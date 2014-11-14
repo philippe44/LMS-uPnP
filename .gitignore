@@ -71,7 +71,7 @@ $RECYCLE.BIN/
 *.msp
 
 # C++ builder related
-*.cbproj
+*.*proj
 *.zip
 *.z
 *.local
