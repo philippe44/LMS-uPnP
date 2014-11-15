@@ -1,0 +1,4 @@
+Ro run the Linux pre-build binary on a 64bits architecture, install at 
+least 32bits libc6
+
+sudo apt-get install libc6:i386 

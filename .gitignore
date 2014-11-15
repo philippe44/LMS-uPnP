@@ -83,4 +83,5 @@ Win32
 *.tds
 *.xml
 *.bat
+*-idx*
 
