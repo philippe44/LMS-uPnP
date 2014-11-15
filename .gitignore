@@ -19,7 +19,6 @@
 *.lib
 
 # Executables
-*.exe
 *.out
 *.app
 
@@ -80,4 +79,9 @@ doc
 tests
 Win32
 *.res
+*.i??
+*.map
+*.tds
+*.xml
+*.bat
 
