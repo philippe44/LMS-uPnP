@@ -1251,7 +1251,7 @@ int main(int argc, char *argv[])
 
 static char usage[] =
 		   "See -t for license terms\n"
-		   "Usage: %s [options]\n"
+		   "Usage: [options]\n"
 		   "  -s <server>[:<port>]\tConnect to specified server, otherwise uses autodiscovery to find server\n"
 		   "  -x <config file>\tread config from file (default is ./config.xml)\n"
 //		   "  -c <codec1>,<codec2>\tRestrict codecs to those specified, otherwise load all available codecs; known codecs: " CODECS "\n"
