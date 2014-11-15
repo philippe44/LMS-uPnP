@@ -47,6 +47,10 @@ char				glBaseVDIR[] = "LMS2UPNP";
 char				glSQServer[SQ_STR_LENGTH] = "?";
 u8_t				glMac[6] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05 };
 sq_log_level_t		glLog = { lINFO, lINFO, lINFO, lINFO, lINFO, lINFO, lINFO, lINFO, lINFO};
+#if LINUX || FREEBSD
+bool				glDaemonize = false;
+#endif
+char				*glLogFile;
 
 tMRConfig			glMRConfig = {
 							-3L,
@@ -722,7 +726,6 @@ int uPNPInitialize(char *IPaddress, unsigned int *Port)
 	}
 
 	rc = UpnpAddVirtualDir(glBaseVDIR);
-	printf("offset_t %d\n", sizeof(off_t));
 
 	if (rc != UPNP_E_SUCCESS) {
 		LOG_ERROR("Error setting VirtualDir: %d", rc);
@@ -992,7 +995,7 @@ bool ParseArgs(int argc, char **argv) {
 
 	while (optind < argc && strlen(argv[optind]) >= 2 && argv[optind][0] == '-') {
 		char *opt = argv[optind] + 1;
-		if (strstr("stxd", opt) && optind < argc - 1) {
+		if (strstr("stxdzf", opt) && optind < argc - 1) {
 			optarg = argv[optind + 1];
 			optind += 2;
 		} else if (strstr("tz"
@@ -1023,6 +1026,14 @@ bool ParseArgs(int argc, char **argv) {
 			} else {
 				gl_resample = "";
 			}
+			break;
+#endif
+		case 'f':
+			glLogFile = optarg;
+			break;
+#if LINUX || FREEBSD
+		case 'z':
+			glDaemonize = true;
 			break;
 #endif
 #if DSD
@@ -1101,6 +1112,20 @@ int main(int argc, char *argv[])
 	// potentially overwrite with some cmdline parameters
 	if (!ParseArgs(argc, argv)) exit(1);
 
+	if (glLogFile) {
+		if (!freopen(glLogFile, "a", stderr)) {
+			fprintf(stderr, "error opening logfile %s: %s\n", glLogFile, strerror(errno));
+		}
+	}
+
+#if LINUX || FREEBSD
+	if (glDaemonize) {
+		if (daemon(1, glLogFile ? 1 : 0)) {
+			fprintf(stderr, "error daemonizing: %s\n", strerror(errno));
+		}
+	}
+#endif
+
 	if (strstr(glSQServer, "?")) sq_init(NULL, glMac, &glLog);
 	else sq_init(glSQServer, glMac, &glLog);
 
@@ -1113,7 +1138,15 @@ int main(int argc, char *argv[])
 	Start();
 
 	while (strcmp(resp, "exit")) {
+
+#if LINUX || FREEBSD
+		if (!glDaemonize)
+			scanf("%s", resp);
+		else
+			pause();
+#else
 		scanf("%s", resp);
+#endif
 
 		if (!strcmp(resp, "play")) {
 			struct sMR *p;
@@ -1253,7 +1286,7 @@ static char usage[] =
 		   "  -x <config file>\tread config from file (default is ./config.xml)\n"
 //		   "  -c <codec1>,<codec2>\tRestrict codecs to those specified, otherwise load all available codecs; known codecs: " CODECS "\n"
 //		   "  -e <codec1>,<codec2>\tExplicitly exclude native support of one or more codecs; known codecs: " CODECS "\n"
-//		   "  -f <logfile>\t\tWrite debug to logfile\n"
+		   "  -f <logfile>\t\tWrite debug to logfile\n"
 		   "  -d <log>=<level>\tSet logging level, logs: all|slimproto|stream|decode|output|web|upnp|main|sq2mr, level: info|debug|sdebug\n"
 #if RESAMPLE
 		   "  -R -u [params]\tResample, params = <recipe>:<flags>:<attenuation>:<precision>:<passband_end>:<stopband_start>:<phase_response>,\n"

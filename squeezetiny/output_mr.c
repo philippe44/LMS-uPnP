@@ -284,7 +284,7 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 				out->write_count += space;
 			}
 
-			sleep_time = 2000;
+			sleep_time = 10000;
 		} else sleep_time = 100000;
 
 		// all done, time to close the file
