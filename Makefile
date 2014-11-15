@@ -12,6 +12,7 @@ EXECUTABLE ?= squeeze2upnp-x86
 
 squeezetiny_dir = squeezetiny
 squeezeupnp_dir = squeeze2upnp
+build_dir	= ./bin
 
 LIBRARY = libupnp.a libixml.a libthreadutil.a
 
@@ -77,7 +78,7 @@ OBJECTS = $(SOURCES:.c=.o)
 all: $(EXECUTABLE)
 
 $(EXECUTABLE): $(OBJECTS)
-	$(CC) $(OBJECTS) $(LIBRARY) $(LDFLAGS) -o $@
+	$(CC) $(OBJECTS) $(LIBRARY) $(LDFLAGS) -o $(build_dir)/$@
 
 $(OBJECTS): $(DEPS)
 

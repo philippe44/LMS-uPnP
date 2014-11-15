@@ -26,10 +26,8 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "ithread.h"
 #include "ixml.h" /* for IXML_Document, IXML_Element */
 #include "upnp.h" /* for Upnp_EventType */
-#include "upnptools.h"
 #include "util_common.h"
 
 char 		*XMLGetFirstDocumentItem(IXML_Document *doc, const char *item);

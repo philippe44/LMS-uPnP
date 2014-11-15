@@ -21,15 +21,9 @@
 
 #include <sys/stat.h>
 
-
 #include "squeezedefs.h"
-#include "webserver.h"
-#include "util.h"
-#include "util_common.h"
-#include "squeezeitf.h"
 #include "squeeze2upnp.h"
-
-#define xx__FLAC
+#include "webserver.h"
 
 static log_level	loglevel = lWARN;
 

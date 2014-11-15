@@ -27,8 +27,6 @@
 #include <stdio.h>
 
 #include "upnp.h"
-#include "UpnpString.h"
-#include "upnptools.h"
 #include "ithread.h"
 #include "squeezedefs.h"
 #include "squeezeitf.h"

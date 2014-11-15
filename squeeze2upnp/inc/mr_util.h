@@ -2,7 +2,6 @@
 #define __MR_UTIL_H
 
 #include "squeeze2upnp.h"
-#include "mr_util.h"
 #include "util_common.h"
 
 void 			MRutilInit(log_level level);

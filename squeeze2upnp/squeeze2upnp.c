@@ -19,22 +19,20 @@
  *
  */
 
-
 #include <math.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #include "squeezedefs.h"
 #include "squeeze2upnp.h"
 #include "upnpdebug.h"
+#include "upnptools.h"
 #include "webserver.h"
 #include "util_common.h"
 #include "util.h"
-#include "squeezeitf.h"
 #include "avt_util.h"
 #include "mr_util.h"
-
-#include <fcntl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 
 /*
 TODO :
@@ -880,7 +878,6 @@ void AddMRDevice(IXML_Document *DescDoc, const char *location,	int expires)
 		strcpy(Device->PresURL, UsedPresURL);
 		ExtractIP(location, &Device->ip);
 
-//		if (!SendARP(*((u32_t*) Device->ip), INADDR_ANY, Device->mac, &Device->macSize)) {
 		if (SendARP(*((in_addr_t*) &Device->ip), INADDR_ANY, Device->mac, &Device->macSize)) {
 			LOG_ERROR("[%p]: cannot get mac %s", Device, Device->FriendlyName);
 			memset(Device->mac, 0, sizeof(Device->mac));

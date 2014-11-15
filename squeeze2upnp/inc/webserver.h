@@ -23,9 +23,6 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-#include "upnp.h"
-#include "UpnpString.h"
-#include "upnptools.h"
 #include "util_common.h"
 #include "util.h"
 

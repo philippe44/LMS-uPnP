@@ -279,7 +279,6 @@ void SaveConfig(char *name)
 	XMLAddNode(doc, root, "server", glSQServer);
 	XMLAddNode(doc, root, "slimproto_stream_port", "%d", gl_slimproto_stream_port);
 	XMLAddNode(doc, root, "base_mac", "%02x:%02x:%02x:%02x:%02x:%02x", glMac[0], glMac[1], glMac[2], glMac[3], glMac[4], glMac[5]);
-//	XMLAddNode(doc, root, "add_unknown", "%d", glMRConfig.Enabled);
 	XMLAddNode(doc, root, "slimproto_log", level2debug(glLog.slimproto));
 	XMLAddNode(doc, root, "stream_log", level2debug(glLog.stream));
 	XMLAddNode(doc, root, "output_log", level2debug(glLog.output));

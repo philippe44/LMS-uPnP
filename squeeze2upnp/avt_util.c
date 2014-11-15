@@ -23,8 +23,6 @@
 #include <stdlib.h>
 #include <math.h>
 
-#include "upnp.h"
-#include "UpnpString.h"
 #include "upnptools.h"
 #include "squeezedefs.h"
 #include "util_common.h"
