@@ -10,18 +10,18 @@ LIBUPNP
  - Under Win32, libupnp is build with the following defines
         WIN32
         UPNP_STATIC_LIB
-        UPNP_USE_BCBPP
+        UPNP_USE_BCBPP (for C++ builder)
  - Under Linux : N/A
 
 Main application for Windows
  - For compilation, use following defines
         WIN32
         UPNP_STATIC_LIB
-        UPNP_USE_BCBPP
+        UPNP_USE_BCBPP (for C++ builder)
         NO_CODEC
  - Link with the generated libupnp static lib and ptrhead import lib
  - For runtime
-        On C++ builder, requires CC32160mt.dll
+        On C++ builder, requires cc32160mt.dll
         pthread.dll
 
 Main application for Linux
