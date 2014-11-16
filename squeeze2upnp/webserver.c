@@ -116,20 +116,15 @@ int WebRead(UpnpWebFileHandle FileHandle, char *buf, size_t buflen)
 /*---------------------------------------------------------------------------*/
 int WebSeek(UpnpWebFileHandle FileHandle, off_t offset, int origin)
 {
-	int seek;
+	int rc;
 
 	if (!FileHandle) return -1;
 
-	if (offset < 0) {
-		LOG_WARN("[%p]: no negative seek %d, %d", FileHandle, offset, origin);
-		return -1;
-	}
-
-	seek = sq_seek(FileHandle, (unsigned) offset, origin);
-	if (seek == -1) seek = fseek(FileHandle, offset, origin);
+	rc = sq_seek(FileHandle, (unsigned) offset, origin);
+	if (rc == -1) rc = fseek(FileHandle, offset, origin);
 
 	LOG_INFO("[%p]: seek %d, %d", FileHandle, offset, origin);
-	return seek;
+	return rc;
 }
 
 /*---------------------------------------------------------------------------*/
