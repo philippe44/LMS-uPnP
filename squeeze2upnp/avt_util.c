@@ -103,21 +103,6 @@ typedef enum {
 
 #undef DIDL_PATCH
 
-#if 0
-// ready to insert the protocol option string, this room for 2 strings of options
-"<DIDL-Lite xmlns:dc=\"http://purl.org/dc/elements/1.1/\""
-" xmlns:upnp=\"urn:schemas-upnp-org:metadata-1-0/upnp/\""
-" xmlns=\"urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/\">"
-" <item>"
-" <dc:title>squeeze2upnp: LMS to uPnP gateway</dc:title>"
-" <upnp:class>object.item.audioItem.musicTrack</upnp:class>"
-" <res duration=\"\" protocolInfo=\"%s%s\">%s</res>"
-" </item>"
-"</DIDL-Lite>"
-;
-#endif
-
-
 #ifndef DIDL_PATCH
 char DIDL[]=
 // ready to insert the protocol option string, with room for 2 strings of options
@@ -125,7 +110,9 @@ typedef enum {
 " xmlns:upnp=\"urn:schemas-upnp-org:metadata-1-0/upnp/\""
 " xmlns=\"urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/\">"
 " <item>"
-" <dc:title>squeeze2upnp: LMS to uPnP gateway</dc:title>"
+" <dc:title>LMS to uPnP gateway</dc:title>"
+" <upnp:artist>squeeze2upnp</upnp:artist>"
+" <upnp:album>N/A</upnp:album>"
 " <res protocolInfo=\"%s%s\">%s</res>"
 " <upnp:class>object.item.audioItem.musicTrack</upnp:class>"
 " </item>"
