@@ -101,12 +101,48 @@ typedef enum {
 
 #endif
 
-char DIDL[]=
+#undef DIDL_PATCH
+
+#if 0
 // ready to insert the protocol option string, this room for 2 strings of options
-"<DIDL-Lite xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:upnp=\"urn:schemas-upnp-org:metadata-1-0/upnp/\" xmlns=\"urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/\">"
-		"<res duration=\"\" protocolInfo=\"%s%s\">%s</res>"
+"<DIDL-Lite xmlns:dc=\"http://purl.org/dc/elements/1.1/\""
+" xmlns:upnp=\"urn:schemas-upnp-org:metadata-1-0/upnp/\""
+" xmlns=\"urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/\">"
+" <item>"
+" <upnp:class>object.item.audioItem.musicTrack</upnp:class>"
+" <res duration=\"\" protocolInfo=\"%s%s\">%s</res>"
+" </item>"
 "</DIDL-Lite>"
 ;
+#endif
+
+
+#ifndef DIDL_PATCH
+char DIDL[]=
+// ready to insert the protocol option string, with room for 2 strings of options
+"<DIDL-Lite xmlns:dc=\"http://purl.org/dc/elements/1.1/\""
+" xmlns:upnp=\"urn:schemas-upnp-org:metadata-1-0/upnp/\""
+" xmlns=\"urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/\">"
+" <item>"
+" <res protocolInfo=\"%s%s\">%s</res>"
+" </item>"
+"</DIDL-Lite>"
+;
+#else
+char DIDL[]=
+"<DIDL-Lite xmlns=\"urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\""
+" xmlns:upnp=\"urn:schemas-upnp-org:metadata-1-0/upnp/\">"
+" <item>"
+" <dc:title>1:01 - A Hard Day&apos;s Night (1964) [24/96000]"
+" </dc:title>"
+" <upnp:artist>The Beatles</upnp:artist>"
+" <upnp:genre>Pop</upnp:genre>"
+" <upnp:album>A Hard Day&apos;s Night</upnp:album>"
+" <res size=\"58159495\" duration=\"0:02:39\" protocolInfo=\"http-get:*:audio/x-flac:*\">%s</res>"
+" </item>"
+" </DIDL-Lite>"
+;
+#endif
 
 /*
 DLNA options, that *might* be the only ones or might be added to other options
@@ -132,8 +168,12 @@ int AVTSetURI(char *ControlURL, char *URI, char *ProtInfo, void *Cookie)
 	char *MetaData;
 
 	MetaData = malloc(strlen(ProtInfo) + strlen(URI) + strlen(DIDL) + strlen(DLNA_OPT) + 1);
+#ifndef DIDL_PATCH
 	if (ProtInfo[strlen(ProtInfo) - 1] == ':') sprintf(MetaData, DIDL, ProtInfo, DLNA_OPT + 1, URI);
 	else sprintf(MetaData, DIDL, ProtInfo, DLNA_OPT, URI);
+#else
+	sprintf(MetaData, DIDL, URI);
+#endif
 
 	LOG_INFO("uPNP setURI %s for %s (cookie %p)", URI, ControlURL, Cookie);
 	ActionNode =  UpnpMakeAction("SetAVTransportURI", AV_TRANSPORT, 0, NULL);
