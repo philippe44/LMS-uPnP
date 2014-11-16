@@ -338,8 +338,8 @@ int sq_seek(void *desc, unsigned bytes, unsigned from)
 	else {
 		struct thread_ctx_s *ctx = p->owner; 		// for the macro to work ... ugh
 		LOCK_S;LOCK_O;
-		rc = fseek(p->read_file, bytes + from, SEEK_SET);
-		p->read_count += bytes + from;
+		rc = fseek(p->read_file, bytes, from);
+		p->read_count += bytes;
 		UNLOCK_S;UNLOCK_O;
 	}
 
