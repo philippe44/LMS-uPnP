@@ -3,7 +3,7 @@ builder, so i've not made a proper makefile. The Linux makefile is ugly and
 very hardcoded.
 
 DEPENDENCIES
- - need pthread (pthread_win32 on Windows) and dynamically linked
+ - pthread (pthread_win32 on Windows) and dynamically linked
  - libupnp, statically linked
 
 LIBUPNP
