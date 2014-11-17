@@ -1,0 +1,35 @@
+790d789
+< 	int RangeRC;
+810,811c809
+< 	RangeRC = GetNextRange(&Ptr, &FirstByte, &LastByte);
+< 	if (FileLength < 0 && LastByte != -1) {
+---
+> 	if (FileLength < 0) {
+815,816c813,814
+< 	if (RangeRC != -1) {
+< 		if (FileLength < FirstByte && FileLength > 0) {
+---
+> 	if (GetNextRange(&Ptr, &FirstByte, &LastByte) != -1) {
+> 		if (FileLength < FirstByte) {
+820,836c818
+< 		if (FirstByte >= 0 && LastByte == -1 && FileLength < 0) {
+< 			Instr->RangeOffset = FirstByte;
+< 			/*
+< 			probably readsendsize is not neede das there is no content-length
+< 			in chunked encoding
+< 			Instr->ReadSendSize = LastByte - FirstByte + 1;
+< 			*/
+< 			rc = snprintf(Instr->RangeHeader,
+< 				sizeof(Instr->RangeHeader),
+< 				"CONTENT-RANGE: bytes %" PRId64
+< 				"-" "*/*" "\r\n",
+< 				(int64_t)FirstByte);
+< 			if (rc < 0 || (unsigned int) rc >= sizeof(Instr->RangeHeader)) {
+< 				free(RangeInput);
+< 				return HTTP_INTERNAL_SERVER_ERROR;
+< 			}
+< 		} else if (FirstByte >= 0 && LastByte >= 0 && LastByte >= FirstByte) {
+---
+> 		if (FirstByte >= 0 && LastByte >= 0 && LastByte >= FirstByte) {
+968d949
+< 				/* ignore RANGE in case of chunked transmission */
