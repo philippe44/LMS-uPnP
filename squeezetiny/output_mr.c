@@ -60,8 +60,8 @@ typedef struct flac_frame_s {
 } flac_frame_t;
 
 typedef struct flac_streaminfo_s {
-		u16_t min_block_size;
-		u16_t max_block_size;
+		u8_t min_block_size[2];
+		u8_t max_block_size[2];
 		u8_t min_frame_size[3];
 		u8_t max_frame_size[3];
 		u8_t combo[4];
@@ -70,8 +70,8 @@ typedef struct flac_streaminfo_s {
 } flac_streaminfo_t;
 
 flac_streaminfo_t FLAC_STREAMINFO = {
-		0x0000,
-		0xffff,
+		0x00, 0x00,
+		0xff, 0xff,
 		{ 0x00, 0x00, 0x00 },
 		{ 0x00, 0x00, 0x00 },
 		{ BYTE_1(FLAC_COMBO(44100, 2, 16)),
