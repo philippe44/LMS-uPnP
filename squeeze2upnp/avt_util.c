@@ -101,9 +101,6 @@ typedef enum {
 
 #endif
 
-#undef DIDL_PATCH
-
-#ifndef DIDL_PATCH
 char DIDL[]=
 // ready to insert the protocol option string, with room for 2 strings of options
 "<DIDL-Lite xmlns:dc=\"http://purl.org/dc/elements/1.1/\""
@@ -118,20 +115,6 @@ typedef enum {
 " </item>"
 "</DIDL-Lite>"
 ;
-#else
-char DIDL[]=
-"<DIDL-Lite xmlns=\"urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\""
-" xmlns:upnp=\"urn:schemas-upnp-org:metadata-1-0/upnp/\">"
-" <item>"
-" <dc:title>1:01 - A Hard Day&apos;s Night (1964) [24/96000]</dc:title>"
-" <upnp:artist>The Beatles</upnp:artist>"
-" <upnp:genre>Pop</upnp:genre>"
-" <upnp:album>A Hard Day&apos;s Night</upnp:album>"
-" <res size=\"58159495\" duration=\"0:02:39\" protocolInfo=\"http-get:*:audio/x-flac:*\">%s</res>"
-" </item>"
-" </DIDL-Lite>"
-;
-#endif
 
 /*
 DLNA options, that *might* be the only ones or might be added to other options
