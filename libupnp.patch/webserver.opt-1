@@ -1,6 +1,0 @@
-950,954d949
-< 				/* ignore RANGE in case of chunked transmission */
-< 				if (FileSize < 0) {
-< 					RetCode = HTTP_OK;
-< 					break;
-< 				}

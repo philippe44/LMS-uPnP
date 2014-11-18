@@ -820,14 +820,14 @@ static int CreateHTTPRangeResponseHeader(
 		if (FirstByte >= 0 && LastByte == -1 && FileLength < 0) {
 			Instr->RangeOffset = FirstByte;
 			/*
-			probably readsendsize is not neede das there is no content-length
+			probably readsendsize is not needed as there is no content-length
 			in chunked encoding
 			Instr->ReadSendSize = LastByte - FirstByte + 1;
 			*/
 			rc = snprintf(Instr->RangeHeader,
 				sizeof(Instr->RangeHeader),
 				"CONTENT-RANGE: bytes %" PRId64
-				"-" "*/*" "\r\n",
+				"-" "*" "\r\n",
 				(int64_t)FirstByte);
 			if (rc < 0 || (unsigned int) rc >= sizeof(Instr->RangeHeader)) {
 				free(RangeInput);
@@ -966,6 +966,12 @@ static int CheckOtherHTTPHeaders(
 				break;
 			case HDR_RANGE:
 				/* ignore RANGE in case of chunked transmission */
+#if 0
+				if (FileSize < 0) {
+					RetCode = HTTP_OK;
+					break;
+				}
+#endif
 				RetCode = CreateHTTPRangeResponseHeader(TmpBuf,
 					FileSize, RespInstr);
 				if (RetCode != HTTP_OK) {
@@ -1259,7 +1265,8 @@ static int process_request(
 		/* Transfer-Encoding: chunked */
 		if (http_MakeMessage(headers, resp_major, resp_minor,
 		    "R" "T" "GKLD" "s" "tcS" "Xc" "sCc",
-		    HTTP_PARTIAL_CONTENT,	/* status code */
+			HTTP_PARTIAL_CONTENT,	/* status code */
+//				HTTP_OK,	/* status code */
 		    finfo.content_type,	/* content type */
 		    RespInstr,	/* range info */
 		    RespInstr,	/* language info */
@@ -1298,7 +1305,7 @@ static int process_request(
 		/* !RespInstr->IsRangeActive && !RespInstr->IsChunkActive */
 		if (RespInstr->ReadSendSize >= 0) {
 			if (http_MakeMessage(headers, resp_major, resp_minor,
-			    "R" "N" "TLD" "s" "tcS" "Xc" "sCc",
+				"R" "N" "TLD" "s" "tcS" "Xc" "sCc",
 			    HTTP_OK,	/* status code */
 			    RespInstr->ReadSendSize,	/* content length */
 			    finfo.content_type,	/* content type */
