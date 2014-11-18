@@ -56,7 +56,8 @@ static log_level loglevel = lWARN;
 
 static u8_t 	pcm_sample_size[] = { 8, 16, 24, 32 };
 static u32_t 	pcm_sample_rate[] = { 11000, 22000, 32000, 44100, 48000,
-									  8000, 16000, 24000, 96000 };
+									  8000, 16000, 24000, 96000, 176400,
+                                	  192000, 352800, 384000 };
 static u8_t		pcm_channels[] = { 1, 2 };
 
 
