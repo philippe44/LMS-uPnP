@@ -36,7 +36,7 @@
 /*----------------------------------------------------------------------------*/
 
 #define MAX_SRV			10
-#define MAX_PROTO		32
+#define MAX_PROTO		128
 #define	AV_TRANSPORT 	"urn:schemas-upnp-org:service:AVTransport:1"
 #define	RENDERING_CTRL 	"urn:schemas-upnp-org:service:RenderingControl:1"
 #define	CONNECTION_MGR 	"urn:schemas-upnp-org:service:ConnectionManager:1"
