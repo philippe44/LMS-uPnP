@@ -20,8 +20,6 @@
 
 // make may define: SELFPIPE, RESAMPLE, RESAMPLE_MP, VISEXPORT, DSD, LINKALL to influence build
 
-#define VERSION "v0.0.9.7"
-
 // build detection
 #include "squeezedefs.h"
 

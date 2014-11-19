@@ -120,7 +120,7 @@ int WebSeek(UpnpWebFileHandle FileHandle, off_t offset, int origin)
 
 	if (!FileHandle) return -1;
 
-	rc = sq_seek(FileHandle, (unsigned) offset, origin);
+	rc = sq_seek(FileHandle, offset, origin);
 	if (rc == -1) rc = fseek(FileHandle, offset, origin);
 
 	LOG_INFO("[%p]: seek %d, %d", FileHandle, offset, origin);

@@ -83,7 +83,7 @@ char*				sq_content_type(const char *urn);	// string must be released by caller
 void*				sq_open(const char *urn);
 bool				sq_close(void *desc);
 int					sq_read(void *desc, void *dst, unsigned bytes);
-int					sq_seek(void *desc, unsigned bytes, unsigned from);
+int					sq_seek(void *desc, off_t bytes, int from);
 void				sq_reset(sq_dev_handle_t);
 
 void stream_loglevel(log_level level);

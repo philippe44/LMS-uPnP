@@ -1,6 +1,8 @@
 #ifndef __SQUEEZEDEFS_H
 #define __SQUEEZEDEFS_H
 
+#define VERSION "v0.0.9.8"
+
 #if defined(linux)
 #define LINUX     1
 #define OSX       0

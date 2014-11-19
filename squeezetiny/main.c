@@ -294,11 +294,15 @@ void *sq_open(const char *urn)
 		struct thread_ctx_s *ctx = out->owner; 		// for the macro to work ... ugh
 
 		LOCK_S;LOCK_O;
-		sprintf(buf, "%s/%s", thread_ctx[i-1].config.buffer_dir, out->buf_name);
-		out->read_file = fopen(buf, "rb");
-		out->read_count = 0;
-		LOG_INFO("[%p]: open", out->owner);
-		if (!out->read_file) out = NULL;
+		if (!out->read_file) {
+			sprintf(buf, "%s/%s", thread_ctx[i-1].config.buffer_dir, out->buf_name);
+			out->read_file = fopen(buf, "rb");
+			out->read_count = 0;
+			LOG_INFO("[%p]: open", out->owner);
+			if (!out->read_file) out = NULL;
+		}
+		// Some clients try to open 2 sessions : do not allow that
+		else out = NULL;
 		UNLOCK_S;UNLOCK_O;
 	}
 
@@ -327,7 +331,7 @@ bool sq_close(void *desc)
 }
 
 /*---------------------------------------------------------------------------*/
-int sq_seek(void *desc, unsigned bytes, unsigned from)
+int sq_seek(void *desc, off_t bytes, int from)
 {
 	out_ctx_t *p = (out_ctx_t*) desc;
 	int rc = -1;

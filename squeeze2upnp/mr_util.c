@@ -58,11 +58,19 @@ bool _SetContentType(char *Cap[], sq_seturi_t *uri, char *ProtInfo, int n, ...)
 		// find the corresponding line in the device's protocol info
 		for (p = Cap; *p; p++) {
 			if (!strstr(*p, fmt)) continue;
+			// if not PCM, just copy the found format
 			if (!strstr(*p, "audio/L")) {
 				strcpy(uri->content_type, fmt);
 				strcpy(ProtInfo, *p);
 				break;
 			}
+			// if the proposed format accepts any rate & channel, give it a try
+			if (!strstr(*p, "channels") && !strstr(*p, "rate")) {
+				strcpy(uri->content_type, fmt);
+				strcpy(ProtInfo, *p);
+				break;
+			}
+			// if PCM, try to find an exact match
 			if (strstr(*p, channels) && strstr(*p, rate)) {
 				sprintf(uri->content_type, "%s;channels=%d;rate=%d", fmt, uri->channels, uri->sample_rate);
 				strcpy(ProtInfo, *p);

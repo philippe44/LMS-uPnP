@@ -1,0 +1,25 @@
+S = <stream_length> 	-1, -3, <value> = some large number > 1000000000
+A = <accept_nexturi>	0, 1
+C = <can_pause>		0, 1
+F = <force_volume>	0, 1
+
+P = pause works ?
+R = repositioning works ?
+
+
+
+Compatible		codecs		S	A	C	F	P	R	
+														
+Sonos			mp3,flc		<value>	1	1	1	Y	Y
+Marantz NR1603		pcm,mp3,flc	-3	1	1	1	Y	Y
+xbmc			pcm,mp3,flc	-3	1	1	1	Y	Y
+
+
+
+Somehow			codecs		S	A	C	F	P	R
+
+JBL OnBeat		mp3,flc		-3	1	1	1	N	Y
+(device stuk in upnp "transitioning" state. same with other controlers)
+
+Not compatible
+
