@@ -231,7 +231,7 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 						if (strncmp(_buf_readp(ctx->streambuf), "fLaC", 4)) {
 							flac_frame_t *frame;
 							flac_streaminfo_t *streaminfo;
-							u16_t rate;
+							u32_t rate;
 							u8_t sample_size;
 							u8_t channels;
 
