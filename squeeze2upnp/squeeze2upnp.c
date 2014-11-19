@@ -169,6 +169,8 @@ static void AddMRDevice(IXML_Document *DescDoc, const char *location, int expire
 
 			NFREE(device->NextURI);
 
+			LOG_INFO("[%p]: codec:%c, ch:%d, s:%d, r:%d", device, p->content_type[0],
+										p->channels, p->sample_size, p->sample_rate);
 			if (SetContentType(device->ProtocolCap, param, ProtInfo)) {
 				strcpy(device->NextProtInfo, ProtInfo);
 				if (device->Config.AcceptNextURI)
@@ -199,6 +201,9 @@ static void AddMRDevice(IXML_Document *DescDoc, const char *location, int expire
 			// check side effect of this
 			NFREE(device->NextURI);
 			// end check
+
+			LOG_INFO("[%p]: codec:%c, ch:%d, s:%d, r:%d", device, p->content_type[0],
+										p->channels, p->sample_size, p->sample_rate);
 
 			if (SetContentType(device->ProtocolCap, param, ProtInfo)) {
 				AVTSetURI(device->Service[AVT_SRV_IDX].ControlURL, uri, ProtInfo, (void*) device->seqN++);
