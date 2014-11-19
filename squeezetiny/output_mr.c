@@ -235,7 +235,6 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 							u8_t sample_size;
 							u8_t channels;
 
-							LOG_INFO("[%p] insert flac header", ctx);
 							frame = (flac_frame_t*) _buf_readp(ctx->streambuf);
 							if (FLAC_GET_FRAME_TAG(frame->tag) != FLAC_TAG) {
 								LOG_ERROR("[%p]: no header and not a frame ...", ctx);
@@ -253,6 +252,7 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 								streaminfo->combo[3] = BYTE_4(FLAC_COMBO(rate, channels, sample_size));
 								out->write_count = fwrite(&flac_header, 1, sizeof(flac_header), out->write_file);
 								out->write_count += fwrite(streaminfo, 1, sizeof(flac_streaminfo_t), out->write_file);
+								LOG_INFO("[%p]: flac header ch:%d, s:%d, r:%d", ctx, channels, sample_size, rate);
 								if (!rate || !sample_size || !channels) {
 									LOG_ERROR("[%p]: wrong header %d %d %d", rate, channels, sample_size);
 								}
