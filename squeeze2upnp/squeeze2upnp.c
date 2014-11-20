@@ -63,8 +63,9 @@ tMRConfig			glMRConfig = {
 							true,
 							"",
 							false,
+							false,
 							true,
-							"0:0, 400:10, 700:20, 1200:30, 2050:40, 3800:50, 6600:60, 12000:70, 21000:80, 37000:90, 65535:100"
+							"0:0, 400:10, 700:20, 1200:30, 2050:40, 3800:50, 6600:60, 12000:70, 21000:80, 37000:90, 65535:100",
 					};
 
 sq_dev_param_t glDeviceParam = {
@@ -226,6 +227,8 @@ static void AddMRDevice(IXML_Document *DescDoc, const char *location, int expire
 				device->PausedTime = 0;
 				QueueAction(handle, caller, action, cookie, param, false);
 				device->sqState = SQ_PLAY;
+				if (device->Config.VolumeOnPlay)
+					SetVolume(device->Service[REND_SRV_IDX].ControlURL, device->Volume, (void*) device->seqN++);
 			}
 			else rc = false;
 			break;
@@ -256,7 +259,8 @@ static void AddMRDevice(IXML_Document *DescDoc, const char *location, int expire
 			b2 = device->VolumeCurve[i].b;
 			device->Volume = Volume * (b1-b2)/(a1-a2) + b1 - a1*(b1-b2)/(a1-a2);
 
-			SetVolume(device->Service[REND_SRV_IDX].ControlURL, device->Volume, (void*) device->seqN++);
+			if (!device->Config.VolumeOnPlay || device->sqState == SQ_PLAY)
+				SetVolume(device->Service[REND_SRV_IDX].ControlURL, device->Volume, (void*) device->seqN++);
 			break;
 		}
 		default:
@@ -491,7 +495,7 @@ void *TimerLoop(void *args)
 		p = glSQ2MRList;
 		while (p)	{
 
-			if (!p->on) {
+			if (!p->on || (p->sqState == SQ_STOP && p->State == STOPPED)) {
 				p = p->NextSQ;
 				continue;
 			}
@@ -1286,6 +1290,7 @@ int main(int argc, char *argv[])
 
 
 static char usage[] =
+ 			VERSION "\n"
 		   "See -t for license terms\n"
 		   "Usage: [options]\n"
 		   "  -s <server>[:<port>]\tConnect to specified server, otherwise uses autodiscovery to find server\n"
