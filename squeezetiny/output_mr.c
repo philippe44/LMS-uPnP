@@ -264,6 +264,7 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 				}
 			}
 
+			// endianess re-ordering for PCM
 			if (!strcmp(out->ext, "pcm")) {
 				u32_t i;
 				u8_t j, buf[4];
