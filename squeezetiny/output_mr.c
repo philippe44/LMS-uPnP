@@ -264,8 +264,8 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 				}
 			}
 
-			// endianess re-ordering for PCM
-			if (!strcmp(out->ext, "pcm")) {
+			// endianness re-ordering for PCM
+			if (!strcmp(out->ext, "pcm") && out->endianness) {
 				u32_t i;
 				u8_t j, buf[4];
 				u8_t *p, inc = out->sample_size/8;

@@ -384,6 +384,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 
 					ctx->out_ctx[idx].sample_size = uri.sample_size;
 					ctx->out_ctx[idx].sample_rate = uri.sample_rate;
+					ctx->out_ctx[idx].endianness = strm->pcm_endianness - '0';
 					ctx->out_ctx[idx].channels = uri.channels;
 					strcpy(ctx->out_ctx[idx].ext, uri.format);
 					UNLOCK_S;UNLOCK_O;

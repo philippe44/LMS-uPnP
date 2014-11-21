@@ -297,12 +297,12 @@ void SaveConfig(char *name)
 	XMLAddNode(doc, root, "sq2mr_log", level2debug(glLog.sq2mr));
 
 	common = XMLAddNode(doc, root, "common", NULL);
-	XMLAddNode(doc, common, "streambuf_size", "%d", (int) glDeviceParam.stream_buf_size);
-	XMLAddNode(doc, common, "output_size", "%d", (int) glDeviceParam.output_buf_size);
+	XMLAddNode(doc, common, "streambuf_size", "%d", (u32_t) glDeviceParam.stream_buf_size);
+	XMLAddNode(doc, common, "output_size", "%d", (u32_t) glDeviceParam.output_buf_size);
 	XMLAddNode(doc, common, "buffer_dir", glDeviceParam.buffer_dir);
-	XMLAddNode(doc, common, "stream_length", "%d", (int) glMRConfig.StreamLength);
+	XMLAddNode(doc, common, "stream_length", "%d", (s32_t) glMRConfig.StreamLength);
 	XMLAddNode(doc, common, "max_read_wait", "%d", (int) glDeviceParam.max_read_wait);
-	XMLAddNode(doc, common, "max_GET_bytes", "%d", (int) glDeviceParam.max_get_bytes);
+	XMLAddNode(doc, common, "max_GET_bytes", "%d", (s32_t) glDeviceParam.max_get_bytes);
 	XMLAddNode(doc, common, "didle_duration", glMRConfig.DidleDuration);
 	XMLAddNode(doc, common, "enabled", "%d", (int) glMRConfig.Enabled);
 	XMLAddNode(doc, common, "process_mode", "%d", (int) glMRConfig.ProcessMode);
@@ -327,17 +327,17 @@ void SaveConfig(char *name)
 		XMLAddNode(doc, dev_node, "enabled", "%d", (int) p->Config.Enabled);
 
 		if (p->sq_config.stream_buf_size != glDeviceParam.stream_buf_size)
-			XMLAddNode(doc, dev_node, "streambuf_size", "%d", (int) p->sq_config.stream_buf_size);
+			XMLAddNode(doc, dev_node, "streambuf_size", "%d", (u32_t) p->sq_config.stream_buf_size);
 		if (p->sq_config.output_buf_size != glDeviceParam.output_buf_size)
-			XMLAddNode(doc, dev_node, "output_size", "%d", (int) p->sq_config.output_buf_size);
+			XMLAddNode(doc, dev_node, "output_size", "%d", (u32_t) p->sq_config.output_buf_size);
 		if (strcmp(p->sq_config.buffer_dir, glDeviceParam.buffer_dir))
 			XMLAddNode(doc, dev_node, "buffer_dir", p->sq_config.buffer_dir);
 			if (p->Config.StreamLength != glMRConfig.StreamLength)
-			XMLAddNode(doc, dev_node, "stream_length", "%d", (int) p->Config.StreamLength);
+			XMLAddNode(doc, dev_node, "stream_length", "%d", (s32_t) p->Config.StreamLength);
 		if (p->sq_config.max_read_wait != glDeviceParam.max_read_wait)
 			XMLAddNode(doc, dev_node, "max_read_wait", "%d", (int) p->sq_config.max_read_wait);
 		if (p->sq_config.max_get_bytes != glDeviceParam.max_get_bytes)
-			XMLAddNode(doc, dev_node, "max_GET_size", "%d", (int) p->sq_config.max_get_bytes);
+			XMLAddNode(doc, dev_node, "max_GET_size", "%d", (s32_t) p->sq_config.max_get_bytes);
 		if (strcmp(p->Config.DidleDuration, glMRConfig.DidleDuration))
 			XMLAddNode(doc, dev_node, "didle_duration", p->Config.DidleDuration);
 		if (p->Config.ProcessMode != glMRConfig.ProcessMode)

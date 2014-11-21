@@ -488,6 +488,7 @@ typedef struct out_ctx_s {
 	char				ext[5];
 	u8_t				sample_size;
 	u32_t				sample_rate;
+	bool				endianness;
 	u8_t				channels;
 	char				content_type[SQ_STR_LENGTH];
 	u32_t				read_count, write_count;

@@ -298,6 +298,7 @@ void stream_thread_init(unsigned stream_buf_size, struct thread_ctx_s *ctx) {
 
 	LOG_DEBUG("[%p] streambuf size: %u", ctx, stream_buf_size);
 
+	stream_buf_size = (stream_buf_size / (4*3)) * (4*3);
 	ctx->streambuf = &ctx->__s_buf;
 	buf_init(ctx->streambuf, stream_buf_size);
 	if (ctx->streambuf->buf == NULL) {
