@@ -13,7 +13,7 @@ LIBUPNP
         UPNP_USE_BCBPP (for C++ builder)
  - Under Linux : N/A
  - The is a small bug in libupnp, so the file webserver.c must be taken 
-from here, not from libupnp main repository
+from here, not from libupnp main repository to rebuild the library
 
 Main application for Windows
  - For compilation, use following defines
