@@ -70,7 +70,7 @@ typedef struct flac_streaminfo_s {
 } flac_streaminfo_t;
 
 flac_streaminfo_t FLAC_STREAMINFO = {
-		0x10, 0x00,
+		0x00, 0x10,
 		0xff, 0xff,
 		{ 0x00, 0x00, 0x00 },
 		{ 0x00, 0x00, 0x00 },
@@ -89,8 +89,8 @@ flac_streaminfo_t FLAC_STREAMINFO = {
 static u8_t flac_header[] = {
 			'f', 'L', 'a', 'C',
 			0x80,
-			(u8_t) ((u32_t) sizeof(flac_streaminfo_t) << 16),
-			(u8_t) ((u32_t) sizeof(flac_streaminfo_t) << 8),
+			(u8_t) ((u32_t) sizeof(flac_streaminfo_t) >> 16),
+			(u8_t) ((u32_t) sizeof(flac_streaminfo_t) >> 8),
 			(u8_t) ((u32_t) sizeof(flac_streaminfo_t))
 		};
 
