@@ -193,7 +193,7 @@ void decode_close(struct thread_ctx_s *ctx) {
 /*---------------------------------------------------------------------------*/
 void decode_flush(struct thread_ctx_s *ctx) {
 
-	LOG_INFO("[%p]: decode flush %d", ctx);
+	LOG_INFO("[%p]: decode flush", ctx);
 	LOCK_D;
 	ctx->decode.state = DECODE_STOPPED;
 	IF_PROCESS(

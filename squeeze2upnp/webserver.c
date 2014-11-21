@@ -67,7 +67,7 @@ int WebGetInfo(const char *FileName, struct File_Info *Info)
 #else
 		Info->content_type = strdup("audio/mpeg");
 #endif
-	LOG_DEBUG("Webserver GetInfo %s %s", FileName, Info->content_type);
+	LOG_INFO("[%p]: GetInfo %s %s", Device, FileName, Info->content_type);
 
 	return UPNP_E_SUCCESS;
 }
