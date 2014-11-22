@@ -304,6 +304,7 @@ void SyncNotifState(char *State, struct sMR* Device)
 				strcpy(Device->CurrentURI, Device->NextURI);
 				NFREE(Device->NextURI);
 
+				sq_flush(Device->SqueezeHandle);
 				AVTSetURI(Device->Service[AVT_SRV_IDX].ControlURL, Device->CurrentURI, Device->NextProtInfo, (void*) Device->seqN++);
 
 				// no need to queue

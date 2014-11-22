@@ -351,8 +351,7 @@ int sq_seek(void *desc, off_t bytes, int from)
 	return rc;
 }
 
-
-/*---------------------------------------------------------------------------*/
+/*---------------------------------------------------------------------------*/
 int sq_read(void *desc, void *dst, unsigned bytes)
 {
 	unsigned wait, read_b = 0;
@@ -398,7 +397,7 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 	made, otherwise the upnp device will make another read attempt, read in
 	the nextURI buffer and miss the end of the current track
 	*/
-    if (wait && !read_b && !p->write_file) {
+	if (wait && !read_b && !p->write_file) {
 		ctx->read_ended = true;
 		LOG_INFO("[%p]: read (end of track) w:%d", ctx, wait);
 	}
@@ -489,6 +488,19 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 	 }
  }
 
+/*---------------------------------------------------------------------------*/
+void sq_flush(sq_dev_handle_t handle)
+{
+	int i;
+	char buf[SQ_STR_LENGTH];
+
+	if (!handle) return;
+
+	for (i = 0; i < 2; i++) {
+		sprintf(buf, "%s/%s", thread_ctx[handle-1].config.buffer_dir, thread_ctx[handle-1].out_ctx[i].buf_name);
+		remove(buf);
+    }
+}
 
 /*---------------------------------------------------------------------------*/
 void sq_reset(sq_dev_handle_t handle)

@@ -375,12 +375,14 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 						fclose(ctx->out_ctx[idx].read_file);
 						ctx->out_ctx[idx].read_file = NULL;
 					}
+					ctx->out_ctx[idx].read_count = 0;
 
 					if (ctx->out_ctx[idx].write_file) {
 						LOG_ERROR("[%p]: write file left open", ctx, ctx->out_ctx[idx].buf_name);
 						fclose(ctx->out_ctx[idx].write_file);
 						ctx->out_ctx[idx].write_file = NULL;
 					}
+					ctx->out_ctx[idx].write_count = 0;
 
 					ctx->out_ctx[idx].sample_size = uri.sample_size;
 					ctx->out_ctx[idx].sample_rate = uri.sample_rate;

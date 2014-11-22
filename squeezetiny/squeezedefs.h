@@ -1,7 +1,7 @@
 #ifndef __SQUEEZEDEFS_H
 #define __SQUEEZEDEFS_H
 
-#define VERSION "v0.0.9.9g"
+#define VERSION "v0.0.9.9h"
 
 #if defined(linux)
 #define LINUX     1

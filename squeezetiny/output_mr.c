@@ -214,7 +214,7 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 			bool ready = true;
 			space = _buf_cont_read(ctx->streambuf);
 
-			// first thing first, opens the buffer if needed
+			// first thing first, open the buffer if needed
 			if (!out->write_file) {
 				char buf[SQ_STR_LENGTH];
 
@@ -222,6 +222,47 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 				out->write_file = fopen(buf, "wb");
 				out->write_count = out->write_count_t = 0;
 			}
+
+			// re-size buffer if needed
+			if (ctx->config.buffer_size != -1 && out->write_count > ctx->config.buffer_size) {
+				u8_t *buf;
+				u32_t n;
+				char n1[SQ_STR_LENGTH], n2[SQ_STR_LENGTH];
+
+				// LMS will need to wait for the player to consume data ...
+				if ((out->write_count - out->read_count) > ctx->config.buffer_size / 2) {
+					UNLOCK_S;
+					usleep(100000);
+					continue;
+				}
+
+				LOCK_O;
+				LOG_INFO("[%p]: re-sizing buffer w:%d r:%d", ctx, out->write_count, out->read_count);
+				out->write_count -= ctx->config.buffer_size / 2;
+				out->read_count -= ctx->config.buffer_size / 2;
+
+				buf = malloc(2L*1024L*1024L);
+				sprintf(n1, "%s/%s~", ctx->config.buffer_dir, out->buf_name);
+				sprintf(n2, "%s/%s", ctx->config.buffer_dir, out->buf_name);
+
+				fclose(out->write_file);
+				out->write_file = fopen(n1, "wb");
+				fseek(out->read_file, -(ctx->config.buffer_size / 2), SEEK_CUR);
+				while (n = fread(buf, 1, 2L*1024L*1024L, out->read_file)) {
+					fwrite(buf, 1, n, out->write_file);
+				}
+
+				fclose(out->write_file);
+				fclose(out->read_file);
+				free(buf);
+				remove(n2);
+				rename(n1, n2);
+
+				out->write_file = fopen(n2, "ab");
+				out->read_file = fopen(n2, "rb");
+				fseek(out->read_file, ctx->config.buffer_size /2, SEEK_SET);
+			}
+			UNLOCK_O;
 
 			// some file format require the re-insertion of headers
 			if (!out->write_count) {
@@ -310,18 +351,6 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 				out->write_count += space;
 				out->write_count_t += space;
 			}
-
-#if 0
-			// limit the size of the buffer
-			LOCK_O;
-			if (ctx->config.buffer_size != -1 && out->write_count >= ctx->config.buffer_size && out->read_count >= ctx->config.buffer_size / 2) {
-				LOG_INFO("[%p]: re-sizing buffer w:%d r:%d", ctx, out->write_count, out->read_count);
-				// must be > 0, not only >= 0 !
-				out->write_count -= ctx->config.buffer_size / 2;
-				out->read_count = 0;
-			}
-			UNLOCK_O;
-#endif
 
 			sleep_time = 10000;
 		} else sleep_time = 100000;
