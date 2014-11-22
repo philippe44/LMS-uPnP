@@ -297,6 +297,8 @@ void SyncNotifState(char *State, struct sMR* Device)
 		if (Device->State != STOPPED) {
 			LOG_INFO("%s: uPNP stop", Device->FriendlyName);
 			if (!Device->Config.AcceptNextURI && Device->NextURI) {
+                // avoid the "blurb" effect as "play" may arrive too early
+				sq_flush(Device->SqueezeHandle, Device->CurrentURI);
 
 				// fake a "SETURI" and a "PLAY" request
 				NFREE(Device->CurrentURI);
@@ -304,7 +306,6 @@ void SyncNotifState(char *State, struct sMR* Device)
 				strcpy(Device->CurrentURI, Device->NextURI);
 				NFREE(Device->NextURI);
 
-				sq_flush(Device->SqueezeHandle);
 				AVTSetURI(Device->Service[AVT_SRV_IDX].ControlURL, Device->CurrentURI, Device->NextProtInfo, (void*) Device->seqN++);
 
 				// no need to queue
