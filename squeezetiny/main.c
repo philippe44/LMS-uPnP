@@ -489,7 +489,7 @@ int sq_read(void *desc, void *dst, unsigned bytes)
  }
 
 /*---------------------------------------------------------------------------*/
-void sq_flush(sq_dev_handle_t handle)
+void sq_flush(sq_dev_handle_t handle, char *urn)
 {
 	int i;
 	char buf[SQ_STR_LENGTH];
@@ -497,8 +497,10 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 	if (!handle) return;
 
 	for (i = 0; i < 2; i++) {
-		sprintf(buf, "%s/%s", thread_ctx[handle-1].config.buffer_dir, thread_ctx[handle-1].out_ctx[i].buf_name);
-		remove(buf);
+		if (strstr(urn, thread_ctx[handle-1].out_ctx[i].buf_name)) {
+			sprintf(buf, "%s/%s", thread_ctx[handle-1].config.buffer_dir, thread_ctx[handle-1].out_ctx[i].buf_name);
+			remove(buf);
+		}
     }
 }
 
