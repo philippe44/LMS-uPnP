@@ -33,7 +33,9 @@ typedef	struct sq_dev_param_s {
 	int			max_read_wait;
 	char		codecs[SQ_STR_LENGTH];
 	sq_rate_e	sample_rate;
+	bool		lpcm;
 	char		buffer_dir[SQ_STR_LENGTH];
+	s32_t		buffer_size;
 } sq_dev_param_t;
 
 typedef struct sq_log_level_s {		// must be one of lERROR, lINFO, lDEBUG or lSDEBUG

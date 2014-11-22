@@ -297,7 +297,7 @@ void *sq_open(const char *urn)
 		if (!out->read_file) {
 			sprintf(buf, "%s/%s", thread_ctx[i-1].config.buffer_dir, out->buf_name);
 			out->read_file = fopen(buf, "rb");
-			out->read_count = 0;
+			out->read_count = out->read_count_t = 0;
 			LOG_INFO("[%p]: open", out->owner);
 			if (!out->read_file) out = NULL;
 		}
@@ -323,7 +323,7 @@ bool sq_close(void *desc)
 		LOCK_S;LOCK_O;
 		if (p->read_file) fclose(p->read_file);
 		p->read_file = NULL;
-		LOG_INFO("[%p]: read total:%d", p->owner, p->read_count);
+		LOG_INFO("[%p]: read total:%Ld", p->owner, p->read_count_t);
 		UNLOCK_S;UNLOCK_O;
 	}
 
@@ -344,6 +344,7 @@ int sq_seek(void *desc, off_t bytes, int from)
 		LOCK_S;LOCK_O;
 		rc = fseek(p->read_file, bytes, from);
 		p->read_count += bytes;
+		p->read_count_t += bytes;
 		UNLOCK_S;UNLOCK_O;
 	}
 
@@ -389,6 +390,7 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 	LOCK_S;LOCK_O;
 
 	p->read_count += read_b;
+	p->read_count_t += read_b;
 
 	/*
 	stream disconnected and not full data request served ==> end of stream

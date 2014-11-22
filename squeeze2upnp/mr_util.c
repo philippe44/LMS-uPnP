@@ -300,6 +300,7 @@ void SaveConfig(char *name)
 	XMLAddNode(doc, common, "streambuf_size", "%d", (u32_t) glDeviceParam.stream_buf_size);
 	XMLAddNode(doc, common, "output_size", "%d", (u32_t) glDeviceParam.output_buf_size);
 	XMLAddNode(doc, common, "buffer_dir", glDeviceParam.buffer_dir);
+	XMLAddNode(doc, common, "buffer_size", "%d", (u32_t) glDeviceParam.buffer_size);
 	XMLAddNode(doc, common, "stream_length", "%d", (s32_t) glMRConfig.StreamLength);
 	XMLAddNode(doc, common, "max_read_wait", "%d", (int) glDeviceParam.max_read_wait);
 	XMLAddNode(doc, common, "max_GET_bytes", "%d", (s32_t) glDeviceParam.max_get_bytes);
@@ -309,6 +310,7 @@ void SaveConfig(char *name)
 	XMLAddNode(doc, common, "can_pause", "%d", (int) glMRConfig.CanPause);
 	XMLAddNode(doc, common, "codecs", glDeviceParam.codecs);
 	XMLAddNode(doc, common, "sample_rate", "%d", (int) glDeviceParam.sample_rate);
+	XMLAddNode(doc, common, "lpcm", "%d", (int) glDeviceParam.lpcm);
 	XMLAddNode(doc, common, "seek_after_pause", "%d", (int) glMRConfig.SeekAfterPause);
 	XMLAddNode(doc, common, "force_volume", "%d", (int) glMRConfig.ForceVolume);
 	XMLAddNode(doc, common, "volume_on_play", "%d", (int) glMRConfig.VolumeOnPlay);
@@ -332,7 +334,9 @@ void SaveConfig(char *name)
 			XMLAddNode(doc, dev_node, "output_size", "%d", (u32_t) p->sq_config.output_buf_size);
 		if (strcmp(p->sq_config.buffer_dir, glDeviceParam.buffer_dir))
 			XMLAddNode(doc, dev_node, "buffer_dir", p->sq_config.buffer_dir);
-			if (p->Config.StreamLength != glMRConfig.StreamLength)
+		if (p->sq_config.buffer_size != glDeviceParam.buffer_size)
+			XMLAddNode(doc, dev_node, "buffer_size", "%d", (u32_t) p->sq_config.buffer_size);
+		if (p->Config.StreamLength != glMRConfig.StreamLength)
 			XMLAddNode(doc, dev_node, "stream_length", "%d", (s32_t) p->Config.StreamLength);
 		if (p->sq_config.max_read_wait != glDeviceParam.max_read_wait)
 			XMLAddNode(doc, dev_node, "max_read_wait", "%d", (int) p->sq_config.max_read_wait);
@@ -358,6 +362,8 @@ void SaveConfig(char *name)
 			XMLAddNode(doc, dev_node, "codecs", p->sq_config.codecs);
 		if (p->sq_config.sample_rate != glDeviceParam.sample_rate)
 			XMLAddNode(doc, dev_node, "sample_rate", "%d", (int) p->sq_config.sample_rate);
+		if (p->sq_config.lpcm != glDeviceParam.lpcm)
+			XMLAddNode(doc, dev_node, "lpcm", "%d", (int) p->sq_config.lpcm);
 
 		p = p->Next;
 	}
@@ -378,6 +384,7 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "streambuf_size")) sq_conf->stream_buf_size = atol(val);
 	if (!strcmp(name, "output_size")) sq_conf->output_buf_size = atol(val);
 	if (!strcmp(name, "buffer_dir")) strcpy(sq_conf->buffer_dir, val);
+	if (!strcmp(name, "buffer_size")) sq_conf->buffer_size = atol(val);
 	if (!strcmp(name, "stream_length")) Conf->StreamLength = atol(val);
 	if (!strcmp(name, "max_read_wait")) sq_conf->max_read_wait = atol(val);
 	if (!strcmp(name, "max_GET_bytes")) sq_conf->max_get_bytes = atol(val);
@@ -393,6 +400,7 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	}
 	if (!strcmp(name, "codecs")) strcpy(sq_conf->codecs, val);
 	if (!strcmp(name, "sample_rate"))sq_conf->sample_rate = atol(val);
+	if (!strcmp(name, "lpcm"))sq_conf->lpcm = atol(val);
 	if (!strcmp(name, "seek_after_pause")) Conf->SeekAfterPause = atol(val);
 	if (!strcmp(name, "force_volume")) Conf->ForceVolume = atol(val);
 	if (!strcmp(name, "volume_on_play")) Conf->VolumeOnPlay = atol(val);

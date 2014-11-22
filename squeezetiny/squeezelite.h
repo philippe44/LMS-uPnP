@@ -492,6 +492,7 @@ typedef struct out_ctx_s {
 	u8_t				channels;
 	char				content_type[SQ_STR_LENGTH];
 	u32_t				read_count, write_count;
+	u64_t				read_count_t, write_count_t;
 } out_ctx_t;
 
 struct thread_ctx_s {

@@ -220,7 +220,7 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 
 				sprintf(buf, "%s/%s", ctx->config.buffer_dir, out->buf_name);
 				out->write_file = fopen(buf, "wb");
-				out->write_count = 0;
+				out->write_count = out->write_count_t = 0;
 			}
 
 			// some file format require the re-insertion of headers
@@ -252,6 +252,7 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 								streaminfo->combo[3] = BYTE_4(FLAC_COMBO(rate, channels, sample_size));
 								out->write_count = fwrite(&flac_header, 1, sizeof(flac_header), out->write_file);
 								out->write_count += fwrite(streaminfo, 1, sizeof(flac_streaminfo_t), out->write_file);
+								out->write_count_t = out->write_count;
 								LOG_INFO("[%p]: flac header ch:%d, s:%d, r:%d", ctx, channels, sample_size, rate);
 								if (!rate || !sample_size || !channels) {
 									LOG_ERROR("[%p]: wrong header %d %d %d", rate, channels, sample_size);
@@ -264,16 +265,40 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 				}
 			}
 
-			// endianness re-ordering for PCM
-			if (!strcmp(out->ext, "pcm") && out->endianness) {
+			/*
+			endianness re-ordering for PCM (1 = little endian)
+			this could be highly optimized ... and is similar to the functions
+			found in output_pack of original squeezelite
+			*/
+			if (!strcmp(out->ext, "pcm")) {
 				u32_t i;
-				u8_t j, buf[4];
-				u8_t *p, inc = out->sample_size/8;
-				space = (space / inc) * inc;
+				u8_t j, *p;
 				p = _buf_readp(ctx->streambuf);
-				for (i = 0; i < space; i += inc) {
-					for (j = 0; j < inc; j++) buf[inc-1-j] = *(p+j);
-					for (j = 0; j < inc; j++) *(p++) = buf[j];
+				// 2 or 4 bytes or 3 bytes with no packing, but changed endianness
+				if ((out->sample_size == 16 || out->sample_size == 32 || (out->sample_size == 24 && !ctx->config.lpcm)) && out->endianness) {
+					u8_t buf[4];
+					u8_t inc = out->sample_size/8;
+					space = (space / inc) * inc;
+					for (i = 0; i < space; i += inc) {
+						for (j = 0; j < inc; j++) buf[inc-1-j] = *(p+j);
+						for (j = 0; j < inc; j++) *(p++) = buf[j];
+					}
+				}
+				// 3 bytes with packing required and endianness changed
+				if (out->sample_size == 24 && ctx->config.lpcm) {
+					u8_t buf[12];
+					space = (space / 12) * 12;
+					for (i = 0; i < space; i += 12) {
+						// order after that should be R0T,R0M,R0B,L0T,L0M,L0B,R1T,R1M,R1B,L1T,L1M,L1B
+						if (out->endianness) for (j = 0; j < 12; j++) buf[12-1-j] = *(p+j);
+						else for (j = 0; j < 12; j++) buf[j] = *(p+j);
+						for (j = 0; j < 4; j++) {
+							*(p+8-j) = buf[3*j+2];
+							*(p++) = buf[3*j];
+							*(p++) = buf[3*j+1];
+						}
+						p += 4;
+					}
 				}
 			}
 
@@ -283,7 +308,20 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 				fflush(out->write_file);
 				_buf_inc_readp(ctx->streambuf, space);
 				out->write_count += space;
+				out->write_count_t += space;
 			}
+
+#if 0
+			// limit the size of the buffer
+			LOCK_O;
+			if (ctx->config.buffer_size != -1 && out->write_count >= ctx->config.buffer_size && out->read_count >= ctx->config.buffer_size / 2) {
+				LOG_INFO("[%p]: re-sizing buffer w:%d r:%d", ctx, out->write_count, out->read_count);
+				// must be > 0, not only >= 0 !
+				out->write_count -= ctx->config.buffer_size / 2;
+				out->read_count = 0;
+			}
+			UNLOCK_O;
+#endif
 
 			sleep_time = 10000;
 		} else sleep_time = 100000;
@@ -291,7 +329,7 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 		// all done, time to close the file
 		if (ctx->stream.state <= DISCONNECT & !_buf_used(ctx->streambuf) && out->write_file)
 		{
-			LOG_INFO("[%p] wrote total %d", ctx, out->write_count);
+			LOG_INFO("[%p] wrote total %d", ctx, out->write_count_t);
 			fclose(out->write_file);
 			out->write_file = NULL;
 		}
