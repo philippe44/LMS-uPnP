@@ -82,7 +82,7 @@ sq_dev_param_t glDeviceParam = {
 					100,
 					"mp3",
 					SQ_RATE_48000,
-					0,
+					L24_PACKED_LPCM,
 					".",
 					-1L,
 				} ;
