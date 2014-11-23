@@ -300,7 +300,7 @@ void SaveConfig(char *name)
 	XMLAddNode(doc, common, "streambuf_size", "%d", (u32_t) glDeviceParam.stream_buf_size);
 	XMLAddNode(doc, common, "output_size", "%d", (u32_t) glDeviceParam.output_buf_size);
 	XMLAddNode(doc, common, "buffer_dir", glDeviceParam.buffer_dir);
-	XMLAddNode(doc, common, "buffer_size", "%d", (u32_t) glDeviceParam.buffer_size);
+	XMLAddNode(doc, common, "buffer_limit", "%d", (u32_t) glDeviceParam.buffer_limit);
 	XMLAddNode(doc, common, "stream_length", "%d", (s32_t) glMRConfig.StreamLength);
 	XMLAddNode(doc, common, "max_read_wait", "%d", (int) glDeviceParam.max_read_wait);
 	XMLAddNode(doc, common, "max_GET_bytes", "%d", (s32_t) glDeviceParam.max_get_bytes);
@@ -334,8 +334,8 @@ void SaveConfig(char *name)
 			XMLAddNode(doc, dev_node, "output_size", "%d", (u32_t) p->sq_config.output_buf_size);
 		if (strcmp(p->sq_config.buffer_dir, glDeviceParam.buffer_dir))
 			XMLAddNode(doc, dev_node, "buffer_dir", p->sq_config.buffer_dir);
-		if (p->sq_config.buffer_size != glDeviceParam.buffer_size)
-			XMLAddNode(doc, dev_node, "buffer_size", "%d", (u32_t) p->sq_config.buffer_size);
+		if (p->sq_config.buffer_limit != glDeviceParam.buffer_limit)
+			XMLAddNode(doc, dev_node, "buffer_limit", "%d", (u32_t) p->sq_config.buffer_limit);
 		if (p->Config.StreamLength != glMRConfig.StreamLength)
 			XMLAddNode(doc, dev_node, "stream_length", "%d", (s32_t) p->Config.StreamLength);
 		if (p->sq_config.max_read_wait != glDeviceParam.max_read_wait)
@@ -384,7 +384,7 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "streambuf_size")) sq_conf->stream_buf_size = atol(val);
 	if (!strcmp(name, "output_size")) sq_conf->output_buf_size = atol(val);
 	if (!strcmp(name, "buffer_dir")) strcpy(sq_conf->buffer_dir, val);
-	if (!strcmp(name, "buffer_size")) sq_conf->buffer_size = atol(val);
+	if (!strcmp(name, "buffer_limit")) sq_conf->buffer_limit = atol(val);
 	if (!strcmp(name, "stream_length")) Conf->StreamLength = atol(val);
 	if (!strcmp(name, "max_read_wait")) sq_conf->max_read_wait = atol(val);
 	if (!strcmp(name, "max_GET_bytes")) sq_conf->max_get_bytes = atol(val);

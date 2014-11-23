@@ -224,13 +224,13 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 			}
 
 			// re-size buffer if needed
-			if (ctx->config.buffer_size != -1 && out->write_count > ctx->config.buffer_size) {
+			if (ctx->config.buffer_limit != -1 && out->write_count > ctx->config.buffer_limit) {
 				u8_t *buf;
 				u32_t n;
 				char n1[SQ_STR_LENGTH], n2[SQ_STR_LENGTH];
 
 				// LMS will need to wait for the player to consume data ...
-				if ((out->write_count - out->read_count) > ctx->config.buffer_size / 2) {
+				if ((out->write_count - out->read_count) > ctx->config.buffer_limit / 2) {
 					UNLOCK_S;
 					usleep(100000);
 					continue;
@@ -238,8 +238,8 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 
 				LOCK_O;
 				LOG_INFO("[%p]: re-sizing buffer w:%d r:%d", ctx, out->write_count, out->read_count);
-				out->write_count -= ctx->config.buffer_size / 2;
-				out->read_count -= ctx->config.buffer_size / 2;
+				out->write_count -= ctx->config.buffer_limit / 2;
+				out->read_count -= ctx->config.buffer_limit / 2;
 
 				buf = malloc(2L*1024L*1024L);
 				sprintf(n1, "%s/%s~", ctx->config.buffer_dir, out->buf_name);
@@ -247,7 +247,7 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 
 				fclose(out->write_file);
 				out->write_file = fopen(n1, "wb");
-				fseek(out->read_file, -(ctx->config.buffer_size / 2), SEEK_CUR);
+				fseek(out->read_file, -(ctx->config.buffer_limit / 2), SEEK_CUR);
 				while (n = fread(buf, 1, 2L*1024L*1024L, out->read_file)) {
 					fwrite(buf, 1, n, out->write_file);
 				}
@@ -260,7 +260,7 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 
 				out->write_file = fopen(n2, "ab");
 				out->read_file = fopen(n2, "rb");
-				fseek(out->read_file, ctx->config.buffer_size /2, SEEK_SET);
+				fseek(out->read_file, ctx->config.buffer_limit /2, SEEK_SET);
 			}
 			UNLOCK_O;
 

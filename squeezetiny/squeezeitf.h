@@ -36,7 +36,7 @@ typedef	struct sq_dev_param_s {
 	sq_rate_e	sample_rate;
 	sq_L24_pack_t	L24_format;
 	char		buffer_dir[SQ_STR_LENGTH];
-	s32_t		buffer_size;
+	s32_t		buffer_limit;
 } sq_dev_param_t;
 
 typedef struct sq_log_level_s {		// must be one of lERROR, lINFO, lDEBUG or lSDEBUG
