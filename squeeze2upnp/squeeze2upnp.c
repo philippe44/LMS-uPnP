@@ -291,14 +291,13 @@ void SyncNotifState(char *State, struct sMR* Device)
 		return;
 	}
 
-	Action = UnQueueAction(Device);
+	Action = UnQueueAction(Device, true);
 
 	if (!strcmp(State, "STOPPED")) {
 		if (Device->State != STOPPED) {
 			LOG_INFO("%s: uPNP stop", Device->FriendlyName);
 			if (!Device->Config.AcceptNextURI && Device->NextURI) {
-                // avoid the "blurb" effect as "play" may arrive too early
-				sq_flush(Device->SqueezeHandle, Device->CurrentURI);
+				int WaitFor = Device->seqN++;
 
 				// fake a "SETURI" and a "PLAY" request
 				NFREE(Device->CurrentURI);
@@ -306,10 +305,14 @@ void SyncNotifState(char *State, struct sMR* Device)
 				strcpy(Device->CurrentURI, Device->NextURI);
 				NFREE(Device->NextURI);
 
-				AVTSetURI(Device->Service[AVT_SRV_IDX].ControlURL, Device->CurrentURI, Device->NextProtInfo, (void*) Device->seqN++);
+				AVTSetURI(Device->Service[AVT_SRV_IDX].ControlURL, Device->CurrentURI, Device->NextProtInfo, (void*) WaitFor);
 
-				// no need to queue
-				AVTPlay(Device->Service[AVT_SRV_IDX].ControlURL, (void*) Device->seqN++);
+				/*
+				Need to queue to wait for the SetURI to be accepted, otherwise
+				the current URI will be played, creating a "blurb" effect
+				*/
+				QueueAction(Device->SqueezeHandle, Device, SQ_PLAY, WaitFor, NULL, true);
+
 				// fake the change
 				sq_notify(Device->SqueezeHandle, Device, SQ_TRACK_CHANGE, 0, NULL);
 
@@ -328,7 +331,10 @@ void SyncNotifState(char *State, struct sMR* Device)
 			if (Device->Config.ForceVolume && Device->Config.ProcessMode != SQ_LMSUPNP)
 				SetVolume(Device->Service[REND_SRV_IDX].ControlURL, Device->Volume, (void*) Device->seqN++);
 
-			if (Action && Action->Action == SQ_PLAY) NFREE(Action);
+			if (Action && Action->Action == SQ_PLAY) {
+				UnQueueAction(Device, false);
+				NFREE(Action);
+			}
 			Device->State = PLAYING;
 		}
 	}
@@ -336,27 +342,36 @@ void SyncNotifState(char *State, struct sMR* Device)
 	if (!strcmp(State, "PAUSED_PLAYBACK")) {
 		if (Device->State != PAUSED) {
 			LOG_INFO("%s: uPNP pause", Device->FriendlyName);
-			if (Action && Action->Action == SQ_PAUSE) NFREE(Action);
+			if (Action && Action->Action == SQ_PAUSE) {
+				UnQueueAction(Device, false);
+				NFREE(Action);
+			}
 			Device->State = PAUSED;
 		}
 	}
 
-	ithread_mutex_unlock(&Device->Mutex);
-	if (!Action) return;
+	if (Action && (!Action->Ordered || Action->Cookie <= Device->LastAckAction)) {
+		struct sAction *p = UnQueueAction(Device, false);
 
-	switch (Action->Action) {
-	case SQ_UNPAUSE:
-	case SQ_PLAY:
-		AVTPlay(Action->Caller->Service[AVT_SRV_IDX].ControlURL, (void*) Device->seqN++);
-		break;
-	case SQ_PAUSE:
-		AVTBasic(Action->Caller->Service[AVT_SRV_IDX].ControlURL, "Pause", (void*) Device->seqN++);
-		break;
-	default:
-		break;
+		if (p != Action) {
+			LOG_ERROR("[%p]: mutex issue %d, %d", p->Cookie, Action->Cookie);
+		}
+
+		switch (Action->Action) {
+		case SQ_UNPAUSE:
+		case SQ_PLAY:
+			AVTPlay(Action->Caller->Service[AVT_SRV_IDX].ControlURL, (void*) Device->seqN++);
+			break;
+		case SQ_PAUSE:
+			AVTBasic(Action->Caller->Service[AVT_SRV_IDX].ControlURL, "Pause", (void*) Device->seqN++);
+			break;
+		default:
+			break;
+		}
+		NFREE(Action);
 	}
 
-	NFREE(Action);
+	ithread_mutex_unlock(&Device->Mutex);
 }
 
 #ifdef SUBSCRIBE_EVENT
@@ -401,7 +416,7 @@ void HandleStateEvent(struct Upnp_Event *Event, void *Cookie)
 		free(CurrentURI);
 	 }
 
-	UnQueueAction(Device);
+	UnQueueAction(Device, false);
 }
 #endif
 
@@ -420,6 +435,7 @@ int CallbackActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 			p = CURL2Device(Action->CtrlUrl);
 			if (!p) break;
 
+			p->LastAckAction = (int) Cookie;
 			LOG_SDEBUG("[%p]: ac %i %s (cookie %d)", p, EventType, Action->CtrlUrl, Cookie);
 
 			// time position response

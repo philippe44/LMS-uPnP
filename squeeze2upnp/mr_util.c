@@ -138,7 +138,7 @@ void FlushActionList(struct sMR *Device)
 }
 
 /*----------------------------------------------------------------------------*/
-void QueueAction(sq_dev_handle_t handle, struct sMR *Device, sq_action_t action, int cookie, void *param, bool sticky)
+void QueueAction(sq_dev_handle_t handle, struct sMR *Device, sq_action_t action, int cookie, void *param, bool ordered)
 {
 	struct sAction *Action = malloc(sizeof(struct sAction));
 	struct sAction *p;
@@ -150,8 +150,7 @@ void FlushActionList(struct sMR *Device)
 	Action->Action  = action;
 	Action->Cookie  = cookie;
 	Action->Next	= NULL;
-	Action->Count	= 5;
-	Action->Sticky	= sticky;
+	Action->Ordered	= ordered;
 
 	switch(action) {
 	case SQ_VOLUME:
@@ -175,9 +174,11 @@ void FlushActionList(struct sMR *Device)
 }
 
 /*----------------------------------------------------------------------------*/
-struct sAction *UnQueueAction(struct sMR *Device)
+struct sAction *UnQueueAction(struct sMR *Device, bool Keep)
 {
 	struct sAction  *p = NULL;
+
+	if (Keep) return Device->Actions;
 
 	ithread_mutex_lock(&Device->ActionsMutex);
 	if (Device->Actions) {
@@ -192,7 +193,6 @@ struct sAction *UnQueueAction(struct sMR *Device)
 	if (p->Caller != Device) {
 		LOG_ERROR("[%p]: action in wrong queue %p", Device, p->Caller);
 	}
-	p->Count--;
 
 	return p;
 }

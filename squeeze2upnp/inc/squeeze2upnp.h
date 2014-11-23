@@ -99,6 +99,7 @@ struct sMR {
 	int	 SqueezeHandle;
 	struct sService Service[MAX_SRV];
 	struct sAction	*Actions;
+	int				LastAckAction;
 	ithread_mutex_t  ActionsMutex;
 	ithread_mutex_t  Mutex;
 	u8_t		Volume;
@@ -128,8 +129,7 @@ struct sAction	{
 		u32_t	Time;
 	} 				Param;
 	struct sAction	*Next;
-	int				Count;
-	bool			Sticky;
+	bool			Ordered;
 };
 
 extern UpnpClient_Handle   	glControlPointHandle;

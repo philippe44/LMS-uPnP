@@ -14,13 +14,23 @@ Sonos			mp3,flc		<value>	1	1	1	Y	Y
 Marantz NR1603		pcm,mp3,flc	-3	1	1	1	Y	Y
 xbmc			pcm,mp3,flc	-3	1	1	1	Y	Y
 M1 Cl1c			pcm,mp3,flc	-3	1	1	1	!flc	!flc	
+Naim Uniti2 		pcm,mp3,flc 	-3 	1 	1 	1 	Y 	Y
 
 
 
 Somehow			codecs		S	A	C	F	P	R
 
 JBL OnBeat		mp3,flc		-3	1	1	1	N	Y
-(device stuk in upnp "transitioning" state. same with other controlers)
+(device stuk in upnp "transitioning" state. same with other controllers)
 
 Not compatible
+
+
+Comments
+
+Sonos:
+ - it <buffer_size> is used, then pause/unpause will not work properly. This is
+ due to the fact that Sonos does not accept -3 for <stream_length> and tries to
+ re-read a track from the beginning on unpause, and this fails once the buffer has
+ been shrunk once (see user guide)
 
