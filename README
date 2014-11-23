@@ -2,6 +2,8 @@ This can be built for Linux or Windows. My main Windows environment is C++
 builder, so i've not made a proper makefile. The Linux makefile is ugly and
 very hardcoded.
 
+Look in curent/ for a "stable" build. all other directory are wok in progress
+
 DEPENDENCIES
  - pthread (pthread_win32 on Windows) and dynamically linked
  - libupnp, statically linked
