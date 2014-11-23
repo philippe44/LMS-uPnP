@@ -47,9 +47,11 @@ u8_t	FLAC_CODED_SAMPLE_SIZE[] = { 0, 8, 12, 0, 16, 20, 24, 0 };
 
 #define FLAC_TAG	(0xf8ff)	// byte order is reversed because it's treated as a u16
 #define FLAC_GET_FRAME_TAG(n)	((u16_t) ((n) & 0xf8ff))
+#define FLAC_GET_BLOCK_SIZE(n)	((u8_t) ((n) >> 4) & 0x0f)
 #define FLAC_GET_FRAME_RATE(n) ((u8_t) ((n) & 0x0f))
 #define FLAC_GET_FRAME_CHANNEL(n) ((u8_t) ((n) >> 4) & 0x0f)
 #define FLAC_GET_FRAME_SAMPLE_SIZE(n) ((u8_t) ((n) >> 1) & 0x07)
+#define FLAC_GET_BLOCK_STRATEGY(n) ((u16_t) ((n) & 0x0100))
 
 #define FLAC_RECV_MIN	128
 
@@ -111,6 +113,17 @@ extern u8_t *silencebuf;
 #if DSD
 extern u8_t *silencebuf_dop;
 #endif
+
+/*---------------------------------------------------------------------------*/
+static u16_t flac_block_size(u8_t block_size)
+{
+	if (block_size == 0x01) return 192;
+	if (block_size <= 0x05) return 576 * (1 << (block_size - 2));
+	if (block_size == 0x06) return 0;
+	if (block_size == 0x07) return 0;
+	if (block_size <= 0xf) return 256 * (1 << (block_size - 8));
+	return 0;
+}
 
 /*---------------------------------------------------------------------------*/
 #if 0
@@ -224,13 +237,13 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 			}
 
 			// re-size buffer if needed
-			if (ctx->config.buffer_limit != -1 && out->write_count > ctx->config.buffer_limit) {
+			if (ctx->config.buffer_limit != -1 && out->write_count > (u32_t) ctx->config.buffer_limit) {
 				u8_t *buf;
 				u32_t n;
 				char n1[SQ_STR_LENGTH], n2[SQ_STR_LENGTH];
 
 				// LMS will need to wait for the player to consume data ...
-				if ((out->write_count - out->read_count) > ctx->config.buffer_limit / 2) {
+				if ((out->write_count - out->read_count) > (u32_t) ctx->config.buffer_limit / 2) {
 					UNLOCK_S;
 					usleep(100000);
 					continue;
@@ -273,8 +286,8 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 							flac_frame_t *frame;
 							flac_streaminfo_t *streaminfo;
 							u32_t rate;
-							u8_t sample_size;
-							u8_t channels;
+							u8_t sample_size, channels;
+							u16_t block_size = 0;
 
 							frame = (flac_frame_t*) _buf_readp(ctx->streambuf);
 							if (FLAC_GET_FRAME_TAG(frame->tag) != FLAC_TAG) {
@@ -287,6 +300,18 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 								channels = FLAC_CODED_CHANNELS[FLAC_GET_FRAME_CHANNEL(frame->channels_sample_size)];
 								streaminfo = malloc(sizeof(flac_streaminfo_t));
 								memcpy(streaminfo, &FLAC_STREAMINFO, sizeof(flac_streaminfo_t));
+
+								if (!FLAC_GET_BLOCK_STRATEGY(frame->tag)) {
+									block_size = flac_block_size(FLAC_GET_BLOCK_SIZE(frame->bsize_rate));
+									if (block_size) {
+										streaminfo->min_block_size[0] = streaminfo->max_block_size[0] = BYTE_3(block_size);
+										streaminfo->min_block_size[1] = streaminfo->max_block_size[1] = BYTE_4(block_size);
+									}
+									else {
+										LOG_WARN("[%p]: unhandled blocksize %d, using variable", ctx, frame->tag);
+									}
+								}
+
 								streaminfo->combo[0] = BYTE_1(FLAC_COMBO(rate, channels, sample_size));
 								streaminfo->combo[1] = BYTE_2(FLAC_COMBO(rate, channels, sample_size));
 								streaminfo->combo[2] = BYTE_3(FLAC_COMBO(rate, channels, sample_size));
@@ -294,7 +319,7 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 								out->write_count = fwrite(&flac_header, 1, sizeof(flac_header), out->write_file);
 								out->write_count += fwrite(streaminfo, 1, sizeof(flac_streaminfo_t), out->write_file);
 								out->write_count_t = out->write_count;
-								LOG_INFO("[%p]: flac header ch:%d, s:%d, r:%d", ctx, channels, sample_size, rate);
+								LOG_INFO("[%p]: flac header ch:%d, s:%d, r:%d, b:%d", ctx, channels, sample_size, rate, block_size);
 								if (!rate || !sample_size || !channels) {
 									LOG_ERROR("[%p]: wrong header %d %d %d", rate, channels, sample_size);
 								}
