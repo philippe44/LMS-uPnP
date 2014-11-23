@@ -304,7 +304,6 @@ void SaveConfig(char *name)
 	XMLAddNode(doc, common, "stream_length", "%d", (s32_t) glMRConfig.StreamLength);
 	XMLAddNode(doc, common, "max_read_wait", "%d", (int) glDeviceParam.max_read_wait);
 	XMLAddNode(doc, common, "max_GET_bytes", "%d", (s32_t) glDeviceParam.max_get_bytes);
-	XMLAddNode(doc, common, "didle_duration", glMRConfig.DidleDuration);
 	XMLAddNode(doc, common, "enabled", "%d", (int) glMRConfig.Enabled);
 	XMLAddNode(doc, common, "process_mode", "%d", (int) glMRConfig.ProcessMode);
 	XMLAddNode(doc, common, "can_pause", "%d", (int) glMRConfig.CanPause);
@@ -342,8 +341,6 @@ void SaveConfig(char *name)
 			XMLAddNode(doc, dev_node, "max_read_wait", "%d", (int) p->sq_config.max_read_wait);
 		if (p->sq_config.max_get_bytes != glDeviceParam.max_get_bytes)
 			XMLAddNode(doc, dev_node, "max_GET_size", "%d", (s32_t) p->sq_config.max_get_bytes);
-		if (strcmp(p->Config.DidleDuration, glMRConfig.DidleDuration))
-			XMLAddNode(doc, dev_node, "didle_duration", p->Config.DidleDuration);
 		if (p->Config.ProcessMode != glMRConfig.ProcessMode)
 			XMLAddNode(doc, dev_node, "process_mode", "%d", (int) p->Config.ProcessMode);
 		if (p->Config.CanPause != glMRConfig.CanPause)
@@ -389,7 +386,6 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "max_read_wait")) sq_conf->max_read_wait = atol(val);
 	if (!strcmp(name, "max_GET_bytes")) sq_conf->max_get_bytes = atol(val);
 	if (!strcmp(name, "enabled")) Conf->Enabled = atol(val);
-	if (!strcmp(name, "didle_duration")) strcpy(Conf->DidleDuration, val);
 	if (!strcmp(name, "process_mode")) {
 		Conf->ProcessMode = atol(val);
 		sq_conf->mode = Conf->ProcessMode;

@@ -58,7 +58,6 @@ struct sService {
 typedef struct sMRConfig
 {
 	int			StreamLength;		// length of the "fake" file
-	char 		DidleDuration[32];	// Duration of track in DIDL header
 	sq_mode_t	ProcessMode;   		// DIRECT, STREAM, FULL
 	bool		NoZeroVolume;		// prevent volume to be set at 0 between tracks
 	bool		SeekAfterPause;		// ask for a SEEK after unpause ?

@@ -54,7 +54,6 @@ char				*glLogFile;
 
 tMRConfig			glMRConfig = {
 							-3L,
-							"24:00:00.000",
 							SQ_STREAM,
 							false,
 							false,
