@@ -88,9 +88,15 @@ flac_streaminfo_t FLAC_STREAMINFO = {
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }
 };
 
+static u8_t flac_vorbis_block[] = { 0x84,0x00,0x00,0x28,0x20,0x00,0x00,0x00,0x72,
+									0x65,0x66,0x65,0x72,0x65,0x6E,0x63,0x65,0x20,
+									0x6C,0x69,0x62,0x46,0x4C,0x41,0x43,0x20,0x31,
+									0x2E,0x32,0x2E,0x31,0x20,0x32,0x30,0x30,0x37,
+								    0x30,0x39,0x31,0x37,0x00,0x00,0x00,0x00 };
+
 static u8_t flac_header[] = {
 			'f', 'L', 'a', 'C',
-			0x80,
+			0x00,
 			(u8_t) ((u32_t) sizeof(flac_streaminfo_t) >> 16),
 			(u8_t) ((u32_t) sizeof(flac_streaminfo_t) >> 8),
 			(u8_t) ((u32_t) sizeof(flac_streaminfo_t))
@@ -318,6 +324,7 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 								streaminfo->combo[3] = BYTE_4(FLAC_COMBO(rate, channels, sample_size));
 								out->write_count = fwrite(&flac_header, 1, sizeof(flac_header), out->write_file);
 								out->write_count += fwrite(streaminfo, 1, sizeof(flac_streaminfo_t), out->write_file);
+								out->write_count += fwrite(&flac_vorbis_block, 1, sizeof(flac_vorbis_block), out->write_file);
 								out->write_count_t = out->write_count;
 								LOG_INFO("[%p]: flac header ch:%d, s:%d, r:%d, b:%d", ctx, channels, sample_size, rate, block_size);
 								if (!rate || !sample_size || !channels) {
