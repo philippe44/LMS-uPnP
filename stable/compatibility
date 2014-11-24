@@ -14,6 +14,7 @@ Sonos			mp3,flc		<value>	1	1	1	Y	Y
 Marantz NR1603		pcm,mp3,flc	-3	1	1	1	Y	Y
 xbmc			pcm,mp3,flc	-3	1	1	1	Y	Y
 M1 Cl1c			pcm,mp3,flc	-3	1	1	1	Y(*)	Y(*)
+Marantz CR603 		pcm, mp3, flc	-3	0	1	1	Y	Y
 Naim Uniti2 		pcm,mp3,flc 	-3 	1 	1 	1 	Y 	Y
 
 
