@@ -246,7 +246,7 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 			if (ctx->config.buffer_limit != -1 && out->write_count > (u32_t) ctx->config.buffer_limit) {
 				u8_t *buf;
 				u32_t n;
-				char n1[SQ_STR_LENGTH], n2[SQ_STR_LENGTH];
+				struct stat Status;
 
 				// LMS will need to wait for the player to consume data ...
 				if ((out->write_count - out->read_count) > (u32_t) ctx->config.buffer_limit / 2) {
@@ -256,32 +256,30 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 				}
 
 				LOCK_O;
-				LOG_INFO("[%p]: re-sizing buffer w:%d r:%d", ctx, out->write_count, out->read_count);
-				out->write_count -= ctx->config.buffer_limit / 2;
-				out->read_count -= ctx->config.buffer_limit / 2;
+				out->write_count -= ctx->config.buffer_limit / 4;
+				out->read_count -= ctx->config.buffer_limit / 4;
 
 				buf = malloc(2L*1024L*1024L);
-				sprintf(n1, "%s/%s~", ctx->config.buffer_dir, out->buf_name);
-				sprintf(n2, "%s/%s", ctx->config.buffer_dir, out->buf_name);
-
-				fclose(out->write_file);
-				out->write_file = fopen(n1, "wb");
-				fseek(out->read_file, -(ctx->config.buffer_limit / 2), SEEK_CUR);
-				while (n = fread(buf, 1, 2L*1024L*1024L, out->read_file)) {
-					fwrite(buf, 1, n, out->write_file);
+				fseek(out->write_file, 0, SEEK_SET);
+				fseek(out->read_file, ctx->config.buffer_limit / 4, SEEK_SET);
+				for (n = 0; n < out->write_count;) {
+					u32_t b;
+					b = fread(buf, 1, 2L*1024L*1024L, out->read_file);
+					fwrite(buf, 1, b, out->write_file);
+					n += b;
 				}
-
-				fclose(out->write_file);
-				fclose(out->read_file);
 				free(buf);
-				remove(n2);
-				rename(n1, n2);
+				fflush(out->write_file);
 
-				out->write_file = fopen(n2, "ab");
-				out->read_file = fopen(n2, "rb");
-				fseek(out->read_file, ctx->config.buffer_limit /2, SEEK_SET);
+				fseek(out->read_file, out->read_count, SEEK_SET);
+				fresize(out->write_file, out->write_count);
+				fstat(fileno(out->write_file), &Status);
+				LOG_INFO("[%p]: re-sizing w:%d r:%d rp:%d ws:%d", ctx,
+						  out->write_count + ctx->config.buffer_limit /4,
+						  out->read_count + ctx->config.buffer_limit /4,
+						  ftell(out->read_file), Status.st_size);
+				UNLOCK_O;
 			}
-			UNLOCK_O;
 
 			// some file format require the re-insertion of headers
 			if (!out->write_count) {
@@ -377,7 +375,8 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 
 			// write in the file
 			if (ready) {
-				fwrite(_buf_readp(ctx->streambuf), 1, space, out->write_file);
+				u32_t a;
+				a = fwrite(_buf_readp(ctx->streambuf), 1, space, out->write_file);
 				fflush(out->write_file);
 				_buf_inc_readp(ctx->streambuf, space);
 				out->write_count += space;

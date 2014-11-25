@@ -1,7 +1,7 @@
 #ifndef __SQUEEZEDEFS_H
 #define __SQUEEZEDEFS_H
 
-#define VERSION "v0.1.0.0"
+#define VERSION "v0.1.1.0"
 
 #if defined(linux)
 #define LINUX     1
@@ -65,6 +65,8 @@ typedef int64_t   s64_t;
 #define mutex_destroy(m) pthread_mutex_destroy(&m)
 #define thread_type pthread_t
 int SendARP(in_addr_t src, in_addr_t dst, u8_t mac[], u8_t *size);
+#define fresize(f,s) ftruncate(fileno(f), s)
+
 #endif
 
 #if WIN
@@ -109,6 +111,7 @@ typedef BOOL bool;
 #define open _open
 #define read _read
 #define snprintf _snprintf
+#define fresize(f, s) chsize(fileno(f), s)
 
 #define in_addr_t u32_t
 #define socklen_t int

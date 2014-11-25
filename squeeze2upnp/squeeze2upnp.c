@@ -680,7 +680,7 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 
 			r = XMLGetFirstDocumentItem(Action->ActionResult, "Sink");
 			if (r) {
-				LOG_DEBUG("[%p]: ProtocolInfo(cookie %d)", p, p->Elapsed, Cookie);
+				LOG_DEBUG("[%p]: ProtocolInfo %s (cookie %d)", p, r, Cookie);
 				ParseProtocolInfo(p, r);
 			}
 			ithread_mutex_unlock(&glDeviceListMutex);
@@ -712,9 +712,11 @@ int uPNPInitialize(char *IPaddress, unsigned int *Port)
 
 	ithread_mutex_init(&glDeviceListMutex, 0);
 
+
 	UpnpSetLogLevel(UPNP_ALL);
 	if (*IPaddress) rc = UpnpInit(IPaddress, *Port);
 	else rc = UpnpInit(NULL, *Port);
+	UpnpSetMaxContentLength(60000);
 
 	if (rc != UPNP_E_SUCCESS) {
 		LOG_ERROR("uPNP init failed: %d\n", rc);

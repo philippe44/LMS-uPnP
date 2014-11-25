@@ -297,7 +297,12 @@ void *sq_open(const char *urn)
 		if (!out->read_file) {
 			sprintf(buf, "%s/%s", thread_ctx[i-1].config.buffer_dir, out->buf_name);
 			out->read_file = fopen(buf, "rb");
-			// the read_count_t is only set at the setURI, not at every close/open !
+			/*
+			read_count_t is only set at the setURI, not at every close/open !
+			this is mandatory for players that migth close, re-open and seek in
+			what case they expect the seek to be from the true origin of the file
+			and not from the origin of the shrunk buffer
+			*/
 			out->read_count = 0;
 			LOG_INFO("[%p]: open", out->owner);
 			if (!out->read_file) out = NULL;
@@ -309,6 +314,24 @@ void *sq_open(const char *urn)
 
 	return out;
 }
+
+/*---------------------------------------------------------------------------*/
+void *sq_isopen(const char *urn)
+{
+	int i = 0;
+	out_ctx_t *out = NULL;
+
+
+	for (i = 0; i < MAX_PLAYER && !out; i++) {
+		if (!thread_ctx[i].in_use) continue;
+		if (strstr(urn, thread_ctx[i].out_ctx[0].buf_name)) out = &thread_ctx[i].out_ctx[0];
+		if (strstr(urn, thread_ctx[i].out_ctx[1].buf_name)) out = &thread_ctx[i].out_ctx[1];
+	}
+
+	if (out) return out->read_file;
+	else return NULL;
+}
+
 
 /*---------------------------------------------------------------------------*/
 bool sq_close(void *desc)
@@ -324,7 +347,6 @@ bool sq_close(void *desc)
 		LOCK_S;LOCK_O;
 		if (p->read_file) fclose(p->read_file);
 		p->read_file = NULL;
-		p->read_count_t -= p->read_count;
 		LOG_INFO("[%p]: read total:%Ld", p->owner, p->read_count_t);
 		UNLOCK_S;UNLOCK_O;
 	}
@@ -345,10 +367,17 @@ int sq_seek(void *desc, off_t bytes, int from)
 		struct thread_ctx_s *ctx = p->owner; 		// for the macro to work ... ugh
 		LOCK_S;LOCK_O;
 
-		// not clear what happen during a SEEK_SET vs a SEEK_CUR
-		bytes -= p->read_count_t - p->read_count;
-		if (bytes < 0) bytes = 0;
-		LOG_INFO("[%p]: adjusting %d", p->owner, bytes);
+		/*
+		see comment on sq_open. write_count being different from write_count_t
+		indicates a least one buffer shrinkage. Still, what to be done on
+		SEEK_CUR versus SEEK_SET is unclear
+		*/
+		if (p->write_count != p->write_count_t) {
+			bytes -= p->read_count_t - p->read_count;
+			if (bytes < 0) bytes = 0;
+			LOG_INFO("[%p]: adjusting %d", p->owner, bytes);
+		}
+
 		rc = fseek(p->read_file, bytes, from);
 		p->read_count += bytes;
 		p->read_count_t += bytes;
