@@ -256,7 +256,7 @@ void ParseProtocolInfo(struct sMR *Device, char *Info)
 	do {
 		p = strtok(p, ",");
 		n += strlen(p) + 1;
-		if (strstr(p, "http-get")) {
+		if (strstr(p, "http-get") && strstr(p, "audio")) {
 			Device->ProtocolCap[i] = malloc(strlen(p) + 1);
 			strcpy(Device->ProtocolCap[i], p);
 			i++;
