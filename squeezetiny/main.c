@@ -298,11 +298,11 @@ void *sq_open(const char *urn)
 			sprintf(buf, "%s/%s", thread_ctx[i-1].config.buffer_dir, out->buf_name);
 			out->read_file = fopen(buf, "rb");
 			/*
-			read_count_t is only set at the setURI, not at every close/open !
-			this is mandatory for players that migth close, re-open and seek in
-			what case they expect the seek to be from the true origin of the file
-			and not from the origin of the shrunk buffer
+			do no reset read_count_t after first buffer skrinkage happened.
+			some players tend to close & re-open the connection on pause, to
+			read_count must be reset
 			*/
+			if (out->read_count_t == out->read_count) out->read_count_t = 0;
 			out->read_count = 0;
 			LOG_INFO("[%p]: open", out->owner);
 			if (!out->read_file) out = NULL;
@@ -368,14 +368,13 @@ int sq_seek(void *desc, off_t bytes, int from)
 		LOCK_S;LOCK_O;
 
 		/*
-		see comment on sq_open. write_count being different from write_count_t
-		indicates a least one buffer shrinkage. Still, what to be done on
-		SEEK_CUR versus SEEK_SET is unclear
+		see comment on sq_open. Still, what to be done
+		on SEEK_CUR versus SEEK_SET is unclear
 		*/
-		if (p->write_count != p->write_count_t) {
-			bytes -= p->read_count_t - p->read_count;
-			if (bytes < 0) bytes = 0;
+		bytes -= p->read_count_t - p->read_count;
+		if (bytes < 0) {
 			LOG_INFO("[%p]: adjusting %d", p->owner, bytes);
+			bytes = 0;
 		}
 
 		rc = fseek(p->read_file, bytes, from);

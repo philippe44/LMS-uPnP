@@ -69,7 +69,9 @@ int WebGetInfo(const char *FileName, struct File_Info *Info)
 #endif
 	LOG_INFO("[%p]: GetInfo %s %s", Device, FileName, Info->content_type);
 
-	return UPNP_E_SUCCESS;
+	// Some clients try to open 2 sessions : do not allow that
+	if (sq_isopen(FileName)) return -1;
+	else return UPNP_E_SUCCESS;
 }
 
 UpnpWebFileHandle WebOpen(const char *FileName, enum UpnpOpenFileMode Mode)

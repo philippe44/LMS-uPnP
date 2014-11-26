@@ -92,7 +92,16 @@ static u8_t flac_vorbis_block[] = { 0x84,0x00,0x00,0x28,0x20,0x00,0x00,0x00,0x72
 									0x65,0x66,0x65,0x72,0x65,0x6E,0x63,0x65,0x20,
 									0x6C,0x69,0x62,0x46,0x4C,0x41,0x43,0x20,0x31,
 									0x2E,0x32,0x2E,0x31,0x20,0x32,0x30,0x30,0x37,
-								    0x30,0x39,0x31,0x37,0x00,0x00,0x00,0x00 };
+									0x30,0x39,0x31,0x37,0x00,0x00,0x00,0x00 };
+
+//#define TIM_HEADER
+#ifdef TIM_HEADER
+static u8_t TimHeader[] = {	0x66,0x4C,0x61,0x43,0x80,0x00,0x00,0x22,0x10,0x00,
+							0x10,0x00,0x00,0x06,0xA9,0x00,0x36,0x64,0x0A,0xC4,
+							0x42,0xF0,0x01,0x25,0xCF,0xC4,0x6A,0xF9,0x0E,0x36,
+							0x1E,0x00,0x8D,0xD7,0x4F,0xA0,0x8F,0x18,0x69,0x51,
+							0xE4,0x48 };
+#endif
 
 static u8_t flac_header[] = {
 			'f', 'L', 'a', 'C',
@@ -246,7 +255,7 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 			if (ctx->config.buffer_limit != -1 && out->write_count > (u32_t) ctx->config.buffer_limit) {
 				u8_t *buf;
 				u32_t n;
-				char n1[SQ_STR_LENGTH], n2[SQ_STR_LENGTH];
+				struct stat Status;
 
 				// LMS will need to wait for the player to consume data ...
 				if ((out->write_count - out->read_count) > (u32_t) ctx->config.buffer_limit / 2) {
@@ -256,32 +265,30 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 				}
 
 				LOCK_O;
-				LOG_INFO("[%p]: re-sizing buffer w:%d r:%d", ctx, out->write_count, out->read_count);
-				out->write_count -= ctx->config.buffer_limit / 2;
-				out->read_count -= ctx->config.buffer_limit / 2;
+				out->write_count -= ctx->config.buffer_limit / 4;
+				out->read_count -= ctx->config.buffer_limit / 4;
 
 				buf = malloc(2L*1024L*1024L);
-				sprintf(n1, "%s/%s~", ctx->config.buffer_dir, out->buf_name);
-				sprintf(n2, "%s/%s", ctx->config.buffer_dir, out->buf_name);
-
-				fclose(out->write_file);
-				out->write_file = fopen(n1, "wb");
-				fseek(out->read_file, -(ctx->config.buffer_limit / 2), SEEK_CUR);
-				while (n = fread(buf, 1, 2L*1024L*1024L, out->read_file)) {
-					fwrite(buf, 1, n, out->write_file);
+				fseek(out->write_file, 0, SEEK_SET);
+				fseek(out->read_file, ctx->config.buffer_limit / 4, SEEK_SET);
+				for (n = 0; n < out->write_count;) {
+					u32_t b;
+					b = fread(buf, 1, 2L*1024L*1024L, out->read_file);
+					fwrite(buf, 1, b, out->write_file);
+					n += b;
 				}
-
-				fclose(out->write_file);
-				fclose(out->read_file);
 				free(buf);
-				remove(n2);
-				rename(n1, n2);
+				fflush(out->write_file);
 
-				out->write_file = fopen(n2, "ab");
-				out->read_file = fopen(n2, "rb");
-				fseek(out->read_file, ctx->config.buffer_limit /2, SEEK_SET);
+				fseek(out->read_file, out->read_count, SEEK_SET);
+				fresize(out->write_file, out->write_count);
+				fstat(fileno(out->write_file), &Status);
+				LOG_INFO("[%p]: re-sizing w:%d r:%d rp:%d ws:%d", ctx,
+						  out->write_count + ctx->config.buffer_limit /4,
+						  out->read_count + ctx->config.buffer_limit /4,
+						  ftell(out->read_file), Status.st_size);
+				UNLOCK_O;
 			}
-			UNLOCK_O;
 
 			// some file format require the re-insertion of headers
 			if (!out->write_count) {
@@ -301,6 +308,7 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 								ready = true;
 							}
 							else {
+#ifndef TIM_HEADER
 								rate = FLAC_CODED_RATES[FLAC_GET_FRAME_RATE(frame->bsize_rate)];
 								sample_size = FLAC_CODED_SAMPLE_SIZE[FLAC_GET_FRAME_SAMPLE_SIZE(frame->channels_sample_size)];
 								channels = FLAC_CODED_CHANNELS[FLAC_GET_FRAME_CHANNEL(frame->channels_sample_size)];
@@ -331,6 +339,11 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 									LOG_ERROR("[%p]: wrong header %d %d %d", rate, channels, sample_size);
 								}
 								free(streaminfo);
+#else
+							out->write_count += fwrite(&TimHeader, 1, sizeof(TimHeader), out->write_file);
+							out->write_count_t = out->write_count;
+							LOG_INFO("[%p]: Tim's header", ctx);
+#endif
 							}
 						}
 					}
@@ -377,7 +390,8 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 
 			// write in the file
 			if (ready) {
-				fwrite(_buf_readp(ctx->streambuf), 1, space, out->write_file);
+				u32_t a;
+				a = fwrite(_buf_readp(ctx->streambuf), 1, space, out->write_file);
 				fflush(out->write_file);
 				_buf_inc_readp(ctx->streambuf, space);
 				out->write_count += space;

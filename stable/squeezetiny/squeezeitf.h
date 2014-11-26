@@ -84,6 +84,7 @@ bool 				sq_set_time(sq_dev_handle_t handle, u32_t time);
 void*				sq_urn2MR(const char *urn);
 char*				sq_content_type(const char *urn);	// string must be released by caller
 void*				sq_open(const char *urn);
+void*				sq_isopen(const char *urn);
 bool				sq_close(void *desc);
 int					sq_read(void *desc, void *dst, unsigned bytes);
 int					sq_seek(void *desc, off_t bytes, int from);

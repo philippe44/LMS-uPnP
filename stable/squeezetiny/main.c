@@ -297,7 +297,12 @@ void *sq_open(const char *urn)
 		if (!out->read_file) {
 			sprintf(buf, "%s/%s", thread_ctx[i-1].config.buffer_dir, out->buf_name);
 			out->read_file = fopen(buf, "rb");
-			// the read_count_t is only set at the setURI, not at every close/open !
+			/*
+			do no reset read_count_t after first buffer skrinkage happened.
+			some players tend to close & re-open the connection on pause, to
+			read_count must be reset
+			*/
+			if (out->read_count_t == out->read_count) out->read_count_t = 0;
 			out->read_count = 0;
 			LOG_INFO("[%p]: open", out->owner);
 			if (!out->read_file) out = NULL;
@@ -309,6 +314,24 @@ void *sq_open(const char *urn)
 
 	return out;
 }
+
+/*---------------------------------------------------------------------------*/
+void *sq_isopen(const char *urn)
+{
+	int i = 0;
+	out_ctx_t *out = NULL;
+
+
+	for (i = 0; i < MAX_PLAYER && !out; i++) {
+		if (!thread_ctx[i].in_use) continue;
+		if (strstr(urn, thread_ctx[i].out_ctx[0].buf_name)) out = &thread_ctx[i].out_ctx[0];
+		if (strstr(urn, thread_ctx[i].out_ctx[1].buf_name)) out = &thread_ctx[i].out_ctx[1];
+	}
+
+	if (out) return out->read_file;
+	else return NULL;
+}
+
 
 /*---------------------------------------------------------------------------*/
 bool sq_close(void *desc)
@@ -324,7 +347,6 @@ bool sq_close(void *desc)
 		LOCK_S;LOCK_O;
 		if (p->read_file) fclose(p->read_file);
 		p->read_file = NULL;
-		p->read_count_t -= p->read_count;
 		LOG_INFO("[%p]: read total:%Ld", p->owner, p->read_count_t);
 		UNLOCK_S;UNLOCK_O;
 	}
@@ -345,10 +367,16 @@ int sq_seek(void *desc, off_t bytes, int from)
 		struct thread_ctx_s *ctx = p->owner; 		// for the macro to work ... ugh
 		LOCK_S;LOCK_O;
 
-		// not clear what happen during a SEEK_SET vs a SEEK_CUR
+		/*
+		see comment on sq_open. Still, what to be done
+		on SEEK_CUR versus SEEK_SET is unclear
+		*/
 		bytes -= p->read_count_t - p->read_count;
-		if (bytes < 0) bytes = 0;
-		LOG_INFO("[%p]: adjusting %d", p->owner, bytes);
+		if (bytes < 0) {
+			LOG_INFO("[%p]: adjusting %d", p->owner, bytes);
+			bytes = 0;
+		}
+
 		rc = fseek(p->read_file, bytes, from);
 		p->read_count += bytes;
 		p->read_count_t += bytes;
