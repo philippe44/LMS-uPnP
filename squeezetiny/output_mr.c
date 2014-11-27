@@ -406,8 +406,12 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 			LOG_INFO("[%p] wrote total %d", ctx, out->write_count_t);
 			fclose(out->write_file);
 			out->write_file = NULL;
+			UNLOCK_S;
+			buf_flush(ctx->streambuf);
 		}
-		UNLOCK_S;
+		else {
+			UNLOCK_S;
+		}
 
 		usleep(sleep_time);
 	}
