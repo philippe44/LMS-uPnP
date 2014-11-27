@@ -36,4 +36,5 @@ Sonos:
  been shrunk once (see user guide)
 
 M1Cl1c:
- - Repositionning with flac does not work
+ - Repositionning with flac does not work unless the flac-to-flac transcoding is
+changed in LMS (see README in bin/ directory
