@@ -373,7 +373,7 @@ int sq_seek(void *desc, off_t bytes, int from)
 		*/
 		bytes -= p->read_count_t - p->read_count;
 		if (bytes < 0) {
-			LOG_INFO("[%p]: adjusting %d", p->owner, bytes);
+			LOG_INFO("[%p]: adjusting b:%d t:%d r:%d", p->owner, bytes, p->read_count_t, p->read_count);
 			bytes = 0;
 		}
 

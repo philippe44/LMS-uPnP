@@ -332,7 +332,7 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 								streaminfo->combo[3] = BYTE_4(FLAC_COMBO(rate, channels, sample_size));
 								out->write_count = fwrite(&flac_header, 1, sizeof(flac_header), out->write_file);
 								out->write_count += fwrite(streaminfo, 1, sizeof(flac_streaminfo_t), out->write_file);
-								out->write_count += fwrite(&flac_vorbis_block, 1, sizeof(flac_vorbis_block), out->write_file);
+//								out->write_count += fwrite(&flac_vorbis_block, 1, sizeof(flac_vorbis_block), out->write_file);
 								out->write_count_t = out->write_count;
 								LOG_INFO("[%p]: flac header ch:%d, s:%d, r:%d, b:%d", ctx, channels, sample_size, rate, block_size);
 								if (!rate || !sample_size || !channels) {
@@ -390,8 +390,7 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 
 			// write in the file
 			if (ready) {
-				u32_t a;
-				a = fwrite(_buf_readp(ctx->streambuf), 1, space, out->write_file);
+				fwrite(_buf_readp(ctx->streambuf), 1, space, out->write_file);
 				fflush(out->write_file);
 				_buf_inc_readp(ctx->streambuf, space);
 				out->write_count += space;
@@ -402,7 +401,7 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 		} else sleep_time = 100000;
 
 		// all done, time to close the file
-		if (ctx->stream.state <= DISCONNECT & !_buf_used(ctx->streambuf) && out->write_file)
+		if (out->write_file && ctx->stream.state <= DISCONNECT && (!_buf_used(ctx->streambuf) || (out->sample_size == 24 && _buf_used(ctx->streambuf) < 12)))
 		{
 			LOG_INFO("[%p] wrote total %d", ctx, out->write_count_t);
 			fclose(out->write_file);
