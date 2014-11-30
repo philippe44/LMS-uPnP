@@ -1,6 +1,7 @@
 # Cross compile support - create a Makefile which defines these three variables and then includes this Makefile...
 CFLAGS  ?= -Wall -fPIC -ggdb -O2 $(OPTS) $(INCLUDE) $(DEFINES)
 LDFLAGS ?= -lpthread -lm -lrt -L. -s
+# for LD debug -s
 EXECUTABLE ?= squeeze2upnp-x86
 
 # passing one or more of these in $(OPTS) enables optional feature inclusion

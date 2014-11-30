@@ -81,22 +81,6 @@ static bool get_header_urn(char *header, int header_len, char *urn)
 }
 
 /*---------------------------------------------------------------------------*/
-static char *format2ext(u8_t format)
-{
-	switch(format) {
-		case 'p': return "pcm";
-		case 'm': return "mp3";
-		case 'f': return "flac";
-		case 'w': return "wma";
-		case 'o': return "ogg";
-		case 'a': return "aac";
-		case 'l': return "m4a";
-		default: return "xxx";
-	}
-}
-
-
-/*---------------------------------------------------------------------------*/
 bool ctx_callback(struct thread_ctx_s *ctx, sq_action_t action, int cookie, void *param)
 {
 	bool rc = false;
@@ -317,7 +301,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 		break;
 	case 's':
 		{
-			bool proceed = true;
+			bool proceed = false;
 			unsigned header_len = len - sizeof(struct strm_packet);
 			char *header = (char *)(pkt + sizeof(struct strm_packet));
 			in_addr_t ip = (in_addr_t)strm->server_ip; // keep in network byte order
@@ -346,6 +330,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 
 			if (ip == LOCAL_PLAYER_IP && port == LOCAL_PLAYER_PORT) {
 				// extension to slimproto for LocalPlayer - header is filename not http header, don't expect cont
+				// not use for now
 				stream_file(header, header_len, strm->threshold * 1024, ctx);
 				ctx->autostart -= 2;
 			} else {
@@ -354,12 +339,10 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 				uri.sample_size = (strm->pcm_sample_size != '?') ? pcm_sample_size[strm->pcm_sample_size - '0'] : 0xff;
 				uri.sample_rate = (strm->pcm_sample_rate != '?') ? pcm_sample_rate[strm->pcm_sample_rate - '0'] : 0xff;
 				uri.channels = (strm->pcm_channels != '?') ? pcm_channels[strm->pcm_channels - '1'] : 0xff;
-				strcpy(uri.format, format2ext(strm->format));
-				// real content_type will be set by the SETURI, according to player cap
+				// real content_type and format will be set by the SETURI, according to player cap
 				uri.content_type[0] = strm->format;
 
-				switch (ctx->config.mode) {
-				case SQ_STREAM:
+				if (ctx->config.mode == SQ_STREAM)
 				{
 					unsigned idx;
 
@@ -388,68 +371,36 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 					ctx->out_ctx[idx].sample_rate = uri.sample_rate;
 					ctx->out_ctx[idx].endianness = strm->pcm_endianness - '0';
 					ctx->out_ctx[idx].channels = uri.channels;
-					strcpy(ctx->out_ctx[idx].ext, uri.format);
-					UNLOCK_S;UNLOCK_O;
 
-					strcpy(uri.urn, ctx->out_ctx[idx].buf_name);
-					strcat(uri.urn, ".");
-					strcat(uri.urn, ctx->out_ctx[idx].ext);
-#if 0
-					strcpy(uri.urn, "__song__.mp3");
+					/*
+					this set the content_type and the proto_info. it is made in
+					the "upnp domain" for clarity, although it requires this
+					ackward 2 steps setup
+					*/
+					if (ctx_callback(ctx, SQ_SETFORMAT, 0, &uri)) {
+						proceed = true;
+						strcpy(ctx->out_ctx[idx].content_type, uri.content_type);
+						strcpy(ctx->out_ctx[idx].ext, uri.format);
+						strcpy(uri.urn, ctx->out_ctx[idx].buf_name);
+						strcat(uri.urn, ".");
+						strcat(uri.urn, ctx->out_ctx[idx].ext);
+#ifdef TEST_IDX_BUF
+						strcpy(uri.urn, "__song__.mp3");
 #endif
-
-					if (ctx->play_running || ctx->track_status != TRACK_STOPPED) {
-						if (!ctx_callback(ctx, SQ_SETNEXTURI, 0, &uri)) proceed = false;
-					}
-					else {
-						if (ctx_callback(ctx, SQ_SETURI, 0, &uri)) {
+						if (ctx->play_running || ctx->track_status != TRACK_STOPPED) {
+							ctx_callback(ctx, SQ_SETNEXTURI, 0, &uri);
+						}
+						else {
+							ctx_callback(ctx, SQ_SETURI, 0, &uri);
 							ctx->track_ended = false;
 							ctx->track_status = TRACK_STOPPED;
 							ctx->track_new = true;
 							ctx->status.ms_played = ctx->ms_played = 0;
-							LOCK_S;
 							ctx->read_to = ctx->read_ended = false;
-							UNLOCK_S;
 						}
-						else proceed = false;
-					}
-
-					// now content_type is set by the SQ_SETURI
-					strcpy(ctx->out_ctx[idx].content_type, uri.content_type);
-
-					if (proceed) {
 						LOG_INFO("[%p] URI proxied by SQ2MR : %s", ctx, uri.urn);
 					}
-					break;
-				}
-				case SQ_DIRECT:
-					get_header_urn(header, header_len, uri.urn);
-					// LMS provides the stream directly to the renderer
-					strcpy(uri.ip, inet_ntoa(ctx->serv_addr.sin_addr));
-					uri.port = ntohs(port);
-					// never use the streaming state, go direct to running. the decode_complete
-					// will be sent when the track ends ... no other way to detect that
-
-					if (ctx->play_running || ctx->track_status != TRACK_STOPPED) {
-						if (!ctx_callback(ctx, SQ_SETNEXTURI, 0, &uri)) break;
-					}
-					else {
-						if (!ctx_callback(ctx, SQ_SETURI, 0, &uri)) {
-							ctx->track_ended = false;
-							ctx->track_status = TRACK_STOPPED;
-							ctx->track_new = true;
-							ctx->status.ms_played = ctx->ms_played = 0;
-							LOCK_S;
-							ctx->read_to = ctx->read_ended = false;
-							UNLOCK_S;
-						}
-						else proceed = false;
-					}
-
-					LOG_INFO("[%p] URI directly from LMS : %s", ctx, uri.urn);
-					break;
-				default:
-					break;
+					UNLOCK_S;UNLOCK_O;
 				}
 			}
 
@@ -770,14 +721,14 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 				ctx->track_ended = false;
 			}
 
-			// should not happen in SQ_DIRECT or SQ_PROXY
+			// should not happen in SQ_PROXY
 			if (!ctx->sentSTMo && ctx->status.stream_state == STREAMING_HTTP && ctx->read_to) {
 				_sendSTMo = true;
 				ctx->sentSTMo = true;
 				_stream_disconnect = true;
 			}
 
-			if ((ctx->status.stream_state == STREAMING_HTTP || ctx->status.stream_state == STREAMING_FILE || ctx->config.mode == SQ_DIRECT) && !ctx->sentSTMl) {
+			if ((ctx->status.stream_state == STREAMING_HTTP || ctx->status.stream_state == STREAMING_FILE) && !ctx->sentSTMl) {
 				// autostart 2 and 3 require cont to be received first
 				if (ctx->autostart == 0) {
 					_sendSTMl = true;
