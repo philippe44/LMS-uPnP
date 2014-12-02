@@ -33,18 +33,15 @@ int WebGetInfo(const char *FileName, struct File_Info *Info)
 	struct stat Status;
 	struct sMR *Device;
 
-#ifdef __FLAC
-	if (strstr(FileName, "__song__.flac")) {
-		Handle = (void*) fopen("__song__.flac", "rb");
-#else
+#ifdef TEST_IDX_BUF
 	if (strstr(FileName, "__song__.mp3")) {
 		Handle = fopen("__song__.mp3", "rb");
-#endif
 		fstat(fileno(Handle), &Status);
 		Status.st_size = -3;
 		fclose(Handle);
 	}
 	else
+#endif
 	{
 		Status.st_ctime = 0;
 		Device = (struct sMR*) sq_urn2MR(FileName);
@@ -62,9 +59,7 @@ int WebGetInfo(const char *FileName, struct File_Info *Info)
 	Info->file_length = Status.st_size;
 	Info->content_type = sq_content_type(FileName);
 	if (!strcmp(Info->content_type, "audio/unknown"))
-#ifdef __FLAC
-		Info->content_type = strdup("audio/flac");
-#else
+#ifdef TEST_IDX_BUF
 		Info->content_type = strdup("audio/mpeg");
 #endif
 	LOG_INFO("[%p]: GetInfo %s %s", Device, FileName, Info->content_type);
@@ -78,14 +73,13 @@ UpnpWebFileHandle WebOpen(const char *FileName, enum UpnpOpenFileMode Mode)
 {
 	void *p;
 
-#ifdef __FLAC
-	if (strstr(FileName, "__song__.flac"))
-		p = (void*) fopen("__song__.fac", "rb");
-#else
+#ifdef TEST_IDX_BUF
 	if (strstr(FileName, "__song__.mp3"))
 	   p = (void*) fopen("__song__.mp3", "rb");
+
+	else
 #endif
-	else {
+	{
 		p = sq_open(FileName);
 		if (!p) {
 			LOG_ERROR("No context for %s", FileName);
@@ -108,8 +102,9 @@ int WebRead(UpnpWebFileHandle FileHandle, char *buf, size_t buflen)
 	if (!FileHandle) return 0;
 
 	read = sq_read(FileHandle, buf, buflen);
+#ifdef TEST_IDX_BUF
 	if (read == -1) read = fread(buf, 1, buflen, FileHandle);
-
+#endif
 	LOG_DEBUG("read %d on %d", read, buflen);
 
 	return read;
@@ -135,7 +130,11 @@ int WebClose(UpnpWebFileHandle FileHandle)
 	if (!FileHandle) return -1;
 
 	LOG_DEBUG("webserver close", NULL);
+#ifdef TEST_IDX_BUF
 	if (!sq_close(FileHandle)) fclose(FileHandle);
+#else
+	sq_close(FileHandle);
+#endif
 	return UPNP_E_SUCCESS;
 }
 

@@ -373,7 +373,7 @@ int sq_seek(void *desc, off_t bytes, int from)
 		*/
 		bytes -= p->read_count_t - p->read_count;
 		if (bytes < 0) {
-			LOG_INFO("[%p]: adjusting %d", p->owner, bytes);
+			LOG_INFO("[%p]: adjusting b:%d t:%d r:%d", p->owner, bytes, p->read_count_t, p->read_count);
 			bytes = 0;
 		}
 
@@ -479,7 +479,6 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 			LOCK_S;
 			if (ctx->play_running) {
 				ctx->track_ended = true;
-				if (ctx->config.mode == SQ_DIRECT) ctx->read_ended = true;
 			 }
 			ctx->play_running = false;
 			UNLOCK_S;
@@ -491,19 +490,6 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 			int time = *((unsigned*) param);
 
 			LOG_DEBUG("[%p] time %d %d", ctx, ctx->ms_played, time*1000);
-
-			LOCK_S;
-			if (ctx->play_running && ctx->config.mode == SQ_DIRECT) {
-				int delta = (int) ctx->ms_played - (int) time*1000;
-				if (delta > 10) {
-					LOG_INFO("[%p] End of track by time rollover %d", ctx, delta);
-					ctx->read_ended = true;
-					ctx->ms_played = 0;
-					ctx->track_new = true;
-					wake_controller(ctx);
-				}
-			}
-			UNLOCK_S;
 			ctx->ms_played = time * 1000;
 			break;
 		}
@@ -511,7 +497,6 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 			LOCK_S;
 			if (ctx->play_running) {
 				LOG_INFO("[%p] End of track by track change", ctx);
-				if (ctx->config.mode == SQ_DIRECT) ctx->read_ended = true;
 				ctx->ms_played = 0;
 				ctx->track_new = true;
 				wake_controller(ctx);

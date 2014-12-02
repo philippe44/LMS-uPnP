@@ -1,0 +1,7 @@
+0.1.2.0
+ - add a wav header to pcm stream for players that accept audio/wav, audio/x-wav 
+and audio/wave in protocol info by do not accept audio/Lxx (xx = sample size).
+Was needed for Sonos to receive pcm samples. Endianness pobably need more attention
+ - re-organize format detection code for wave header addition
+ - suppress DIRECT mode (was useless)
+ - correct some coredump on exit (access to invalid file handles)

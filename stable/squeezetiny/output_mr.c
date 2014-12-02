@@ -35,6 +35,7 @@ static log_level loglevel = lWARN;
 #define BYTE_3(n)	((u8_t) (n >> 8))
 #define BYTE_4(n)	((u8_t) (n))
 
+/*---------------------------------- FLAC ------------------------------------*/
 
 #define FLAC_COMBO(F,N,S) ((u32_t) (((u32_t) F << 12) | ((u32_t) ((N-1) & 0x07) << 9) | ((u32_t) ((S-1) & 0x01f) << 4)))
 #define QUAD_BYTE_H(n)	((u32_t) ((u64_t)(n) >> 32))
@@ -94,15 +95,6 @@ static u8_t flac_vorbis_block[] = { 0x84,0x00,0x00,0x28,0x20,0x00,0x00,0x00,0x72
 									0x2E,0x32,0x2E,0x31,0x20,0x32,0x30,0x30,0x37,
 									0x30,0x39,0x31,0x37,0x00,0x00,0x00,0x00 };
 
-//#define TIM_HEADER
-#ifdef TIM_HEADER
-static u8_t TimHeader[] = {	0x66,0x4C,0x61,0x43,0x80,0x00,0x00,0x22,0x10,0x00,
-							0x10,0x00,0x00,0x06,0xA9,0x00,0x36,0x64,0x0A,0xC4,
-							0x42,0xF0,0x01,0x25,0xCF,0xC4,0x6A,0xF9,0x0E,0x36,
-							0x1E,0x00,0x8D,0xD7,0x4F,0xA0,0x8F,0x18,0x69,0x51,
-							0xE4,0x48 };
-#endif
-
 static u8_t flac_header[] = {
 			'f', 'L', 'a', 'C',
 			0x00,
@@ -111,6 +103,39 @@ static u8_t flac_header[] = {
 			(u8_t) ((u32_t) sizeof(flac_streaminfo_t))
 		};
 
+
+/*---------------------------------- WAVE ------------------------------------*/
+
+static struct wave_header_s {
+	u8_t 	chunk_id[4];
+	u32_t	chunk_size;
+	u8_t	format[4];
+	u8_t	subchunk1_id[4];
+	u32_t	subchunk1_size;
+	u16_t	audio_format;
+	u16_t	channels;
+	u32_t	sample_rate;
+	u32_t   byte_rate;
+	u16_t	block_align;
+	u16_t	bits_per_sample;
+	u8_t	subchunk2_id[4];
+	u32_t	subchunk2_size;
+
+} wave_header = {
+		'R', 'I', 'F', 'F',
+		1000000000 + 8,
+		'W', 'A', 'V', 'E',
+		'f','m','t',' ',
+		16,
+		1,
+		0,
+		0,
+		0,
+		0,
+		0,
+		'd', 'a', 't', 'a',
+		1000000000 - sizeof(struct wave_header_s) - 8 - 8
+	};
 
 #define LOCK_S   mutex_lock(ctx->streambuf->mutex)
 #define UNLOCK_S mutex_unlock(ctx->streambuf->mutex)
@@ -308,7 +333,6 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 								ready = true;
 							}
 							else {
-#ifndef TIM_HEADER
 								rate = FLAC_CODED_RATES[FLAC_GET_FRAME_RATE(frame->bsize_rate)];
 								sample_size = FLAC_CODED_SAMPLE_SIZE[FLAC_GET_FRAME_SAMPLE_SIZE(frame->channels_sample_size)];
 								channels = FLAC_CODED_CHANNELS[FLAC_GET_FRAME_CHANNEL(frame->channels_sample_size)];
@@ -332,18 +356,12 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 								streaminfo->combo[3] = BYTE_4(FLAC_COMBO(rate, channels, sample_size));
 								out->write_count = fwrite(&flac_header, 1, sizeof(flac_header), out->write_file);
 								out->write_count += fwrite(streaminfo, 1, sizeof(flac_streaminfo_t), out->write_file);
-								out->write_count += fwrite(&flac_vorbis_block, 1, sizeof(flac_vorbis_block), out->write_file);
 								out->write_count_t = out->write_count;
 								LOG_INFO("[%p]: flac header ch:%d, s:%d, r:%d, b:%d", ctx, channels, sample_size, rate, block_size);
 								if (!rate || !sample_size || !channels) {
 									LOG_ERROR("[%p]: wrong header %d %d %d", rate, channels, sample_size);
 								}
 								free(streaminfo);
-#else
-							out->write_count += fwrite(&TimHeader, 1, sizeof(TimHeader), out->write_file);
-							out->write_count_t = out->write_count;
-							LOG_INFO("[%p]: Tim's header", ctx);
-#endif
 							}
 						}
 					}
@@ -388,10 +406,22 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 				}
 			}
 
+			if (!strcmp(out->ext, "wav")) {
+				if (!out->write_count) {
+					wave_header.channels = out->channels;
+					wave_header.bits_per_sample = out->sample_size;
+					wave_header.sample_rate = out->sample_rate;
+					wave_header.byte_rate = out->sample_rate * out->channels * (out->sample_size / 8);
+					wave_header.block_align = out->channels * (out->sample_size / 8);
+					out->write_count = fwrite(&wave_header, 1, sizeof(struct wave_header_s), out->write_file);
+					out->write_count_t = out->write_count;
+					LOG_INFO("[%p]: wave header", ctx);
+				}
+			}
+
 			// write in the file
 			if (ready) {
-				u32_t a;
-				a = fwrite(_buf_readp(ctx->streambuf), 1, space, out->write_file);
+				fwrite(_buf_readp(ctx->streambuf), 1, space, out->write_file);
 				fflush(out->write_file);
 				_buf_inc_readp(ctx->streambuf, space);
 				out->write_count += space;
@@ -402,13 +432,17 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 		} else sleep_time = 100000;
 
 		// all done, time to close the file
-		if (ctx->stream.state <= DISCONNECT & !_buf_used(ctx->streambuf) && out->write_file)
+		if (out->write_file && ctx->stream.state <= DISCONNECT && (!_buf_used(ctx->streambuf) || (out->sample_size == 24 && _buf_used(ctx->streambuf) < 12)))
 		{
 			LOG_INFO("[%p] wrote total %d", ctx, out->write_count_t);
 			fclose(out->write_file);
 			out->write_file = NULL;
+			UNLOCK_S;
+			buf_flush(ctx->streambuf);
 		}
-		UNLOCK_S;
+		else {
+			UNLOCK_S;
+		}
 
 		usleep(sleep_time);
 	}
@@ -451,7 +485,6 @@ void output_mr_thread_init(unsigned output_buf_size, char *params, unsigned rate
 	case SQ_FULL:
 			pthread_create(&ctx->mr_thread, &attr, output_thru_thread, ctx);
 			break;
-	case SQ_DIRECT:
 	case SQ_STREAM:
 			pthread_create(&ctx->mr_thread, &attr, output_thru_thread, ctx);
 			break;
@@ -465,7 +498,6 @@ void output_mr_thread_init(unsigned output_buf_size, char *params, unsigned rate
 	case SQ_FULL:
 		ctx->mr_thread = CreateThread(NULL, OUTPUT_THREAD_STACK_SIZE, (LPTHREAD_START_ROUTINE) NULL, ctx, 0, NULL);
 		break;
-	case SQ_DIRECT:
 	case SQ_STREAM:
 		ctx->mr_thread = CreateThread(NULL, OUTPUT_THREAD_STACK_SIZE, (LPTHREAD_START_ROUTINE)&output_thru_thread, ctx, 0, NULL);
 		break;

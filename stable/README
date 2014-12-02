@@ -16,6 +16,7 @@ LIBUPNP
  - Under Linux : N/A
  - The is a small bug in libupnp, so the file webserver.c must be taken 
 from here, not from libupnp main repository to rebuild the library
+- It is recommended to set MAX_JOBS_TOTAL to at least 200 in config.h
 
 Main application for Windows
  - For compilation, use following defines

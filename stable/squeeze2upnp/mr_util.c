@@ -36,8 +36,23 @@ void MRutilInit(log_level level)
 	loglevel = level;
 }
 
+/*---------------------------------------------------------------------------*/
+static char *format2ext(u8_t format)
+{
+	switch(format) {
+		case 'p': return "pcm";
+		case 'm': return "mp3";
+		case 'f': return "flac";
+		case 'w': return "wma";
+		case 'o': return "ogg";
+		case 'a': return "aac";
+		case 'l': return "m4a";
+		default: return "xxx";
+	}
+}
+
 /*----------------------------------------------------------------------------*/
-bool _SetContentType(char *Cap[], sq_seturi_t *uri, char *ProtInfo, int n, ...)
+bool _SetContentType(char *Cap[], sq_seturi_t *uri, int n, ...)
 {
 	int i;
 	char *fmt, **p = NULL;
@@ -61,19 +76,21 @@ bool _SetContentType(char *Cap[], sq_seturi_t *uri, char *ProtInfo, int n, ...)
 			// if not PCM, just copy the found format
 			if (!strstr(*p, "audio/L")) {
 				strcpy(uri->content_type, fmt);
-				strcpy(ProtInfo, *p);
+				strcpy(uri->proto_info, *p);
+				// special case of wave, need to alter the file extension here
+				if (strstr(*p, "wav")) strcpy(uri->format, "wav");
 				break;
 			}
 			// if the proposed format accepts any rate & channel, give it a try
 			if (!strstr(*p, "channels") && !strstr(*p, "rate")) {
 				strcpy(uri->content_type, fmt);
-				strcpy(ProtInfo, *p);
+				strcpy(uri->proto_info, *p);
 				break;
 			}
 			// if PCM, try to find an exact match
 			if (strstr(*p, channels) && strstr(*p, rate)) {
 				sprintf(uri->content_type, "%s;channels=%d;rate=%d", fmt, uri->channels, uri->sample_rate);
-				strcpy(ProtInfo, *p);
+				strcpy(uri->proto_info, *p);
 				break;
 			}
 		}
@@ -83,32 +100,34 @@ bool _SetContentType(char *Cap[], sq_seturi_t *uri, char *ProtInfo, int n, ...)
 	va_end(args);
 
 	if (!*p) {
-		strcpy(ProtInfo, "audio/unknown");
+		strcpy(uri->proto_info, "audio/unknown");
 		strcpy(uri->content_type, "audio/unknown");
 		return false;
-    }
+	}
 
 	return true;
 }
 
 /*----------------------------------------------------------------------------*/
-bool SetContentType(char *Cap[], sq_seturi_t *uri, char *ProtInfo)
+bool SetContentType(char *Cap[], sq_seturi_t *uri)
 {
+	strcpy(uri->format, format2ext(uri->content_type[0]));
+
 	switch (uri->content_type[0]) {
-	case 'm': return _SetContentType(Cap, uri, ProtInfo, 3, "audio/mp3", "audio/mpeg", "audio/mpeg3");
-	case 'f': return _SetContentType(Cap, uri, ProtInfo, 2, "audio/x-flac", "audio/flac");
-	case 'w': return _SetContentType(Cap, uri, ProtInfo, 2, "audio/x-wma", "audio/wma");
-	case 'o': return _SetContentType(Cap, uri, ProtInfo, 1, "audio/ogg");
-	case 'a': return _SetContentType(Cap, uri, ProtInfo, 1, "audio/aac");
-	case 'l': return _SetContentType(Cap, uri, ProtInfo, 1, "audio/m4a");
+	case 'm': return _SetContentType(Cap, uri, 3, "audio/mp3", "audio/mpeg", "audio/mpeg3");
+	case 'f': return _SetContentType(Cap, uri, 2, "audio/x-flac", "audio/flac");
+	case 'w': return _SetContentType(Cap, uri, 2, "audio/x-wma", "audio/wma");
+	case 'o': return _SetContentType(Cap, uri, 1, "audio/ogg");
+	case 'a': return _SetContentType(Cap, uri, 1, "audio/aac");
+	case 'l': return _SetContentType(Cap, uri, 1, "audio/m4a");
 	case 'p': {
 		char p[SQ_STR_LENGTH];
 		sprintf(p, "audio/L%d", uri->sample_size);
-		return _SetContentType(Cap, uri, ProtInfo, 1, p);
+		return _SetContentType(Cap, uri, 4, p, "audio/wav", "audio/x-wav", "audio/wave");
 	}
 	default:
-		strcpy(uri->content_type, "unknown"); break;
-		strcpy(ProtInfo, "");
+		strcpy(uri->content_type, "unknown");
+		strcpy(uri->proto_info, "");
 		return false;
 	}
 

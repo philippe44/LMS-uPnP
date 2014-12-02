@@ -158,10 +158,20 @@ static void AddMRDevice(IXML_Document *DescDoc, const char *location, int expire
 
 	switch (action) {
 
-		case SQ_SETNEXTURI: {
-			char uri[RESOURCE_LENGTH], ProtInfo[SQ_STR_LENGTH];
+		case SQ_SETFORMAT: {
 			sq_seturi_t *p = (sq_seturi_t*) param;
 
+			LOG_INFO("[%p]: codec:%c, ch:%d, s:%d, r:%d", device, p->content_type[0],
+										p->channels, p->sample_size, p->sample_rate);
+			if (!SetContentType(device->ProtocolCap, param)) {
+				LOG_ERROR("[%p]: no matching codec in player (%s)", caller, p->proto_info);
+				rc = false;
+			}
+			break;
+		}
+		case SQ_SETNEXTURI: {
+			char uri[RESOURCE_LENGTH];
+			sq_seturi_t *p = (sq_seturi_t*) param;
 
 			// if port and/or ip are 0 or "", means that the CP@ shall be used
 			if (p->port)
@@ -171,25 +181,18 @@ static void AddMRDevice(IXML_Document *DescDoc, const char *location, int expire
 
 			NFREE(device->NextURI);
 
-			LOG_INFO("[%p]: codec:%c, ch:%d, s:%d, r:%d", device, p->content_type[0],
-										p->channels, p->sample_size, p->sample_rate);
-			if (SetContentType(device->ProtocolCap, param, ProtInfo)) {
-				strcpy(device->NextProtInfo, ProtInfo);
-				if (device->Config.AcceptNextURI)
-					AVTSetNextURI(device->Service[AVT_SRV_IDX].ControlURL, uri, ProtInfo, (void*) device->seqN++);
-				// to know what is expected next
-				device->NextURI = (char*) malloc(strlen(uri) + 1);
-				strcpy(device->NextURI, uri);
-				LOG_INFO("[%p]: next URI set %s", device, device->NextURI);
-			}
-			else {
-				LOG_ERROR("[%p]: no matching codec in player (%s)", caller, ProtInfo);
-				rc = false;
-			}
+			strcpy(device->NextProtInfo, p->proto_info);
+			if (device->Config.AcceptNextURI)
+				AVTSetNextURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info, (void*) device->seqN++);
+
+			// to know what is expected next
+			device->NextURI = (char*) malloc(strlen(uri) + 1);
+			strcpy(device->NextURI, uri);
+			LOG_INFO("[%p]: next URI set %s", device, device->NextURI);
 			break;
 		}
 		case SQ_SETURI:	{
-			char uri[RESOURCE_LENGTH], ProtInfo[SQ_STR_LENGTH];
+			char uri[RESOURCE_LENGTH];
 			sq_seturi_t *p = (sq_seturi_t*) param;
 
 			// if port and/or ip are 0 or "", means that the CP@ shall be used
@@ -204,19 +207,10 @@ static void AddMRDevice(IXML_Document *DescDoc, const char *location, int expire
 			NFREE(device->NextURI);
 			// end check
 
-			LOG_INFO("[%p]: codec:%c, ch:%d, s:%d, r:%d", device, p->content_type[0],
-										p->channels, p->sample_size, p->sample_rate);
-
-			if (SetContentType(device->ProtocolCap, param, ProtInfo)) {
-				AVTSetURI(device->Service[AVT_SRV_IDX].ControlURL, uri, ProtInfo, (void*) device->seqN++);
-				device->CurrentURI = (char*) malloc(strlen(uri) + 1);
-				strcpy(device->CurrentURI, uri);
-				LOG_INFO("[%p]: current URI set %s", device, device->CurrentURI);
-			}
-			else {
-				LOG_ERROR("[%p]: no matching codec in player (%s)", caller, ProtInfo);
-				rc = false;
-			}
+			AVTSetURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info, (void*) device->seqN++);
+			device->CurrentURI = (char*) malloc(strlen(uri) + 1);
+			strcpy(device->CurrentURI, uri);
+			LOG_INFO("[%p]: current URI set %s", device, device->CurrentURI);
 			break;
 		}
 		case SQ_UNPAUSE:
@@ -794,7 +788,8 @@ int uPNPInitialize(char *IPaddress, unsigned int *Port)
 /*----------------------------------------------------------------------------*/
 int uPNPTerminate(void)
 {
-	ithread_cancel(glTimerThread);
+//	ithread_cancel(glTimerThread);
+	ithread_join(glTimerThread, NULL);
 	UpnpUnRegisterClient(glControlPointHandle);
 	UpnpEnableWebserver(false);
 	UpnpFinish();

@@ -6,9 +6,9 @@
 
 #define SQ_STR_LENGTH	256
 
-typedef enum {SQ_SETURI, SQ_RESETURI, SQ_SETNEXTURI, SQ_PLAY, SQ_PAUSE, SQ_UNPAUSE, SQ_STOP, SQ_SEEK,
+typedef enum {SQ_SETFORMAT, SQ_SETURI, SQ_SETNEXTURI, SQ_PLAY, SQ_PAUSE, SQ_UNPAUSE, SQ_STOP, SQ_SEEK,
 			  SQ_VOLUME, SQ_TIME, SQ_TRACK_CHANGE, SQ_ONOFF} sq_action_t;
-typedef enum {SQ_LMSUPNP = 0, SQ_DIRECT = 1, SQ_STREAM = 2, SQ_FULL = 3} sq_mode_t;
+typedef enum {SQ_LMSUPNP = 0, SQ_STREAM = 2, SQ_FULL = 3} sq_mode_t;
 typedef	sq_action_t sq_event_t;
 
 #define MAX_SUPPORTED_SAMPLERATES 16
@@ -61,6 +61,7 @@ typedef struct
 	u32_t	sample_rate;
 	char	format[5];
 	char	content_type[SQ_STR_LENGTH];
+	char	proto_info[SQ_STR_LENGTH];
 } sq_seturi_t;
 
 extern unsigned gl_slimproto_stream_port;

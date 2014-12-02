@@ -2,20 +2,23 @@ S = <stream_length> 	-1, -3, <value> = some large number > 1000000000
 A = <accept_nexturi>	0, 1
 C = <can_pause>		0, 1
 F = <force_volume>	0, 1
+L = <L24_format>	0, 1
 
 P = pause works ?
 R = repositioning works ?
 
 
 
-Compatible		codecs		S	A	C	F	P	R	
+Compatible		codecs		S	A	C	F	P	R	L
 														
-Sonos			mp3,flc		<value>	1	1	1	Y	Y
-Marantz NR1603		pcm,mp3,flc	-3	1	1	1	Y	Y
-xbmc			pcm,mp3,flc	-3	1	1	1	Y	Y
-M1 Cl1c			pcm,mp3,flc	-3	1	1	1	Y(*)	Y(*)
-Marantz CR603 		pcm, mp3, flc	-3	0	1	1	Y	Y
-Naim Uniti2 		pcm,mp3,flc 	-3 	1 	1 	1 	Y 	Y
+Sonos			mp3,flc		<value>	1	1	1	Y	Y	N/A
+Marantz NR1603		pcm,mp3,flc	-3	1	1	1	Y	Y	N/A
+xbmc			pcm,mp3,flc	-3	1	1	1	Y	Y	N/A
+M1 Cl1c			pcm,mp3,flc	-3	1	1	1	Y(*)	Y(*)	1
+Marantz CR603 		pcm, mp3, flc	-3	0	1	1	Y	Y	?
+Naim Uniti2 		pcm,mp3,flc 	-3 	1 	1 	1 	Y 	Y	?
+Revo SuperConnect	pcm,flc,mp3	<value> 0	1	0/1	1	1	?
+Windows Media Player	mp3		-3	0	1	0/1	1	1	N/A
 
 
 
@@ -34,6 +37,18 @@ Sonos:
  due to the fact that Sonos does not accept -3 for <stream_length> and tries to
  re-read a track from the beginning on unpause, and this fails once the buffer has
  been shrunk once (see user guide)
+ - <stream_length> at -3 does not work with mp3 files.
 
 M1Cl1c:
- - Repositionning with flac does not work
+ - Repositionning with flac does not work unless the flac-to-flac transcoding is
+changed in LMS (see README in bin/ directory
+
+Revo SUperConnect:
+ - <stream_length> at -3 prevents proper pause as the Revo thinks that it is 
+receiving a live stream and thus refuses to pause it (despite DLNA parameters
+set to allow it to do so)
+
+Windows Media Player:
+ - WMP wants to acquire the whole stream before it starts playing - this takes a while
+ - pcm, although accepted by WMP, does not play
+
