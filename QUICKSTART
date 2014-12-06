@@ -14,7 +14,7 @@ LINUX
 and in many cases it will run fine
 
 - If you want to change some configuration items, then it is time to RTFM, but 
-here are a few quick tips beofre
+here are a few quick tips before
 
 1- to create a config file, launch squeeze2upnp and, WHILE IT IS RUNNING, 
 type "save config.xml" (without the "")
