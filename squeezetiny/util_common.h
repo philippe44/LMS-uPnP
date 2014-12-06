@@ -32,6 +32,8 @@ const char *logtime(void);
 void logprint(const char *fmt, ...);
 log_level debug2level(char *level);
 char *level2debug(log_level level);
+char *url_encode(char *str);
+char *url_decode(char *str);
 
 #define LOG_ERROR(fmt, ...) logprint("%s %s:%d " fmt "\n", logtime(), __FUNCTION__, __LINE__, ##__VA_ARGS__)
 #define LOG_WARN(fmt, ...)  if (loglevel >= lWARN)  logprint("%s %s:%d " fmt "\n", logtime(), __FUNCTION__, __LINE__, ##__VA_ARGS__)

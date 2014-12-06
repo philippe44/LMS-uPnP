@@ -182,8 +182,14 @@ static void AddMRDevice(IXML_Document *DescDoc, const char *location, int expire
 			NFREE(device->NextURI);
 
 			strcpy(device->NextProtInfo, p->proto_info);
-			if (device->Config.AcceptNextURI)
-				AVTSetNextURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info, (void*) device->seqN++);
+			if (device->Config.AcceptNextURI){
+				sq_metadata_t MetaData;
+
+				sq_get_metadata(device->SqueezeHandle, &MetaData, true);
+				AVTSetNextURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info,
+					MetaData.title, MetaData.artist, MetaData.album, (void*) device->seqN++);
+				sq_free_metadata(&MetaData);
+			}
 
 			// to know what is expected next
 			device->NextURI = (char*) malloc(strlen(uri) + 1);
@@ -194,6 +200,7 @@ static void AddMRDevice(IXML_Document *DescDoc, const char *location, int expire
 		case SQ_SETURI:	{
 			char uri[RESOURCE_LENGTH];
 			sq_seturi_t *p = (sq_seturi_t*) param;
+			sq_metadata_t MetaData;
 
 			// if port and/or ip are 0 or "", means that the CP@ shall be used
 			if (p->port)
@@ -207,10 +214,15 @@ static void AddMRDevice(IXML_Document *DescDoc, const char *location, int expire
 			NFREE(device->NextURI);
 			// end check
 
-			AVTSetURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info, (void*) device->seqN++);
+			sq_get_metadata(device->SqueezeHandle, &MetaData, false);
+			AVTSetURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info,
+				MetaData.title, MetaData.artist, MetaData.album, (void*) device->seqN++);
+			sq_free_metadata(&MetaData);
+
 			device->CurrentURI = (char*) malloc(strlen(uri) + 1);
 			strcpy(device->CurrentURI, uri);
 			LOG_INFO("[%p]: current URI set %s", device, device->CurrentURI);
+
 			break;
 		}
 		case SQ_UNPAUSE:
@@ -291,6 +303,7 @@ void SyncNotifState(char *State, struct sMR* Device)
 			LOG_INFO("%s: uPNP stop", Device->FriendlyName);
 			if (!Device->Config.AcceptNextURI && Device->NextURI) {
 				int WaitFor = Device->seqN++;
+				sq_metadata_t MetaData;
 
 				// fake a "SETURI" and a "PLAY" request
 				NFREE(Device->CurrentURI);
@@ -298,7 +311,9 @@ void SyncNotifState(char *State, struct sMR* Device)
 				strcpy(Device->CurrentURI, Device->NextURI);
 				NFREE(Device->NextURI);
 
-				AVTSetURI(Device->Service[AVT_SRV_IDX].ControlURL, Device->CurrentURI, Device->NextProtInfo, (void*) WaitFor);
+				sq_get_metadata(Device->SqueezeHandle, &MetaData, true);
+				AVTSetURI(Device->Service[AVT_SRV_IDX].ControlURL, Device->CurrentURI, Device->NextProtInfo, MetaData.title, MetaData.artist, MetaData.album, (void*) WaitFor);
+				sq_free_metadata(&MetaData);
 
 				/*
 				Need to queue to wait for the SetURI to be accepted, otherwise
@@ -498,7 +513,6 @@ void *TimerLoop(void *args)
 	unsigned last;
 	int	elapsed;
 	struct sMR *p;
-	char *Resp;
 
 	last = gettime_ms();
 
@@ -853,7 +867,6 @@ void AddMRDevice(IXML_Document *DescDoc, const char *location,	int expires)
 	char *EventURL = NULL;
 	char *ControlURL = NULL;
 	char *manufacturer = NULL;
-	u8_t IPaddress[4];
 	struct sMR *Device, *p;
 	int rc = 1;
 
@@ -1036,7 +1049,7 @@ bool ParseArgs(int argc, char **argv) {
 			optind += 1;
 		}
 		else {
-			printf(usage);
+			printf("%s", usage);
 			return false;
 		}
 
@@ -1090,13 +1103,13 @@ bool ParseArgs(int argc, char **argv) {
 
 				}
 				else {
-					printf("usage");
+					printf("%s", usage);
 					return false;
 				}
 			}
 			break;
 		case 't':
-			printf(license);
+			printf("%s", license);
 			return false;
 		default:
 			break;
@@ -1167,18 +1180,18 @@ int main(int argc, char *argv[])
 
 #if LINUX || FREEBSD
 		if (!glDaemonize)
-			scanf("%s", resp);
+			i = scanf("%s", resp);
 		else
 			pause();
 #else
-		scanf("%s", resp);
+		i = scanf("%s", resp);
 #endif
 
 		if (!strcmp(resp, "play")) {
 			struct sMR *p;
 			char name[128];
 
-			scanf("%s", name);
+			i = scanf("%s", name);
 			if (*name == '*') *name = '\0';
 			ithread_mutex_lock(&glDeviceListMutex);
 			p = glDeviceList;
@@ -1194,7 +1207,7 @@ int main(int argc, char *argv[])
 			struct sMR *p;
 			char name[128];
 
-			scanf("%s", name);
+			i = scanf("%s", name);
 			if (*name == '*') *name = '\0';
 			ithread_mutex_lock(&glDeviceListMutex);
 			p = glDeviceList;
@@ -1210,7 +1223,7 @@ int main(int argc, char *argv[])
 			struct sMR *p;
 			char name[128];
 
-			scanf("%s", name);
+			i = scanf("%s", name);
 			if (*name == '*') *name = '\0';
 			ithread_mutex_lock(&glDeviceListMutex);
 			p = glDeviceList;
@@ -1227,7 +1240,7 @@ int main(int argc, char *argv[])
 			char name[128];
 			struct sMR *p;
 
-			scanf("%s", name);
+			i = scanf("%s", name);
 			if (*name == '*') *name = '\0';
 			ithread_mutex_lock(&glDeviceListMutex);
 			p = glDeviceList;
@@ -1235,63 +1248,62 @@ int main(int argc, char *argv[])
 
 			while (p)	{
 				if (strstr(p->FriendlyName, name))
-				AVTSetURI (p->Service[AVT_SRV_IDX].ControlURL, PlayURI, NULL, NULL);
+					AVTSetURI (p->Service[AVT_SRV_IDX].ControlURL, PlayURI, NULL, NULL, NULL, NULL, NULL);
 				p = p->Next;
 			}
-
-			ithread_mutex_unlock(&glDeviceListMutex);
+    		ithread_mutex_unlock(&glDeviceListMutex);
 		}
 
 		if (!strcmp(resp, "sdbg"))	{
 			char level[20];
-			scanf("%s", level);
+			i = scanf("%s", level);
 			stream_loglevel(debug2level(level));
 		}
 
 #if 0
 		if (!strcmp(resp, "odbg"))	{
 			char level[20];
-			scanf("%s", level);
+			i = scanf("%s", level);
 			output_loglevel(debug2level(level));
 			output_mr_loglevel(debug2level(level));
 		}
-#endif                }
+#endif
 
 		if (!strcmp(resp, "pdbg"))	{
 			char level[20];
-			scanf("%s", level);
+			i = scanf("%s", level);
 			slimproto_loglevel(debug2level(level));
 		}
 
 		if (!strcmp(resp, "wdbg"))	{
 			char level[20];
-			scanf("%s", level);
+			i = scanf("%s", level);
 			WebServerLogLevel(debug2level(level));
 		}
 
 		if (!strcmp(resp, "mdbg"))	{
 			char level[20];
-			scanf("%s", level);
+			i = scanf("%s", level);
 			main_loglevel(debug2level(level));
 		}
 
 
 		if (!strcmp(resp, "qdbg"))	{
 			char level[20];
-			scanf("%s", level);
+			i = scanf("%s", level);
 			LOG_ERROR("Squeeze change log", NULL);
 			loglevel = debug2level(level);
 		}
 
 		if (!strcmp(resp, "udbg"))	{
 			char level[20];
-			scanf("%s", level);
+			i = scanf("%s", level);
 			uPNPLogLevel(debug2level(level));
 		}
 
 		 if (!strcmp(resp, "save"))	{
 			char name[128];
-			scanf("%s", name);
+			i = scanf("%s", name);
 			SaveConfig(name);
 		}
 	}

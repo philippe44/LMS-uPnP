@@ -73,8 +73,8 @@ typedef struct flac_streaminfo_s {
 } flac_streaminfo_t;
 
 flac_streaminfo_t FLAC_STREAMINFO = {
-		0x00, 0x10,
-		0x40, 0x00,
+		{ 0x00, 0x10 },
+		{ 0xff, 0xff },
 		{ 0x00, 0x00, 0x00 },
 		{ 0x00, 0x00, 0x00 },
 		{ BYTE_1(FLAC_COMBO(44100, 2, 16)),
@@ -122,10 +122,10 @@ static struct wave_header_s {
 	u32_t	subchunk2_size;
 
 } wave_header = {
-		'R', 'I', 'F', 'F',
+		{ 'R', 'I', 'F', 'F' },
 		1000000000 + 8,
-		'W', 'A', 'V', 'E',
-		'f','m','t',' ',
+		{ 'W', 'A', 'V', 'E' },
+		{ 'f','m','t',' ' },
 		16,
 		1,
 		0,
@@ -133,7 +133,7 @@ static struct wave_header_s {
 		0,
 		0,
 		0,
-		'd', 'a', 't', 'a',
+		{ 'd', 'a', 't', 'a' },
 		1000000000 - sizeof(struct wave_header_s) - 8 - 8
 	};
 
@@ -239,6 +239,9 @@ static void output_thread(struct thread_ctx_s *ctx) {
 			ctx->buffill = 0;
 		}
 	}
+}
+#else
+static void output_thread(struct thread_ctx_s *ctx) {
 }
 #endif
 
@@ -483,10 +486,10 @@ void output_mr_thread_init(unsigned output_buf_size, char *params, unsigned rate
 	pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN + OUTPUT_THREAD_STACK_SIZE);
 	switch (ctx->config.mode) {
 	case SQ_FULL:
-			pthread_create(&ctx->mr_thread, &attr, output_thru_thread, ctx);
+			pthread_create(&ctx->mr_thread, &attr, &output_thread, ctx);
 			break;
 	case SQ_STREAM:
-			pthread_create(&ctx->mr_thread, &attr, output_thru_thread, ctx);
+			pthread_create(&ctx->mr_thread, &attr, &output_thru_thread, ctx);
 			break;
 	default:
 		break;
@@ -496,7 +499,7 @@ void output_mr_thread_init(unsigned output_buf_size, char *params, unsigned rate
 #if WIN
 	switch (ctx->config.mode) {
 	case SQ_FULL:
-		ctx->mr_thread = CreateThread(NULL, OUTPUT_THREAD_STACK_SIZE, (LPTHREAD_START_ROUTINE) NULL, ctx, 0, NULL);
+		ctx->mr_thread = CreateThread(NULL, OUTPUT_THREAD_STACK_SIZE, (LPTHREAD_START_ROUTINE) &output_thread, ctx, 0, NULL);
 		break;
 	case SQ_STREAM:
 		ctx->mr_thread = CreateThread(NULL, OUTPUT_THREAD_STACK_SIZE, (LPTHREAD_START_ROUTINE)&output_thru_thread, ctx, 0, NULL);

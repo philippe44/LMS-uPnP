@@ -1,3 +1,10 @@
+0.1.3.0
+ - add metadata 
+ - change incorrect upnp:artist to dc:creator in DIDL string
+ - change back flac header re-insertion default max block size to 0xfff
+ - remove a few compiler warning
+ - improve the "synchronous start" (continuous synchro does not work)
+
 0.1.2.0
  - add a wav header to pcm stream for players that accept audio/wav, audio/x-wav 
 and audio/wave in protocol info by do not accept audio/Lxx (xx = sample size).
