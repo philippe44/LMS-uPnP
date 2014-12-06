@@ -10,7 +10,7 @@ R = repositioning works ?
 
 
 
-Compatible		codecs		S	A	C	F	S	P	R	L
+Compatible		codecs		S	A	C	F	T	P	R	L
 														
 Sonos			mp3,flc		<value>	1	1	1	0	Y	Y	N/A
 Marantz NR1603		pcm,mp3,flc	-3	1	1	1	0	Y	Y	N/A
