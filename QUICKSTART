@@ -30,5 +30,15 @@ at the COMPATIBILITY file for info on your player
 <seek_after_pause> : set it to 1 if your player does not pause
 <codecs> : set it to flc,mp3,pcm to support flac and pcm as well
 
-4- last thing to know : these options can be set for all players or
-for each player individually
+4- Important to know : these options can be set for all players under the
+<common> sectio or for each player individually under each <device> section
+
+5- If you have problems with flac files to jump to a time position in the track,
+or if some streaming sites do not play flac (like Qobuz), edit or create a file 
+"custom-convert.conf" in LMS directory (squeezebox/server) and add a line
+ 
+flc flc * *
+        # IR
+        [flac] -cs - -
+
+
