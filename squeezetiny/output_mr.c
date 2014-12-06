@@ -97,7 +97,7 @@ static u8_t flac_vorbis_block[] = { 0x84,0x00,0x00,0x28,0x20,0x00,0x00,0x00,0x72
 
 static u8_t flac_header[] = {
 			'f', 'L', 'a', 'C',
-			0x00,
+			0x80,
 			(u8_t) ((u32_t) sizeof(flac_streaminfo_t) >> 16),
 			(u8_t) ((u32_t) sizeof(flac_streaminfo_t) >> 8),
 			(u8_t) ((u32_t) sizeof(flac_streaminfo_t))
