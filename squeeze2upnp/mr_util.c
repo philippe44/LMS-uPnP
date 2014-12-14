@@ -45,7 +45,7 @@ static char *format2ext(u8_t format)
 		case 'f': return "flac";
 		case 'w': return "wma";
 		case 'o': return "ogg";
-		case 'a': return "aac";
+		case 'a':
 		case 'l': return "m4a";
 		default: return "xxx";
 	}
@@ -83,7 +83,11 @@ bool _SetContentType(char *Cap[], sq_seturi_t *uri, int n, ...)
 			}
 			// if the proposed format accepts any rate & channel, give it a try
 			if (!strstr(*p, "channels") && !strstr(*p, "rate")) {
+#if 0
 				strcpy(uri->content_type, fmt);
+#else
+				sprintf(uri->content_type, "%s;channels=%d;rate=%d", fmt, uri->channels, uri->sample_rate);
+#endif
 				strcpy(uri->proto_info, *p);
 				break;
 			}
@@ -118,7 +122,7 @@ bool SetContentType(char *Cap[], sq_seturi_t *uri)
 	case 'f': return _SetContentType(Cap, uri, 2, "audio/x-flac", "audio/flac");
 	case 'w': return _SetContentType(Cap, uri, 2, "audio/x-wma", "audio/wma");
 	case 'o': return _SetContentType(Cap, uri, 1, "audio/ogg");
-	case 'a': return _SetContentType(Cap, uri, 1, "audio/aac");
+	case 'a': return _SetContentType(Cap, uri, 4, "audio/x-aac", "audio/aac", "audio/m4a", "audio/mp4");
 	case 'l': return _SetContentType(Cap, uri, 1, "audio/m4a");
 	case 'p': {
 		char p[SQ_STR_LENGTH];
