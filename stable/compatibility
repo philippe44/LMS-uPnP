@@ -3,22 +3,25 @@ A = <accept_nexturi>	0, 1
 C = <can_pause>		0, 1
 F = <force_volume>	0, 1
 L = <L24_format>	0, 1
+T = <seek_after_pause>	0, 1
 
 P = pause works ?
 R = repositioning works ?
 
 
 
-Compatible		codecs		S	A	C	F	P	R	L
+Compatible		codecs		S	A	C	F	T	P	R	L
 														
-Sonos			mp3,flc		<value>	1	1	1	Y	Y	N/A
-Marantz NR1603		pcm,mp3,flc	-3	1	1	1	Y	Y	N/A
-xbmc			pcm,mp3,flc	-3	1	1	1	Y	Y	N/A
-M1 Cl1c			pcm,mp3,flc	-3	1	1	1	Y(*)	Y(*)	1
-Marantz CR603 		pcm, mp3, flc	-3	0	1	1	Y	Y	?
-Naim Uniti2 		pcm,mp3,flc 	-3 	1 	1 	1 	Y 	Y	?
-Revo SuperConnect	pcm,flc,mp3	<value> 0	1	0/1	1	1	?
-Windows Media Player	mp3		-3	0	1	0/1	1	1	N/A
+Sonos			mp3,flc		<value>	1	1	1	0	Y	Y	N/A
+Marantz NR1603		pcm,mp3,flc	-3	1	1	1	0	Y	Y	N/A
+xbmc			pcm,mp3,flc	-3	1	1	1	0	Y	Y	N/A
+M1 Cl1c			pcm,mp3,flc	-3	1	1	1	0	Y(*)	Y(*)	1
+Marantz CR603 		pcm, mp3, flc	-3	0	1	1	0	Y	Y	?
+Naim Uniti2 		pcm,mp3,flc 	-3 	1 	1 	1 	?	Y 	Y	?
+Revo SuperConnect	pcm,flc,mp3	<value> 0	1	0/1	1	Y	Y	?
+Windows Media Player	mp3		-3	0	1	0/1	1	Y	Y	N/A
+XBoxOne			mp3,pcm		<value>	0(*)	1	0/1	1	Y	Y	N/A
+foobar2000		flc,mp3,pcm	-3	1	1	0/1	0	Y	Y	N/A
 
 
 
@@ -50,5 +53,12 @@ set to allow it to do so)
 
 Windows Media Player:
  - WMP wants to acquire the whole stream before it starts playing - this takes a while
+(similar comments as underneath ... compliance to standards)
  - pcm, although accepted by WMP, does not play
+
+xBoneOne
+ - Although the XBoxOne accept the upnp command SetNextAVTransportURI, it does not 
+automatically move to that URI once the current URI finishes ... (it wants a "Next"
+command). Microsoft, Microsoft I guess compliance to standards are good only for the 
+others
 

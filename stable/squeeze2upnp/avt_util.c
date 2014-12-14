@@ -107,9 +107,9 @@ typedef enum {
 " xmlns:upnp=\"urn:schemas-upnp-org:metadata-1-0/upnp/\""
 " xmlns=\"urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/\">"
 " <item>"
-" <dc:title>LMS to uPnP gateway</dc:title>"
-" <upnp:artist>squeeze2upnp</upnp:artist>"
-" <upnp:album>N/A</upnp:album>"
+" <dc:title>%s</dc:title>"
+" <dc:creator>%s</dc:creator>"
+" <upnp:album>%s</upnp:album>"
 " <res protocolInfo=\"%s%s\">%s</res>"
 " <upnp:class>object.item.audioItem.musicTrack</upnp:class>"
 " </item>"
@@ -133,16 +133,20 @@ void AVTInit(log_level level)
 }
 
 /*----------------------------------------------------------------------------*/
-int AVTSetURI(char *ControlURL, char *URI, char *ProtInfo, void *Cookie)
+int AVTSetURI(char *ControlURL, char *URI, char *ProtInfo, char *title, char *artist, char * album, void *Cookie)
 {
 	IXML_Document *ActionNode = NULL;
 	int rc;
 	char *MetaData;
 
-	MetaData = malloc(strlen(ProtInfo) + strlen(URI) + strlen(DIDL) + strlen(DLNA_OPT) + 1);
+	if (!title) title = "LMS to uPnP gateway";
+	if (!artist) artist = "squeeze2upnp";
+	if (!album) album = "N/A";
+
+	MetaData = malloc(strlen(title) + strlen(artist) + strlen(album) + strlen(ProtInfo) + strlen(URI) + strlen(DIDL) + strlen(DLNA_OPT) + 1);
 #ifndef DIDL_PATCH
-	if (ProtInfo[strlen(ProtInfo) - 1] == ':') sprintf(MetaData, DIDL, ProtInfo, DLNA_OPT + 1, URI);
-	else sprintf(MetaData, DIDL, ProtInfo, DLNA_OPT, URI);
+	if (ProtInfo[strlen(ProtInfo) - 1] == ':') sprintf(MetaData, DIDL, title, artist, album, ProtInfo, DLNA_OPT + 1, URI);
+	else sprintf(MetaData, DIDL, title, artist, album, ProtInfo, DLNA_OPT, URI);
 #else
 	sprintf(MetaData, DIDL, URI);
 #endif
@@ -169,15 +173,19 @@ int AVTSetURI(char *ControlURL, char *URI, char *ProtInfo, void *Cookie)
 }
 
 /*----------------------------------------------------------------------------*/
-int AVTSetNextURI(char *ControlURL, char *URI, char *ProtInfo, void *Cookie)
+int AVTSetNextURI(char *ControlURL, char *URI, char *ProtInfo, char *title, char *artist, char *album, void *Cookie)
 {
 	IXML_Document *ActionNode = NULL;
 	int rc;
 	char 	*MetaData;
 
-	MetaData = malloc(strlen(ProtInfo) + strlen(URI) + strlen(DIDL) + strlen(DLNA_OPT) + 1);
-	if (ProtInfo[strlen(ProtInfo) - 1] == ':') sprintf(MetaData, DIDL, ProtInfo, DLNA_OPT + 1, URI);
-	else sprintf(MetaData, DIDL, ProtInfo, DLNA_OPT, URI);
+	if (!title) title = "LMS to uPnP gateway";
+	if (!artist) artist = "squeeze2upnp";
+	if (!album) album = "N/A";
+
+	MetaData = malloc(strlen(title) + strlen(artist) + strlen(album) + strlen(ProtInfo) + strlen(URI) + strlen(DIDL) + strlen(DLNA_OPT) + 1);
+	if (ProtInfo[strlen(ProtInfo) - 1] == ':') sprintf(MetaData, DIDL, title, artist, album, ProtInfo, DLNA_OPT + 1, URI);
+	else sprintf(MetaData, DIDL, title, artist, album, ProtInfo, DLNA_OPT, URI);
 
 	LOG_INFO("uPNP setNextURI %s for %s (cookie %p)", URI, ControlURL, Cookie);
 	ActionNode =  UpnpMakeAction("SetNextAVTransportURI", AV_TRANSPORT, 0, NULL);

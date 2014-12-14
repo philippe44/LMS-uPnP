@@ -1,13 +1,20 @@
-0.1.3.2
+0.1.3.3 
+ - with <seek_after_pause> set to 1, unpause was not restarting at the right time
+if repositionig was done during pause
+ - when upnp device capability for pcm does not detail sample rate and channel 
+(ie audio/L16), add the channel and rate details in the mime-type response 
+(ie audio/L16;channels=2;rate=44100) - was need for foobar2000
+ - add aac in the supported format (does not seem to work with Sonos or foobar yet)
+ - <volume_on_play> to 1 by default
+ - <volume_curve> max by default is 65536 instead of 65535
+ - check that squeezelite instance was created before trying to run it
+ - L/R inversion corrected in PCM 24 bits, packed type 1
  - buffer write file opening done as soon as LMS play command is received (quick GET)
- - handle case where no playlist index is returned in metadata (crash)
- - metadata track and time request were doubling the '?'
-
-0.1.3.1
+ - in flac metadata (for repositionning) vorbis header is needed to NamUniti
  - flac header in re-positioning was not set as "last block = 0x80" (happened after 
 vorbis_comment was removed)
-
-0.1.3.0
+ - handle case where no playlist index is returned in metadata (crash)
+ - metadata track and time request were doubling the '?'
  - add metadata 
  - change incorrect upnp:artist to dc:creator in DIDL string
  - change back flac header re-insertion default max block size to 0xfff

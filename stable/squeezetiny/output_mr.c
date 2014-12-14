@@ -73,8 +73,8 @@ typedef struct flac_streaminfo_s {
 } flac_streaminfo_t;
 
 flac_streaminfo_t FLAC_STREAMINFO = {
-		0x00, 0x10,
-		0x40, 0x00,
+		{ 0x00, 0x10 },
+		{ 0xff, 0xff },
 		{ 0x00, 0x00, 0x00 },
 		{ 0x00, 0x00, 0x00 },
 		{ BYTE_1(FLAC_COMBO(44100, 2, 16)),
@@ -122,10 +122,10 @@ static struct wave_header_s {
 	u32_t	subchunk2_size;
 
 } wave_header = {
-		'R', 'I', 'F', 'F',
+		{ 'R', 'I', 'F', 'F' },
 		1000000000 + 8,
-		'W', 'A', 'V', 'E',
-		'f','m','t',' ',
+		{ 'W', 'A', 'V', 'E' },
+		{ 'f','m','t',' ' },
 		16,
 		1,
 		0,
@@ -133,7 +133,7 @@ static struct wave_header_s {
 		0,
 		0,
 		0,
-		'd', 'a', 't', 'a',
+		{ 'd', 'a', 't', 'a' },
 		1000000000 - sizeof(struct wave_header_s) - 8 - 8
 	};
 
@@ -240,6 +240,9 @@ static void output_thread(struct thread_ctx_s *ctx) {
 		}
 	}
 }
+#else
+static void output_thread(struct thread_ctx_s *ctx) {
+}
 #endif
 
 /*---------------------------------------------------------------------------*/
@@ -267,7 +270,7 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 			bool ready = true;
 			space = _buf_cont_read(ctx->streambuf);
 
-			// first thing first, open the buffer if needed
+			// open the buffer if needed (should be opened in slimproto)
 			if (!out->write_file) {
 				char buf[SQ_STR_LENGTH];
 
@@ -356,6 +359,7 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 								streaminfo->combo[3] = BYTE_4(FLAC_COMBO(rate, channels, sample_size));
 								out->write_count = fwrite(&flac_header, 1, sizeof(flac_header), out->write_file);
 								out->write_count += fwrite(streaminfo, 1, sizeof(flac_streaminfo_t), out->write_file);
+								out->write_count += fwrite(flac_vorbis_block, 1, sizeof(flac_vorbis_block), out->write_file);
 								out->write_count_t = out->write_count;
 								LOG_INFO("[%p]: flac header ch:%d, s:%d, r:%d, b:%d", ctx, channels, sample_size, rate, block_size);
 								if (!rate || !sample_size || !channels) {
@@ -393,15 +397,22 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 					u8_t buf[12];
 					space = (space / 12) * 12;
 					for (i = 0; i < space; i += 12) {
-						// order after that should be R0T,R0M,R0B,L0T,L0M,L0B,R1T,R1M,R1B,L1T,L1M,L1B
-						if (out->endianness) for (j = 0; j < 12; j++) buf[12-1-j] = *(p+j);
+						// order after that should be L0T,L0M,L0B,R0T,R0M,R0B,L1T,L1M,L1B,R1T,R1M,R1B
+						if (out->endianness) for (j = 0; j < 12; j += 3) {
+							buf[j] = *(p+j+3-1);
+							buf[j+1] = *(p+j+1);
+							buf[j+2] = *(p+j);
+                        }
 						else for (j = 0; j < 12; j++) buf[j] = *(p+j);
-						for (j = 0; j < 4; j++) {
-							*(p+8-j) = buf[3*j+2];
-							*(p++) = buf[3*j];
-							*(p++) = buf[3*j+1];
-						}
-						p += 4;
+ 						// L0T,L0M & R0T,R0M
+						*p++ = buf[0]; *p++ = buf[1];
+						*p++ = buf[3]; *p++ = buf[4];
+						// L1T,L1M & R1T,R1M
+						*p++ = buf[6]; *p++ = buf[7];
+						*p++ = buf[9]; *p++ = buf[10];
+						// L0B, R0B, L1B, R1B
+						*p++ = buf[2]; *p++ = buf[5]; *p++ = buf[8]; *p++ = buf[11];
+						// after that R0T,R0M,L0T,L0M,R1T,R1M,L1T,L1M,R0B,L0B,R1B,L1B
 					}
 				}
 			}
@@ -483,10 +494,10 @@ void output_mr_thread_init(unsigned output_buf_size, char *params, unsigned rate
 	pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN + OUTPUT_THREAD_STACK_SIZE);
 	switch (ctx->config.mode) {
 	case SQ_FULL:
-			pthread_create(&ctx->mr_thread, &attr, output_thru_thread, ctx);
+			pthread_create(&ctx->mr_thread, &attr, &output_thread, ctx);
 			break;
 	case SQ_STREAM:
-			pthread_create(&ctx->mr_thread, &attr, output_thru_thread, ctx);
+			pthread_create(&ctx->mr_thread, &attr, &output_thru_thread, ctx);
 			break;
 	default:
 		break;
@@ -496,7 +507,7 @@ void output_mr_thread_init(unsigned output_buf_size, char *params, unsigned rate
 #if WIN
 	switch (ctx->config.mode) {
 	case SQ_FULL:
-		ctx->mr_thread = CreateThread(NULL, OUTPUT_THREAD_STACK_SIZE, (LPTHREAD_START_ROUTINE) NULL, ctx, 0, NULL);
+		ctx->mr_thread = CreateThread(NULL, OUTPUT_THREAD_STACK_SIZE, (LPTHREAD_START_ROUTINE) &output_thread, ctx, 0, NULL);
 		break;
 	case SQ_STREAM:
 		ctx->mr_thread = CreateThread(NULL, OUTPUT_THREAD_STACK_SIZE, (LPTHREAD_START_ROUTINE)&output_thru_thread, ctx, 0, NULL);

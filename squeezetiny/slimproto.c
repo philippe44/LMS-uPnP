@@ -347,6 +347,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 				if (ctx->config.mode == SQ_STREAM)
 				{
 					unsigned idx;
+					char buf[SQ_STR_LENGTH];
 
 					// stream is proxied and then forwared to the renderer
 					stream_sock(ip, port, header, header_len, strm->threshold * 1024, ctx->autostart >= 2, ctx);
@@ -365,8 +366,10 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 					if (ctx->out_ctx[idx].write_file) {
 						LOG_ERROR("[%p]: write file left open", ctx, ctx->out_ctx[idx].buf_name);
 						fclose(ctx->out_ctx[idx].write_file);
-						ctx->out_ctx[idx].write_file = NULL;
 					}
+					// open the write_file here as some players react very fast
+					sprintf(buf, "%s/%s", ctx->config.buffer_dir, ctx->out_ctx[idx].buf_name);
+					ctx->out_ctx[idx].write_file = fopen(buf, "wb");
 					ctx->out_ctx[idx].write_count = ctx->out_ctx[idx].write_count_t = 0;
 
 					ctx->out_ctx[idx].sample_size = uri.sample_size;

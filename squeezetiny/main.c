@@ -223,7 +223,7 @@ u32_t sq_get_time(sq_dev_handle_t handle)
 		return 0;
 	}
 
-	sprintf(cmd, "%s time ?", ctx->cli_id);
+	sprintf(cmd, "%s time", ctx->cli_id);
 	rsp = cli_send_cmd(cmd, true, ctx);
 	if (rsp) {
 		time = (u32_t) (atof(rsp) * 1000);
@@ -282,9 +282,16 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 
 	sprintf(cmd, "%s playlist index", ctx->cli_id);
 	rsp = cli_send_cmd(cmd, true, ctx);
+
+	if (!rsp) {
+		LOG_ERROR("[%p]: missing index", ctx);
+		return false;
+	}
+
 	idx = atol(rsp);
+
 	if (next) {
-		sprintf(cmd, "%s playlist tracks ?", ctx->cli_id);
+		sprintf(cmd, "%s playlist tracks", ctx->cli_id);
 		rsp = cli_send_cmd(cmd, true, ctx);
 		idx = (rsp) ? (idx + 1) % atol(rsp) : (idx + 1);
 	}
@@ -299,7 +306,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 	metadata->genre = cli_send_cmd(cmd, true, ctx);
 	sprintf(cmd, "%s playlist duration %d", ctx->cli_id, idx);
 	metadata->duration = cli_send_cmd(cmd, true, ctx);
-	LOG_DEBUG("[%p]: idx %d, artist:%s\n\talbum:%s\n\ttitle:%s\n\tgenre%s\n\tduration:%s", ctx, idx,
+	LOG_INFO("[%p]: idx %d, artist:%s\n\talbum:%s\n\ttitle:%s\n\tgenre%s\n\tduration:%s", ctx, idx,
 				metadata->artist, metadata->album, metadata->title,
 				metadata->genre, metadata->duration);
 

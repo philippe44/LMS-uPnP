@@ -25,8 +25,8 @@
 #include "util_common.h"
 
 void AVTInit(log_level level);
-int AVTSetURI(char *ControlURL, char *URI, char *ProtocolInfo, void *Cookie);
-int AVTSetNextURI(char *ControlURL, char *URI, char *ProtocolInfo, void *Cookie);
+int AVTSetURI(char *ControlURL, char *URI, char *ProtocolInfo, char *title, char *artist, char *album, void *Cookie);
+int AVTSetNextURI(char *ControlURL, char *URI, char *ProtocolInfo, char *title, char *artist, char *album, void *Cookie);
 int AVTCallAction(char *ControlURL, char *Var, void *Cookie);
 int AVTPlay(char *ControlURL, void *Cookie);
 int SetVolume(char *ControlURL, u8_t Volume, void *Cookie);

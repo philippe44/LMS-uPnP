@@ -60,6 +60,7 @@ static u32_t 	pcm_sample_rate[] = { 11025, 22050, 32000, 44100, 48000,
 									  176400, 192000, 352800, 384000 };
 static u8_t		pcm_channels[] = { 1, 2 };
 
+#if 0
 /*---------------------------------------------------------------------------*/
 static bool get_header_urn(char *header, int header_len, char *urn)
 {
@@ -79,6 +80,7 @@ static bool get_header_urn(char *header, int header_len, char *urn)
 	urn[0] = '\0';
 	return false;
 }
+#endif
 
 /*---------------------------------------------------------------------------*/
 bool ctx_callback(struct thread_ctx_s *ctx, sq_action_t action, int cookie, void *param)
@@ -345,6 +347,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 				if (ctx->config.mode == SQ_STREAM)
 				{
 					unsigned idx;
+					char buf[SQ_STR_LENGTH];
 
 					// stream is proxied and then forwared to the renderer
 					stream_sock(ip, port, header, header_len, strm->threshold * 1024, ctx->autostart >= 2, ctx);
@@ -363,9 +366,11 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 					if (ctx->out_ctx[idx].write_file) {
 						LOG_ERROR("[%p]: write file left open", ctx, ctx->out_ctx[idx].buf_name);
 						fclose(ctx->out_ctx[idx].write_file);
-						ctx->out_ctx[idx].write_file = NULL;
 					}
-					ctx->out_ctx[idx].write_count = ctx->out_ctx[idx].write_count = 0;
+					// open the write_file here as some players react very fast
+					sprintf(buf, "%s/%s", ctx->config.buffer_dir, ctx->out_ctx[idx].buf_name);
+					ctx->out_ctx[idx].write_file = fopen(buf, "wb");
+					ctx->out_ctx[idx].write_count = ctx->out_ctx[idx].write_count_t = 0;
 
 					ctx->out_ctx[idx].sample_size = uri.sample_size;
 					ctx->out_ctx[idx].sample_rate = uri.sample_rate;
@@ -706,11 +711,10 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			UNLOCK_S;
 
 			if (ctx->start_at && now > ctx->start_at) {
-				LOG_INFO("[%p] start time elapsed %u %u", ctx->start_at, now);
-				/*
-				TODO : make sure necessary variable are set in unpause or start
-				*/
+				LOG_INFO("[%p] start time elapsed %d %d", ctx, ctx->start_at, now);
 				ctx->start_at = 0;
+				if (ctx->track_status != TRACK_PAUSED) ctx->track_new = true;
+				ctx->track_status = TRACK_STARTED;
 				ctx_callback(ctx, SQ_PLAY, 0, NULL);
 			}
 

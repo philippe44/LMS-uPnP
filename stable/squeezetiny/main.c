@@ -74,10 +74,16 @@ struct thread_ctx_s thread_ctx[MAX_PLAYER];
 static char 			_gl_server[SERVER_NAME_LEN + 1];
 static char 			*gl_server = NULL;
 static u8_t				gl_last_mac[6];
+#if 0
 static unsigned 		gl_rate_delay = 0;
+#endif
+#if RESAMPLE
 static char 			*gl_resample = NULL;
+#endif
+#if DSD
 static bool 			gl_dop	= false;
 static unsigned 		gl_dop_delay = 0;
+#endif
 static char				gl_include_codecs[SQ_STR_LENGTH];
 static char				gl_exclude_codecs[SQ_STR_LENGTH];
 
@@ -163,72 +169,71 @@ void *sq_urn2MR(const char *urn)
 	return (out) ? thread_ctx[i-1].MR : NULL;
 }
 
-bool cli_send_cmd(char *cmd, struct thread_ctx_s *ctx)
+char *cli_send_cmd(char *cmd, bool req, struct thread_ctx_s *ctx)
 {
-	// this is still thread safe as there is one socket per device, so seqN can
-	// the same between devices
-	static u16_t tagN;
-	char tag[16];
-	char packet[128];
-	char *res, *p;
-	int wait, len;
-	bool rc = false;
+	char packet[1024];
+	int wait;
+	size_t len;
+	char *rsp = NULL;
 
 	mutex_lock(ctx->cli_mutex);
 
 	wait = ctx->config.max_read_wait;
-	sprintf(tag, "%d\n", tagN++);
-	len = sprintf(packet, "%s%s\n", tag, cmd);
-	send_packet(packet, len, ctx->cli_sock);
+	if (req) len = sprintf(packet, "%s ?\n", cmd);
+	else len = sprintf(packet, "%s\n", cmd);
+	send_packet((u8_t*) packet, len, ctx->cli_sock);
 
 	// first receive the tag and then point to the last '\n'
 	len = 0;
-	p = res = NULL;
 	while (wait--)	{
-		len += recv(ctx->cli_sock, packet + len, 128-1 - len, 0);
+		int k;
+		usleep(10000);
+		k = recv(ctx->cli_sock, packet + len, 1024-1 - len, 0);
+		if (k < 0) continue;
+		len += k;
 		packet[len] = '\0';
-		if (!p) {
-			p = strstr(packet, tag);
-			if (p) p += strlen(tag);
+		rsp = url_decode(packet);
+		if (strchr(packet, '\n')) {
+			if (strstr(rsp, cmd)) break;
 		}
-		if (p) {
-			res = strchr(p, '\n');
-			if (res) break;
-		}
-		usleep(50000);
+		NFREE(rsp);
 	}
 
-	if (res) {
-		*res = '\0';
-		while (*--res != ' ' && res > packet);
-		strcpy(cmd, res);
-		rc = true;
+	if (rsp) {
+		char *p;
+		for (p = rsp + strlen(cmd); *p == ' '; p++);
+		strcpy(rsp, p);
+		*(strrchr(rsp, '\n')) = '\0';
 	}
 
 	mutex_unlock(ctx->cli_mutex);
-	return rc;
+	return rsp;
 }
 
-
 /*--------------------------------------------------------------------------*/
-u32_t sq_get_time(sq_dev_handle_t handle)
+u32_t sq_get_time(sq_dev_handle_t handle)
 {
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
 	char cmd[128];
+	char *rsp;
+	u32_t time = 0;
 
 	if (!handle || !ctx->cli_sock) {
 		LOG_ERROR("[%p]: no handle or CLI socket %d", ctx, handle);
 		return 0;
 	}
 
-	sprintf(cmd, "%s time ?", ctx->cli_id);
-	if (cli_send_cmd(cmd, ctx)) {
-		return (u32_t) (atof(cmd) * 1000);
+	sprintf(cmd, "%s time", ctx->cli_id);
+	rsp = cli_send_cmd(cmd, true, ctx);
+	if (rsp) {
+		time = (u32_t) (atof(rsp) * 1000);
 	}
 	else {
 		LOG_ERROR("[%p] cannot gettime", ctx);
-		return 0;
 	}
+
+	NFREE(rsp);
+	return time;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -236,6 +241,8 @@ bool sq_set_time(sq_dev_handle_t handle, u32_t time)
 {
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
 	char cmd[128];
+	char *rsp;
+	bool rc = false;
 
 	if (!handle || !ctx->cli_sock) {
 		LOG_ERROR("[%p]: no handle or cli socket %d", ctx, handle);
@@ -244,18 +251,80 @@ bool sq_set_time(sq_dev_handle_t handle, u32_t time)
 
 	sprintf(cmd, "%s time %.1lf", ctx->cli_id, (double) time / 1000);
 
-	if (cli_send_cmd(cmd, ctx)) {
+	rsp = cli_send_cmd(cmd, false, ctx);
+	if (rsp) {
 		LOG_INFO("[%p] set time %d", ctx, time);
-		return true;
+		rc = true;
 	}
 	else {
 		LOG_ERROR("[%p] cannot settime %d", ctx, time);
-		return false;
 	}
+
+	NFREE(rsp);
+	return rc;
 }
 
-/*---------------------------------------------------------------------------*/
-char *sq_content_type(const char *urn)
+/*--------------------------------------------------------------------------*/
+bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
+{
+	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
+	char cmd[128];
+	char *rsp;
+	u16_t idx;
+
+	metadata->artist = metadata->album = metadata->title = metadata->genre = metadata->duration = NULL;
+	metadata->picture = NULL;
+
+	if (!handle || !ctx->cli_sock) {
+		LOG_ERROR("[%p]: no handle or CLI socket %d", ctx, handle);
+		return false;
+	}
+
+	sprintf(cmd, "%s playlist index", ctx->cli_id);
+	rsp = cli_send_cmd(cmd, true, ctx);
+
+	if (!rsp) {
+		LOG_ERROR("[%p]: missing index", ctx);
+		return false;
+	}
+
+	idx = atol(rsp);
+
+	if (next) {
+		sprintf(cmd, "%s playlist tracks", ctx->cli_id);
+		rsp = cli_send_cmd(cmd, true, ctx);
+		idx = (rsp) ? (idx + 1) % atol(rsp) : (idx + 1);
+	}
+
+	sprintf(cmd, "%s playlist title %d", ctx->cli_id, idx);
+	metadata->title = cli_send_cmd(cmd, true, ctx);
+	sprintf(cmd, "%s playlist album %d", ctx->cli_id, idx);
+	metadata->album = cli_send_cmd(cmd, true, ctx);
+	sprintf(cmd, "%s playlist artist %d", ctx->cli_id, idx);
+	metadata->artist = cli_send_cmd(cmd, true, ctx);
+	sprintf(cmd, "%s playlist genre %d", ctx->cli_id, idx);
+	metadata->genre = cli_send_cmd(cmd, true, ctx);
+	sprintf(cmd, "%s playlist duration %d", ctx->cli_id, idx);
+	metadata->duration = cli_send_cmd(cmd, true, ctx);
+	LOG_INFO("[%p]: idx %d, artist:%s\n\talbum:%s\n\ttitle:%s\n\tgenre%s\n\tduration:%s", ctx, idx,
+				metadata->artist, metadata->album, metadata->title,
+				metadata->genre, metadata->duration);
+
+	return true;
+}
+
+/*--------------------------------------------------------------------------*/
+void sq_free_metadata(sq_metadata_t *metadata)
+{
+	NFREE(metadata->artist);
+	NFREE(metadata->album);
+	NFREE(metadata->title);
+	NFREE(metadata->genre);
+	NFREE(metadata->duration);
+}
+
+/*---------------------------------------------------------------------------*/
+char *sq_content_type(const char *urn)
 {
 	int i = 0;
 	out_ctx_t *out = NULL;
@@ -552,7 +621,7 @@ void sq_init(char *server, u8_t mac[6], sq_log_level_t *log)
 /*---------------------------------------------------------------------------*/
 sq_dev_handle_t sq_reserve_device(void *MR, sq_callback_t callback)
 {
-	int i, ctx_i;
+	int ctx_i;
 	struct thread_ctx_s *ctx;
 
 	/* find a free thread context - this must be called in a LOCKED context */

@@ -29,7 +29,9 @@ static log_level	loglevel = lWARN;
 
 int WebGetInfo(const char *FileName, struct File_Info *Info)
 {
+#ifdef TEST_IDX_BUF
 	FILE *Handle;
+#endif
 	struct stat Status;
 	struct sMR *Device;
 
@@ -58,8 +60,8 @@ int WebGetInfo(const char *FileName, struct File_Info *Info)
 	Info->last_modified = Status.st_ctime;
 	Info->file_length = Status.st_size;
 	Info->content_type = sq_content_type(FileName);
-	if (!strcmp(Info->content_type, "audio/unknown"))
 #ifdef TEST_IDX_BUF
+	if (!strcmp(Info->content_type, "audio/unknown"))
 		Info->content_type = strdup("audio/mpeg");
 #endif
 	LOG_INFO("[%p]: GetInfo %s %s", Device, FileName, Info->content_type);
@@ -120,7 +122,7 @@ int WebSeek(UpnpWebFileHandle FileHandle, off_t offset, int origin)
 	rc = sq_seek(FileHandle, offset, origin);
 	if (rc == -1) rc = fseek(FileHandle, offset, origin);
 
-	LOG_INFO("[%p]: seek %d, %d", FileHandle, offset, origin);
+	LOG_INFO("[%p]: seek %d, %d (rc:%d)", FileHandle, offset, origin, rc);
 	return rc;
 }
 

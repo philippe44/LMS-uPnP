@@ -97,7 +97,7 @@ static u8_t flac_vorbis_block[] = { 0x84,0x00,0x00,0x28,0x20,0x00,0x00,0x00,0x72
 
 static u8_t flac_header[] = {
 			'f', 'L', 'a', 'C',
-			0x80,
+			0x00,
 			(u8_t) ((u32_t) sizeof(flac_streaminfo_t) >> 16),
 			(u8_t) ((u32_t) sizeof(flac_streaminfo_t) >> 8),
 			(u8_t) ((u32_t) sizeof(flac_streaminfo_t))
@@ -270,7 +270,7 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 			bool ready = true;
 			space = _buf_cont_read(ctx->streambuf);
 
-			// first thing first, open the buffer if needed
+			// open the buffer if needed (should be opened in slimproto)
 			if (!out->write_file) {
 				char buf[SQ_STR_LENGTH];
 
@@ -359,6 +359,7 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 								streaminfo->combo[3] = BYTE_4(FLAC_COMBO(rate, channels, sample_size));
 								out->write_count = fwrite(&flac_header, 1, sizeof(flac_header), out->write_file);
 								out->write_count += fwrite(streaminfo, 1, sizeof(flac_streaminfo_t), out->write_file);
+								out->write_count += fwrite(flac_vorbis_block, 1, sizeof(flac_vorbis_block), out->write_file);
 								out->write_count_t = out->write_count;
 								LOG_INFO("[%p]: flac header ch:%d, s:%d, r:%d, b:%d", ctx, channels, sample_size, rate, block_size);
 								if (!rate || !sample_size || !channels) {
@@ -396,15 +397,22 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 					u8_t buf[12];
 					space = (space / 12) * 12;
 					for (i = 0; i < space; i += 12) {
-						// order after that should be R0T,R0M,R0B,L0T,L0M,L0B,R1T,R1M,R1B,L1T,L1M,L1B
-						if (out->endianness) for (j = 0; j < 12; j++) buf[12-1-j] = *(p+j);
+						// order after that should be L0T,L0M,L0B,R0T,R0M,R0B,L1T,L1M,L1B,R1T,R1M,R1B
+						if (out->endianness) for (j = 0; j < 12; j += 3) {
+							buf[j] = *(p+j+3-1);
+							buf[j+1] = *(p+j+1);
+							buf[j+2] = *(p+j);
+                        }
 						else for (j = 0; j < 12; j++) buf[j] = *(p+j);
-						for (j = 0; j < 4; j++) {
-							*(p+8-j) = buf[3*j+2];
-							*(p++) = buf[3*j];
-							*(p++) = buf[3*j+1];
-						}
-						p += 4;
+ 						// L0T,L0M & R0T,R0M
+						*p++ = buf[0]; *p++ = buf[1];
+						*p++ = buf[3]; *p++ = buf[4];
+						// L1T,L1M & R1T,R1M
+						*p++ = buf[6]; *p++ = buf[7];
+						*p++ = buf[9]; *p++ = buf[10];
+						// L0B, R0B, L1B, R1B
+						*p++ = buf[2]; *p++ = buf[5]; *p++ = buf[8]; *p++ = buf[11];
+						// after that R0T,R0M,L0T,L0M,R1T,R1M,L1T,L1M,R0B,L0B,R1B,L1B
 					}
 				}
 			}

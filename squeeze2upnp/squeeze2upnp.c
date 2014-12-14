@@ -62,9 +62,9 @@ tMRConfig			glMRConfig = {
 							true,
 							"",
 							false,
-							false,
 							true,
-							"0:0, 400:10, 700:20, 1200:30, 2050:40, 3800:50, 6600:60, 12000:70, 21000:80, 37000:90, 65535:100",
+							true,
+							"0:0, 400:10, 700:20, 1200:30, 2050:40, 3800:50, 6600:60, 12000:70, 21000:80, 37000:90, 65536:100",
 					};
 
 sq_dev_param_t glDeviceParam = {
@@ -226,12 +226,21 @@ static void AddMRDevice(IXML_Document *DescDoc, const char *location, int expire
 			break;
 		}
 		case SQ_UNPAUSE:
+#if 0
 			if (device->PausedTime && device->Config.SeekAfterPause) {
 				sq_set_time(device->SqueezeHandle, device->PausedTime);
 			}
+#else
+			if (device->Config.SeekAfterPause) {
+				u32_t PausedTime = sq_get_time(device->SqueezeHandle);
+				sq_set_time(device->SqueezeHandle, PausedTime);
+			}
+#endif
 		case SQ_PLAY:
 			if (device->CurrentURI) {
+#if 0
 				device->PausedTime = 0;
+#endif
 				QueueAction(handle, caller, action, cookie, param, false);
 				device->sqState = SQ_PLAY;
 				if (device->Config.VolumeOnPlay)
@@ -245,8 +254,10 @@ static void AddMRDevice(IXML_Document *DescDoc, const char *location, int expire
 			device->sqState = action;
 			break;
 		case SQ_PAUSE:
+#if 0
 			if (device->Config.SeekAfterPause)
 				device->PausedTime = sq_get_time(device->SqueezeHandle);
+#endif
 			QueueAction(handle, caller, action, cookie, param, false);
 			device->sqState = action;
 			break;
@@ -635,7 +646,12 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 				// create or re-create slimdevices and associated list
 				if (!p->SqueezeHandle && p->Config.Enabled && !p->uPNPTimeOut)	{
 					p->SqueezeHandle = sq_reserve_device(p, &sq_callback);
-					sq_run_device(p->SqueezeHandle, *(p->Config.Name) ? p->Config.Name : p->FriendlyName, p->mac, &p->sq_config);
+					if (p->SqueezeHandle)
+						sq_run_device(p->SqueezeHandle, *(p->Config.Name) ? p->Config.Name : p->FriendlyName, p->mac, &p->sq_config);
+					else {
+						LOG_ERROR("[%p]: cannot create squeezelite instance", p);
+                    }
+
 				}
 
 				// uPNP device has gone dark ... remove it from slimdevice lists

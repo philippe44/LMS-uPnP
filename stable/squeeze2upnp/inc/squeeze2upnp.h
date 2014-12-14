@@ -91,7 +91,9 @@ struct sMR {
 	sq_action_t		sqState;
 	u32_t			Elapsed;
 	u32_t			seqN;
+#if 0
 	u32_t			PausedTime;
+#endif
 	unsigned	Stalled;
 	unsigned	TrackPoll, StatePoll;
 	bool		uPNPTimeOut;
