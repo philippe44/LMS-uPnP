@@ -1,4 +1,4 @@
-0.1.3.3
+0.1.3.3 
  - with <seek_after_pause> set to 1, unpause was not restarting at the right time
 if repositionig was done during pause
  - when upnp device capability for pcm does not detail sample rate and channel 
