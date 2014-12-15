@@ -1,0 +1,6 @@
+0.1.4.0pre1 
+ - try to request the "nextURI" much earlier from LMS
+ - there are 2 versions : 
+
+xxx-fast: simple improvment, a bit faster but the same mechanism, unlikely to have any side effect
+xxx-early : different mechanism, much faster but large potential for side effects
