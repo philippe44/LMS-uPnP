@@ -68,6 +68,7 @@ typedef struct sMRConfig
 	bool		ForceVolume;		// force volume after each state detection
 	bool 		VolumeOnPlay;		// change only volume when playing has started
 	bool		AcceptNextURI;
+	bool		SendMetaData;
 	char 		VolumeCurve[SQ_STR_LENGTH];
 } tMRConfig;
 

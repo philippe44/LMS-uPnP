@@ -44,7 +44,7 @@ Sonos:
 
 M1Cl1c:
  - Repositionning with flac does not work unless the flac-to-flac transcoding is
-changed in LMS (see README in bin/ directory
+changed in LMS (see QUICKSTART)
 
 Revo SUperConnect:
  - <stream_length> at -3 prevents proper pause as the Revo thinks that it is 
@@ -56,9 +56,9 @@ Windows Media Player:
 (similar comments as underneath ... compliance to standards)
  - pcm, although accepted by WMP, does not play
 
-xBoneOne
+xBoxOne
  - Although the XBoxOne accept the upnp command SetNextAVTransportURI, it does not 
 automatically move to that URI once the current URI finishes ... (it wants a "Next"
-command). Microsoft, Microsoft I guess compliance to standards are good only for the 
+command). Microsoft, Microsoft I guess compliance to standards is good only for the 
 others
 

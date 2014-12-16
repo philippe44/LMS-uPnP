@@ -303,7 +303,6 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 		break;
 	case 's':
 		{
-			bool proceed = false;
 			unsigned header_len = len - sizeof(struct strm_packet);
 			char *header = (char *)(pkt + sizeof(struct strm_packet));
 			in_addr_t ip = (in_addr_t)strm->server_ip; // keep in network byte order
@@ -383,7 +382,6 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 					ackward 2 steps setup
 					*/
 					if (ctx_callback(ctx, SQ_SETFORMAT, 0, &uri)) {
-						proceed = true;
 						strcpy(ctx->out_ctx[idx].content_type, uri.content_type);
 						strcpy(ctx->out_ctx[idx].ext, uri.format);
 						strcpy(uri.urn, ctx->out_ctx[idx].buf_name);
@@ -403,13 +401,16 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 							ctx->status.ms_played = ctx->ms_played = 0;
 							ctx->read_to = ctx->read_ended = false;
 						}
+						sendSTAT("STMc", 0, ctx);
 						LOG_INFO("[%p] URI proxied by SQ2MR : %s", ctx, uri.urn);
 					}
+					else ctx->decode.state = DECODE_ERROR;
+
 					UNLOCK_S;UNLOCK_O;
 				}
 			}
 
-			if (proceed) sendSTAT("STMc", 0, ctx);
+			sendSTAT("STMc", 0, ctx);
 			ctx->sentSTMu = ctx->sentSTMo = ctx->sentSTMl = false;
 
 #if 0

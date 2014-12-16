@@ -64,6 +64,7 @@ tMRConfig			glMRConfig = {
 							false,
 							true,
 							true,
+							true,
 							"0:0, 400:10, 700:20, 1200:30, 2050:40, 3800:50, 6600:60, 12000:70, 21000:80, 37000:90, 65536:100",
 					};
 
@@ -183,9 +184,9 @@ static void AddMRDevice(IXML_Document *DescDoc, const char *location, int expire
 
 			strcpy(device->NextProtInfo, p->proto_info);
 			if (device->Config.AcceptNextURI){
-				sq_metadata_t MetaData;
+				sq_metadata_t MetaData = { NULL, NULL, NULL, NULL, NULL, NULL };
 
-				sq_get_metadata(device->SqueezeHandle, &MetaData, true);
+				if (device->Config.SendMetaData) sq_get_metadata(device->SqueezeHandle, &MetaData, true);
 				AVTSetNextURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info,
 					MetaData.title, MetaData.artist, MetaData.album, (void*) device->seqN++);
 				sq_free_metadata(&MetaData);
@@ -200,7 +201,7 @@ static void AddMRDevice(IXML_Document *DescDoc, const char *location, int expire
 		case SQ_SETURI:	{
 			char uri[RESOURCE_LENGTH];
 			sq_seturi_t *p = (sq_seturi_t*) param;
-			sq_metadata_t MetaData;
+			sq_metadata_t MetaData = { NULL, NULL, NULL, NULL, NULL, NULL };
 
 			// if port and/or ip are 0 or "", means that the CP@ shall be used
 			if (p->port)
@@ -214,7 +215,7 @@ static void AddMRDevice(IXML_Document *DescDoc, const char *location, int expire
 			NFREE(device->NextURI);
 			// end check
 
-			sq_get_metadata(device->SqueezeHandle, &MetaData, false);
+			if (device->Config.SendMetaData) sq_get_metadata(device->SqueezeHandle, &MetaData, false);
 			AVTSetURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info,
 				MetaData.title, MetaData.artist, MetaData.album, (void*) device->seqN++);
 			sq_free_metadata(&MetaData);

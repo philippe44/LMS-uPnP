@@ -336,6 +336,7 @@ void SaveConfig(char *name)
 	XMLAddNode(doc, common, "seek_after_pause", "%d", (int) glMRConfig.SeekAfterPause);
 	XMLAddNode(doc, common, "force_volume", "%d", (int) glMRConfig.ForceVolume);
 	XMLAddNode(doc, common, "volume_on_play", "%d", (int) glMRConfig.VolumeOnPlay);
+	XMLAddNode(doc, common, "send_metadata", "%d", (int) glMRConfig.SendMetaData);
 	XMLAddNode(doc, common, "volume_curve", glMRConfig.VolumeCurve);
 	XMLAddNode(doc, common, "accept_nexturi", "%d", (int) glMRConfig.AcceptNextURI);
 
@@ -374,6 +375,8 @@ void SaveConfig(char *name)
 			XMLAddNode(doc, dev_node, "force_volume", "%d", (int) p->Config.ForceVolume);
 		if (p->Config.VolumeOnPlay != glMRConfig.VolumeOnPlay)
 			XMLAddNode(doc, dev_node, "volume_on_play", "%d", (int) p->Config.VolumeOnPlay);
+		if (p->Config.SendMetaData != glMRConfig.SendMetaData)
+			XMLAddNode(doc, dev_node, "send_metadata", "%d", (int) p->Config.SendMetaData);
 		if (strcmp(p->Config.VolumeCurve, glMRConfig.VolumeCurve))
 			XMLAddNode(doc, dev_node, "volume_curve", p->Config.VolumeCurve);
 		if (p->Config.AcceptNextURI != glMRConfig.AcceptNextURI)
@@ -384,6 +387,7 @@ void SaveConfig(char *name)
 			XMLAddNode(doc, dev_node, "sample_rate", "%d", (int) p->sq_config.sample_rate);
 		if (p->sq_config.L24_format != glDeviceParam.L24_format)
 			XMLAddNode(doc, dev_node, "L24_format", "%d", (int) p->sq_config.L24_format);
+
 
 		p = p->Next;
 	}
@@ -425,6 +429,7 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "volume_on_play")) Conf->VolumeOnPlay = atol(val);
 	if (!strcmp(name, "volume_curve")) strcpy(Conf->VolumeCurve, val);
 	if (!strcmp(name, "accept_nexturi")) Conf->AcceptNextURI = atol(val);
+	if (!strcmp(name, "send_metadata")) Conf->SendMetaData = atol(val);
 	if (!strcmp(name, "name")) strcpy(Conf->Name, val);
 }
 
