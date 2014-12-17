@@ -1,0 +1,13 @@
+- To run the Linux pre-build binary on a 64bits architecture, install at 
+least 32bits libc6
+
+sudo apt-get install libc6:i386 
+
+- There is a problem with repositionning flac files for some players and 
+this seems to be linked with the way LMS produces the flac files. To fix 
+this, edit the convert.conf in the LMS server directory and change the 
+flac to flac transcoding for the underneath
+
+flc flc * *
+        # FT:{START=--skip=%t}U:{END=--until=%v}D:{RESAMPLE=-r %d}
+        [flac] -dcs $START$ $END$ -- $FILE$ | [sox] -q -t wav - -t flac -C 0 $RESAMPLE$ -
