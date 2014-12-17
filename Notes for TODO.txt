@@ -1,4 +1,4 @@
-1- When <seek_after_pause> is set to 1 and when you press "unpause" in LMS, sq2u sends LMS a request to "seek" from the beginning to the "paused" time (this is equivalent to a "repositoning" done from the GUI)
+1- When is set to 1 and when you press "unpause" in LMS, sq2u sends LMS a request to "seek" from the beginning to the "paused" time (this is equivalent to a "repositoning" done from the GUI)
 
 2- Quobuz does not allow repositionning (you can try using a normal squeezebox player)
 
@@ -8,4 +8,4 @@
 
 5- When the Uniti believes it is receiving a live stream, when pausing, it closes the connection and when un-pausing it re-opens it and asks for data starting from "first byte". For sq2u, "first byte" means from the beginning, but for the Uniti "first byte" means the most recent byte in the stream, as the stream is supposed to have continued during the pause - hence the "disconnect" between the two. Other players, like my Sonos, close the connection as well, but when they re-open it, they compute the last byte they received and ask sq2u to send data from there 
 
-6- Why not on Spotify ? I guess (tbc) that Spotify allows "repositionning". In case thase, the command 1- and 3- work properly and it is the nature of LMS to rebuild entirely a stream that starts at the repositonned position. So in that precise case, the "first byte" of LMS/sq2u means the same "first byte" as understood by the Uniti
+6- Why not on Spotify ? I guess (tbc) that Spotify allows "repositionning". In case case, the commands 1- and 3- work properly and it is the nature of LMS, when it accepts a repositioning, to cut the stream so that it starts at the repositonned position. So in that precise case, the "first byte" of LMS/sq2u means the same "first byte" as understood by the Uniti (ie the last played byte). And it works several times because Spotify unpause is likely fine by Spotify, not by LMS so it is like rebuilding a whole stream, so no fake header issue

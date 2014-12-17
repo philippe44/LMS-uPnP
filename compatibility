@@ -4,24 +4,25 @@ C = <can_pause>		0, 1
 F = <force_volume>	0, 1
 L = <L24_format>	0, 1
 T = <seek_after_pause>	0, 1
+H = <flac_header>	0, 1, 2
 
 P = pause works ?
 R = repositioning works ?
 
 
 
-Compatible		codecs		S	A	C	F	T	P	R	L
+Compatible		codecs		S	A	C	F	T	P	R	L	F
 														
-Sonos			mp3,flc		<value>	1	1	1	0	Y	Y	N/A
-Marantz NR1603		pcm,mp3,flc	-3	1	1	1	0	Y	Y	N/A
-xbmc			pcm,mp3,flc	-3	1	1	1	0	Y	Y	N/A
-M1 Cl1c			pcm,mp3,flc	-3	1	1	1	0	Y(*)	Y(*)	1
-Marantz CR603 		pcm, mp3, flc	-3	0	1	1	0	Y	Y	?
-Naim Uniti2 		pcm,mp3,flc 	-3 	1 	1 	1 	?	Y 	Y	?
-Revo SuperConnect	pcm,flc,mp3	<value> 0	1	0/1	1	Y	Y	?
-Windows Media Player	mp3		-3	0	1	0/1	1	Y	Y	N/A
-XBoxOne			mp3,pcm		<value>	0(*)	1	0/1	1	Y	Y	N/A
-foobar2000		flc,mp3,pcm	-3	1	1	0/1	0	Y	Y	N/A
+Sonos			mp3,flc		<value>	1	1	1	0	Y	Y	N/A	0,1,2
+Marantz NR1603		pcm,mp3,flc	-3	1	1	1	0	Y	Y	N/A	1,2
+xbmc			pcm,mp3,flc	-3	1	1	1	0	Y	Y	N/A	
+M1 Cl1c			pcm,mp3,flc	-3	1	1	1	0	Y(*)	Y(*)	1	(*)	
+Marantz CR603 		pcm, mp3, flc	-3	0	1	1	0	Y	Y	?	?
+Naim Uniti2 		pcm,mp3,flc 	-3 	1 	1 	1 	?	Y 	Y	?	?
+Revo SuperConnect	pcm,flc,mp3	<value> 0	1	0/1	1	Y	Y	?	?
+Windows Media Player	mp3		-3	0	1	0/1	1	Y	Y	N/A	N/A
+xBoxOne			mp3,pcm		<value>	0(*)	1	0/1	1	Y	Y	N/A	N/A
+foobar2000		flc,mp3,pcm	-3	1	1	0/1	0	Y	Y	N/A	1,2
 
 
 
@@ -46,7 +47,7 @@ M1Cl1c:
  - Repositionning with flac does not work unless the flac-to-flac transcoding is
 changed in LMS (see QUICKSTART)
 
-Revo SUperConnect:
+Revo SuperConnect:
  - <stream_length> at -3 prevents proper pause as the Revo thinks that it is 
 receiving a live stream and thus refuses to pause it (despite DLNA parameters
 set to allow it to do so)
