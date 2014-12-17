@@ -333,6 +333,7 @@ void SaveConfig(char *name)
 	XMLAddNode(doc, common, "codecs", glDeviceParam.codecs);
 	XMLAddNode(doc, common, "sample_rate", "%d", (int) glDeviceParam.sample_rate);
 	XMLAddNode(doc, common, "L24_format", "%d", (int) glDeviceParam.L24_format);
+	XMLAddNode(doc, common, "flac_header", "%d", (int) glDeviceParam.flac_header);
 	XMLAddNode(doc, common, "seek_after_pause", "%d", (int) glMRConfig.SeekAfterPause);
 	XMLAddNode(doc, common, "force_volume", "%d", (int) glMRConfig.ForceVolume);
 	XMLAddNode(doc, common, "volume_on_play", "%d", (int) glMRConfig.VolumeOnPlay);
@@ -387,7 +388,8 @@ void SaveConfig(char *name)
 			XMLAddNode(doc, dev_node, "sample_rate", "%d", (int) p->sq_config.sample_rate);
 		if (p->sq_config.L24_format != glDeviceParam.L24_format)
 			XMLAddNode(doc, dev_node, "L24_format", "%d", (int) p->sq_config.L24_format);
-
+		if (p->sq_config.flac_header != glDeviceParam.flac_header)
+			XMLAddNode(doc, dev_node, "flac_header", "%d", (int) p->sq_config.flac_header);
 
 		p = p->Next;
 	}
@@ -424,6 +426,7 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "codecs")) strcpy(sq_conf->codecs, val);
 	if (!strcmp(name, "sample_rate"))sq_conf->sample_rate = atol(val);
 	if (!strcmp(name, "L24_format"))sq_conf->L24_format = atol(val);
+	if (!strcmp(name, "flac_header"))sq_conf->flac_header = atol(val);
 	if (!strcmp(name, "seek_after_pause")) Conf->SeekAfterPause = atol(val);
 	if (!strcmp(name, "force_volume")) Conf->ForceVolume = atol(val);
 	if (!strcmp(name, "volume_on_play")) Conf->VolumeOnPlay = atol(val);

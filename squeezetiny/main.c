@@ -293,7 +293,8 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 	if (next) {
 		sprintf(cmd, "%s playlist tracks", ctx->cli_id);
 		rsp = cli_send_cmd(cmd, true, ctx);
-		idx = (rsp) ? (idx + 1) % atol(rsp) : (idx + 1);
+		if (rsp && atol(rsp)) idx = (idx + 1) % atol(rsp);
+		else idx = 0;
 	}
 
 	sprintf(cmd, "%s playlist title %d", ctx->cli_id, idx);
@@ -502,7 +503,10 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 	the nextURI buffer and miss the end of the current track
 	*/
 	if (wait && !read_b && !p->write_file) {
+#ifndef __EARLY_STMd__
 		ctx->read_ended = true;
+		wake_controller(ctx);
+#endif
 		LOG_INFO("[%p]: read (end of track) w:%d", ctx, wait);
 	}
 

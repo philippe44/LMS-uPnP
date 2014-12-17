@@ -72,7 +72,8 @@ typedef struct flac_streaminfo_s {
 		u8_t MD5[16];
 } flac_streaminfo_t;
 
-flac_streaminfo_t FLAC_STREAMINFO = {
+
+flac_streaminfo_t FLAC_NORMAL_STREAMINFO = {
 		{ 0x00, 0x10 },
 		{ 0xff, 0xff },
 		{ 0x00, 0x00, 0x00 },
@@ -88,6 +89,26 @@ flac_streaminfo_t FLAC_STREAMINFO = {
 		{ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }
 };
+
+#define FLAC_TOTAL_SAMPLES 0xffffffff
+
+flac_streaminfo_t FLAC_FULL_STREAMINFO = {
+		{ 0x00, 0x10 },
+		{ 0xff, 0xff },
+		{ 0x00, 0x00, 0x00 },
+		{ 0x00, 0x00, 0x00 },
+		{ BYTE_1(FLAC_COMBO(44100, 2, 16)),
+		BYTE_2(FLAC_COMBO(44100, 2, 16)),
+		BYTE_3(FLAC_COMBO(44100, 2, 16)),
+		BYTE_4(FLAC_COMBO(44100, 2, 16)) | BYTE_1(QUAD_BYTE_H(FLAC_TOTAL_SAMPLES)) },
+		{ BYTE_1(QUAD_BYTE_L(FLAC_TOTAL_SAMPLES)),
+		BYTE_2(QUAD_BYTE_L(FLAC_TOTAL_SAMPLES)),
+		BYTE_3(QUAD_BYTE_L(FLAC_TOTAL_SAMPLES)),
+		BYTE_4(QUAD_BYTE_L(FLAC_TOTAL_SAMPLES)) },
+		{ 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa,
+		0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa }
+};
+
 
 static u8_t flac_vorbis_block[] = { 0x84,0x00,0x00,0x28,0x20,0x00,0x00,0x00,0x72,
 									0x65,0x66,0x65,0x72,0x65,0x6E,0x63,0x65,0x20,
@@ -323,7 +344,7 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 				// flac case
 				if (!strcmp(out->ext, "flac")) {
 					if (space >= FLAC_RECV_MIN) {
-						if (strncmp(_buf_readp(ctx->streambuf), "fLaC", 4)) {
+						if (strncmp(_buf_readp(ctx->streambuf), "fLaC", 4) && ctx->config.flac_header != FLAC_NO_HEADER) {
 							flac_frame_t *frame;
 							flac_streaminfo_t *streaminfo;
 							u32_t rate;
@@ -340,7 +361,10 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 								sample_size = FLAC_CODED_SAMPLE_SIZE[FLAC_GET_FRAME_SAMPLE_SIZE(frame->channels_sample_size)];
 								channels = FLAC_CODED_CHANNELS[FLAC_GET_FRAME_CHANNEL(frame->channels_sample_size)];
 								streaminfo = malloc(sizeof(flac_streaminfo_t));
-								memcpy(streaminfo, &FLAC_STREAMINFO, sizeof(flac_streaminfo_t));
+								if (ctx->config.flac_header == FLAC_NORMAL_HEADER)
+									memcpy(streaminfo, &FLAC_NORMAL_STREAMINFO, sizeof(flac_streaminfo_t));
+								else
+									memcpy(streaminfo, &FLAC_FULL_STREAMINFO, sizeof(flac_streaminfo_t));
 
 								if (!FLAC_GET_BLOCK_STRATEGY(frame->tag)) {
 									block_size = flac_block_size(FLAC_GET_BLOCK_SIZE(frame->bsize_rate));
@@ -448,6 +472,11 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 			LOG_INFO("[%p] wrote total %d", ctx, out->write_count_t);
 			fclose(out->write_file);
 			out->write_file = NULL;
+#ifdef __EARLY_STMd__
+			ctx->read_ended = true;
+			wake_controller(ctx);
+#endif
+
 			UNLOCK_S;
 			buf_flush(ctx->streambuf);
 		}
