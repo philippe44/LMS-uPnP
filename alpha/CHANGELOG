@@ -1,2 +1,16 @@
-0.1.4.0pre1 
- - FLAC header with "fake & large" number of samples
+0.1.4.0
+ - metadata request can cause a fault if the list has been emptied (mod 0 call)
+ - if uPnP player cannot play a format, send the proper error code to LMS (also send STMc everytime)
+ - add <flac_header> parameter
+ - add <send_metadata> parameter
+
+<flac_header>[0 | 1 | 2]</flac_header>
+When repositioning on a flac playback, LMS re-generates a file starting from the new position but does not insert a proper header . Such header is required by some players and it contains information like total number of samples in the file and a checksum of the decoded audio data. Sq2u cannot know these values and the flac standard specifies that they should then be set to 0. Nevertheless, some players consider these audio data as being a live stream and will consequently refuse to pause. The symptoms varies, but mainly after a re-positionning, pause/un-pause will fail or, if <seek_after_pause> is set to 1, the first pause/un-pause will work, but not any subsequent pause/un-pause
+0 : no header re-inserted
+1: header re-inserted with 0 for total number of sample and checksum
+2: header re-inserted with 2^32-1 for total number of samples and 0xaa (170) 16 times for checksum
+
+<send_metadata>[0 | 1]</meta_data>
+0 : do not send metadata to player
+1 : send metadata (title, artist, album, genre, duration) to player
+
