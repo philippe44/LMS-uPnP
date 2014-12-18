@@ -84,5 +84,5 @@ Win32
 *.xml
 *.bat
 *-idx*
-bin/*.txt
+*.txt
 
