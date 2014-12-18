@@ -561,3 +561,157 @@ Content-Type: audio/x-flac
 [22:43:33.134] SyncNotifState:316 marantz NR1603: uPNP stop
 [22:43:33.134] sq_notify:551 [0048B60C] uPNP notify STOP
 [22:43:45.000] CallbackEventHandler:649 uPNP search timeout
+[22:50:48.764] slimproto_loglevel:1022 slimproto change log
+[22:50:48.764] stream_loglevel:292 stream change log
+[22:50:48.764] output_mr_loglevel:271 output_mr init 2
+[22:50:48.764] decode_init:123 init decode, include codecs:  exclude codecs: 
+[22:50:48.764] uPNPLogLevel:406 uPNP change log
+[22:50:48.764] WebServerLogLevel:146 webserver change loglevel 2
+[22:50:49.132] uPNPInitialize:767 uPNP init success - 192.168.2.10:49152
+[22:50:49.132] uPNPInitialize:778 ControlPoint registered
+[22:50:49.132] uPNPInitialize:789 WebServer enabled
+[22:50:49.132] uPNPInitialize:800 VirtualDir set for Squeezelite
+[22:50:49.132] uPNPInitialize:817 Callbacks registered for VirtualDir
+[22:50:49.303] GetProtocolInfo:355 uPNP http://192.168.2.23:1400/MediaRenderer/ConnectionManager/Control GetProtocolInfo (cookie 00000000)
+[22:50:49.407] GetProtocolInfo:355 uPNP http://192.168.2.65:1400/MediaRenderer/ConnectionManager/Control GetProtocolInfo (cookie 00000000)
+[22:50:49.445] GetProtocolInfo:355 uPNP http://192.168.2.22:1400/MediaRenderer/ConnectionManager/Control GetProtocolInfo (cookie 00000000)
+[22:50:49.549] GetProtocolInfo:355 uPNP http://192.168.2.24:1400/MediaRenderer/ConnectionManager/Control GetProtocolInfo (cookie 00000000)
+[22:50:51.270] GetProtocolInfo:355 uPNP http://192.168.2.10:1186/ConnectionManager/d8bbb1e0-9cfb-51ad-645b-7f1de561906e/control.xml GetProtocolInfo (cookie 00000000)
+[22:50:51.872] GetProtocolInfo:355 uPNP http://192.168.2.58:8080/ConnectionManager/ctrl GetProtocolInfo (cookie 00000000)
+[22:50:51.880] GetProtocolInfo:355 uPNP http://192.168.2.32:8080/ConnectionManager/ctrl GetProtocolInfo (cookie 00000000)
+[22:51:04.000] CallbackEventHandler:649 uPNP search timeout
+[22:51:04.032] output_mr_thread_init:494 [004833BC] init output media renderer
+[22:51:04.032] decode_thread_init:151 [004833BC]: init decode 48823760
+[22:51:04.066] discover_server:827 [004833BC] sending discovery
+[22:51:04.067] discover_server:838 [004833BC] got response from: 192.168.2.10:3483
+[22:51:04.067] slimproto_thread_init:1117 [004833BC] connecting to 192.168.2.10:3483
+[22:51:04.067] decode_flush:196 [004833BC]: decode flush
+[22:51:04.067] output_flush:572 [004833BC] flush output buffer
+[22:51:04.067] sq_callback:154 [0257A460]: device off or not controlled by LMS
+[22:51:04.101] output_mr_thread_init:494 [00485F3C] init output media renderer
+[22:51:04.137] decode_thread_init:151 [00485F3C]: init decode 48823760
+[22:51:04.137] discover_server:827 [00485F3C] sending discovery
+[22:51:04.173] discover_server:838 [00485F3C] got response from: 192.168.2.10:3483
+[22:51:04.173] slimproto:885 [004833BC] connected
+[22:51:04.174] slimproto:896 [004833BC] local player
+[22:51:04.174] sendHELO:132 [004833BC] mac: 00:0e:58:fd:8a:4a
+[22:51:04.174] sendHELO:134 [004833BC] cap: Model=squeezelite,ModelName=SqueezeLite,AccuratePlayPoints=0,HasDigitalOut=1,MaxSampleRate=48000,flc,mp3,pcm
+[22:51:04.174] slimproto_thread_init:1117 [00485F3C] connecting to 192.168.2.10:3483
+[22:51:04.174] decode_flush:196 [00485F3C]: decode flush
+[22:51:04.174] output_flush:572 [00485F3C] flush output buffer
+[22:51:04.174] sq_callback:154 [0257DB90]: device off or not controlled by LMS
+[22:51:04.174] output_mr_thread_init:494 [00488ABC] init output media renderer
+[22:51:04.174] decode_thread_init:151 [00488ABC]: init decode 48823760
+[22:51:04.174] discover_server:827 [00488ABC] sending discovery
+[22:51:04.280] process_strm:240 [004833BC] strm command q
+[22:51:04.280] decode_flush:196 [004833BC]: decode flush
+[22:51:04.280] output_flush:572 [004833BC] flush output buffer
+[22:51:04.280] sq_callback:154 [0257A460]: device off or not controlled by LMS
+[22:51:04.315] process_aude:466 [004833BC] on/off using aude 1
+[22:51:04.315] decode_flush:196 [004833BC]: decode flush
+ discover_server:838 [00488ABC] got response from: 192.168.2.10:3483
+[22:51:04.315] slimproto_thread_init:1117 [00488ABC] connecting to 192.168.2.10:3483
+[22:51:04.315] decode_flush:196 [00488ABC]: decode flush
+[22:51:04.315] output_flush:572 [00488ABC] flush output buffer
+[22:51:04.315] sq_callback:154 [02531D40]: device off or not controlled by LMS
+[22:51:04.315] slimproto:885 [00485F3C] connected
+[22:51:04.316] slimproto:896 [00485F3C] local player
+[22:51:04.316] sendHELO:132 [00485F3C] mac: 00:0e:58:a2:ab:58
+[22:51:04.316] sendHELO:134 [00485F3C] cap: Model=squeezelite,ModelName=SqueezeLite,AccuratePlayPoints=0,HasDigitalOut=1,MaxSampleRate=48000,flc,mp3
+[22:51:04.316] output_flush:572 [004833BC] flush output buffer
+[22:51:04.316] sq_callback:154 [0257A460]: device off or not controlled by LMS
+[22:51:04.316] sq_callback:150 [0257A460]: device set on/off 1
+[22:51:04.352] output_mr_thread_init:494 [0048B63C] init output media renderer
+[22:51:04.390] decode_thread_init:151 [0048B63C]: init decode 48823760
+[22:51:04.427] discover_server:827 [0048B63C] sending discovery
+[22:51:04.427] process_strm:240 [00485F3C] strm command q
+[22:51:04.427] decode_flush:196 [00485F3C]: decode flush
+[22:51:04.427] slimproto:885 [00488ABC] connected
+[22:51:04.427] slimproto:896 [00488ABC] local player
+[22:51:04.427] sendHELO:132 [00488ABC] mac: 00:0e:58:c3:f6:7c
+[22:51:04.427] sendHELO:134 [00488ABC] cap: Model=squeezelite,ModelName=SqueezeLite,AccuratePlayPoints=0,HasDigitalOut=1,MaxSampleRate=48000,flc,mp3
+[22:51:04.427] output_flush:572 [00485F3C] flush output buffer
+[22:51:04.427] sq_callback:154 [0257DB90]: device off or not controlled by LMS
+[22:51:04.427] process_aude:466 [00485F3C] on/off using aude 0
+[22:51:04.427] decode_flush:196 [00485F3C]: decode flush
+[22:51:04.427] output_flush:572 [00485F3C] flush output buffer
+[22:51:04.427] sq_callback:154 [0257DB90]: device off or not controlled by LMS
+[22:51:04.428] sq_callback:150 [0257DB90]: device set on/off 0
+[22:51:04.428] sq_callback:154 [0257DB90]: device off or not controlled by LMS
+[22:51:04.428] sq_callback:154 [0257DB90]: device off or not controlled by LMS
+[22:51:04.428] discover_server:838 [0048B63C] got response from: 192.168.2.10:3483
+[22:51:04.428] slimproto_thread_init:1117 [0048B63C] connecting to 192.168.2.10:3483
+[22:51:04.428] decode_flush:196 [0048B63C]: decode flush
+[22:51:04.428] output_flush:572 [0048B63C] flush output buffer
+[22:51:04.428] sq_callback:154 [025812C0]: device off or not controlled by LMS
+[22:51:04.469] output_mr_thread_init:494 [0048E1BC] init output media renderer
+[22:51:04.469] decode_thread_init:151 [0048E1BC]: init decode 48823760
+[22:51:04.470] discover_server:827 [0048E1BC] sending discovery
+[22:51:04.556] slimproto:885 [0048B63C] connected
+[22:51:04.556] slimproto:896 [0048B63C] local player
+[22:51:04.556] sendHELO:132 [0048B63C] mac: 8c:89:a5:18:29:95
+[22:51:04.556] sendHELO:134 [0048B63C] cap: Model=squeezelite,ModelName=SqueezeLite,AccuratePlayPoints=0,HasDigitalOut=1,MaxSampleRate=44100,flc,mp3,pcm
+[22:51:04.573] process_strm:240 [00488ABC] strm command q
+[22:51:04.573] decode_flush:196 [00488ABC]: decode flush
+[22:51:04.573] output_flush:572 [00488ABC] flush output buffer
+[22:51:04.573] sq_callback:154 [02531D40]: device off or not controlled by LMS
+[22:51:04.573] process_aude:466 [00488ABC] on/off using aude 0
+[22:51:04.573] decode_flush:196 [00488ABC]: decode flush
+[22:51:04.573] output_flush:572 [00488ABC] flush output buffer
+[22:51:04.573] sq_callback:154 [02531D40]: device off or not controlled by LMS
+[22:51:04.573] sq_callback:150 [02531D40]: device set on/off 0
+[22:51:04.573] sq_callback:154 [02531D40]: device off or not controlled by LMS
+[22:51:04.573] sq_callback:154 [02531D40]: device off or not controlled by LMS
+[22:51:04.576] discover_server:838 [0048E1BC] got response from: 192.168.2.10:3483
+[22:51:04.576] slimproto_thread_init:1117 [0048E1BC] connecting to 192.168.2.10:3483
+[22:51:04.576] decode_flush:196 [0048E1BC]: decode flush
+[22:51:04.576] output_flush:572 [0048E1BC] flush output buffer
+[22:51:04.576] sq_callback:154 [02585520]: device off or not controlled by LMS
+[22:51:04.617] process_strm:240 [0048B63C] strm command q
+[22:51:04.617] decode_flush:196 [0048B63C]: decode flush
+[22:51:04.617] output_flush:572 [0048B63C] flush output buffer
+[22:51:04.617] sq_callback:154 [025812C0]: device off or not controlled by LMS
+[22:51:04.617] process_aude:466 [0048B63C] on/off using aude 1
+[22:51:04.617] decode_flush:196 [0048B63C]: decode flush
+[22:51:04.617] output_flush:572 [0048B63C] flush output buffer
+[22:51:04.617] sq_callback:154 [025812C0]: device off or not controlled by LMS
+[22:51:04.617] sq_callback:150 [025812C0]: device set on/off 1
+[22:51:04.617] output_mr_thread_init:494 [00490D3C] init output media renderer
+[22:51:04.656] decode_thread_init:151 [00490D3C]: init decode 48823760
+[22:51:04.696] slimproto:885 [0048E1BC] connected
+[22:51:04.696] slimproto:896 [0048E1BC] local player
+[22:51:04.696] sendHELO:132 [0048E1BC] mac: 9c:64:5e:02:96:f5
+[22:51:04.696] sendHELO:134 [0048E1BC] cap: Model=squeezelite,ModelName=SqueezeLite,AccuratePlayPoints=0,HasDigitalOut=1,MaxSampleRate=192000,mp3
+[22:51:04.696] discover_server:827 [00490D3C] sending discovery
+[22:51:04.696] discover_server:838 [00490D3C] got response from: 192.168.2.10:3483
+[22:51:04.697] slimproto_thread_init:1117 [00490D3C] connecting to 192.168.2.10:3483
+[22:51:04.697] decode_flush:196 [00490D3C]: decode flush
+[22:51:04.697] output_flush:572 [00490D3C] flush output buffer
+[22:51:04.697] sq_callback:154 [02557F00]: device off or not controlled by LMS
+[22:51:04.739] process_strm:240 [0048E1BC] strm command q
+[22:51:04.739] decode_flush:196 [0048E1BC]: decode flush
+[22:51:04.739] output_flush:572 [0048E1BC] flush output buffer
+[22:51:04.739] sq_callback:154 [02585520]: device off or not controlled by LMS
+[22:51:04.739] process_aude:466 [0048E1BC] on/off using aude 1
+[22:51:04.739] decode_flush:196 [0048E1BC]: decode flush
+[22:51:04.739] output_flush:572 [0048E1BC] flush output buffer
+[22:51:04.739] sq_callback:154 [02585520]: device off or not controlled by LMS
+[22:51:04.739] sq_callback:150 [02585520]: device set on/off 1
+[22:51:04.749] slimproto:885 [00490D3C] connected
+[22:51:04.749] slimproto:896 [00490D3C] local player
+[22:51:04.749] sendHELO:132 [00490D3C] mac: 00:06:78:11:05:96
+[22:51:04.749] sendHELO:134 [00490D3C] cap: Model=squeezelite,ModelName=SqueezeLite,AccuratePlayPoints=0,HasDigitalOut=1,MaxSampleRate=192000,flc,pcm,mp3
+[22:51:04.855] process_strm:240 [00490D3C] strm command q
+[22:51:04.855] decode_flush:196 [00490D3C]: decode flush
+[22:51:04.855] output_flush:572 [00490D3C] flush output buffer
+[22:51:04.855] sq_callback:154 [02557F00]: device off or not controlled by LMS
+[22:51:04.855] process_strm:240 [00490D3C] strm command q
+[22:51:04.855] decode_flush:196 [00490D3C]: decode flush
+[22:51:04.855] output_flush:572 [00490D3C] flush output buffer
+[22:51:04.855] sq_callback:154 [02557F00]: device off or not controlled by LMS
+[22:51:04.855] process_aude:466 [00490D3C] on/off using aude 1
+[22:51:04.855] decode_flush:196 [00490D3C]: decode flush
+[22:51:04.855] output_flush:572 [00490D3C] flush output buffer
+[22:51:04.855] sq_callback:154 [02557F00]: device off or not controlled by LMS
+[22:51:04.855] sq_callback:150 [02557F00]: device set on/off 1
+[22:53:04.000] CallbackEventHandler:649 uPNP search timeout
