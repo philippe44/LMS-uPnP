@@ -314,33 +314,40 @@ void SyncNotifState(char *State, struct sMR* Device)
 	if (!strcmp(State, "STOPPED")) {
 		if (Device->State != STOPPED) {
 			LOG_INFO("%s: uPNP stop", Device->FriendlyName);
-			if (!Device->Config.AcceptNextURI && Device->NextURI) {
-				int WaitFor = Device->seqN++;
-				sq_metadata_t MetaData;
+			if (Device->NextURI) {
+				if (!Device->Config.AcceptNextURI) {
+					int WaitFor = Device->seqN++;
+					sq_metadata_t MetaData;
 
-				// fake a "SETURI" and a "PLAY" request
-				NFREE(Device->CurrentURI);
-				Device->CurrentURI = malloc(strlen(Device->NextURI) + 1);
-				strcpy(Device->CurrentURI, Device->NextURI);
-				NFREE(Device->NextURI);
+					// fake a "SETURI" and a "PLAY" request
+					NFREE(Device->CurrentURI);
+					Device->CurrentURI = malloc(strlen(Device->NextURI) + 1);
+					strcpy(Device->CurrentURI, Device->NextURI);
+					NFREE(Device->NextURI);
 
-				sq_get_metadata(Device->SqueezeHandle, &MetaData, true);
-				AVTSetURI(Device->Service[AVT_SRV_IDX].ControlURL, Device->CurrentURI, Device->NextProtInfo, MetaData.title, MetaData.artist, MetaData.album, (void*) WaitFor);
-				sq_free_metadata(&MetaData);
+					sq_get_metadata(Device->SqueezeHandle, &MetaData, true);
+					AVTSetURI(Device->Service[AVT_SRV_IDX].ControlURL, Device->CurrentURI, Device->NextProtInfo, MetaData.title, MetaData.artist, MetaData.album, (void*) WaitFor);
+					sq_free_metadata(&MetaData);
 
-				/*
-				Need to queue to wait for the SetURI to be accepted, otherwise
-				the current URI will be played, creating a "blurb" effect
-				*/
-				QueueAction(Device->SqueezeHandle, Device, SQ_PLAY, WaitFor, NULL, true);
+					/*
+					Need to queue to wait for the SetURI to be accepted, otherwise
+					the current URI will be played, creating a "blurb" effect
+					*/
+					QueueAction(Device->SqueezeHandle, Device, SQ_PLAY, WaitFor, NULL, true);
 
-				// fake the change
-				sq_notify(Device->SqueezeHandle, Device, SQ_TRACK_CHANGE, 0, NULL);
-
-				LOG_INFO("[%p]: no gapless %s", Device, Device->CurrentURI);
+					// fake the change
+					sq_notify(Device->SqueezeHandle, Device, SQ_TRACK_CHANGE, 0, NULL);
+					LOG_INFO("[%p]: no gapless %s", Device, Device->CurrentURI);
+			   }
+			   else {
+					LOG_INFO("[%p]: unwanted stop(n:%s)", Device, Device->NextURI);
+					AVTBasic(Device->Service[AVT_SRV_IDX].ControlURL, "Next", (void*) Device->seqN++);
+			  }
 			}
-			else sq_notify(Device->SqueezeHandle, Device, SQ_STOP, 0, NULL);
-			Device->State = STOPPED;
+			else {
+				sq_notify(Device->SqueezeHandle, Device, SQ_STOP, 0, NULL);
+				Device->State = STOPPED;
+			}
 		 }
 	}
 

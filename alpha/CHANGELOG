@@ -1,4 +1,5 @@
 0.1.4.0
+ - change DIDL header to add dlna  schema
  - metadata request can cause a fault if the list has been emptied (mod 0 call)
  - if uPnP player cannot play a format, send the proper error code to LMS (also send STMc everytime)
  - add <flac_header> parameter
