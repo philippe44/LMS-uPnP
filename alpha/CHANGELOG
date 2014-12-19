@@ -1,9 +1,11 @@
 0.1.4.0
- - change DIDL header to add dlna  schema
  - metadata request can cause a fault if the list has been emptied (mod 0 call)
- - if uPnP player cannot play a format, send the proper error code to LMS (also send STMc everytime)
+ - if uPnP player cannot play a format, send the proper error code to LMS (also send STMc everytime) == > that's to avoid being
+stuck in a middle of a playlist - LMS will just move to the next song and a squeeze2upnp will just log the problem
  - add <flac_header> parameter
  - add <send_metadata> parameter
+ - if <buffer_limit> is smaller tha max(<streambuf_size>, <outputbuf_size>) * 4, set it to that max
+ - if uPnP player stops before or during a SetNextURI, re-activate it by sending a "Next" command (this is a race condition: get metadata is taking too much time)
 
 <flac_header>[0 | 1 | 2]</flac_header>
 When repositioning on a flac playback, LMS re-generates a file starting from the new position but does not insert a proper header . Such header is required by some players and it contains information like total number of samples in the file and a checksum of the decoded audio data. Sq2u cannot know these values and the flac standard specifies that they should then be set to 0. Nevertheless, some players consider these audio data as being a live stream and will consequently refuse to pause. The symptoms varies, but mainly after a re-positionning, pause/un-pause will fail or, if <seek_after_pause> is set to 1, the first pause/un-pause will work, but not any subsequent pause/un-pause
