@@ -24,6 +24,7 @@
 #include "squeezedefs.h"
 #include "util.h"
 #include "util_common.h"
+#include "upnptools.h"
 
 /*----------------------------------------------------------------------------*/
 /* globals */
@@ -275,15 +276,15 @@ char *XMLGetChangeItem(IXML_Document *doc, char *Item)
 /*----------------------------------------------------------------------------*/
 IXML_Node *XMLAddNode(IXML_Document *doc, IXML_Node *parent, char *name, char *fmt, ...)
 {
-	IXML_Node *node;
-	IXML_Element *elm;
+	IXML_Node *node, *elm;
+//	IXML_Element *elm;
 
 	char buf[256];
 	va_list args;
 
-	elm =  ixmlDocument_createElement(doc, name);
+	elm = (IXML_Node*) ixmlDocument_createElement(doc, name);
 	if (parent) ixmlNode_appendChild(parent, elm);
-	else ixmlNode_appendChild(doc, elm);
+	else ixmlNode_appendChild((IXML_Node*) doc, elm);
 
 	if (fmt) {
 		va_start(args, fmt);

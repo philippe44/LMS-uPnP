@@ -130,8 +130,6 @@ bool SetContentType(char *Cap[], sq_seturi_t *uri)
 		strcpy(uri->proto_info, "");
 		return false;
 	}
-
-	return true;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -231,7 +229,10 @@ void FlushMRList(void)
 		FlushActionList(p);
 		NFREE(p->CurrentURI);
 		NFREE(p->NextURI);
-		while (p->ProtocolCap[i] && i < MAX_PROTO) NFREE(p->ProtocolCap[i++]);
+		while (p->ProtocolCap[i] && i < MAX_PROTO) {
+			NFREE(p->ProtocolCap[i]);
+			i++;
+		}
         free(p);
 		p = n;
 	}
@@ -284,7 +285,7 @@ void ParseProtocolInfo(struct sMR *Device, char *Info)
 	} while (i < MAX_PROTO && n < size);
 
 	// remove trailing "*" as we WILL add DLNA-related info, so some options to come
-	for (i = 0; p = Device->ProtocolCap[i]; i++)
+	for (i = 0; (p = Device->ProtocolCap[i]); i++)
 		if (p[strlen(p) - 1] == '*') p[strlen(p) - 1] = '\0';
 }
 
@@ -295,8 +296,7 @@ void SaveConfig(char *name)
 {
 	struct sMR *p;
 	IXML_Document *doc = ixmlDocument_createDocument();
-	IXML_Element  *elm, *common;
-	IXML_Node	 *node, *root;
+	IXML_Node	 *root, *common;
 	char *s;
 	FILE *file;
 
@@ -462,7 +462,7 @@ void *FindMRConfig(void *ref, char *UDN)
 	unsigned i;
 
 	elm = ixmlDocument_getElementById(doc, "squeeze2upnp");
-	l1_node_list = ixmlDocument_getElementsByTagName(elm, "udn");
+	l1_node_list = ixmlDocument_getElementsByTagName((IXML_Document*) elm, "udn");
 	for (i = 0; i < ixmlNodeList_length(l1_node_list); i++) {
 		IXML_Node *l1_node, *l1_1_node;
 		l1_node = ixmlNodeList_item(l1_node_list, i);
@@ -517,7 +517,7 @@ void *LoadConfig(char *name, tMRConfig *Conf, sq_dev_param_t *sq_conf)
 		unsigned i;
 		char *n, *v;
 		IXML_NodeList *l1_node_list;
-		l1_node_list = ixmlNode_getChildNodes(elm);
+		l1_node_list = ixmlNode_getChildNodes((IXML_Node*) elm);
 		for (i = 0; i < ixmlNodeList_length(l1_node_list); i++) {
 			IXML_Node *l1_node, *l1_1_node;
 			l1_node = ixmlNodeList_item(l1_node_list, i);
@@ -529,12 +529,12 @@ void *LoadConfig(char *name, tMRConfig *Conf, sq_dev_param_t *sq_conf)
 		if (l1_node_list) ixmlNodeList_free(l1_node_list);
 	}
 
-	elm = ixmlDocument_getElementById(elm, "common");
+	elm = ixmlDocument_getElementById((IXML_Document	*)elm, "common");
 	if (elm) {
 		char *n, *v;
 		IXML_NodeList *l1_node_list;
 		unsigned i;
-		l1_node_list = ixmlNode_getChildNodes(elm);
+		l1_node_list = ixmlNode_getChildNodes((IXML_Node*) elm);
 		for (i = 0; i < ixmlNodeList_length(l1_node_list); i++) {
 			IXML_Node *l1_node, *l1_1_node;
 			l1_node = ixmlNodeList_item(l1_node_list, i);

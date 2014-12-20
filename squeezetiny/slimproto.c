@@ -1087,9 +1087,9 @@ void slimproto_thread_init(char *server, u8_t mac[6], const char *name, const ch
 	pthread_attr_init(&attr);
 	pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN + SLIMPROTO_THREAD_STACK_SIZE);
 if (ctx->config.mode == SQ_LMSUPNP)
-	pthread_create(&ctx->thread, &attr, slimproto_short, ctx);
+	pthread_create(&ctx->thread, &attr, (void *(*)(void*)) slimproto_short, ctx);
 else
-	pthread_create(&ctx->thread, &attr, slimproto, ctx);
+	pthread_create(&ctx->thread, &attr, (void *(*)(void*)) slimproto, ctx);
 	pthread_attr_destroy(&attr);
 #endif
 #if WIN

@@ -303,6 +303,7 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 			if (ctx->config.buffer_limit != -1 && out->write_count > (u32_t) ctx->config.buffer_limit) {
 				u8_t *buf;
 				u32_t n;
+				int rc;
 				struct stat Status;
 
 				// LMS will need to wait for the player to consume data ...
@@ -329,12 +330,12 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 				fflush(out->write_file);
 
 				fseek(out->read_file, out->read_count, SEEK_SET);
-				fresize(out->write_file, out->write_count);
+				rc = fresize(out->write_file, out->write_count);
 				fstat(fileno(out->write_file), &Status);
-				LOG_INFO("[%p]: re-sizing w:%d r:%d rp:%d ws:%d", ctx,
+				LOG_INFO("[%p]: re-sizing w:%d r:%d rp:%d ws:%d rc:%d", ctx,
 						  out->write_count + ctx->config.buffer_limit /4,
 						  out->read_count + ctx->config.buffer_limit /4,
-						  ftell(out->read_file), Status.st_size);
+						  ftell(out->read_file), Status.st_size, rc );
 				UNLOCK_O;
 			}
 
@@ -522,10 +523,10 @@ void output_mr_thread_init(unsigned output_buf_size, char *params, unsigned rate
 	pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN + OUTPUT_THREAD_STACK_SIZE);
 	switch (ctx->config.mode) {
 	case SQ_FULL:
-			pthread_create(&ctx->mr_thread, &attr, &output_thread, ctx);
+			pthread_create(&ctx->mr_thread, &attr, (void *(*)(void*)) &output_thread, ctx);
 			break;
 	case SQ_STREAM:
-			pthread_create(&ctx->mr_thread, &attr, &output_thru_thread, ctx);
+			pthread_create(&ctx->mr_thread, &attr, (void *(*)(void*)) &output_thru_thread, ctx);
 			break;
 	default:
 		break;

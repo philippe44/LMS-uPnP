@@ -106,6 +106,7 @@ struct sMR {
 		u8_t	b;
 	} VolumeCurve[32];
 	char	*ProtocolCap[MAX_PROTO + 1];
+	u16_t	ErrorCount;
 	struct sMR	*NextSQ;
 	struct sMR	*Next;
 };

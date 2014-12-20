@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
+#include <ctype.h>
 
 #if defined(WIN32) || defined(WIN)
 #include <winsock2.h>

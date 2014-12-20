@@ -289,12 +289,14 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 	}
 
 	idx = atol(rsp);
+	NFREE(rsp);
 
 	if (next) {
 		sprintf(cmd, "%s playlist tracks", ctx->cli_id);
 		rsp = cli_send_cmd(cmd, true, ctx);
 		if (rsp && atol(rsp)) idx = (idx + 1) % atol(rsp);
 		else idx = 0;
+		NFREE(rsp);
 	}
 
 	sprintf(cmd, "%s playlist title %d", ctx->cli_id, idx);
@@ -677,7 +679,7 @@ bool sq_run_device(sq_dev_handle_t handle, char *name, u8_t *mac, sq_dev_param_t
 		memcpy(l_mac, gl_last_mac, 6);
 	}
 
-	if (param->buffer_limit < max(param->stream_buf_size, param->output_buf_size) * 4) {
+	if ((u32_t) param->buffer_limit < max(param->stream_buf_size, param->output_buf_size) * 4) {
 		LOG_ERROR("[%p]: incorrect buffer limit %d", ctx, param->buffer_limit);
 		param->buffer_limit = max(param->stream_buf_size, param->output_buf_size) * 4;
 	}

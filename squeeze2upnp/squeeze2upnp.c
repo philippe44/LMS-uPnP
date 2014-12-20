@@ -502,8 +502,10 @@ int CallbackActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 			LOG_SDEBUG("Action complete : %i (cookie %d)", EventType, Cookie);
 
 			if (Action->ErrCode != UPNP_E_SUCCESS) {
+				p->ErrorCount++;
 				LOG_ERROR("Error in action callback -- %d (cookie %d)",	Action->ErrCode, Cookie);
 			}
+			else p->ErrorCount = 0;
 
 			break;
 		}
@@ -933,6 +935,7 @@ void AddMRDevice(IXML_Document *DescDoc, const char *location,	int expires)
 		Device->on = false;
 		Device->macSize = 6;
 		Device->SqueezeHandle = 0;
+		Device->ErrorCount = 0;
 		strcpy(Device->UDN, UDN);
 		strcpy(Device->DescDocURL, location);
 		strcpy(Device->FriendlyName, friendlyName);
@@ -950,7 +953,7 @@ void AddMRDevice(IXML_Document *DescDoc, const char *location,	int expires)
 		memcpy(&Device->sq_config, &glDeviceParam, sizeof(sq_dev_param_t));
 
 		InitActionList(Device);
-		for (i = 0 ; i < MAX_SRV; i++) strcpy(Device->Service[i].Id, "");
+		for (i = 0; i < MAX_SRV; i++) strcpy(Device->Service[i].Id, "");
 
 		/* find the AVTransport service */
 		for (i = 0; i < NB_SRV; i++) {
@@ -966,11 +969,11 @@ void AddMRDevice(IXML_Document *DescDoc, const char *location,	int expires)
 #ifdef SUBSCRIBE_EVENT
 				UpnpSubscribe(glControlPointHandle, EventURL, &s->TO, s->SID);
 #endif
-				if (ServiceId) 	free(ServiceId);
-				if (EventURL) 	free(EventURL);
-				if (ControlURL) free(ControlURL);
 			}
-		}
+			NFREE(ServiceId);
+			NFREE(EventURL);
+			NFREE(ControlURL);
+    	}
 
 		/* insert device in the list */
 		Device->Next = NULL;
@@ -989,11 +992,12 @@ void AddMRDevice(IXML_Document *DescDoc, const char *location,	int expires)
 
 	ithread_mutex_unlock(&glDeviceListMutex);
 
-	if (deviceType) 	free(deviceType);
-	if (friendlyName) 	free(friendlyName);
-	if (UDN) 			free(UDN);
-	if (URLBase) 		free(URLBase);
-	if (presURL)  		free(presURL);
+	NFREE(deviceType);
+	NFREE(friendlyName);
+	NFREE(UDN);
+	NFREE(URLBase);
+	NFREE(presURL);
+	NFREE(manufacturer);
 }
 
 /*----------------------------------------------------------------------------*/
