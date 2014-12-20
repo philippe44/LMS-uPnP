@@ -91,8 +91,8 @@ sq_dev_handle_t		sq_reserve_device(void *caller_id, sq_callback_t callback);
 bool				sq_call(sq_dev_handle_t handle, sq_action_t action, void *param);
 void				sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, int cookie, void *param);
 u32_t 				sq_get_time(sq_dev_handle_t handle);
-bool				sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next);
-void 				sq_free_metadata(sq_metadata_t *metadata);
+bool				sq_get_metadata(sq_dev_handle_t handle, struct sq_metadata_s *metadata, bool next);
+void 				sq_free_metadata(struct sq_metadata_s *metadata);
 bool 				sq_set_time(sq_dev_handle_t handle, u32_t time);
 void*				sq_urn2MR(const char *urn);
 char*				sq_content_type(const char *urn);	// string must be released by caller

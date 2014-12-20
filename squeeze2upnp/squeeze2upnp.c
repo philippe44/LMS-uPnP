@@ -184,11 +184,10 @@ static void AddMRDevice(IXML_Document *DescDoc, const char *location, int expire
 
 			strcpy(device->NextProtInfo, p->proto_info);
 			if (device->Config.AcceptNextURI){
-				sq_metadata_t MetaData = { NULL, NULL, NULL, NULL, NULL, NULL };
+				sq_metadata_t MetaData;
 
 				if (device->Config.SendMetaData) sq_get_metadata(device->SqueezeHandle, &MetaData, true);
-				AVTSetNextURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info,
-					MetaData.title, MetaData.artist, MetaData.album, (void*) device->seqN++);
+				AVTSetNextURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info, &MetaData, (void*) device->seqN++);
 				sq_free_metadata(&MetaData);
 			}
 
@@ -201,7 +200,7 @@ static void AddMRDevice(IXML_Document *DescDoc, const char *location, int expire
 		case SQ_SETURI:	{
 			char uri[RESOURCE_LENGTH];
 			sq_seturi_t *p = (sq_seturi_t*) param;
-			sq_metadata_t MetaData = { NULL, NULL, NULL, NULL, NULL, NULL };
+			sq_metadata_t MetaData;
 
 			// if port and/or ip are 0 or "", means that the CP@ shall be used
 			if (p->port)
@@ -216,8 +215,7 @@ static void AddMRDevice(IXML_Document *DescDoc, const char *location, int expire
 			// end check
 
 			if (device->Config.SendMetaData) sq_get_metadata(device->SqueezeHandle, &MetaData, false);
-			AVTSetURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info,
-				MetaData.title, MetaData.artist, MetaData.album, (void*) device->seqN++);
+			AVTSetURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info, &MetaData, (void*) device->seqN++);
 			sq_free_metadata(&MetaData);
 
 			device->CurrentURI = (char*) malloc(strlen(uri) + 1);
@@ -321,7 +319,7 @@ void SyncNotifState(char *State, struct sMR* Device)
 					NFREE(Device->NextURI);
 
 					sq_get_metadata(Device->SqueezeHandle, &MetaData, true);
-					AVTSetURI(Device->Service[AVT_SRV_IDX].ControlURL, Device->CurrentURI, Device->NextProtInfo, MetaData.title, MetaData.artist, MetaData.album, (void*) WaitFor);
+					AVTSetURI(Device->Service[AVT_SRV_IDX].ControlURL, Device->CurrentURI, Device->NextProtInfo, &MetaData, (void*) WaitFor);
 					sq_free_metadata(&MetaData);
 
 					/*
@@ -1261,7 +1259,7 @@ int main(int argc, char *argv[])
 
 			while (p)	{
 				if (strstr(p->FriendlyName, name))
-					AVTSetURI (p->Service[AVT_SRV_IDX].ControlURL, PlayURI, NULL, NULL, NULL, NULL, NULL);
+					AVTSetURI (p->Service[AVT_SRV_IDX].ControlURL, PlayURI, NULL, NULL, NULL);
 				p = p->Next;
 			}
     		ithread_mutex_unlock(&glDeviceListMutex);

@@ -12,6 +12,7 @@ stuck in a middle of a playlist - LMS will gently move to the next song and a sq
  - Update COMPATIBILITY file
  - remove all warning for Linux compilation
  - fix a few memory leaks
+ - update DIDL-lite header to add DLNA namespace and <upnp:artist>
 
 0.1.3.3 
  - with <seek_after_pause> set to 1, unpause was not restarting at the right time

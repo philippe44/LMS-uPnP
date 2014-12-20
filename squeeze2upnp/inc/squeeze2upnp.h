@@ -111,13 +111,6 @@ struct sMR {
 	struct sMR	*Next;
 };
 
-/*
-struct sMRList {
-	struct sMR		*device;
-	struct sMRList 	*next;
-};
-*/
-
 struct sAction	{
 	sq_dev_handle_t Handle;
 	struct sMR		*Caller;

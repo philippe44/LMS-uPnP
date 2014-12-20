@@ -301,15 +301,25 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 
 	sprintf(cmd, "%s playlist title %d", ctx->cli_id, idx);
 	metadata->title = cli_send_cmd(cmd, true, ctx);
+	if (!metadata->title || *metadata->title == '\0') metadata->title = strdup("[LMS to uPnP]");
+
 	sprintf(cmd, "%s playlist album %d", ctx->cli_id, idx);
 	metadata->album = cli_send_cmd(cmd, true, ctx);
+	if (!metadata->album || *metadata->album == '\0') metadata->album = strdup("[no album]");
+
 	sprintf(cmd, "%s playlist artist %d", ctx->cli_id, idx);
 	metadata->artist = cli_send_cmd(cmd, true, ctx);
+	if (!metadata->artist || *metadata->artist == '\0') metadata->artist = strdup("[no artist]");
+
 	sprintf(cmd, "%s playlist genre %d", ctx->cli_id, idx);
 	metadata->genre = cli_send_cmd(cmd, true, ctx);
+	if (!metadata->genre || *metadata->genre == '\0') metadata->genre = strdup("[no genre]");
+
 	sprintf(cmd, "%s playlist duration %d", ctx->cli_id, idx);
 	metadata->duration = cli_send_cmd(cmd, true, ctx);
-	LOG_INFO("[%p]: idx %d, artist:%s\n\talbum:%s\n\ttitle:%s\n\tgenre:%s\n\tduration:%s", ctx, idx,
+  	if (!metadata->duration || *metadata->duration == '\0') metadata->duration = strdup("[no duration]");
+
+	LOG_INFO("[%p]: idx %d,\nartist:%s\n\talbum:%s\n\ttitle:%s\n\tgenre:%s\n\tduration:%s", ctx, idx,
 				metadata->artist, metadata->album, metadata->title,
 				metadata->genre, metadata->duration);
 
