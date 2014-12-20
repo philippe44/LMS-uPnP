@@ -326,40 +326,6 @@ unsigned Time2Int(char *Time)
 	return ret;
 }
 
-#if 0
-/*----------------------------------------------------------------------------*/
-char *XMLGetChangeItem(IXML_Document *doc, char *Item)
-{
-	unsigned i;
-	IXML_NodeList *changenodelist, *p_list;
-	IXML_Node *changenode, *p_node;
-	char *Change;
-
-	changenodelist = ixmlDocument_getElementsByTagName(doc, "LastChange");
-	if (!changenodelist) return NULL;
-
-	for (i = 0; i < ixmlNodeList_length(changenodelist); i++) {
-		changenode = ixmlNodeList_item(changenodelist, i);
-		if (changenode) {
-			p_list = ixmlElement_getElementsByTagName((IXML_Element *)changenode, Item);
-			if (p_list) {
-					p_node = ixmlNodeList_item(p_list, 0);
-					p_node = ixmlNode_getFirstChild(p_node);
-					Change = strdup(ixmlNode_getNodeValue(p_node));
-					break;
-			}
-			free(p_list);
-		}
-	}
-
-	if (changenodelist)
-		ixmlNodeList_free(changenodelist);
-
-	return Change;
-}
-#endif
-
-
 /*----------------------------------------------------------------------------*/
 char *uPNPEvent2String(Upnp_EventType S)
 {

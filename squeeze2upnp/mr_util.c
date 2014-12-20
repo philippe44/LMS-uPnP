@@ -83,11 +83,7 @@ bool _SetContentType(char *Cap[], sq_seturi_t *uri, int n, ...)
 			}
 			// if the proposed format accepts any rate & channel, give it a try
 			if (!strstr(*p, "channels") && !strstr(*p, "rate")) {
-#if 0
-				strcpy(uri->content_type, fmt);
-#else
 				sprintf(uri->content_type, "%s;channels=%d;rate=%d", fmt, uri->channels, uri->sample_rate);
-#endif
 				strcpy(uri->proto_info, *p);
 				break;
 			}
@@ -329,7 +325,6 @@ void SaveConfig(char *name)
 	XMLAddNode(doc, common, "max_GET_bytes", "%d", (s32_t) glDeviceParam.max_get_bytes);
 	XMLAddNode(doc, common, "enabled", "%d", (int) glMRConfig.Enabled);
 	XMLAddNode(doc, common, "process_mode", "%d", (int) glMRConfig.ProcessMode);
-	XMLAddNode(doc, common, "can_pause", "%d", (int) glMRConfig.CanPause);
 	XMLAddNode(doc, common, "codecs", glDeviceParam.codecs);
 	XMLAddNode(doc, common, "sample_rate", "%d", (int) glDeviceParam.sample_rate);
 	XMLAddNode(doc, common, "L24_format", "%d", (int) glDeviceParam.L24_format);
@@ -368,8 +363,6 @@ void SaveConfig(char *name)
 			XMLAddNode(doc, dev_node, "max_GET_size", "%d", (s32_t) p->sq_config.max_get_bytes);
 		if (p->Config.ProcessMode != glMRConfig.ProcessMode)
 			XMLAddNode(doc, dev_node, "process_mode", "%d", (int) p->Config.ProcessMode);
-		if (p->Config.CanPause != glMRConfig.CanPause)
-			XMLAddNode(doc, dev_node, "can_pause", "%d", (int) p->Config.CanPause);
 		if (p->Config.SeekAfterPause != glMRConfig.SeekAfterPause)
 			XMLAddNode(doc, dev_node, "seek_after_pause", "%d", (int) p->Config.SeekAfterPause);
 		if (p->Config.ForceVolume != glMRConfig.ForceVolume)
@@ -418,10 +411,6 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "process_mode")) {
 		Conf->ProcessMode = atol(val);
 		sq_conf->mode = Conf->ProcessMode;
-	}
-	if (!strcmp(name, "can_pause")) {
-		Conf->CanPause = atol(val);
-		sq_conf->can_pause = Conf->CanPause;
 	}
 	if (!strcmp(name, "codecs")) strcpy(sq_conf->codecs, val);
 	if (!strcmp(name, "sample_rate"))sq_conf->sample_rate = atol(val);

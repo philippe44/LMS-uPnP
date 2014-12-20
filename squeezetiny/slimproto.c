@@ -263,9 +263,6 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 		{
 			unsigned interval = unpackN(&strm->replay_gain);
 
-			if (!ctx->config.can_pause) {
-				break;
-			}
 			ctx->ms_pause = interval;
 			ctx->start_at = (interval) ? gettime_ms() + interval : 0;
 			ctx->track_status = TRACK_PAUSED;
@@ -401,7 +398,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 							ctx->status.ms_played = ctx->ms_played = 0;
 							ctx->read_to = ctx->read_ended = false;
 						}
-						sendSTAT("STMc", 0, ctx);
+//						sendSTAT("STMc", 0, ctx);
 						LOG_INFO("[%p] URI proxied by SQ2MR : %s", ctx, uri.urn);
 					}
 					else ctx->decode.state = DECODE_ERROR;
@@ -512,19 +509,6 @@ static void process_setd(u8_t *pkt, int len,struct thread_ctx_s *ctx) {
 			LOG_INFO("[%p] set name: %s", ctx, setd->data);
 			// confirm change to server
 			sendSETDName(setd->data, ctx->sock);
-#if 0
-			// write name to name_file if -N option set
-			if (ctx->name_file) {
-				FILE *fp = fopen(ctx->name_file, "w");
-				if (fp) {
-					LOG_INFO("[%p] storing name in %s", ctx, ctx->name_file);
-					fputs(ctx->player_name, fp);
-					fclose(fp);
-				} else {
-					LOG_WARN("[%p] unable to store new name in %s", ctx, ctx->name_file);
-				}
-			}
-#endif
 		}
 	}
 }
@@ -1061,27 +1045,6 @@ void slimproto_thread_init(char *server, u8_t mac[6], const char *name, const ch
 		strncpy(ctx->player_name, name, PLAYER_NAME_LEN);
 		ctx->player_name[PLAYER_NAME_LEN] = '\0';
 	}
-
-#if 0
-	if (namefile) {
-		FILE *fp;
-		name_file = namefile;
-		fp = fopen(namefile, "r");
-		if (fp) {
-			if (!fgets(player_name, PLAYER_NAME_LEN, fp)) {
-				player_name[PLAYER_NAME_LEN] = '\0';
-			} else {
-				// strip any \n from fgets response
-				int len = strlen(player_name);
-				if (len > 0 && player_name[len - 1] == '\n') {
-					player_name[len - 1] = '\0';
-				}
-				LOG_INFO("[%p] retrieved name %s from %s", ctx, player_name, name_file);
-			}
-			fclose(fp);
-		}
-	}
-#endif
 
 	/* could be avoided as whole context is reset at init ...*/
 	strcpy(ctx->var_cap, "");

@@ -76,8 +76,7 @@ sq_dev_param_t glDeviceParam = {
 					{ 	SQ_RATE_384000, SQ_RATE_352000, SQ_RATE_192000, SQ_RATE_176400,
 						SQ_RATE_96000, SQ_RATE_48000, SQ_RATE_44100,
 						SQ_RATE_32000, SQ_RATE_24000, SQ_RATE_22500, SQ_RATE_16000,
-					SQ_RATE_12000, SQ_RATE_11025, SQ_RATE_8000, 0 },
-					true,
+						SQ_RATE_12000, SQ_RATE_11025, SQ_RATE_8000, 0 },
 					-1,
 					100,
 					"mp3",
@@ -228,21 +227,12 @@ static void AddMRDevice(IXML_Document *DescDoc, const char *location, int expire
 			break;
 		}
 		case SQ_UNPAUSE:
-#if 0
-			if (device->PausedTime && device->Config.SeekAfterPause) {
-				sq_set_time(device->SqueezeHandle, device->PausedTime);
-			}
-#else
 			if (device->Config.SeekAfterPause) {
 				u32_t PausedTime = sq_get_time(device->SqueezeHandle);
 				sq_set_time(device->SqueezeHandle, PausedTime);
 			}
-#endif
 		case SQ_PLAY:
 			if (device->CurrentURI) {
-#if 0
-				device->PausedTime = 0;
-#endif
 				QueueAction(handle, caller, action, cookie, param, false);
 				device->sqState = SQ_PLAY;
 				if (device->Config.VolumeOnPlay)
@@ -252,14 +242,12 @@ static void AddMRDevice(IXML_Document *DescDoc, const char *location, int expire
 			break;
 		case SQ_STOP:
 			AVTBasic(device->Service[AVT_SRV_IDX].ControlURL, "Stop", (void*) device->seqN++);
+			NFREE(device->CurrentURI);
+			NFREE(device->NextURI);
 			FlushActionList(device);
 			device->sqState = action;
 			break;
 		case SQ_PAUSE:
-#if 0
-			if (device->Config.SeekAfterPause)
-				device->PausedTime = sq_get_time(device->SqueezeHandle);
-#endif
 			QueueAction(handle, caller, action, cookie, param, false);
 			device->sqState = action;
 			break;
@@ -315,6 +303,13 @@ void SyncNotifState(char *State, struct sMR* Device)
 		if (Device->State != STOPPED) {
 			LOG_INFO("%s: uPNP stop", Device->FriendlyName);
 			if (Device->NextURI) {
+				/*
+				Whether the stop was normal because the player does not accept
+				NextURI or this is a timeing issue (NextURI arrived too late),
+				there will be an extra "playing" transition detected at the next
+				state detection. This extra "playing" does not cause any side
+				effect, but check sq_notify
+				*/
 				if (!Device->Config.AcceptNextURI) {
 					int WaitFor = Device->seqN++;
 					sq_metadata_t MetaData;
@@ -335,19 +330,19 @@ void SyncNotifState(char *State, struct sMR* Device)
 					*/
 					QueueAction(Device->SqueezeHandle, Device, SQ_PLAY, WaitFor, NULL, true);
 
-					// fake the change
 					sq_notify(Device->SqueezeHandle, Device, SQ_TRACK_CHANGE, 0, NULL);
 					LOG_INFO("[%p]: no gapless %s", Device, Device->CurrentURI);
 			   }
 			   else {
+					// NextURI event will be handled by the track change detection
 					LOG_INFO("[%p]: unwanted stop(n:%s)", Device, Device->NextURI);
 					AVTBasic(Device->Service[AVT_SRV_IDX].ControlURL, "Next", (void*) Device->seqN++);
 			  }
 			}
 			else {
 				sq_notify(Device->SqueezeHandle, Device, SQ_STOP, 0, NULL);
-				Device->State = STOPPED;
-			}
+            }
+			Device->State = STOPPED;
 		 }
 	}
 
@@ -1002,21 +997,6 @@ void AddMRDevice(IXML_Document *DescDoc, const char *location,	int expires)
 }
 
 /*----------------------------------------------------------------------------*/
-void WatchDog(struct sMR *Device)
-{
-	if ((Device->sqState == SQ_PLAY && Device->State != PLAYING) ||
-		(Device->sqState == SQ_STOP && Device->State != STOPPED)) {
-		Device->Stalled++;
-	}
-	else Device->Stalled = 0;
-
-	if (Device->Stalled >= 10) {
-		sq_reset(Device->SqueezeHandle);
-		Device->Stalled = 0;
-	}
-}
-
-/*----------------------------------------------------------------------------*/
 static bool Start(void)
 {
 	if (!uPNPInitialize(glIPaddress, &glPort)) return false;
@@ -1182,6 +1162,10 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	if (!glConfigID) {
+		LOG_ERROR("\n\n!!!!!!!!!!!!!!!!!! ERROR LOADING CONFIG FILE !!!!!!!!!!!!!!!!!!!!!\n", NULL);
+	}
+
 #if LINUX || FREEBSD
 	if (glDaemonize) {
 		if (daemon(1, glLogFile ? 1 : 0)) {
@@ -1285,14 +1269,11 @@ int main(int argc, char *argv[])
 			stream_loglevel(debug2level(level));
 		}
 
-#if 0
 		if (!strcmp(resp, "odbg"))	{
 			char level[20];
 			i = scanf("%s", level);
-			output_loglevel(debug2level(level));
 			output_mr_loglevel(debug2level(level));
 		}
-#endif
 
 		if (!strcmp(resp, "pdbg"))	{
 			char level[20];

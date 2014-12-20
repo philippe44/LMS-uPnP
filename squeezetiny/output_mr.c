@@ -215,10 +215,8 @@ static int _mr_write_frames(frames_t out_frames, bool silence, s32_t gainL, s32_
 		   }
 	)
 
-#if 0
 	_scale_and_pack_frames(ctx->buf + ctx->buffill * ctx->bytes_per_frame, (s32_t *)(void *)obuf, out_frames, gainL, gainR, ctx->output.format);
 	ctx->buffill += out_frames;
-#endif
 
 	return (int)out_frames;
 }
@@ -298,6 +296,7 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 				sprintf(buf, "%s/%s", ctx->config.buffer_dir, out->buf_name);
 				out->write_file = fopen(buf, "wb");
 				out->write_count = out->write_count_t = 0;
+				LOG_ERROR("[%p]: write file not opened %s", ctx, buf);
 			}
 
 			// re-size buffer if needed

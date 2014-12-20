@@ -39,7 +39,6 @@ typedef	struct sq_dev_param_s {
 	unsigned 	output_buf_size;
 	sq_mode_t	mode;
 	sq_rate_t	rate[MAX_SUPPORTED_SAMPLERATES];
-	bool		can_pause;
 	int			max_get_bytes;		 // max size allowed in a single read
 	int			max_read_wait;
 	char		codecs[SQ_STR_LENGTH];

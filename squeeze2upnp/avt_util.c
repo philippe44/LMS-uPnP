@@ -123,7 +123,6 @@ so the ; might have to be removed
 
 char DLNA_OPT[] = ";DLNA.ORG_OP=01;DLNA.ORG_FLAGS=21700000000000000000000000000000";
 
-
 static log_level loglevel;
 
 /*----------------------------------------------------------------------------*/
