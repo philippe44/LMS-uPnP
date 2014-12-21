@@ -1,18 +1,20 @@
 0.1.4.0
- - metadata request can cause a fault if the list has been emptied (modulus 0 call)
+ - <volume_on_play> can be set to -1 so that *all* LMS volume commands are ignored (use the player's volume control)
+ - When pause/play directly on the player, action is feedback to LMS that should stay in sycn (still early phase ...)
  - if uPnP player cannot play a format, send the proper error code to LMS (also send STMc everytime) == > that's to avoid being
 stuck in a middle of a playlist - LMS will gently move to the next song and a squeeze2upnp will just log the problem
+ - if uPnP players stops before or during a SetNextURI request, re-activate it by sending a hidden "Next" command (this is a race condition: get metadata is taking too much time). Free CurrentURI and NextURI in SQ_STOP to make sure that the uPNP "stop" state detection will not create a spurious "Next" command
  - add <flac_header> parameter
  - add <send_metadata> parameter
+ - update DIDL-lite header to add DLNA namespace and <upnp:artist>
+ - metadata request can cause a fault if the list has been emptied (modulus 0 call)
  - if <buffer_limit> is smaller than max(<streambuf_size>, <outputbuf_size>) * 4, set it to that max
- - if uPnP players stops before or during a SetNextURI request, re-activate it by sending a hidden "Next" command (this is a race condition: get metadata is taking too much time). Free CurrentURI and NextURI in SQ_STOP to make sure that the uPNP "stop" state detection will not create a spurious "Next" command
  - <can_pause> parameter removed
  - big fat warning when config file has an error and cannot be loaded
  - improve HTTP range request response (might have impact with <buffer_limit> and pause reaction)
  - Update COMPATIBILITY file
  - remove all warning for Linux compilation
  - fix a few memory leaks
- - update DIDL-lite header to add DLNA namespace and <upnp:artist>
 
 0.1.3.3 
  - with <seek_after_pause> set to 1, unpause was not restarting at the right time

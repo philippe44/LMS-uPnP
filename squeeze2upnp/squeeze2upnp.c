@@ -233,7 +233,7 @@ static void AddMRDevice(IXML_Document *DescDoc, const char *location, int expire
 			if (device->CurrentURI) {
 				QueueAction(handle, caller, action, cookie, param, false);
 				device->sqState = SQ_PLAY;
-				if (device->Config.VolumeOnPlay)
+				if (device->Config.VolumeOnPlay == 1)
 					SetVolume(device->Service[REND_SRV_IDX].ControlURL, device->Volume, (void*) device->seqN++);
 			}
 			else rc = false;
@@ -256,6 +256,8 @@ static void AddMRDevice(IXML_Document *DescDoc, const char *location, int expire
 			u32_t Volume = *(u32_t*)p;
 			int i = 0;
 			double a2, b2, a1 = 0, b1 = 0;
+
+			if (device->Config.VolumeOnPlay == -1) break;
 
 			for (i = 0; i < 32 && Volume > device->VolumeCurve[i].a; i++);
 
@@ -346,22 +348,34 @@ void SyncNotifState(char *State, struct sMR* Device)
 
 	if (!strcmp(State, "PLAYING")) {
 		if (Device->State != PLAYING) {
-			LOG_INFO("%s: uPNP playing", Device->FriendlyName);
-			sq_notify(Device->SqueezeHandle, Device, SQ_PLAY, 0, NULL);
-
-			if (Device->Config.ForceVolume && Device->Config.ProcessMode != SQ_LMSUPNP)
-				SetVolume(Device->Service[REND_SRV_IDX].ControlURL, Device->Volume, (void*) Device->seqN++);
-
-			if (Action && Action->Action == SQ_PLAY) {
-				UnQueueAction(Device, false);
-				NFREE(Action);
+			bool UnSol;
+			if (Device->sqState == SQ_PAUSE) {
+				UnSol = true;
+				sq_notify(Device->SqueezeHandle, Device, SQ_PLAY, 0, &UnSol);
 			}
-			Device->State = PLAYING;
+			else {
+				UnSol = false;
+				LOG_INFO("%s: uPNP playing", Device->FriendlyName);
+				sq_notify(Device->SqueezeHandle, Device, SQ_PLAY, 0, &UnSol);
+
+				if (Device->Config.ForceVolume == 1 && Device->Config.ProcessMode != SQ_LMSUPNP)
+					SetVolume(Device->Service[REND_SRV_IDX].ControlURL, Device->Volume, (void*) Device->seqN++);
+
+				if (Action && Action->Action == SQ_PLAY) {
+					UnQueueAction(Device, false);
+					NFREE(Action);
+				}
+				Device->State = PLAYING;
+		  }
 		}
 	}
 
 	if (!strcmp(State, "PAUSED_PLAYBACK")) {
 		if (Device->State != PAUSED) {
+			if (Device->sqState != SQ_PAUSE) {
+				bool UnSol = true;
+				sq_notify(Device->SqueezeHandle, Device, SQ_PAUSE, 0, &UnSol);
+			}
 			LOG_INFO("%s: uPNP pause", Device->FriendlyName);
 			if (Action && Action->Action == SQ_PAUSE) {
 				UnQueueAction(Device, false);
