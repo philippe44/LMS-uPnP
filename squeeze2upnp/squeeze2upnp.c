@@ -462,7 +462,7 @@ void HandleStateEvent(struct Upnp_Event *Event, void *Cookie)
 /*----------------------------------------------------------------------------*/
 int CallbackActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 {
-	LOG_INFO("action: %i [%s] [%p]", EventType, uPNPEvent2String(EventType), Cookie);
+	LOG_SDEBUG("action: %i [%s] [%p]", EventType, uPNPEvent2String(EventType), Cookie);
 
 	switch ( EventType ) {
 		case UPNP_CONTROL_ACTION_COMPLETE: 	{
@@ -638,7 +638,7 @@ void *TimerLoop(void *args)
 /*----------------------------------------------------------------------------*/
 int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 {
-	LOG_INFO("event: %i [%s] [%p]", EventType, uPNPEvent2String(EventType), Cookie);
+	LOG_SDEBUG("event: %i [%s] [%p]", EventType, uPNPEvent2String(EventType), Cookie);
 
 	switch ( EventType ) {
 		case UPNP_DISCOVERY_ADVERTISEMENT_ALIVE:
@@ -1063,7 +1063,7 @@ bool ParseArgs(int argc, char **argv) {
 
 	while (optind < argc && strlen(argv[optind]) >= 2 && argv[optind][0] == '-') {
 		char *opt = argv[optind] + 1;
-		if (strstr("stxdf", opt) && optind < argc - 1) {
+		if (strstr("stxdfp", opt) && optind < argc - 1) {
 			optarg = argv[optind + 1];
 			optind += 2;
 		} else if (strstr("tz"
@@ -1098,6 +1098,16 @@ bool ParseArgs(int argc, char **argv) {
 #endif
 		case 'f':
 			glLogFile = optarg;
+			break;
+		case 'p':
+			{
+				FILE *pid_file;
+				if (optarg) pid_file = fopen(optarg, "wb");
+				if (pid_file) {
+					fprintf(pid_file, "%d", getpid());
+					fclose(pid_file);
+				}
+			}
 			break;
 #if LINUX || FREEBSD
 		case 'z':
@@ -1356,6 +1366,7 @@ static char usage[] =
 //		   "  -c <codec1>,<codec2>\tRestrict codecs to those specified, otherwise load all available codecs; known codecs: " CODECS "\n"
 //		   "  -e <codec1>,<codec2>\tExplicitly exclude native support of one or more codecs; known codecs: " CODECS "\n"
 		   "  -f <logfile>\t\tWrite debug to logfile\n"
+  		   "  -p <pid file>\t\twrite PID in file\n"
 		   "  -d <log>=<level>\tSet logging level, logs: all|slimproto|stream|decode|output|web|upnp|main|sq2mr, level: info|debug|sdebug\n"
 #if RESAMPLE
 		   "  -R -u [params]\tResample, params = <recipe>:<flags>:<attenuation>:<precision>:<passband_end>:<stopband_start>:<phase_response>,\n"
