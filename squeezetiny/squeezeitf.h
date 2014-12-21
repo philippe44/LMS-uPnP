@@ -76,7 +76,7 @@ typedef struct
 
 extern unsigned gl_slimproto_stream_port;
 
-typedef bool (*sq_callback_t)(sq_dev_handle_t handle, void *caller_id, sq_action_t action, int cookie, void *param);
+typedef bool (*sq_callback_t)(sq_dev_handle_t handle, void *caller_id, sq_action_t action, u8_t *cookie, void *param);
 
 char*				sq_parse_args(int argc, char**argv);
 // all params can be NULL
@@ -89,7 +89,7 @@ bool				sq_delete_device(sq_dev_handle_t);
 sq_dev_handle_t		sq_reserve_device(void *caller_id, sq_callback_t callback);
 
 bool				sq_call(sq_dev_handle_t handle, sq_action_t action, void *param);
-void				sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, int cookie, void *param);
+void				sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *cookie, void *param);
 u32_t 				sq_get_time(sq_dev_handle_t handle);
 bool				sq_get_metadata(sq_dev_handle_t handle, struct sq_metadata_s *metadata, bool next);
 void 				sq_free_metadata(struct sq_metadata_s *metadata);

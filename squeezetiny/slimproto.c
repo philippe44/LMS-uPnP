@@ -83,7 +83,7 @@ static bool get_header_urn(char *header, int header_len, char *urn)
 #endif
 
 /*---------------------------------------------------------------------------*/
-bool ctx_callback(struct thread_ctx_s *ctx, sq_action_t action, int cookie, void *param)
+bool ctx_callback(struct thread_ctx_s *ctx, sq_action_t action, u8_t *cookie, void *param)
 {
 	bool rc = false;
 
@@ -257,7 +257,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 		if (stream_disconnect(ctx))
 			if (strm->command == 'f') sendSTAT("STMf", 0, ctx);
 		buf_flush(ctx->streambuf);
-		ctx_callback(ctx, SQ_STOP, 0, NULL);
+		ctx_callback(ctx, SQ_STOP, NULL, NULL);
 		break;
 	case 'p':
 		{
@@ -266,7 +266,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 			ctx->ms_pause = interval;
 			ctx->start_at = (interval) ? gettime_ms() + interval : 0;
 			ctx->track_status = TRACK_PAUSED;
-			ctx_callback(ctx, SQ_PAUSE, 0, NULL);
+			ctx_callback(ctx, SQ_PAUSE, NULL, NULL);
 			if (!interval) {
 				sendSTAT("STMp", 0, ctx);
 			}
@@ -276,7 +276,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 	case 'a':
 		{
 			unsigned interval = unpackN(&strm->replay_gain);
-			ctx_callback(ctx, SQ_SEEK, 0, &interval);
+			ctx_callback(ctx, SQ_SEEK, NULL, &interval);
 			LOG_INFO("[%p]skip ahead interval: %u", ctx, interval);
 		}
 		break;
@@ -292,7 +292,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 					ctx->track_new = true;
 					ctx->track_start_time = gettime_ms();
 				}
-				if (ctx->track_status != TRACK_STARTED) ctx_callback(ctx, SQ_UNPAUSE, 0, NULL);
+				if (ctx->track_status != TRACK_STARTED) ctx_callback(ctx, SQ_UNPAUSE, NULL, NULL);
 				ctx->track_status = TRACK_STARTED;
 			}
 			sendSTAT("STMr", 0, ctx);
@@ -378,7 +378,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 					the "upnp domain" for clarity, although it requires this
 					ackward 2 steps setup
 					*/
-					if (ctx_callback(ctx, SQ_SETFORMAT, 0, &uri)) {
+					if (ctx_callback(ctx, SQ_SETFORMAT, NULL, &uri)) {
 						strcpy(ctx->out_ctx[idx].content_type, uri.content_type);
 						strcpy(ctx->out_ctx[idx].ext, uri.format);
 						strcpy(uri.urn, ctx->out_ctx[idx].buf_name);
@@ -388,10 +388,10 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 						strcpy(uri.urn, "__song__.mp3");
 #endif
 						if (ctx->play_running || ctx->track_status != TRACK_STOPPED) {
-							ctx_callback(ctx, SQ_SETNEXTURI, 0, &uri);
+							ctx_callback(ctx, SQ_SETNEXTURI, NULL, &uri);
 						}
 						else {
-							ctx_callback(ctx, SQ_SETURI, 0, &uri);
+							ctx_callback(ctx, SQ_SETURI, NULL, &uri);
 							ctx->track_ended = false;
 							ctx->track_status = TRACK_STOPPED;
 							ctx->track_new = true;
@@ -470,8 +470,8 @@ static void process_aude(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 	buf_flush(ctx->streambuf);
 	UNLOCK_O;
 
-	ctx_callback(ctx, SQ_STOP, 0, NULL);
-	ctx_callback(ctx, SQ_ONOFF, 0, &ctx->on);
+	ctx_callback(ctx, SQ_STOP, NULL, NULL);
+	ctx_callback(ctx, SQ_ONOFF, NULL, &ctx->on);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -490,7 +490,7 @@ static void process_audg(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 	UNLOCK_O;
 
 	gain = (audg->gainL + audg->gainL) / 2;
-	ctx_callback(ctx, SQ_VOLUME, 0, (void*) &gain);
+	ctx_callback(ctx, SQ_VOLUME, NULL, (void*) &gain);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -700,7 +700,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 				ctx->start_at = 0;
 				if (ctx->track_status != TRACK_PAUSED) ctx->track_new = true;
 				ctx->track_status = TRACK_STARTED;
-				ctx_callback(ctx, SQ_PLAY, 0, NULL);
+				ctx_callback(ctx, SQ_PLAY, NULL, NULL);
 			}
 
 			// normal end of streaming
@@ -724,7 +724,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 					ctx->sentSTMl = true;
 				 }
 				 else if (ctx->track_status == TRACK_STOPPED) {
-					 ctx_callback(ctx, SQ_PLAY, 0, NULL);
+					 ctx_callback(ctx, SQ_PLAY, NULL, NULL);
 					 LOCK_S;
 					 ctx->track_status = TRACK_STARTED;
 					 ctx->track_new = true;
@@ -947,9 +947,9 @@ static void slimproto_short(struct thread_ctx_s *ctx) {
 		strcpy(uri.ip, inet_ntoa(ctx->serv_addr.sin_addr));
 		uri.port = gl_slimproto_stream_port;
 		strcpy(uri.urn, "stream.mp3");
-		ctx_callback(ctx, SQ_ONOFF, 0, &onoff);
-		ctx_callback(ctx, SQ_SETURI, 0, &uri);
-		ctx_callback(ctx, SQ_PLAY, 0, NULL);
+		ctx_callback(ctx, SQ_ONOFF, NULL, &onoff);
+		ctx_callback(ctx, SQ_SETURI, NULL, &uri);
+		ctx_callback(ctx, SQ_PLAY, NULL, NULL);
 		onoff = false;
 	}
 
@@ -975,9 +975,9 @@ static void slimproto_short(struct thread_ctx_s *ctx) {
 			strcpy(uri.ip, inet_ntoa(ctx->serv_addr.sin_addr));
 			uri.port = gl_slimproto_stream_port;
 			strcpy(uri.urn, "stream.mp3");
-			ctx_callback(ctx, SQ_ONOFF, 0, &onoff);
-			ctx_callback(ctx, SQ_SETURI, 0, &uri);
-			ctx_callback(ctx, SQ_PLAY, 0, NULL);
+			ctx_callback(ctx, SQ_ONOFF, NULL, &onoff);
+			ctx_callback(ctx, SQ_SETURI, NULL, &uri);
+			ctx_callback(ctx, SQ_PLAY, NULL, NULL);
 			onoff = false;
 		}
 		usleep(5000000L);
@@ -1015,7 +1015,7 @@ void slimproto_reset(struct thread_ctx_s *ctx)
 	ctx->play_running = ctx-> track_ended = false;
 	ctx->track_status = TRACK_STOPPED;
 	stream_disconnect(ctx);
-	if (ctx->callback) ctx_callback(ctx, SQ_STOP, 0, NULL);
+	if (ctx->callback) ctx_callback(ctx, SQ_STOP, NULL, NULL);
 	buf_flush(ctx->streambuf);
 }
 

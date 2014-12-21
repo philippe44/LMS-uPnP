@@ -133,7 +133,7 @@ static void *TimerLoop(void *args);
 static void AddMRDevice(IXML_Document *DescDoc, const char *location, int expires);
 
 /*----------------------------------------------------------------------------*/
-bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, int cookie, void *param)
+bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t *cookie, void *param)
 {
 	struct sMR *device = caller;
 	char *p = (char*) param;
@@ -187,7 +187,7 @@ static void AddMRDevice(IXML_Document *DescDoc, const char *location, int expire
 				sq_metadata_t MetaData;
 
 				if (device->Config.SendMetaData) sq_get_metadata(device->SqueezeHandle, &MetaData, true);
-				AVTSetNextURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info, &MetaData, (void*) device->seqN++);
+				AVTSetNextURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info, &MetaData, device->seqN++);
 				sq_free_metadata(&MetaData);
 			}
 
@@ -215,7 +215,7 @@ static void AddMRDevice(IXML_Document *DescDoc, const char *location, int expire
 			// end check
 
 			if (device->Config.SendMetaData) sq_get_metadata(device->SqueezeHandle, &MetaData, false);
-			AVTSetURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info, &MetaData, (void*) device->seqN++);
+			AVTSetURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info, &MetaData, device->seqN++);
 			sq_free_metadata(&MetaData);
 
 			device->CurrentURI = (char*) malloc(strlen(uri) + 1);
@@ -234,12 +234,12 @@ static void AddMRDevice(IXML_Document *DescDoc, const char *location, int expire
 				QueueAction(handle, caller, action, cookie, param, false);
 				device->sqState = SQ_PLAY;
 				if (device->Config.VolumeOnPlay == 1)
-					SetVolume(device->Service[REND_SRV_IDX].ControlURL, device->Volume, (void*) device->seqN++);
+					SetVolume(device->Service[REND_SRV_IDX].ControlURL, device->Volume, device->seqN++);
 			}
 			else rc = false;
 			break;
 		case SQ_STOP:
-			AVTBasic(device->Service[AVT_SRV_IDX].ControlURL, "Stop", (void*) device->seqN++);
+			AVTBasic(device->Service[AVT_SRV_IDX].ControlURL, "Stop", device->seqN++);
 			NFREE(device->CurrentURI);
 			NFREE(device->NextURI);
 			FlushActionList(device);
@@ -268,7 +268,7 @@ static void AddMRDevice(IXML_Document *DescDoc, const char *location, int expire
 			device->Volume = Volume * (b1-b2)/(a1-a2) + b1 - a1*(b1-b2)/(a1-a2);
 
 			if (!device->Config.VolumeOnPlay || device->sqState == SQ_PLAY)
-				SetVolume(device->Service[REND_SRV_IDX].ControlURL, device->Volume, (void*) device->seqN++);
+				SetVolume(device->Service[REND_SRV_IDX].ControlURL, device->Volume, device->seqN++);
 			break;
 		}
 		default:
@@ -311,7 +311,7 @@ void SyncNotifState(char *State, struct sMR* Device)
 				effect, but check sq_notify
 				*/
 				if (!Device->Config.AcceptNextURI) {
-					int WaitFor = Device->seqN++;
+					u8_t *WaitFor = Device->seqN++;
 					sq_metadata_t MetaData;
 
 					// fake a "SETURI" and a "PLAY" request
@@ -321,7 +321,7 @@ void SyncNotifState(char *State, struct sMR* Device)
 					NFREE(Device->NextURI);
 
 					sq_get_metadata(Device->SqueezeHandle, &MetaData, true);
-					AVTSetURI(Device->Service[AVT_SRV_IDX].ControlURL, Device->CurrentURI, Device->NextProtInfo, &MetaData, (void*) WaitFor);
+					AVTSetURI(Device->Service[AVT_SRV_IDX].ControlURL, Device->CurrentURI, Device->NextProtInfo, &MetaData, WaitFor);
 					sq_free_metadata(&MetaData);
 
 					/*
@@ -330,17 +330,17 @@ void SyncNotifState(char *State, struct sMR* Device)
 					*/
 					QueueAction(Device->SqueezeHandle, Device, SQ_PLAY, WaitFor, NULL, true);
 
-					sq_notify(Device->SqueezeHandle, Device, SQ_TRACK_CHANGE, 0, NULL);
+					sq_notify(Device->SqueezeHandle, Device, SQ_TRACK_CHANGE, NULL, NULL);
 					LOG_INFO("[%p]: no gapless %s", Device, Device->CurrentURI);
 			   }
 			   else {
 					// NextURI event will be handled by the track change detection
 					LOG_INFO("[%p]: unwanted stop(n:%s)", Device, Device->NextURI);
-					AVTBasic(Device->Service[AVT_SRV_IDX].ControlURL, "Next", (void*) Device->seqN++);
+					AVTBasic(Device->Service[AVT_SRV_IDX].ControlURL, "Next", Device->seqN++);
 			  }
 			}
 			else {
-				sq_notify(Device->SqueezeHandle, Device, SQ_STOP, 0, NULL);
+				sq_notify(Device->SqueezeHandle, Device, SQ_STOP, NULL, NULL);
             }
 			Device->State = STOPPED;
 		 }
@@ -352,16 +352,16 @@ void SyncNotifState(char *State, struct sMR* Device)
 
 			if (Device->sqState == SQ_PAUSE) {
 				UnSol = true;
-				sq_notify(Device->SqueezeHandle, Device, SQ_PLAY, 0, &UnSol);
+				sq_notify(Device->SqueezeHandle, Device, SQ_PLAY, NULL, &UnSol);
 			}
 			else {
 				UnSol = false;
 				LOG_INFO("%s: uPNP playing", Device->FriendlyName);
-				sq_notify(Device->SqueezeHandle, Device, SQ_PLAY, 0, &UnSol);
+				sq_notify(Device->SqueezeHandle, Device, SQ_PLAY, NULL, &UnSol);
 			}
 
 			if (Device->Config.ForceVolume == 1 && Device->Config.ProcessMode != SQ_LMSUPNP)
-					SetVolume(Device->Service[REND_SRV_IDX].ControlURL, Device->Volume, (void*) Device->seqN++);
+					SetVolume(Device->Service[REND_SRV_IDX].ControlURL, Device->Volume, Device->seqN++);
 
 			Device->State = PLAYING;
 		}
@@ -377,7 +377,7 @@ void SyncNotifState(char *State, struct sMR* Device)
 		if (Device->State != PAUSED) {
 			if (Device->sqState != SQ_PAUSE) {
 				bool UnSol = true;
-				sq_notify(Device->SqueezeHandle, Device, SQ_PAUSE, 0, &UnSol);
+				sq_notify(Device->SqueezeHandle, Device, SQ_PAUSE, NULL, &UnSol);
 			}
 			LOG_INFO("%s: uPNP pause", Device->FriendlyName);
 			if (Action && Action->Action == SQ_PAUSE) {
@@ -392,16 +392,16 @@ void SyncNotifState(char *State, struct sMR* Device)
 		struct sAction *p = UnQueueAction(Device, false);
 
 		if (p != Action) {
-			LOG_ERROR("[%p]: mutex issue %d, %d", p->Cookie, Action->Cookie);
+			LOG_ERROR("[%p]: mutex issue %p, %p", p->Cookie, Action->Cookie);
 		}
 
 		switch (Action->Action) {
 		case SQ_UNPAUSE:
 		case SQ_PLAY:
-			AVTPlay(Action->Caller->Service[AVT_SRV_IDX].ControlURL, (void*) Device->seqN++);
+			AVTPlay(Action->Caller->Service[AVT_SRV_IDX].ControlURL, Device->seqN++);
 			break;
 		case SQ_PAUSE:
-			AVTBasic(Action->Caller->Service[AVT_SRV_IDX].ControlURL, "Pause", (void*) Device->seqN++);
+			AVTBasic(Action->Caller->Service[AVT_SRV_IDX].ControlURL, "Pause", Device->seqN++);
 			break;
 		default:
 			break;
@@ -462,7 +462,7 @@ void HandleStateEvent(struct Upnp_Event *Event, void *Cookie)
 /*----------------------------------------------------------------------------*/
 int CallbackActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 {
-	LOG_SDEBUG("Action Handler : %i (cookie %d)", EventType, Cookie);
+	LOG_SDEBUG("Action Handler : %i (cookie %p)", EventType, Cookie);
 
 	switch ( EventType ) {
 		case UPNP_CONTROL_ACTION_COMPLETE: 	{
@@ -473,17 +473,17 @@ int CallbackActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 			p = CURL2Device(Action->CtrlUrl);
 			if (!p) break;
 
-			p->LastAckAction = (int) Cookie;
-			LOG_SDEBUG("[%p]: ac %i %s (cookie %d)", p, EventType, Action->CtrlUrl, Cookie);
+			p->LastAckAction = Cookie;
+			LOG_SDEBUG("[%p]: ac %i %s (cookie %p)", p, EventType, Action->CtrlUrl, Cookie);
 
 			// time position response
 			r = XMLGetFirstDocumentItem(Action->ActionResult, "RelTime");
 			if (r) {
 				p->Elapsed = Time2Int(r);
-				LOG_SDEBUG("[%p]: position %d (cookie %d)", p, p->Elapsed, Cookie);
+				LOG_SDEBUG("[%p]: position %d (cookie %p)", p, p->Elapsed, Cookie);
 				// discard any time info unless we are confirmed playing
 				if (p->State == PLAYING)
-					sq_notify(p->SqueezeHandle, p, SQ_TIME, 0, &p->Elapsed);
+					sq_notify(p->SqueezeHandle, p, SQ_TIME, NULL, &p->Elapsed);
 			}
 			NFREE(r);
 
@@ -508,17 +508,17 @@ int CallbackActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 					p->CurrentURI = malloc(strlen(r) + 1);
 					strcpy(p->CurrentURI, r);
 					ithread_mutex_unlock(&p->Mutex);
-					sq_notify(p->SqueezeHandle, p, SQ_TRACK_CHANGE, 0, NULL);
+					sq_notify(p->SqueezeHandle, p, SQ_TRACK_CHANGE, NULL, NULL);
 				}
 				else ithread_mutex_unlock(&p->Mutex);
 			}
 			NFREE(r);
 
-			LOG_SDEBUG("Action complete : %i (cookie %d)", EventType, Cookie);
+			LOG_SDEBUG("Action complete : %i (cookie %p)", EventType, Cookie);
 
 			if (Action->ErrCode != UPNP_E_SUCCESS) {
 				p->ErrorCount++;
-				LOG_ERROR("Error in action callback -- %d (cookie %d)",	Action->ErrCode, Cookie);
+				LOG_ERROR("Error in action callback -- %d (cookie %p)",	Action->ErrCode, Cookie);
 			}
 			else p->ErrorCount = 0;
 
@@ -564,8 +564,8 @@ void *TimerLoop(void *args)
 			if (p->TrackPoll > TRACK_POLL) {
 				p->TrackPoll = 0;
 				if (p->State != STOPPED && p->State != PAUSED) {
-					AVTCallAction(p->Service[AVT_SRV_IDX].ControlURL, "GetPositionInfo", (void*) p->seqN++);
-					AVTCallAction(p->Service[AVT_SRV_IDX].ControlURL, "GetMediaInfo", (void*) p->seqN++);
+					AVTCallAction(p->Service[AVT_SRV_IDX].ControlURL, "GetPositionInfo", p->seqN++);
+					AVTCallAction(p->Service[AVT_SRV_IDX].ControlURL, "GetMediaInfo", p->seqN++);
 				}
 			}
 
@@ -573,7 +573,7 @@ void *TimerLoop(void *args)
 			p->StatePoll += elapsed;
 			if (p->StatePoll > STATE_POLL) {
 				p->StatePoll = 0;
-				AVTCallAction(p->Service[AVT_SRV_IDX].ControlURL, "GetTransportInfo", (void*) p->seqN++);
+				AVTCallAction(p->Service[AVT_SRV_IDX].ControlURL, "GetTransportInfo", p->seqN++);
 			}
 
 #ifdef SUBSCRIBE_EVENT
@@ -725,7 +725,7 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 
 			r = XMLGetFirstDocumentItem(Action->ActionResult, "Sink");
 			if (r) {
-				LOG_DEBUG("[%p]: ProtocolInfo %s (cookie %d)", p, r, Cookie);
+				LOG_DEBUG("[%p]: ProtocolInfo %s (cookie %p)", p, r, Cookie);
 				ParseProtocolInfo(p, r);
 			}
 			ithread_mutex_unlock(&glDeviceListMutex);
@@ -1002,7 +1002,7 @@ void AddMRDevice(IXML_Document *DescDoc, const char *location,	int expires)
 		LoadMRConfig(glConfigID, Device->UDN, &Device->Config, &Device->sq_config);
 		SetVolumeCurve(Device);
 
-		GetProtocolInfo(Device->Service[CNX_MGR_IDX].ControlURL, (void*) Device->seqN++);
+		GetProtocolInfo(Device->Service[CNX_MGR_IDX].ControlURL, Device->seqN++);
 	}
 
 	ithread_mutex_unlock(&glDeviceListMutex);

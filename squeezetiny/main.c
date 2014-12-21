@@ -319,7 +319,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 	metadata->duration = cli_send_cmd(cmd, true, ctx);
   	if (!metadata->duration || *metadata->duration == '\0') metadata->duration = strdup("[no duration]");
 
-	LOG_INFO("[%p]: idx %d,\nartist:%s\n\talbum:%s\n\ttitle:%s\n\tgenre:%s\n\tduration:%s", ctx, idx,
+	LOG_INFO("[%p]: idx %d\n\tartist:%s\n\talbum:%s\n\ttitle:%s\n\tgenre:%s\n\tduration:%s", ctx, idx,
 				metadata->artist, metadata->album, metadata->title,
 				metadata->genre, metadata->duration);
 
@@ -533,7 +533,7 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 
 
 /*---------------------------------------------------------------------------*/
-void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, int cookie, void *param)
+void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *cookie, void *param)
 {
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
 

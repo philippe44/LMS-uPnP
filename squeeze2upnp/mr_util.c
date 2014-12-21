@@ -155,7 +155,7 @@ void FlushActionList(struct sMR *Device)
 }
 
 /*----------------------------------------------------------------------------*/
-void QueueAction(sq_dev_handle_t handle, struct sMR *Device, sq_action_t action, int cookie, void *param, bool ordered)
+void QueueAction(sq_dev_handle_t handle, struct sMR *Device, sq_action_t action, u8_t *cookie, void *param, bool ordered)
 {
 	struct sAction *Action = malloc(sizeof(struct sAction));
 	struct sAction *p;

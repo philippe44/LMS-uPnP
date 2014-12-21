@@ -7,7 +7,7 @@
 void 			MRutilInit(log_level level);
 void 			FlushActionList(struct sMR *Device);
 void 			InitActionList(struct sMR *Device);
-void			QueueAction(sq_dev_handle_t handle, struct sMR *Device, sq_action_t action, int cookie, void *param, bool sticky);
+void			QueueAction(sq_dev_handle_t handle, struct sMR *Device, sq_action_t action, u8_t *cookie, void *param, bool sticky);
 struct sAction*	UnQueueAction(struct sMR *Device, bool Keep);
 
 void 			FlushMRList(void);

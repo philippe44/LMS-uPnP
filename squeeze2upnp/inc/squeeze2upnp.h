@@ -91,13 +91,13 @@ struct sMR {
 	char			NextProtInfo[SQ_STR_LENGTH];		// a bit patchy ... used for faulty NEXTURI players
 	sq_action_t		sqState;
 	u32_t			Elapsed;
-	u32_t			seqN;
+	u8_t			*seqN;
 	unsigned	TrackPoll, StatePoll;
 	bool		uPNPTimeOut;
 	int	 SqueezeHandle;
 	struct sService Service[MAX_SRV];
 	struct sAction	*Actions;
-	int				LastAckAction;
+	u8_t			*LastAckAction;
 	ithread_mutex_t  ActionsMutex;
 	ithread_mutex_t  Mutex;
 	u8_t		Volume;
@@ -115,7 +115,7 @@ struct sAction	{
 	sq_dev_handle_t Handle;
 	struct sMR		*Caller;
 	sq_action_t 	Action;
-	int 			Cookie;
+	u8_t 			*Cookie;
 	union {
 		double	Volume;
 		u32_t	Time;
