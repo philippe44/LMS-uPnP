@@ -462,7 +462,7 @@ void HandleStateEvent(struct Upnp_Event *Event, void *Cookie)
 /*----------------------------------------------------------------------------*/
 int CallbackActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 {
-	LOG_SDEBUG("Action Handler : %i (cookie %p)", EventType, Cookie);
+	LOG_INFO("action: %i [%s] [%p]", EventType, uPNPEvent2String(EventType), Cookie);
 
 	switch ( EventType ) {
 		case UPNP_CONTROL_ACTION_COMPLETE: 	{
@@ -532,12 +532,12 @@ int CallbackActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 	return 0;
 }
 
-
 /*----------------------------------------------------------------------------*/
 #define SCAN_POLL (120*1000)
 #define TRACK_POLL (1000)
 #define STATE_POLL (500)
 #define	SCAN_TIMEOUT (15)
+#define MAX_ACTION_ERRORS (5)
 
 void *TimerLoop(void *args)
 {
@@ -555,6 +555,11 @@ void *TimerLoop(void *args)
 		while (p)	{
 
 			if (!p->on || (p->sqState == SQ_STOP && p->State == STOPPED)) {
+				p = p->NextSQ;
+				continue;
+			}
+
+			if (p->ErrorCount > MAX_ACTION_ERRORS) {
 				p = p->NextSQ;
 				continue;
 			}
@@ -633,7 +638,7 @@ void *TimerLoop(void *args)
 /*----------------------------------------------------------------------------*/
 int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 {
-	LOG_SDEBUG("Event Handler : %i [%s]\n", EventType, uPNPEvent2String(EventType));
+	LOG_INFO("event: %i [%s] [%p]", EventType, uPNPEvent2String(EventType), Cookie);
 
 	switch ( EventType ) {
 		case UPNP_DISCOVERY_ADVERTISEMENT_ALIVE:

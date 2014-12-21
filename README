@@ -14,20 +14,38 @@ very hardcoded.
 
 Look in curent/ for a "stable" build. all other directory are wok in progress
 
+===========================================================================
 DEPENDENCIES
  - pthread (pthread_win32 on Windows) and dynamically linked
  - libupnp, statically linked
 
+===========================================================================
 LIBUPNP
  - Under Win32, libupnp is build with the following defines
         WIN32
         UPNP_STATIC_LIB
         UPNP_USE_BCBPP (for C++ builder)
  - Under Linux : N/A
+
  - The is a small bug in libupnp, so the file webserver.c must be taken 
 from here, not from libupnp main repository to rebuild the library
-- It is recommended to set MAX_JOBS_TOTAL to at least 200 in config.h
 
+- TCP blocking *must* be disabled otherwise when a upnp player disappears
+"non gracefully", it will block other communication for a long delay, creating
+a "too many job" log in libupnp and all sort of nasty side effects. When 
+lauching ./configure, use --disable-blocking_tcp_connections (or --enable-blocking_tcp_connections
+sorry, the doc is a bit confusing on that topic). I choose to modify direcly the
+autoconfig.h in the root directory (and in build/inc) to make sure that the 
+following was commented out 
+	/* #define UPNP_ENABLE_BLOCKING_TCP_CONNECTIONS 1 */
+
+- It is recommended to make the following changes to config.h (find the 
+existing corresponding lines)
+	#define MAX_JOBS_TOTAL 200 
+	#define GENA_NOTIFICATION_SENDING_TIMEOUT 5
+	#define GENA_NOTIFICATION_ANSWERING_TIMEOUT 5
+
+===========================================================================
 Main application for Windows
  - For compilation, use following defines
         WIN32
@@ -38,7 +56,7 @@ Main application for Windows
  - For runtime
         On C++ builder, requires cc32160mt.dll
         pthread.dll
-
+===========================================================================
 Main application for Linux
  - For compilation, use following defines
         NO_CODEC
