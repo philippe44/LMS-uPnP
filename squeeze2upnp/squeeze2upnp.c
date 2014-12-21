@@ -349,6 +349,7 @@ void SyncNotifState(char *State, struct sMR* Device)
 	if (!strcmp(State, "PLAYING")) {
 		if (Device->State != PLAYING) {
 			bool UnSol;
+
 			if (Device->sqState == SQ_PAUSE) {
 				UnSol = true;
 				sq_notify(Device->SqueezeHandle, Device, SQ_PLAY, 0, &UnSol);
@@ -357,16 +358,18 @@ void SyncNotifState(char *State, struct sMR* Device)
 				UnSol = false;
 				LOG_INFO("%s: uPNP playing", Device->FriendlyName);
 				sq_notify(Device->SqueezeHandle, Device, SQ_PLAY, 0, &UnSol);
+			}
 
-				if (Device->Config.ForceVolume == 1 && Device->Config.ProcessMode != SQ_LMSUPNP)
+			if (Device->Config.ForceVolume == 1 && Device->Config.ProcessMode != SQ_LMSUPNP)
 					SetVolume(Device->Service[REND_SRV_IDX].ControlURL, Device->Volume, (void*) Device->seqN++);
 
-				if (Action && Action->Action == SQ_PLAY) {
-					UnQueueAction(Device, false);
-					NFREE(Action);
-				}
-				Device->State = PLAYING;
-		  }
+			Device->State = PLAYING;
+		}
+
+		// avoid double play (causes a restart) in case of unsollicited play
+		if (Action && (Action->Action == SQ_PLAY || Action->Action == SQ_UNPAUSE)) {
+			UnQueueAction(Device, false);
+			NFREE(Action);
 		}
 	}
 
