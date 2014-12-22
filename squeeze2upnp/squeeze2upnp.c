@@ -56,7 +56,7 @@ tMRConfig			glMRConfig = {
 							-3L,
 							SQ_STREAM,
 							false,
-							false,
+							0,
 							true,
 							0,
 							true,
@@ -85,6 +85,7 @@ sq_dev_param_t glDeviceParam = {
 					FLAC_NORMAL_HEADER,
 					".",
 					-1L,
+					0,
 				} ;
 
 /*----------------------------------------------------------------------------*/
@@ -225,7 +226,7 @@ static void AddMRDevice(IXML_Document *DescDoc, const char *location, int expire
 			break;
 		}
 		case SQ_UNPAUSE:
-			if (device->Config.SeekAfterPause) {
+			if (device->Config.SeekAfterPause == 1) {
 				u32_t PausedTime = sq_get_time(device->SqueezeHandle);
 				sq_set_time(device->SqueezeHandle, PausedTime);
 			}

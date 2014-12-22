@@ -416,7 +416,10 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "sample_rate"))sq_conf->sample_rate = atol(val);
 	if (!strcmp(name, "L24_format"))sq_conf->L24_format = atol(val);
 	if (!strcmp(name, "flac_header"))sq_conf->flac_header = atol(val);
-	if (!strcmp(name, "seek_after_pause")) Conf->SeekAfterPause = atol(val);
+	if (!strcmp(name, "seek_after_pause")) {
+		Conf->SeekAfterPause = atol(val);
+		sq_conf->seek_after_pause = Conf->SeekAfterPause;
+	}
 	if (!strcmp(name, "force_volume")) Conf->ForceVolume = atol(val);
 	if (!strcmp(name, "volume_on_play")) Conf->VolumeOnPlay = atol(val);
 	if (!strcmp(name, "volume_curve")) strcpy(Conf->VolumeCurve, val);

@@ -301,23 +301,38 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 
 	sprintf(cmd, "%s playlist title %d", ctx->cli_id, idx);
 	metadata->title = cli_send_cmd(cmd, true, ctx);
-	if (!metadata->title || *metadata->title == '\0') metadata->title = strdup("[LMS to uPnP]");
+	if (!metadata->title || *metadata->title == '\0') {
+			NFREE(metadata->title);
+			metadata->title = strdup("[LMS to uPnP]");
+	}
 
 	sprintf(cmd, "%s playlist album %d", ctx->cli_id, idx);
 	metadata->album = cli_send_cmd(cmd, true, ctx);
-	if (!metadata->album || *metadata->album == '\0') metadata->album = strdup("[no album]");
+	if (!metadata->album || *metadata->album == '\0') {
+		NFREE(metadata->album);
+		metadata->album = strdup("[no album]");
+	}
 
 	sprintf(cmd, "%s playlist artist %d", ctx->cli_id, idx);
 	metadata->artist = cli_send_cmd(cmd, true, ctx);
-	if (!metadata->artist || *metadata->artist == '\0') metadata->artist = strdup("[no artist]");
+	if (!metadata->artist || *metadata->artist == '\0') {
+		NFREE(metadata->artist);
+		metadata->artist = strdup("[no artist]");
+	}
 
 	sprintf(cmd, "%s playlist genre %d", ctx->cli_id, idx);
 	metadata->genre = cli_send_cmd(cmd, true, ctx);
-	if (!metadata->genre || *metadata->genre == '\0') metadata->genre = strdup("[no genre]");
+	if (!metadata->genre || *metadata->genre == '\0') {
+		NFREE(metadata->genre);
+		metadata->genre = strdup("[no genre]");
+	}
 
 	sprintf(cmd, "%s playlist duration %d", ctx->cli_id, idx);
 	metadata->duration = cli_send_cmd(cmd, true, ctx);
-  	if (!metadata->duration || *metadata->duration == '\0') metadata->duration = strdup("[no duration]");
+	if (!metadata->duration || *metadata->duration == '\0') {
+		NFREE(metadata->duration);
+		metadata->duration = strdup("[no duration]");
+	}
 
 	LOG_INFO("[%p]: idx %d\n\tartist:%s\n\talbum:%s\n\ttitle:%s\n\tgenre:%s\n\tduration:%s", ctx, idx,
 				metadata->artist, metadata->album, metadata->title,
@@ -424,6 +439,7 @@ bool sq_close(void *desc)
 		if (p->read_file) fclose(p->read_file);
 		p->read_file = NULL;
 		LOG_INFO("[%p]: read total:%Ld", p->owner, p->read_count_t);
+		p->close_count = p->read_count;
 		p->read_count_t -= p->read_count;
 		p->read_count = 0;
 		UNLOCK_S;UNLOCK_O;
@@ -456,6 +472,7 @@ int sq_seek(void *desc, off_t bytes, int from)
 			LOG_INFO("[%p]: seek unreachable b:%d t:%d r:%d", p->owner, bytes, p->write_count_t, p->write_count);
 			bytes = 0;
 		}
+		if (ctx->config.seek_after_pause == 2) bytes += p->close_count;
 		rc = fseek(p->read_file, bytes, SEEK_SET);
 		p->read_count += bytes;
 		p->read_count_t += bytes;

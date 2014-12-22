@@ -47,6 +47,7 @@ typedef	struct sq_dev_param_s {
 	sq_flac_header_t	flac_header;
 	char		buffer_dir[SQ_STR_LENGTH];
 	s32_t		buffer_limit;
+	int			seek_after_pause;
 } sq_dev_param_t;
 
 typedef struct sq_log_level_s {		// must be one of lERROR, lINFO, lDEBUG or lSDEBUG

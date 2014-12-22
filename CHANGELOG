@@ -6,6 +6,7 @@ stuck in a middle of a playlist - LMS will gently move to the next song and a sq
  - if uPnP players stops before or during a SetNextURI request, re-activate it by sending a hidden "Next" command (this is a race condition: get metadata is taking too much time). Free CurrentURI and NextURI in SQ_STOP to make sure that the uPNP "stop" state detection will not create a spurious "Next" command
  - add <flac_header> parameter
  - add <send_metadata> parameter
+ - <seek_after_pause> now 0,1 or 2 (2 is for players that request to start from first byte after unpause)
  - update DIDL-lite header to add DLNA namespace and <upnp:artist>
  - metadata request can cause a fault if the list has been emptied (modulus 0 call)
  - if <buffer_limit> is smaller than max(<streambuf_size>, <outputbuf_size>) * 4, set it to that max
