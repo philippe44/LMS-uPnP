@@ -20,6 +20,7 @@ stuck in a middle of a playlist - LMS will gently move to the next song and a sq
  - configure libupnp with disabled blocking TCP connection and gen GENA timeouts to avoid "disapearing players" to lock the job queue, ending to a "too many jobs" disaster in libupnp
  - Stop sendind poll request to a player that has generated more than 5 consecutives ACTION_ERROR (has disappeared probably)
  - add -p option to store the pid
+ - for each player, check that <buffer_dir> is accessible in WRITE mode
 
 0.1.3.3 
  - with <seek_after_pause> set to 1, unpause was not restarting at the right time

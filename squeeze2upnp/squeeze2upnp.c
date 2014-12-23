@@ -673,12 +673,10 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 				// create or re-create slimdevices and associated list
 				if (!p->SqueezeHandle && p->Config.Enabled && !p->uPNPTimeOut)	{
 					p->SqueezeHandle = sq_reserve_device(p, &sq_callback);
-					if (p->SqueezeHandle)
-						sq_run_device(p->SqueezeHandle, *(p->Config.Name) ? p->Config.Name : p->FriendlyName, p->mac, &p->sq_config);
-					else {
+					if (!p->SqueezeHandle || !sq_run_device(p->SqueezeHandle, *(p->Config.Name) ? p->Config.Name : p->FriendlyName, p->mac, &p->sq_config)) {
+						p->SqueezeHandle = 0;
 						LOG_ERROR("[%p]: cannot create squeezelite instance", p);
                     }
-
 				}
 
 				// uPNP device has gone dark ... remove it from slimdevice lists

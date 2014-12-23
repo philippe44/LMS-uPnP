@@ -716,6 +716,11 @@ bool sq_run_device(sq_dev_handle_t handle, char *name, u8_t *mac, sq_dev_param_t
 	 }
 #endif
 
+	if (access(param->buffer_dir, 2)) {
+		LOG_ERROR("[%p]: cannot access %s", ctx, param->buffer_dir);
+		return false;
+	}
+
 	for (i = 0, mac_sum =0; i < 5; i++) mac_sum += mac[i];
 	if (mac && mac_sum) memcpy(l_mac, mac, 6);
 	else	{
