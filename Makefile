@@ -4,6 +4,7 @@ CFLAGS  ?= -Wall -fPIC -ggdb -O2 $(OPTS) $(INCLUDE) $(DEFINES)
 LDFLAGS ?= -lpthread -lm -lrt -L. 
 # for LD debug -s
 EXECUTABLE ?= squeeze2upnp-x86
+EXECUTABLE_STATIC ?= squeeze2upnp-x86-static
 
 # passing one or more of these in $(OPTS) enables optional feature inclusion
 #OPT_DSD     = -DDSD
@@ -78,15 +79,20 @@ endif
 
 OBJECTS = $(SOURCES:.c=.o)
 
-all: $(EXECUTABLE)
+all: $(EXECUTABLE) $(EXECUTABLE_STATIC)
 
 $(EXECUTABLE): $(OBJECTS)
 	$(CC) $(OBJECTS) $(LIBRARY) $(LDFLAGS) -o $(build_dir)/$@
+
+$(EXECUTABLE_STATIC): $(OBJECTS)
+	$(CC) $(OBJECTS) $(LIBRARY) $(LDFLAGS) -static -o $(build_dir)/$@
 
 $(OBJECTS): $(DEPS)
 
 .c.o:
 	$(CC) $(CFLAGS) $(CPPFLAGS) $< -c -o $@
 
+
 clean:
 	rm -f $(OBJECTS) $(EXECUTABLE)
+
