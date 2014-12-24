@@ -51,6 +51,7 @@ sq_log_level_t		glLog = { lINFO, lINFO, lINFO, lINFO, lINFO, lINFO, lINFO, lINFO
 bool				glDaemonize = false;
 #endif
 char				*glLogFile;
+char				*glPidFile = NULL;
 
 tMRConfig			glMRConfig = {
 							-3L,
@@ -1099,14 +1100,7 @@ bool ParseArgs(int argc, char **argv) {
 			glLogFile = optarg;
 			break;
 		case 'p':
-			{
-				FILE *pid_file;
-				if (optarg) pid_file = fopen(optarg, "wb");
-				if (pid_file) {
-					fprintf(pid_file, "%d", getpid());
-					fclose(pid_file);
-				}
-			}
+			glPidFile = optarg;
 			break;
 #if LINUX || FREEBSD
 		case 'z':
@@ -1206,6 +1200,18 @@ int main(int argc, char *argv[])
 		}
 	}
 #endif
+
+	if (glPidFile) {
+		FILE *pid_file;
+		pid_file = fopen(glPidFile, "wb");
+		if (pid_file) {
+			fprintf(pid_file, "%d", getpid());
+			fclose(pid_file);
+		}
+		else {
+			LOG_ERROR("Cannot open PID file %s", glPidFile);
+		}
+	}
 
 	if (strstr(glSQServer, "?")) sq_init(NULL, glMac, &glLog);
 	else sq_init(glSQServer, glMac, &glLog);
