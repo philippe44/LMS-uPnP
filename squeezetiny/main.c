@@ -90,7 +90,7 @@ static char				gl_exclude_codecs[SQ_STR_LENGTH];
 /*----------------------------------------------------------------------------*/
 /* locals */
 /*----------------------------------------------------------------------------*/
-static bool sq_wipe_device(struct thread_ctx_s *ctx);
+static void sq_wipe_device(struct thread_ctx_s *ctx);
 
 static log_level	loglevel = lWARN;
 
@@ -109,43 +109,32 @@ void sq_stop(void) {
 }
 
 /*--------------------------------------------------------------------------*/
-bool sq_wipe_device(struct thread_ctx_s *ctx) {
+void sq_wipe_device(struct thread_ctx_s *ctx) {
 	int i;
-	bool rc;
 	char buf[SQ_STR_LENGTH];
 
 	ctx->callback = NULL;
 	ctx->in_use = false;
-	rc = slimproto_close(ctx);
-	if (!rc) {
-		LOG_WARN("[%p] not able to end slimproto (1st)", ctx);
-	}
+	slimproto_close(ctx);
 	output_mr_close(ctx);
 	decode_close(ctx);
 	stream_close(ctx);
-	if (!rc) {
-		rc = slimproto_close(ctx);
-		if (!rc) {
-			LOG_ERROR("[%p] not able to end slimproto (2nd)", ctx);
-		}
-	}
 	for (i = 0; i < 2; i++) {
 		if (ctx->out_ctx[i].read_file) fclose (ctx->out_ctx[i].read_file);
 		if (ctx->out_ctx[i].write_file) fclose (ctx->out_ctx[i].write_file);
 		sprintf(buf, "%s/%s", ctx->config.buffer_dir, ctx->out_ctx[i].buf_name);
 		remove(buf);
+		ctx->out_ctx[i].read_file = ctx->out_ctx[i].write_file = NULL;
+		ctx->out_ctx[i].owner = NULL;
+
 	}
-	memset(ctx, 0, sizeof(struct thread_ctx_s));
-	return rc;
 }
 
 /*--------------------------------------------------------------------------*/
-bool sq_delete_device(sq_dev_handle_t handle) {
+void sq_delete_device(sq_dev_handle_t handle) {
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
-
-	return sq_wipe_device(ctx);
+    sq_wipe_device(ctx);
 }
-
 
 /*---------------------------------------------------------------------------*/
 void main_loglevel(log_level level)
@@ -265,6 +254,16 @@ bool sq_set_time(sq_dev_handle_t handle, u32_t time)
 }
 
 /*--------------------------------------------------------------------------*/
+static void sq_default_metadata(sq_metadata_t *metadata)
+{
+	metadata->title = strdup("[LMS to uPnP]");
+	metadata->album = strdup("[no album]");
+	metadata->artist = strdup("[no artist]");
+	metadata->genre = strdup("[no genre]");
+	metadata->duration = strdup("[no duration]");
+}
+
+/*--------------------------------------------------------------------------*/
 bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 {
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
@@ -277,6 +276,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 
 	if (!handle || !ctx->cli_sock) {
 		LOG_ERROR("[%p]: no handle or CLI socket %d", ctx, handle);
+		sq_default_metadata(metadata);
 		return false;
 	}
 
@@ -285,6 +285,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 
 	if (!rsp) {
 		LOG_ERROR("[%p]: missing index", ctx);
+		sq_default_metadata(metadata);
 		return false;
 	}
 
@@ -429,7 +430,8 @@ bool sq_close(void *desc)
 {
 	out_ctx_t *p = (out_ctx_t*) desc;
 
-	if (&p->owner->out_ctx[p->idx] != p) {
+	// reject any pending request after the device has been stopped
+	if (!p->owner || &p->owner->out_ctx[p->idx] != p) {
 		LOG_ERROR("[%p]: unknow output context %p", p->owner, p);
 		return false;
 	}
@@ -454,7 +456,7 @@ int sq_seek(void *desc, off_t bytes, int from)
 	out_ctx_t *p = (out_ctx_t*) desc;
 	int rc = -1;
 
-	if (&p->owner->out_ctx[p->idx] != p) {
+	if (!p->owner || &p->owner->out_ctx[p->idx] != p) {
 		LOG_ERROR("[%p]: unknow output context %p", p->owner, p);
 	}
 	else {
@@ -462,7 +464,7 @@ int sq_seek(void *desc, off_t bytes, int from)
 		LOCK_S;LOCK_O;
 
 		/*
-		Although a SEEK_CUR is sent, because this is a response to a GET with a 
+		Although a SEEK_CUR is sent, because this is a response to a GET with a
 		range xx-yy, this must be treated as a SEEK_SET. An HTTP range -yy is
 		an illegal request, so SEEK_CUR does not make sense (see httpreadwrite.c)
 		*/
@@ -489,7 +491,7 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 	out_ctx_t *p = (out_ctx_t*) desc;
 	struct thread_ctx_s *ctx = p->owner;
 
-	if (&p->owner->out_ctx[p->idx] != p) {
+	if (!p->owner || &p->owner->out_ctx[p->idx] != p) {
 		LOG_ERROR("[%p]: unknow output context %p", p->owner, p);
 		return -1;
 	}
@@ -513,8 +515,17 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 			if (p->read_file) read_b += fread(dst, 1, bytes, p->read_file);
 			UNLOCK_S;LOCK_O;
 			LOG_SDEBUG("[%p] read %u bytes at %d", ctx, read_b, wait);
-			usleep(50000);
-		} while (!read_b && p->write_file && wait--);
+			if (!read_b) usleep(50000);
+		} while (!read_b && p->write_file && wait-- && p->owner);
+	}
+
+	/*
+	there is tiny chance for a race condition where the device is deleted
+	while sleeping, so check that otherwise LOCK will create a fault
+	*/
+	if (!p->owner) {
+		LOG_ERROR("[%p]: device stopped during wait %p", p, ctx);
+		return 0;
 	}
 
 	LOCK_S;LOCK_O;

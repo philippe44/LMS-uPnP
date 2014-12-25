@@ -276,7 +276,7 @@ void buf_init(struct buffer *buf, size_t size);
 void buf_destroy(struct buffer *buf);
 
 // slimproto.c
-bool slimproto_close(struct thread_ctx_s *ctx);
+void slimproto_close(struct thread_ctx_s *ctx);
 void slimproto_init(log_level level, bool full);
 void slimproto_reset(struct thread_ctx_s *ctx);
 void slimproto_thread_init(char *server, u8_t mac[], const char *name, const char *namefile, struct thread_ctx_s *ctx);
@@ -500,7 +500,6 @@ struct thread_ctx_s {
 	int 	self;
 	int 	autostart;
 	bool	running;
-	bool	slimproto_ended;
 	bool	in_use;
 	bool	on;
 	sq_dev_param_t	config;

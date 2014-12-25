@@ -224,22 +224,29 @@ void FlushMRList(void)
 
 	p = glDeviceList;
 	while (p) {
-		int i = 0;
 		struct sMR *n = p->Next;
-		FlushActionList(p);
-		NFREE(p->CurrentURI);
-		NFREE(p->NextURI);
-		while (p->ProtocolCap[i] && i < MAX_PROTO) {
-			NFREE(p->ProtocolCap[i]);
-			i++;
-		}
-        free(p);
+		DeleteMR(p);
 		p = n;
 	}
 
 	glDeviceList = glSQ2MRList = NULL;
 
 	ithread_mutex_unlock(&glDeviceListMutex);
+}
+
+/*----------------------------------------------------------------------------*/
+void DeleteMR(struct sMR *p)
+{
+	int i = 0;
+
+	FlushActionList(p);
+	NFREE(p->CurrentURI);
+	NFREE(p->NextURI);
+	while (p->ProtocolCap[i] && i < MAX_PROTO) {
+		NFREE(p->ProtocolCap[i]);
+		i++;
+	}
+	NFREE(p);
 }
 
 

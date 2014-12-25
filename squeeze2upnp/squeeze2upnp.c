@@ -663,12 +663,12 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 			break;
 		}
 		case UPNP_DISCOVERY_SEARCH_TIMEOUT:	{
-			struct sMR *p;
+			struct sMR *p, *pp;
 
 			LOG_INFO("uPNP search timeout", NULL);
 			ithread_mutex_lock(&glDeviceListMutex);
 
-			glSQ2MRList = NULL;
+			// first loop only to insert new devices
 			p = glDeviceList;
 			while (p)	{
 				// create or re-create slimdevices and associated list
@@ -676,26 +676,46 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 					p->SqueezeHandle = sq_reserve_device(p, &sq_callback);
 					if (!p->SqueezeHandle || !sq_run_device(p->SqueezeHandle, *(p->Config.Name) ? p->Config.Name : p->FriendlyName, p->mac, &p->sq_config)) {
 						p->SqueezeHandle = 0;
-						LOG_ERROR("[%p]: cannot create squeezelite instance", p);
-                    }
-				}
-
-				// uPNP device has gone dark ... remove it from slimdevice lists
-				if (p->uPNPTimeOut && p->SqueezeHandle) {
-					sq_delete_device(p->SqueezeHandle);
-					p->SqueezeHandle = 0;
-					p->on = false;
-				}
-
-				// finally, if confirmed active, insert device in the list
-				if (p->SqueezeHandle) {
-					if (glSQ2MRList) p->NextSQ = glSQ2MRList;
-					else p->NextSQ = NULL;
-					glSQ2MRList = p;
+						LOG_ERROR("[%p]: cannot create squeezelite instance (%s)", p, p->FriendlyName);
+					}
 				}
 
 				p  = p->Next;
 			}
+
+			/*
+			Second loop to remove "gone dark" devices and create list of active
+			squeeze devices. Two loops are needed to avoid released contexts to
+			be re-used immeditaly, as the thread require time to exit
+			*/
+			glSQ2MRList = NULL;
+			p = glDeviceList;
+			pp = NULL;
+			while (p)	{
+				/*
+				uPNP device has gone dark ... remove it from slimdevice lists. Any
+				other access to device list is mutex-protected so other thread call
+				can happen, they will be blocked till this finished
+				*/
+				if (p->uPNPTimeOut) {
+					LOG_INFO("[%p]: removing renderer (%s)", p, p->FriendlyName);
+					if (pp) pp->Next = p->Next;
+					else glDeviceList = p->Next;
+					if (p->SqueezeHandle) sq_delete_device(p->SqueezeHandle);
+					DeleteMR(p);
+					p = (pp) ? pp->Next : glDeviceList->Next;
+				}
+				// finally, if confirmed active, insert device in the SQ list
+				else {
+					if (p->SqueezeHandle) {
+						if (glSQ2MRList) p->NextSQ = glSQ2MRList;
+						else p->NextSQ = NULL;
+						glSQ2MRList = p;
+					}
+					pp = p;
+					p  = p->Next;
+				}
+    		}
 
 			ithread_mutex_unlock(&glDeviceListMutex);
 			break;
@@ -934,21 +954,35 @@ void AddMRDevice(IXML_Document *DescDoc, const char *location,	int expires)
 		LOG_DEBUG("MediaRenderer UDN:\t%s\nDeviceType:\t%s\nFriendlyName:\t%s", UDN, deviceType, friendlyName);
 	}
 
-	/* Check if this device is already in the list */
+	// check if this device is already in the list
 	p = glDeviceList;
 	while (p && strcmp(p->UDN, UDN)) p = p->Next;
-	if (p) p->uPNPTimeOut = false;
 
-	/*
-	The device is already there, or this is a LMS device with upnp enabled so
-	just update the advertisement timeout field
-	*/
-	if (!p && !strstr(manufacturer, cLogitech)) {
+	// if found, reset timeout no matter what
+	if (p) {
+		p->uPNPTimeOut = false;
+		p->ErrorCount = 0;
+	}
+
+	// create device or refresh parameters if it has gone dark
+	if (!p  && !strstr(manufacturer, cLogitech)) {
 		int i;
 
-		/* Create a new device node */
+		/* Create a new device if needed */
+
 		Device = (struct sMR *) malloc(sizeof(struct sMR));
 		memset(Device, 0, sizeof(struct sMR));
+		ithread_mutex_init(&Device->Mutex, 0);
+		InitActionList(Device);
+
+		Device->Next = NULL;
+		if (glDeviceList) {
+			struct sMR *p = glDeviceList;
+			while (p->Next) p = p->Next;
+			p->Next = Device;
+		} else glDeviceList = Device;
+
+		LOG_INFO("[%p]: adding renderer (%s)", Device, friendlyName);
 
 		Device->Magic = MAGIC;
 		Device->uPNPTimeOut = false;
@@ -968,11 +1002,9 @@ void AddMRDevice(IXML_Document *DescDoc, const char *location,	int expires)
 			memset(Device->mac, 0, sizeof(Device->mac));
         }
 
-		ithread_mutex_init(&Device->Mutex, 0);
 		memcpy(&Device->Config, &glMRConfig, sizeof(tMRConfig));
 		memcpy(&Device->sq_config, &glDeviceParam, sizeof(sq_dev_param_t));
 
-		InitActionList(Device);
 		for (i = 0; i < MAX_SRV; i++) strcpy(Device->Service[i].Id, "");
 
 		/* find the AVTransport service */
@@ -994,14 +1026,6 @@ void AddMRDevice(IXML_Document *DescDoc, const char *location,	int expires)
 			NFREE(EventURL);
 			NFREE(ControlURL);
     	}
-
-		/* insert device in the list */
-		Device->Next = NULL;
-		if (glDeviceList) {
-			struct sMR *p = glDeviceList;
-			while (p->Next) p = p->Next;
-			p->Next = Device;
-		} else glDeviceList = Device;
 
 		/* read parameters from config file  */
 		LoadMRConfig(glConfigID, Device->UDN, &Device->Config, &Device->sq_config);

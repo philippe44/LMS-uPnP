@@ -836,7 +836,6 @@ static void slimproto(struct thread_ctx_s *ctx) {
 
 	mutex_create(ctx->mutex);
 	mutex_create(ctx->cli_mutex);
-	ctx->slimproto_ended = false;
 
 	while (ctx->running) {
 
@@ -931,7 +930,6 @@ static void slimproto(struct thread_ctx_s *ctx) {
 
 	mutex_destroy(ctx->mutex);
 	mutex_destroy(ctx->cli_mutex);
-	ctx->slimproto_ended = true;
 }
 
 
@@ -941,7 +939,6 @@ static void slimproto_short(struct thread_ctx_s *ctx) {
 	unsigned port = 0;
 	sq_seturi_t	uri;
 
-	ctx->slimproto_ended = false;
 	if (ctx->slimproto_ip) {
 		bool onoff = true;
 
@@ -983,23 +980,16 @@ static void slimproto_short(struct thread_ctx_s *ctx) {
 		}
 		usleep(5000000L);
 	}
-
-	ctx->slimproto_ended = true;
 }
 
 /*---------------------------------------------------------------------------*/
-bool slimproto_close(struct thread_ctx_s *ctx) {
-	u32_t end_time = gettime_ms() + 2000;
-
+void slimproto_close(struct thread_ctx_s *ctx) {
 	LOG_INFO("[%p] slimproto stop for %s", ctx, ctx->player_name);
 	ctx->running = false;
 	wake_controller(ctx);
-	while (!ctx->slimproto_ended && (gettime_ms() < end_time)) {
-		usleep(100000);
-		LOG_SDEBUG("[%p] trying to end ...", ctx);
-	}
-	return ctx->slimproto_ended;
-
+#if LINUX || OSX || FREEBSD
+	pthread_detach(ctx->thread);
+#endif
 }
 
 /*---------------------------------------------------------------------------*/

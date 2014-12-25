@@ -551,9 +551,9 @@ void output_mr_thread_init(unsigned output_buf_size, char *params, unsigned rate
 void output_mr_close(struct thread_ctx_s *ctx) {
 	LOG_INFO("[%p] close media renderer", ctx);
 
-	LOCK_O;
+	LOCK_S;LOCK_O;
 	ctx->mr_running = false;
-	UNLOCK_O;
+	UNLOCK_S;UNLOCK_O;
 
 #if 0
 	free(ctx->buf);

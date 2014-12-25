@@ -192,15 +192,18 @@ int XMLFindAndParseService(IXML_Document *DescDoc, const char *location,
 			LOG_SDEBUG("serviceType %s", tempServiceType);
 
 			if (tempServiceType && strcmp(tempServiceType, serviceType) == 0) {
+				NFREE(*serviceId);
 				*serviceId = XMLGetFirstElementItem(service, "serviceId");
 				LOG_SDEBUG("Service %s, serviceId: %s", serviceType, serviceId);
 				relcontrolURL = XMLGetFirstElementItem(service, "controlURL");
 				releventURL = XMLGetFirstElementItem(service, "eventSubURL");
+				NFREE(*controlURL);
 				*controlURL = (char*) malloc(strlen(base) + strlen(relcontrolURL) + 1);
 				if (*controlURL) {
 					ret = UpnpResolveURL(base, relcontrolURL, *controlURL);
 					if (ret != UPNP_E_SUCCESS) LOG_ERROR("Error generating controlURL from %s + %s", base, relcontrolURL);
 				}
+				NFREE(*eventURL);
 				*eventURL = (char*) malloc(strlen(base) + strlen(releventURL) + 1);
 				if (*eventURL) {
 					ret = UpnpResolveURL(base, releventURL, *eventURL);

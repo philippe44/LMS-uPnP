@@ -22,6 +22,11 @@ stuck in a middle of a playlist - LMS will gently move to the next song and a sq
  - Stop sendind poll request to a player that has generated more than 5 consecutives ACTION_ERROR (has disappeared probably)
  - add -p option to store the pid
  - for each player, check that <buffer_dir> is accessible in WRITE mode
+ - Improved cleanup on exit() to avoid coredump 
+ - Improved LMS device deletion when upnp device disappears 
+ - When the same uPnP player disappears and re-apppears, re-connect was impossible
+ - Removed all memory leaks found by valgrind
+ - sq_get_metadata must fill metadata in all cases 
 
 0.1.3.3 
  - with <seek_after_pause> set to 1, unpause was not restarting at the right time
