@@ -33,10 +33,10 @@ from here, not from libupnp main repository to rebuild the library
 - TCP blocking *must* be disabled otherwise when a upnp player disappears
 "non gracefully", it will block other communication for a long delay, creating
 a "too many job" log in libupnp and all sort of nasty side effects. When 
-lauching ./configure, use --disable-blocking_tcp_connections (or --enable-blocking_tcp_connections
-sorry, the doc is a bit confusing on that topic). I choose to modify direcly the
-autoconfig.h in the root directory (and in build/inc) to make sure that the 
-following was commented out 
+launching ./configure, use --disable-blocking_tcp_connections (or 
+--enable-blocking_tcp_connections). Sorry, the doc is a bit confusing on that 
+topic. I choose to modify direcly the autoconfig.h in the root directory 
+(and in build/inc) to make sure that the following was commented out 
 	/* #define UPNP_ENABLE_BLOCKING_TCP_CONNECTIONS 1 */
 
 - It is recommended to make the following changes to config.h (find the 
