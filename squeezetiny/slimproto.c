@@ -130,7 +130,6 @@ static void sendHELO(bool reconnect, const char *fixed_cap, const char *var_cap,
 	memcpy(pkt.mac, mac, 6);
 
 	LOG_INFO("[%p] mac: %02x:%02x:%02x:%02x:%02x:%02x", ctx, pkt.mac[0], pkt.mac[1], pkt.mac[2], pkt.mac[3], pkt.mac[4], pkt.mac[5]);
-
 	LOG_INFO("[%p] cap: %s%s%s", ctx, base_cap, fixed_cap, var_cap);
 
 	send_packet((u8_t *)&pkt, sizeof(pkt), ctx->sock);
@@ -399,7 +398,6 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 							ctx->status.ms_played = ctx->ms_played = 0;
 							ctx->read_to = ctx->read_ended = false;
 						}
-//						sendSTAT("STMc", 0, ctx);
 						LOG_INFO("[%p] URI proxied by SQ2MR : %s", ctx, uri.urn);
 					}
 					else ctx->decode.state = DECODE_ERROR;
@@ -877,8 +875,8 @@ static void slimproto(struct thread_ctx_s *ctx) {
 			getsockname(ctx->sock, (struct sockaddr *) &our_addr, &len);
 
 			if (our_addr.sin_addr.s_addr == ctx->serv_addr.sin_addr.s_addr) {
-				LOG_INFO("[%p] local player", ctx);
 #if 0
+				LOG_INFO("[%p] local player", ctx);
 				strcat(ctx->var_cap, ",loc");
 #endif
 			}
@@ -999,18 +997,6 @@ void slimproto_loglevel(log_level level) {
 }
 
 /*---------------------------------------------------------------------------*/
-void slimproto_reset(struct thread_ctx_s *ctx)
-{
-	decode_flush(ctx);
-	output_flush(ctx);
-	ctx->play_running = ctx-> track_ended = false;
-	ctx->track_status = TRACK_STOPPED;
-	stream_disconnect(ctx);
-	if (ctx->callback) ctx_callback(ctx, SQ_STOP, NULL, NULL);
-	buf_flush(ctx->streambuf);
-}
-
-/*---------------------------------------------------------------------------*/
 void slimproto_thread_init(char *server, u8_t mac[6], const char *name, const char *namefile, struct thread_ctx_s *ctx) {
 	wake_create(ctx->wake_e);
 
@@ -1071,7 +1057,8 @@ void slimproto_thread_init(char *server, u8_t mac[6], const char *name, const ch
 	LOG_INFO("[%p] connecting to %s:%d", ctx, inet_ntoa(ctx->serv_addr.sin_addr), ntohs(ctx->serv_addr.sin_port));
 
 	ctx->new_server = 0;
-	slimproto_reset(ctx);
+	ctx->play_running = ctx-> track_ended = false;
+	ctx->track_status = TRACK_STOPPED;
 
 #if LINUX || OSX || FREEBSD
 	pthread_attr_t attr;

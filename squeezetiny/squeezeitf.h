@@ -102,7 +102,6 @@ void*				sq_isopen(const char *urn);
 bool				sq_close(void *desc);
 int					sq_read(void *desc, void *dst, unsigned bytes);
 int					sq_seek(void *desc, off_t bytes, int from);
-void				sq_reset(sq_dev_handle_t);
 
 void stream_loglevel(log_level level);
 void slimproto_loglevel(log_level level);

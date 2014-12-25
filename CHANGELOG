@@ -31,6 +31,7 @@ stuck in a middle of a playlist - LMS will gently move to the next song and a sq
  - Removed all memory leaks found by valgrind
  - metadata request can cause a fault if the list has been emptied (modulus 0 call)
  - sq_get_metadata must fill metadata in all cases, no NULL can be returned 
+ - start to re-organize LOG levels
 
 0.1.3.3 
  - with <seek_after_pause> set to 1, unpause was not restarting at the right time

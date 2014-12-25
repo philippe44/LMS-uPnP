@@ -812,7 +812,7 @@ int uPNPInitialize(char *IPaddress, unsigned int *Port)
 		return false;
 	}
 	else {
-		LOG_INFO("ControlPoint registered", NULL);
+		LOG_DEBUG("ControlPoint registered", NULL);
 	}
 
 	rc = UpnpEnableWebserver(true);
@@ -823,7 +823,7 @@ int uPNPInitialize(char *IPaddress, unsigned int *Port)
 		return false;
 	}
 	else {
-		LOG_INFO("WebServer enabled", NULL);
+		LOG_DEBUG("WebServer enabled", NULL);
 	}
 
 	rc = UpnpAddVirtualDir(glBaseVDIR);
@@ -834,7 +834,7 @@ int uPNPInitialize(char *IPaddress, unsigned int *Port)
 		return false;
 	}
 	else {
-		LOG_INFO("VirtualDir set for Squeezelite", NULL);
+		LOG_DEBUG("VirtualDir set for Squeezelite", NULL);
 	}
 
 	VirtualDirCallbacks.get_info = WebGetInfo;
@@ -851,7 +851,7 @@ int uPNPInitialize(char *IPaddress, unsigned int *Port)
 		return false;
 	}
 	else {
-		LOG_INFO("Callbacks registered for VirtualDir", NULL);
+		LOG_DEBUG("Callbacks registered for VirtualDir", NULL);
 	}
 
 	/* start a timer thread */

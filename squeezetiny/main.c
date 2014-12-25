@@ -469,6 +469,7 @@ int sq_seek(void *desc, off_t bytes, int from)
 		an illegal request, so SEEK_CUR does not make sense (see httpreadwrite.c)
 		*/
 
+		LOG_INFO("[%p]: seek %d (c:%d)", ctx, bytes - (p->write_count_t - p->write_count));
 		bytes -= p->write_count_t - p->write_count;
 		if (bytes < 0) {
 			LOG_INFO("[%p]: seek unreachable b:%d t:%d r:%d", p->owner, bytes, p->write_count_t, p->write_count);
@@ -639,13 +640,7 @@ int sq_read(void *desc, void *dst, unsigned bytes)
  }
 
 /*---------------------------------------------------------------------------*/
-void sq_reset(sq_dev_handle_t handle)
-{
-	 slimproto_reset(&thread_ctx[handle-1]);
-}
-
-/*---------------------------------------------------------------------------*/
-void sq_init(char *server, u8_t mac[6], sq_log_level_t *log)
+void sq_init(char *server, u8_t mac[6], sq_log_level_t *log)
 {
 	if (server) {
 		strcpy(_gl_server, server);
