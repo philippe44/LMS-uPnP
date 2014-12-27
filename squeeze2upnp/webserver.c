@@ -66,8 +66,33 @@ int WebGetInfo(const char *FileName, struct File_Info *Info)
 #endif
 	LOG_INFO("[%p]: GetInfo %s %s", Device, FileName, Info->content_type);
 
+#if 0
+	{
+	struct Extra_Headers *Headers = Info->extra_headers;
+	while (Headers->name) {
+		if (strstr(Headers->name, "Icy")) {
+			Headers->resp = strdup("icy:blabla");
+		}
+		Headers++;
+	}
+	}
+#endif
+
 	// Some clients try to open 2 sessions : do not allow that
 	if (sq_isopen(FileName)) return -1;
+	else return UPNP_E_SUCCESS;
+}
+
+int WebSetExtraHeaders(const char *FileName, struct Extra_Headers *Headers)
+{
+	struct sMR *Device;
+
+	Device = (struct sMR*) sq_urn2MR(FileName);
+	// some uPnP device have a long memory of this ...
+	if (!Device) {
+		LOG_ERROR("No context for %s", FileName);
+		return UPNP_E_INVALID_HANDLE;
+	}
 	else return UPNP_E_SUCCESS;
 }
 

@@ -507,6 +507,7 @@ int CallbackActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 				if (strcmp(r, p->CurrentURI) && (p->State == PLAYING) && p->NextURI) {
 					LOG_INFO("Detected URI change %s %s", p->CurrentURI, r);
 					NFREE(p->CurrentURI);
+					NFREE(p->NextURI);
 					p->CurrentURI = malloc(strlen(r) + 1);
 					strcpy(p->CurrentURI, r);
 					ithread_mutex_unlock(&p->Mutex);
