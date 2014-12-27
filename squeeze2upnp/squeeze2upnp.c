@@ -675,6 +675,7 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 				if (!p->SqueezeHandle && p->Config.Enabled && !p->uPNPTimeOut)	{
 					p->SqueezeHandle = sq_reserve_device(p, &sq_callback);
 					if (!p->SqueezeHandle || !sq_run_device(p->SqueezeHandle, *(p->Config.Name) ? p->Config.Name : p->FriendlyName, p->mac, &p->sq_config)) {
+						sq_release_device(p->SqueezeHandle);
 						p->SqueezeHandle = 0;
 						LOG_ERROR("[%p]: cannot create squeezelite instance (%s)", p, p->FriendlyName);
 					}
@@ -864,7 +865,6 @@ int uPNPInitialize(char *IPaddress, unsigned int *Port)
 /*----------------------------------------------------------------------------*/
 int uPNPTerminate(void)
 {
-//	ithread_cancel(glTimerThread);
 	ithread_join(glTimerThread, NULL);
 	UpnpUnRegisterClient(glControlPointHandle);
 	UpnpEnableWebserver(false);

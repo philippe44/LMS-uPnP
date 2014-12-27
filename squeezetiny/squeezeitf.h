@@ -88,6 +88,7 @@ void				sq_stop(void);
 bool			 	sq_run_device(sq_dev_handle_t handle, char *name, u8_t *mac, sq_dev_param_t *param);
 void				sq_delete_device(sq_dev_handle_t);
 sq_dev_handle_t		sq_reserve_device(void *caller_id, sq_callback_t callback);
+void				sq_release_device(sq_dev_handle_t);
 
 bool				sq_call(sq_dev_handle_t handle, sq_action_t action, void *param);
 void				sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *cookie, void *param);

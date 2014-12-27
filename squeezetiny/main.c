@@ -675,6 +675,12 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 }
 
 /*---------------------------------------------------------------------------*/
+void sq_release_device(sq_dev_handle_t handle)
+{
+	if (handle) thread_ctx[handle - 1].in_use = false;
+}
+
+/*---------------------------------------------------------------------------*/
 sq_dev_handle_t sq_reserve_device(void *MR, sq_callback_t callback)
 {
 	int ctx_i;

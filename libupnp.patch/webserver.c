@@ -819,11 +819,6 @@ static int CreateHTTPRangeResponseHeader(
 		}
 		if (FirstByte >= 0 && LastByte == -1 && FileLength < 0) {
 			Instr->RangeOffset = FirstByte;
-			/*
-			probably readsendsize is not needed as there is no content-length
-			in chunked encoding
-			Instr->ReadSendSize = LastByte - FirstByte + 1;
-			*/
 			rc = snprintf(Instr->RangeHeader,
 				sizeof(Instr->RangeHeader),
 				"CONTENT-RANGE: bytes %" PRId64
@@ -965,13 +960,6 @@ static int CheckOtherHTTPHeaders(
 				RespInstr->RecvWriteSize = atoi(TmpBuf);
 				break;
 			case HDR_RANGE:
-				/* ignore RANGE in case of chunked transmission */
-#if 0
-				if (FileSize < 0) {
-					RetCode = HTTP_OK;
-					break;
-				}
-#endif
 				RetCode = CreateHTTPRangeResponseHeader(TmpBuf,
 					FileSize, RespInstr);
 				if (RetCode != HTTP_OK) {
@@ -1266,14 +1254,39 @@ static int process_request(
 		if (http_MakeMessage(headers, resp_major, resp_minor,
 		    "R" "T" "GKLD" "s" "tcS" "Xc" "sCc",
 			HTTP_PARTIAL_CONTENT,	/* status code */
-//				HTTP_OK,	/* status code */
-		    finfo.content_type,	/* content type */
-		    RespInstr,	/* range info */
-		    RespInstr,	/* language info */
-		    "LAST-MODIFIED: ",
-		    &finfo.last_modified,
-		    X_USER_AGENT, extra_headers) != 0) {
+			finfo.content_type,	/* content type */
+			RespInstr,	/* range info */
+			RespInstr,	/* language info */
+			"LAST-MODIFIED: ",
+			&finfo.last_modified,
+			X_USER_AGENT, extra_headers) != 0) {
 			goto error_handler;
+		}
+	} else if (RespInstr->IsRangeActive && !RespInstr->IsChunkActive && finfo.file_length == UPNP_UNTIL_CLOSE) {
+		/* Content-Range: serve origin seek but respond with HTTP_OK  */
+		/* Content-length: unknown */
+		if (http_MakeMessage(headers, resp_major, resp_minor,
+#if 1
+			"R" "TLD" "s" "tcS" "Xc" "sCc",
+			HTTP_OK,	/* status code */
+			finfo.content_type,	/* content type */
+			RespInstr,	/* language info */
+			"LAST-MODIFIED: ",
+			&finfo.last_modified,
+			X_USER_AGENT,
+			extra_headers) != 0) {
+			goto error_handler;
+#else
+			"R" "T" "GLD" "s" "tcS" "Xc" "sCc",
+			HTTP_PARTIAL_CONTENT,	/* status code */
+			finfo.content_type,	/* content type */
+			RespInstr,	/* range info */
+			RespInstr,	/* language info */
+			"LAST-MODIFIED: ",
+			&finfo.last_modified,
+			X_USER_AGENT, extra_headers) != 0) {
+			goto error_handler;
+#endif
 		}
 	} else if (RespInstr->IsRangeActive && !RespInstr->IsChunkActive) {
 		/* Content-Range: bytes 222-3333/4000  HTTP_PARTIAL_CONTENT */
