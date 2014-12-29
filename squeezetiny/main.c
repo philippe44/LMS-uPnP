@@ -291,6 +291,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 
 	idx = atol(rsp);
 	NFREE(rsp);
+	metadata->track = idx;
 
 	if (next) {
 		sprintf(cmd, "%s playlist tracks", ctx->cli_id);

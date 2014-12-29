@@ -107,12 +107,13 @@ typedef enum {
 " xmlns:upnp=\"urn:schemas-upnp-org:metadata-1-0/upnp/\""
 " xmlns=\"urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/\""
 " xmlns:dlna=\"urn:schemas-dlna-org:metadata-1-0/\">"
-" <item>"
+" <item id=\"1\" parentID=\"0\" restricted=\"1\">"
 " <dc:title>%s</dc:title>"
 " <dc:creator>%s</dc:creator>"
 " <upnp:artist>%s</upnp:artist>"
 " <upnp:album>%s</upnp:album>"
 " <upnp:genre>%s</upnp:genre>"
+" <upnp:originalTrackNumber>%d</upnp:originalTrackNumber>"
 " <res protocolInfo=\"%s%s\">%s</res>"
 " <upnp:class>object.item.audioItem.musicTrack</upnp:class>"
 " </item>"
@@ -142,15 +143,15 @@ int AVTSetURI(char *ControlURL, char *URI, char *ProtInfo, struct sq_metadata_s 
 	char *DIDLData;
 
 	DIDLData = malloc(strlen(MetaData->title) + 2*strlen(MetaData->artist) +
-			   strlen(MetaData->album) + strlen(MetaData->genre) +
+			   strlen(MetaData->album) + strlen(MetaData->genre) + 5 +
 			   strlen(ProtInfo) + strlen(URI) + strlen(DIDL) + strlen(DLNA_OPT) + 1);
 #ifndef DIDL_PATCH
 	if (ProtInfo[strlen(ProtInfo) - 1] == ':')
 		sprintf(DIDLData, DIDL, MetaData->title, MetaData->artist, MetaData->artist,
-				MetaData->album, MetaData->genre, ProtInfo, DLNA_OPT + 1, URI);
+				MetaData->album, MetaData->genre, MetaData->track, ProtInfo, DLNA_OPT + 1, URI);
 	else
 		sprintf(DIDLData, DIDL, MetaData->title, MetaData->artist, MetaData->artist,
-				MetaData->album, MetaData->genre, ProtInfo, DLNA_OPT, URI);
+				MetaData->album, MetaData->genre, MetaData->track, ProtInfo, DLNA_OPT, URI);
 #else
 	sprintf(DIDLData, DIDL, URI);
 #endif
@@ -184,16 +185,16 @@ int AVTSetNextURI(char *ControlURL, char *URI, char *ProtInfo, struct sq_metadat
 	char *DIDLData;
 
 	DIDLData = malloc(strlen(MetaData->title) + 2*strlen(MetaData->artist) +
-			   strlen(MetaData->album) + strlen(MetaData->genre) +
+			   strlen(MetaData->album) + strlen(MetaData->genre) +  5 +
 			   strlen(ProtInfo) + strlen(URI) + strlen(DIDL) + strlen(DLNA_OPT) + 1);
 
 #ifndef DIDL_PATCH
 	if (ProtInfo[strlen(ProtInfo) - 1] == ':')
 		sprintf(DIDLData, DIDL, MetaData->title, MetaData->artist, MetaData->artist,
-				MetaData->album, MetaData->genre, ProtInfo, DLNA_OPT + 1, URI);
+				MetaData->album, MetaData->genre, MetaData->track, ProtInfo, DLNA_OPT + 1, URI);
 	else
 		sprintf(DIDLData, DIDL, MetaData->title, MetaData->artist, MetaData->artist,
-				MetaData->album, MetaData->genre, ProtInfo, DLNA_OPT, URI);
+				MetaData->album, MetaData->genre, MetaData->track, ProtInfo, DLNA_OPT, URI);
 #else
 	sprintf(DIDLData, DIDL, URI);
 #endif

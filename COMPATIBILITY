@@ -117,7 +117,7 @@ Windows Media Player:
 xBoxOne:
 ***********************************************************************
 <codecs>pcm,mp3</codecs>
-<stream_length>1000000000</stream_length>
+<stream_length>-2</stream_length>
 
  - Although the XBoxOne accept the upnp command SetNextAVTransportURI, it does not 
 automatically move to that URI once the current URI finishes ... (it wants a "Next"

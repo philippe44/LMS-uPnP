@@ -13,7 +13,10 @@ stuck in a middle of a playlist - LMS will gently move to the next song and a sq
  - add <send_metadata> parameter
  - building a Linux statically linked version as well (-static)
  - <seek_after_pause> now 0,1 or 2 (2 restarts stream from that last sent byte - will stay undocumented as it does not seem to work)
- - update DIDL-lite header to add DLNA namespace and <upnp:artist>
+ - add -4 for <stream_length> to allow usage of unkown file size to be sent *but* not using chunked-encoding (need updated libupnp webserver.c and httpreadwrite.c), responding to open-ended request (xxx-) by HTTP 206 and range xxx-yyy/*
+ - add -1 for <stream_length> to allow usage of unkown file size to be sent *but* not using chunked-encoding (need updated libupnp webserver.c and httpreadwrite.c), responding to open-ended requests (xxx-) by HTTP 200 instead of 206
+ - add -2 for <stream_length> to allow usage of chunked-encoding (need updated libupnp webserver.c and httpreadwrite.c), and responding to open-ended requests (xxx-) by HTTP 200 instead of 206
+ - update DIDL-lite header to add DLNA namespace, <upnp:artist>, trackNumber and tweak other parameters
  - if <buffer_limit> is smaller than max(<streambuf_size>, <outputbuf_size>) * 4, set it to that max
  - <can_pause> parameter removed
  - big fat warning when config file has an error and cannot be loaded
@@ -32,9 +35,6 @@ stuck in a middle of a playlist - LMS will gently move to the next song and a sq
  - metadata request can cause a fault if the list has been emptied (modulus 0 call)
  - sq_get_metadata must fill metadata in all cases, no NULL can be returned 
  - start to re-organize LOG levels
- - add -4 for <stream_length> to allow usage of unkown file size to be sent *but* not using chunked-encoding (need updated libupnp webserver.c and httpreadwrite.c), responding to open-ended request (xxx-) by HTTP 206 and range xxx-yyy/*
- - add -1 for <stream_length> to allow usage of unkown file size to be sent *but* not using chunked-encoding (need updated libupnp webserver.c and httpreadwrite.c), responding to open-ended requests (xxx-) by HTTP 200 instead of 206
- - add -2 for <stream_length> to allow usage of chunked-encoding (need updated libupnp webserver.c and httpreadwrite.c), and responding to open-ended requests (xxx-) by HTTP 200 instead of 206
 
 
 
