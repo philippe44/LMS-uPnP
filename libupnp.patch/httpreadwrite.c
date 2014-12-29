@@ -527,6 +527,75 @@ Cleanup_File:
 				fclose(Fp);
 			}
 			goto ExitFunction;
+		} else if (c == 'p' || c == 'h') {
+			int nr, rc;
+			membuffer *headers;
+
+			/* only with virtual dir */
+			headers = va_arg(argp, membuffer *);
+			filename = va_arg(argp, char *);
+			Fp = virtualDirCallback.open(filename, UPNP_READ);
+			if (Fp == NULL) {
+				RetVal = UPNP_E_FILE_READ_ERROR;
+				goto ExitFunction;
+			}
+			if (virtualDirCallback.seek(Fp, Instr->RangeOffset,	SEEK_CUR) != 0) {
+				RetVal = UPNP_E_FILE_READ_ERROR;
+				goto Cleanup_File;
+			}
+			nr = virtualDirCallback.read(Fp, file_buf, Data_Buf_Size);
+			num_read = (size_t)nr;
+			if (num_read == (size_t)0) {
+				/* EOF so no more to send. */
+				RetVal = UPNP_E_FILE_READ_ERROR;
+				goto Cleanup_File;
+			}
+			/* insert missing headers CONTENT-LENGTH and CONTENT-RANGE */
+			rc = snprintf(Instr->RangeHeader,
+					sizeof(Instr->RangeHeader),
+					"CONTENT-RANGE: bytes %" PRId64
+					"-%" PRId64 "/*" "\r\n",
+					(int64_t)Instr->RangeOffset,
+					(int64_t) Instr->RangeOffset + num_read - 1);
+			if (rc < 0 || (unsigned int) rc >= sizeof(Instr->RangeHeader)) {
+				RetVal = HTTP_INTERNAL_SERVER_ERROR;
+				goto Cleanup_File;
+			}
+			/* major and minor are not required for this */
+			if (http_MakeMessage(headers, 0, 0,
+				"N" "G" "c", num_read, Instr) != 0) {
+				RetVal = HTTP_INTERNAL_SERVER_ERROR;
+				goto Cleanup_File;
+			}
+			/* write headers */
+			nw = sock_write(info, headers->buf, headers->length, TimeOut);
+			num_written = (size_t)nw;
+			UpnpPrintf(UPNP_INFO, HTTP, __FILE__, __LINE__,
+				   ">>> (SENT) >>>\n"
+				   "%.*s\nbuf_length=%" PRIzd ", num_written=%" PRIzd "\n"
+				   "------------\n",
+				   (int)headers->length, headers->buf, headers->length, num_written);
+			if (num_written != headers->length) {
+				RetVal = 0;
+				goto Cleanup_File;
+			}
+            /* was just the headers*/
+			if (c == 'h') {
+				goto Cleanup_File;
+			}
+			/* write data */
+			nw = sock_write(info, file_buf, num_read, TimeOut);
+			UpnpPrintf(UPNP_INFO, HTTP, __FILE__, __LINE__,
+					   ">>> (SENT) >>>\n%.*s\n------------\n",
+					   nw, file_buf);
+			/* Send error nothing we can do */
+			num_written = (size_t)nw;
+			if (nw <= 0 || num_written != num_read) {
+				RetVal = 0;
+				goto Cleanup_File;
+			}
+
+			goto Cleanup_File;
 		} else
 #endif /* EXCLUDE_WEB_SERVER */
 		if (c == 'b') {
@@ -870,7 +939,7 @@ int MakePostMessage(const char *url_str, membuffer *request,
  * Parameters:
  *	IN void *Handle:	Handle to the http post object
  *	IN char *buf:		Buffer to send to peer, if format used
- *				is not UPNP_USING_CHUNKED, 
+ *				is not UPNP_USING_CHUNKED,
  *	IN unsigned int *size:	Size of the data to be sent.
  *	IN int timeout:		time out value
  *
@@ -942,7 +1011,7 @@ int http_WriteHttpPost( IN void *Handle,
  *	IN int timeout;		time out value
  *
  * Description:
- *	Sends remaining data if using  UPNP_USING_CHUNKED 
+ *	Sends remaining data if using  UPNP_USING_CHUNKED
  *	format. Receives any more messages. Destroys socket and any socket
  *	associated memory. Frees handle associated with the HTTP POST msg.
  *
@@ -950,7 +1019,7 @@ int http_WriteHttpPost( IN void *Handle,
  *	UPNP_E_SUCCESS		- On success
  *	UPNP_E_INVALID_PARAM	- Invalid Parameter
  ************************************************************************/
-int http_CloseHttpPost(IN void *Handle, IN OUT int *httpStatus, IN int timeout)
+ int http_CloseHttpPost(IN void *Handle, IN OUT int *httpStatus, IN int timeout)
 {
 	int retc = 0;
 	http_parser_t response;

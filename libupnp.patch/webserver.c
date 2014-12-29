@@ -783,7 +783,7 @@ static int CreateHTTPRangeResponseHeader(
 	/*! [out] SendInstruction object where the range operations will be stored. */
 	struct SendInstruction *Instr)
 {
-	off_t FirstByte, LastByte;
+	off_t FirstByte = 0, LastByte = 0;
 	char *RangeInput;
 	char *Ptr;
 	int rc = 0;
@@ -819,11 +819,15 @@ static int CreateHTTPRangeResponseHeader(
 		}
 		if (FirstByte >= 0 && LastByte == -1 && FileLength < 0) {
 			Instr->RangeOffset = FirstByte;
-			rc = snprintf(Instr->RangeHeader,
-				sizeof(Instr->RangeHeader),
-				"CONTENT-RANGE: bytes %" PRId64
-				"-" "*" "\r\n",
-				(int64_t)FirstByte);
+			/* UPNP_INFINITE responds with a 200, no need of CONTENT-RANGE */
+			/* UPNP_UNTIL_CLOSE headers are done in http_SendMessage */
+			if (FileLength == UPNP_USING_CHUNKED) {
+				rc = snprintf(Instr->RangeHeader,
+					sizeof(Instr->RangeHeader),
+					"CONTENT-RANGE: bytes %" PRId64
+					"-" "*" "\r\n",
+					(int64_t)FirstByte);
+			}
 			if (rc < 0 || (unsigned int) rc >= sizeof(Instr->RangeHeader)) {
 				free(RangeInput);
 				return HTTP_INTERNAL_SERVER_ERROR;
@@ -1200,7 +1204,7 @@ static int process_request(
 	}
 	if (using_virtual_dir) {
 		if (req->method != HTTPMETHOD_POST) {
-			if (code = ExtraHTTPHeaders(req, &extra_headers) != HTTP_OK) {
+			if ((code = ExtraHTTPHeaders(req, &extra_headers)) != HTTP_OK) {
 				err_code = code;
 				goto error_handler;
 			}
@@ -1312,7 +1316,7 @@ static int process_request(
 	}
 
 	/* Check if chunked encoding should be used. */
-	if (using_virtual_dir && finfo.file_length == UPNP_USING_CHUNKED) {
+	if (using_virtual_dir && (finfo.file_length == UPNP_USING_CHUNKED || finfo.file_length == UPNP_USING_CHUNKED_200)) {
 		/* Chunked encoding is only supported by HTTP 1.1 clients */
 		if (resp_major == 1 && resp_minor == 1) {
 			RespInstr->IsChunkActive = 1;
@@ -1326,44 +1330,60 @@ static int process_request(
 	}
 
 	if (RespInstr->IsRangeActive && RespInstr->IsChunkActive) {
-		/* Content-Range: bytes 222-3333/4000  HTTP_PARTIAL_CONTENT */
-		/* Transfer-Encoding: chunked */
+		if (finfo.file_length == UPNP_USING_CHUNKED) {
+			/* Content-Range: bytes 222-*  HTTP_PARTIAL_CONTENT */
+			/* Transfer-Encoding: chunked */
+			if (http_MakeMessage(headers, resp_major, resp_minor,
+				"R" "T" "GKLD" "s" "tcS" "Xc" "ECc",
+				HTTP_PARTIAL_CONTENT,	/* status code */
+				finfo.content_type,	/* content type */
+				RespInstr,	/* range info */
+				RespInstr,	/* language info */
+				"LAST-MODIFIED: ",
+				&finfo.last_modified,
+				X_USER_AGENT, extra_headers) != 0) {
+				goto error_handler;
+			}
+		} else if (finfo.file_length == UPNP_USING_CHUNKED_200) {
+			/* Content-Range: bytes 222-  HTTP_OK */
+			/* Transfer-Encoding: chunked */
+			if (http_MakeMessage(headers, resp_major, resp_minor,
+				"R" "T" "KLD" "s" "tcS" "Xc" "ECc",
+				HTTP_OK,	/* status code */
+				finfo.content_type,	/* content type */
+				RespInstr,	/* language info */
+				"LAST-MODIFIED: ",
+				&finfo.last_modified,
+				X_USER_AGENT, extra_headers) != 0) {
+				goto error_handler;
+			}
+		}
+	} else if (RespInstr->IsRangeActive && !RespInstr->IsChunkActive && finfo.file_length == UPNP_UNTIL_CLOSE) {
+		/* Content-Range:  will be added later by http_SendMessage */
+		/* Content-length: (same) */
+		/* warning : trailing CRLF *must* be added by http_SendMessage */
 		if (http_MakeMessage(headers, resp_major, resp_minor,
-			"R" "T" "GKLD" "s" "tcS" "Xc" "ECc",
+			"R" "T" "LD" "s" "tcS" "Xc" "EC",
 			HTTP_PARTIAL_CONTENT,	/* status code */
 			finfo.content_type,	/* content type */
-			RespInstr,	/* range info */
 			RespInstr,	/* language info */
 			"LAST-MODIFIED: ",
 			&finfo.last_modified,
 			X_USER_AGENT, extra_headers) != 0) {
 			goto error_handler;
 		}
-	} else if (RespInstr->IsRangeActive && !RespInstr->IsChunkActive && finfo.file_length == UPNP_UNTIL_CLOSE) {
+	} else if (RespInstr->IsRangeActive && !RespInstr->IsChunkActive && finfo.file_length == UPNP_INFINITE) {
 		/* Content-Range: serve origin seek but respond with HTTP_OK  */
-		/* Content-length: unknown */
+		/* Content-length: not indicated  */
 		if (http_MakeMessage(headers, resp_major, resp_minor,
-#if 1
 			"R" "TLD" "s" "tcS" "Xc" "ECc",
 			HTTP_OK,	/* status code */
 			finfo.content_type,	/* content type */
 			RespInstr,	/* language info */
 			"LAST-MODIFIED: ",
 			&finfo.last_modified,
-			X_USER_AGENT,
-			extra_headers) != 0) {
-			goto error_handler;
-#else
-			"R" "T" "GLD" "s" "tcS" "Xc" "ECc",
-			HTTP_PARTIAL_CONTENT,	/* status code */
-			finfo.content_type,	/* content type */
-			RespInstr,	/* range info */
-			RespInstr,	/* language info */
-			"LAST-MODIFIED: ",
-			&finfo.last_modified,
 			X_USER_AGENT, extra_headers) != 0) {
 			goto error_handler;
-#endif
 		}
 	} else if (RespInstr->IsRangeActive && !RespInstr->IsChunkActive) {
 		/* Content-Range: bytes 222-3333/4000  HTTP_PARTIAL_CONTENT */
@@ -1630,15 +1650,31 @@ void web_server_callback(http_parser_t *parser, INOUT http_message_t *req,
 				&RespInstr,
 				headers.buf, headers.length,
 				filename.buf);*/
-			http_SendMessage(info, &timeout, "Ibf",
-				&RespInstr,
-				headers.buf, headers.length,
-				filename.buf);
+			if (RespInstr.IsRangeActive && RespInstr.ReadSendSize == UPNP_UNTIL_CLOSE) {
+				http_SendMessage(info, &timeout, "Ip",
+					&RespInstr,
+					&headers,
+					filename.buf);
+			}
+			else {
+				http_SendMessage(info, &timeout, "Ibf",
+					&RespInstr,
+					headers.buf, headers.length,
+					filename.buf);
+			}
 			break;
 		case RESP_HEADERS:
 			/* headers only */
-			http_SendMessage(info, &timeout, "b",
-				headers.buf, headers.length);
+			if (RespInstr.IsRangeActive && RespInstr.ReadSendSize == UPNP_UNTIL_CLOSE) {
+				http_SendMessage(info, &timeout, "Ih",
+					&RespInstr,
+					&headers,
+					filename.buf);
+			}
+			else {
+				http_SendMessage(info, &timeout, "b",
+					headers.buf, headers.length);
+			}
 			break;
 		case RESP_POST:
 			/* headers only */

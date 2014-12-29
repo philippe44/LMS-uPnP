@@ -67,9 +67,10 @@
 #define MODL_NAME_SIZE  32
 #define SERL_NUMR_SIZE  64
 #define MODL_DESC_SIZE  64
-#define UPNP_INFINITE		-1
-#define UPNP_USING_CHUNKED	-3
-#define UPNP_UNTIL_CLOSE	-4
+#define UPNP_INFINITE			-1
+#define UPNP_USING_CHUNKED_200	-2
+#define UPNP_USING_CHUNKED		-3
+#define UPNP_UNTIL_CLOSE		-4
 
 /*!
  * \name Error codes 

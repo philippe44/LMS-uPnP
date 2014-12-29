@@ -83,19 +83,6 @@ int WebGetInfo(const char *FileName, struct File_Info *Info)
 	else return UPNP_E_SUCCESS;
 }
 
-int WebSetExtraHeaders(const char *FileName, struct Extra_Headers *Headers)
-{
-	struct sMR *Device;
-
-	Device = (struct sMR*) sq_urn2MR(FileName);
-	// some uPnP device have a long memory of this ...
-	if (!Device) {
-		LOG_ERROR("No context for %s", FileName);
-		return UPNP_E_INVALID_HANDLE;
-	}
-	else return UPNP_E_SUCCESS;
-}
-
 UpnpWebFileHandle WebOpen(const char *FileName, enum UpnpOpenFileMode Mode)
 {
 	void *p;
