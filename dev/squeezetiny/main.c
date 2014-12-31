@@ -216,9 +216,9 @@ static char *cli_decode(char *str) {
 	char *rsp = NULL;
 
 	mutex_lock(ctx->cli_mutex);
-    wait = ctx->config.max_read_wait;
+	wait = ctx->config.max_read_wait;
 
-	cmd = cli_encode(strlwr(cmd));
+	cmd = cli_encode(cmd);
 	if (req) len = sprintf(packet, "%s ?\n", cmd);
 	else len = sprintf(packet, "%s\n", cmd);
 	send_packet((u8_t*) packet, len, ctx->cli_sock);
@@ -232,7 +232,7 @@ static char *cli_decode(char *str) {
 		if (k < 0) continue;
 		len += k;
 		packet[len] = '\0';
-		if (strchr(packet, '\n') && strstr(strlwr(packet), cmd)) {
+		if (strchr(packet, '\n') && stristr(packet, cmd)) {
 			rsp = packet;
 			break;
 		}
@@ -378,18 +378,6 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 	metadata->duration = cli_send_cmd(cmd, true, ctx);
 
 	sq_default_metadata(metadata);
-
-#if 0
-	sprintf(cmd, "%s playlist path %d", ctx->cli_id, idx);
-	metadata->path = cli_send_cmd(cmd, true, ctx);
-	if (!metadata->path || *metadata->path == '\0') {
-		NFREE(metadata->path);
-		metadata->path = strdup("[no path]");
-	}
-
-	sprintf(cmd, "songinfo 0 10 url:%s tags:cfldatgr", metadata->path);
-	metadata->artwork = cli_send_cmd(cmd, false, ctx);
-#endif
 
 	LOG_INFO("[%p]: idx %d\n\tartist:%s\n\talbum:%s\n\ttitle:%s\n\tgenre:%s\n\tduration:%s", ctx, idx,
 				metadata->artist, metadata->album, metadata->title,

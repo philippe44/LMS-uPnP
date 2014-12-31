@@ -144,6 +144,7 @@ char *url_decode(char *str) {
 }
 
 #if LINUX || OSX || FREEBSD
+/*---------------------------------------------------------------------------*/
 char *strlwr(char *str)
 {
  char *p = str;
@@ -154,5 +155,18 @@ char *strlwr(char *str)
  return str;
 }
 #endif
+
+/*---------------------------------------------------------------------------*/
+bool stristr(char *s1, char *s2)
+{
+ char *s1_lwr = strlwr(strdup(s1));
+ char *s2_lwr = strlwr(strdup(s2));
+ char *p = strstr(s1_lwr, s2_lwr);
+
+ free(s1_lwr);
+ free(s2_lwr);
+ return p ? true : false;
+}
+
 
 
