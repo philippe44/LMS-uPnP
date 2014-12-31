@@ -22,10 +22,10 @@ LIBRARY = libupnp.a libixml.a libthreadutil.a
 DEFINES = -DNO_CODEC -D_FILE_OFFSET_BITS=64 
 #-D_LARGE_FILE_SOURCE
 
-INCLUDE = -I../libupnp/1.6.19/threadutil/inc\
-          -I../libupnp/1.6.19/ixml/inc\
-          -I../libupnp/1.6.19/upnp/inc\
-          -I../libupnp/1.6.19/build/inc\
+INCLUDE = -I../../libupnp/1.6.19/threadutil/inc\
+          -I../../libupnp/1.6.19/ixml/inc\
+          -I../../libupnp/1.6.19/upnp/inc\
+          -I../../libupnp/1.6.19/build/inc\
           -I$(squeezetiny_dir)\
           -I$(squeezeupnp_dir)/inc
 

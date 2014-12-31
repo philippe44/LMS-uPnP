@@ -85,4 +85,5 @@ Win32
 *.bat
 *-idx*
 *.txt
+__old_structure
 

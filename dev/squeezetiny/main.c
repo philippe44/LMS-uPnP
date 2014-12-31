@@ -29,6 +29,7 @@
 
 #include <math.h>
 #include <signal.h>
+#include <ctype.h>
 
 #define TITLE "Squeezelite " VERSION ", Copyright 2012-2014 Adrian Smith + Philippe."
 
@@ -133,7 +134,7 @@ void sq_wipe_device(struct thread_ctx_s *ctx) {
 /*--------------------------------------------------------------------------*/
 void sq_delete_device(sq_dev_handle_t handle) {
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
-    sq_wipe_device(ctx);
+	sq_wipe_device(ctx);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -158,6 +159,55 @@ void *sq_urn2MR(const char *urn)
 	return (out) ? thread_ctx[i-1].MR : NULL;
 }
 
+/*---------------------------------------------------------------------------*/
+static char from_hex(char ch) {
+  return isdigit(ch) ? ch - '0' : tolower(ch) - 'a' + 10;
+}
+
+/*---------------------------------------------------------------------------*/
+static char to_hex(char code) {
+  static char hex[] = "0123456789abcdef";
+  return hex[code & 15];
+}
+
+/*---------------------------------------------------------------------------*/
+/* IMPORTANT: be sure to free() the returned string after use */
+static char *cli_encode(char *str) {
+  char *pstr = str, *buf = malloc(strlen(str) * 3 + 1), *pbuf = buf;
+  while (*pstr) {
+	if (isalnum(*pstr) || *pstr == '-' || *pstr == '_' || *pstr == '.' || *pstr == '~' || *pstr == ' ')
+	  *pbuf++ = *pstr;
+	else if (*pstr == '%') {
+	  *pbuf++ = '%',*pbuf++ = '2', *pbuf++ = '5';
+	}
+	else
+	  *pbuf++ = '%', *pbuf++ = to_hex(*pstr >> 4), *pbuf++ = to_hex(*pstr & 15);
+	pstr++;
+  }
+  *pbuf = '\0';
+  return buf;
+}
+
+/*---------------------------------------------------------------------------*/
+/* IMPORTANT: be sure to free() the returned string after use */
+static char *cli_decode(char *str) {
+  char *pstr = str, *buf = malloc(strlen(str) + 1), *pbuf = buf;
+  while (*pstr) {
+	if (*pstr == '%') {
+      if (pstr[1] && pstr[2]) {
+        *pbuf++ = from_hex(pstr[1]) << 4 | from_hex(pstr[2]);
+        pstr += 2;
+	  }
+    } else {
+      *pbuf++ = *pstr;
+    }
+	pstr++;
+  }
+  *pbuf = '\0';
+  return buf;
+}
+
+/*---------------------------------------------------------------------------*/
 char *cli_send_cmd(char *cmd, bool req, struct thread_ctx_s *ctx)
 {
 	char packet[1024];
@@ -166,8 +216,9 @@ void *sq_urn2MR(const char *urn)
 	char *rsp = NULL;
 
 	mutex_lock(ctx->cli_mutex);
+    wait = ctx->config.max_read_wait;
 
-	wait = ctx->config.max_read_wait;
+	cmd = cli_encode(strlwr(cmd));
 	if (req) len = sprintf(packet, "%s ?\n", cmd);
 	else len = sprintf(packet, "%s\n", cmd);
 	send_packet((u8_t*) packet, len, ctx->cli_sock);
@@ -181,20 +232,21 @@ void *sq_urn2MR(const char *urn)
 		if (k < 0) continue;
 		len += k;
 		packet[len] = '\0';
-		rsp = url_decode(packet);
-		if (strchr(packet, '\n')) {
-			if (strstr(rsp, cmd)) break;
+		LOG_INFO("[%p]: %s %s", ctx, cmd, strlwr(packet));
+		if (strchr(packet, '\n') && strstr(strlwr(packet), cmd)) {
+			rsp = packet;
+			break;
 		}
-		NFREE(rsp);
 	}
 
 	if (rsp) {
-		char *p;
-		for (p = rsp + strlen(cmd); *p == ' '; p++);
-		strcpy(rsp, p);
+		for (rsp += strlen(cmd); *rsp == ' '; rsp++);
+		rsp = cli_decode(rsp);
 		*(strrchr(rsp, '\n')) = '\0';
+		if (*rsp == '\0') NFREE(rsp);
 	}
 
+	NFREE(cmd);
 	mutex_unlock(ctx->cli_mutex);
 	return rsp;
 }
@@ -254,13 +306,24 @@ bool sq_set_time(sq_dev_handle_t handle, u32_t time)
 }
 
 /*--------------------------------------------------------------------------*/
+static void sq_init_metadata(sq_metadata_t *metadata)
+{
+	metadata->artist = metadata->album =
+		metadata->title = metadata->genre =
+		metadata->duration = metadata->path =
+		metadata->artwork =	NULL;
+}
+
+/*--------------------------------------------------------------------------*/
 static void sq_default_metadata(sq_metadata_t *metadata)
 {
-	metadata->title = strdup("[LMS to uPnP]");
-	metadata->album = strdup("[no album]");
-	metadata->artist = strdup("[no artist]");
-	metadata->genre = strdup("[no genre]");
-	metadata->duration = strdup("[no duration]");
+	if (!metadata->title) metadata->title = strdup("[LMS to uPnP]");
+	if (!metadata->album) metadata->album = strdup("[no album]");
+	if (!metadata->artist) metadata->artist = strdup("[no artist]");
+	if (!metadata->genre) metadata->genre = strdup("[no genre]");
+	if (!metadata->duration) metadata->duration = strdup("[no duration]");
+	if (!metadata->path) metadata->path = strdup("[no path]");
+	if (!metadata->artwork) metadata->artwork = strdup("[no artwork]");
 }
 
 /*--------------------------------------------------------------------------*/
@@ -271,8 +334,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 	char *rsp;
 	u16_t idx;
 
-	metadata->artist = metadata->album = metadata->title = metadata->genre = metadata->duration = NULL;
-	metadata->picture = NULL;
+	sq_init_metadata(metadata);
 
 	if (!handle || !ctx->cli_sock) {
 		LOG_ERROR("[%p]: no handle or CLI socket %d", ctx, handle);
@@ -303,38 +365,32 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 
 	sprintf(cmd, "%s playlist title %d", ctx->cli_id, idx);
 	metadata->title = cli_send_cmd(cmd, true, ctx);
-	if (!metadata->title || *metadata->title == '\0') {
-			NFREE(metadata->title);
-			metadata->title = strdup("[LMS to uPnP]");
-	}
 
 	sprintf(cmd, "%s playlist album %d", ctx->cli_id, idx);
 	metadata->album = cli_send_cmd(cmd, true, ctx);
-	if (!metadata->album || *metadata->album == '\0') {
-		NFREE(metadata->album);
-		metadata->album = strdup("[no album]");
-	}
 
 	sprintf(cmd, "%s playlist artist %d", ctx->cli_id, idx);
 	metadata->artist = cli_send_cmd(cmd, true, ctx);
-	if (!metadata->artist || *metadata->artist == '\0') {
-		NFREE(metadata->artist);
-		metadata->artist = strdup("[no artist]");
-	}
 
 	sprintf(cmd, "%s playlist genre %d", ctx->cli_id, idx);
 	metadata->genre = cli_send_cmd(cmd, true, ctx);
-	if (!metadata->genre || *metadata->genre == '\0') {
-		NFREE(metadata->genre);
-		metadata->genre = strdup("[no genre]");
-	}
 
 	sprintf(cmd, "%s playlist duration %d", ctx->cli_id, idx);
 	metadata->duration = cli_send_cmd(cmd, true, ctx);
-	if (!metadata->duration || *metadata->duration == '\0') {
-		NFREE(metadata->duration);
-		metadata->duration = strdup("[no duration]");
+
+	sq_default_metadata(metadata);
+
+#if 0
+	sprintf(cmd, "%s playlist path %d", ctx->cli_id, idx);
+	metadata->path = cli_send_cmd(cmd, true, ctx);
+	if (!metadata->path || *metadata->path == '\0') {
+		NFREE(metadata->path);
+		metadata->path = strdup("[no path]");
 	}
+
+	sprintf(cmd, "songinfo 0 10 url:%s tags:cfldatgr", metadata->path);
+	metadata->artwork = cli_send_cmd(cmd, false, ctx);
+#endif
 
 	LOG_INFO("[%p]: idx %d\n\tartist:%s\n\talbum:%s\n\ttitle:%s\n\tgenre:%s\n\tduration:%s", ctx, idx,
 				metadata->artist, metadata->album, metadata->title,
@@ -351,6 +407,8 @@ void sq_free_metadata(sq_metadata_t *metadata)
 	NFREE(metadata->title);
 	NFREE(metadata->genre);
 	NFREE(metadata->duration);
+	NFREE(metadata->path);
+	NFREE(metadata->artwork);
 }
 
 /*---------------------------------------------------------------------------*/

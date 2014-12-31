@@ -31,7 +31,8 @@ typedef struct sq_metadata_s {
 	char *title;
 	char *genre;
 	char *duration;
-	u8_t *picture;
+	char *path;
+	char *artwork;
 	u16_t track;
 } sq_metadata_t;
 

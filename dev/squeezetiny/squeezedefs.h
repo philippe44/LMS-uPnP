@@ -3,7 +3,7 @@
 
 //#define __EARLY_STMd__
 
-#define VERSION "v0.1.4.0rc9"
+#define VERSION "v0.1.4.0rc10"
 
 #if defined(linux)
 #define LINUX     1
@@ -68,6 +68,7 @@ typedef int64_t   s64_t;
 #define thread_type pthread_t
 int SendARP(in_addr_t src, in_addr_t dst, u8_t mac[], u8_t *size);
 #define fresize(f,s) ftruncate(fileno(f), s)
+char *strlwr(char *str);
 
 #endif
 
