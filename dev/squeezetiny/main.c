@@ -232,7 +232,6 @@ static char *cli_decode(char *str) {
 		if (k < 0) continue;
 		len += k;
 		packet[len] = '\0';
-		LOG_INFO("[%p]: %s %s", ctx, cmd, strlwr(packet));
 		if (strchr(packet, '\n') && strstr(strlwr(packet), cmd)) {
 			rsp = packet;
 			break;

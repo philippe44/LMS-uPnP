@@ -12,7 +12,9 @@ This can be built for Linux or Windows. My main Windows environment is C++
 builder, so i've not made a proper makefile. The Linux makefile is ugly and
 very hardcoded.
 
-Look in curent/ for a "stable" build. all other directory are wok in progress
+/stable is for the build I'm not changing anymore
+/dev is work under progress
+/x.y.z are older versions
 
 ===========================================================================
 DEPENDENCIES
