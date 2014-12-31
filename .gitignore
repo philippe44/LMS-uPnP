@@ -87,4 +87,5 @@ Win32
 *.txt
 __old_structure
 alpha
+*.save*
 
