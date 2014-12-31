@@ -4,17 +4,17 @@ to be controlled as a normal SqueezeBox device.
 
 See "New User Guide.pdf" to know more
 
-in /bin, there are binaries for Windows and Linux (include how to run it on
+/stable is for the build I'm not changing anymore
+/dev is work under progress
+/x.y.z are older versions
+
+in ./bin, there are binaries for Windows and Linux (include how to run it on
 32 bits and 64 bits versions) so rebuilding is not necessary, but if you 
 want to rebuild, here is what should be done
 
 This can be built for Linux or Windows. My main Windows environment is C++
 builder, so i've not made a proper makefile. The Linux makefile is ugly and
 very hardcoded.
-
-/stable is for the build I'm not changing anymore
-/dev is work under progress
-/x.y.z are older versions
 
 ===========================================================================
 DEPENDENCIES
@@ -29,7 +29,7 @@ LIBUPNP
         UPNP_USE_BCBPP (for C++ builder)
  - Under Linux : N/A
 
- - The is a small bug in libupnp, so the file webserver.c, upnp.H and 
+ - The are few changes in libupnp, so the file webserver.c, upnp.h and 
 httpreadwrite.c must be taken from here, not from libupnp main repository, 
 to rebuild the library
 
