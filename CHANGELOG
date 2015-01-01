@@ -1,4 +1,4 @@
-0.1.4.0rc11
+0.1.4.0rc14
 
 WARNING: version rc4 include important changes to try to remove all crashes upon player bringup/teardown 
 and program exit. This required an important change in players list management - side effects might still
@@ -17,6 +17,8 @@ stuck in a middle of a playlist - LMS will gently move to the next song and a sq
  - add -1 for <stream_length> to allow usage of unkown file size to be sent *but* not using chunked-encoding (need updated libupnp webserver.c and httpreadwrite.c), responding to open-ended requests (xxx-) by HTTP 200 instead of 206
  - add -2 for <stream_length> to allow usage of chunked-encoding (need updated libupnp webserver.c and httpreadwrite.c), and responding to open-ended requests (xxx-) by HTTP 200 instead of 206
  - update DIDL-lite header to add DLNA namespace, <upnp:artist>, trackNumber and tweak other parameters
+ - <mac> added to each device. As pointed by ralphy, current logic was not working properly. Now, if mac predecence is 1/ mac from <device>, then mac from ARP network request, then mac from <base_mac> + n (Nth player). when "save <filename> is called, the <mac> is re-written for every device. 
+ - add command line "-i <config file>" to discover upnp players, save config file, then exit
  - if <buffer_limit> is smaller than max(<streambuf_size>, <outputbuf_size>) * 4, set it to that max
  - <can_pause> parameter removed
  - big fat warning when config file has an error and cannot be loaded

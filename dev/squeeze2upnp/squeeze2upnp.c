@@ -23,6 +23,9 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#if WIN
+#include <process.h>
+#endif
 
 #include "squeezedefs.h"
 #include "squeeze2upnp.h"
@@ -51,7 +54,8 @@ sq_log_level_t		glLog = { lINFO, lINFO, lINFO, lINFO, lINFO, lINFO, lINFO, lINFO
 bool				glDaemonize = false;
 #endif
 char				*glLogFile;
-char				*glPidFile = NULL;
+static char			*glPidFile = NULL;
+static char			*glSaveConfigFile = NULL;
 
 tMRConfig			glMRConfig = {
 							-3L,
@@ -87,6 +91,7 @@ sq_dev_param_t glDeviceParam = {
 					".",
 					-1L,
 					0,
+					{ 0x00,0x00,0x00,0x00,0x00,0x00 }
 				} ;
 
 /*----------------------------------------------------------------------------*/
@@ -102,6 +107,7 @@ struct sMR 		  	*glDeviceList = NULL;
 struct sMR		  	*glSQ2MRList = NULL;
 void				*glConfigID = NULL;
 char				glConfigName[SQ_STR_LENGTH] = "./config.xml";
+static bool			glDiscovery = false;
 
 /*----------------------------------------------------------------------------*/
 /* consts or pseudo-const*/
@@ -611,6 +617,7 @@ void *TimerLoop(void *args)
 				p = p->Next;
 			}
 			ithread_mutex_unlock(&glDeviceListMutex);
+			glDiscovery = false;
 			rc = UpnpSearchAsync(glControlPointHandle, SCAN_TIMEOUT, MEDIA_RENDERER, NULL);
 			if (UPNP_E_SUCCESS != rc) LOG_ERROR("Error sending search update%d", rc);
 
@@ -675,7 +682,7 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 				// create or re-create slimdevices and associated list
 				if (!p->SqueezeHandle && p->Config.Enabled && !p->uPNPTimeOut)	{
 					p->SqueezeHandle = sq_reserve_device(p, &sq_callback);
-					if (!p->SqueezeHandle || !sq_run_device(p->SqueezeHandle, *(p->Config.Name) ? p->Config.Name : p->FriendlyName, p->mac, &p->sq_config)) {
+					if (!p->SqueezeHandle || !sq_run_device(p->SqueezeHandle, *(p->Config.Name) ? p->Config.Name : p->FriendlyName, &p->sq_config)) {
 						sq_release_device(p->SqueezeHandle);
 						p->SqueezeHandle = 0;
 						LOG_ERROR("[%p]: cannot create squeezelite instance (%s)", p, p->FriendlyName);
@@ -720,6 +727,7 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
     		}
 
 			ithread_mutex_unlock(&glDeviceListMutex);
+			glDiscovery = true;
 			break;
 		}
 		case UPNP_EVENT_RECEIVED:
@@ -880,6 +888,7 @@ int uPNPSearchMediaRenderer(void)
 	int rc;
 
 	/* search for (Media Render and wait 15s */
+	glDiscovery = false;
 	rc = UpnpSearchAsync(glControlPointHandle, SCAN_TIMEOUT, MEDIA_RENDERER, NULL);
 
 	if (UPNP_E_SUCCESS != rc) {
@@ -968,9 +977,9 @@ void AddMRDevice(IXML_Document *DescDoc, const char *location,	int expires)
 	// create device or refresh parameters if it has gone dark
 	if (!p  && !strstr(manufacturer, cLogitech)) {
 		int i;
+		u8_t mac_size = 6;
 
 		/* Create a new device if needed */
-
 		Device = (struct sMR *) malloc(sizeof(struct sMR));
 		memset(Device, 0, sizeof(struct sMR));
 		ithread_mutex_init(&Device->Mutex, 0);
@@ -988,7 +997,6 @@ void AddMRDevice(IXML_Document *DescDoc, const char *location,	int expires)
 		Device->Magic = MAGIC;
 		Device->uPNPTimeOut = false;
 		Device->on = false;
-		Device->macSize = 6;
 		Device->SqueezeHandle = 0;
 		Device->ErrorCount = 0;
 		strcpy(Device->UDN, UDN);
@@ -998,13 +1006,14 @@ void AddMRDevice(IXML_Document *DescDoc, const char *location,	int expires)
 		strcpy(Device->PresURL, UsedPresURL);
 		ExtractIP(location, &Device->ip);
 
-		if (SendARP(*((in_addr_t*) &Device->ip), INADDR_ANY, Device->mac, &Device->macSize)) {
-			LOG_ERROR("[%p]: cannot get mac %s", Device, Device->FriendlyName);
-			memset(Device->mac, 0, sizeof(Device->mac));
-        }
-
 		memcpy(&Device->Config, &glMRConfig, sizeof(tMRConfig));
 		memcpy(&Device->sq_config, &glDeviceParam, sizeof(sq_dev_param_t));
+
+		if (SendARP(*((in_addr_t*) &Device->ip), INADDR_ANY, Device->sq_config.mac, &mac_size)) {
+			LOG_ERROR("[%p]: cannot get mac %s", Device, Device->FriendlyName);
+			// not sure what SendARP does with the MAC if it does not find one
+			memset(Device->sq_config.mac, 0, sizeof(Device->sq_config.mac));
+		}
 
 		for (i = 0; i < MAX_SRV; i++) strcpy(Device->Service[i].Id, "");
 
@@ -1088,7 +1097,7 @@ bool ParseArgs(int argc, char **argv) {
 
 	while (optind < argc && strlen(argv[optind]) >= 2 && argv[optind][0] == '-') {
 		char *opt = argv[optind] + 1;
-		if (strstr("stxdfp", opt) && optind < argc - 1) {
+		if (strstr("stxdfpi", opt) && optind < argc - 1) {
 			optarg = argv[optind + 1];
 			optind += 2;
 		} else if (strstr("tz"
@@ -1123,6 +1132,9 @@ bool ParseArgs(int argc, char **argv) {
 #endif
 		case 'f':
 			glLogFile = optarg;
+			break;
+		case 'i':
+			glSaveConfigFile = optarg;
 			break;
 		case 'p':
 			glPidFile = optarg;
@@ -1219,7 +1231,7 @@ int main(int argc, char *argv[])
 	}
 
 #if LINUX || FREEBSD
-	if (glDaemonize) {
+	if (glDaemonize && !glSaveConfigFile) {
 		if (daemon(1, glLogFile ? 1 : 0)) {
 			fprintf(stderr, "error daemonizing: %s\n", strerror(errno));
 		}
@@ -1249,7 +1261,12 @@ int main(int argc, char *argv[])
 
 	Start();
 
-	while (strcmp(resp, "exit")) {
+	if (glSaveConfigFile) {
+		while (!glDiscovery) sleep(1);
+		SaveConfig(glSaveConfigFile);
+	}
+
+	while (strcmp(resp, "exit") && !glSaveConfigFile) {
 
 #if LINUX || FREEBSD
 		if (!glDaemonize)
@@ -1393,6 +1410,7 @@ static char usage[] =
 		   "Usage: [options]\n"
 		   "  -s <server>[:<port>]\tConnect to specified server, otherwise uses autodiscovery to find server\n"
 		   "  -x <config file>\tread config from file (default is ./config.xml)\n"
+   		   "  -i <config file>\tdiscover players, save config in <file> and then exit\n"
 //		   "  -c <codec1>,<codec2>\tRestrict codecs to those specified, otherwise load all available codecs; known codecs: " CODECS "\n"
 //		   "  -e <codec1>,<codec2>\tExplicitly exclude native support of one or more codecs; known codecs: " CODECS "\n"
 		   "  -f <logfile>\t\tWrite debug to logfile\n"

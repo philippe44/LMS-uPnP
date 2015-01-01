@@ -50,6 +50,7 @@ typedef	struct sq_dev_param_s {
 	char		buffer_dir[SQ_STR_LENGTH];
 	s32_t		buffer_limit;
 	int			seek_after_pause;
+	u8_t		mac[6];
 } sq_dev_param_t;
 
 typedef struct sq_log_level_s {		// must be one of lERROR, lINFO, lDEBUG or lSDEBUG
@@ -87,7 +88,7 @@ void				sq_init(char *server, u8_t mac[6], sq_log_level_t *);
 void				sq_stop(void);
 
 // only name cannot be NULL
-bool			 	sq_run_device(sq_dev_handle_t handle, char *name, u8_t *mac, sq_dev_param_t *param);
+bool			 	sq_run_device(sq_dev_handle_t handle, char *name, sq_dev_param_t *param);
 void				sq_delete_device(sq_dev_handle_t);
 sq_dev_handle_t		sq_reserve_device(void *caller_id, sq_callback_t callback);
 void				sq_release_device(sq_dev_handle_t);

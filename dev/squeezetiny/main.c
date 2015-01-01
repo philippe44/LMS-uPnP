@@ -754,12 +754,11 @@ sq_dev_handle_t sq_reserve_device(void *MR, sq_callback_t callback)
 
 
 /*---------------------------------------------------------------------------*/
-bool sq_run_device(sq_dev_handle_t handle, char *name, u8_t *mac, sq_dev_param_t *param)
+bool sq_run_device(sq_dev_handle_t handle, char *name, sq_dev_param_t *param)
 {
 	int i;
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
-	u8_t l_mac[6];
-	u16_t mac_sum;
+	u16_t mac_sum;
 	char buf[SQ_STR_LENGTH];
 
 #if 0
@@ -779,26 +778,25 @@ bool sq_run_device(sq_dev_handle_t handle, char *name, u8_t *mac, sq_dev_param_t
 		return false;
 	}
 
-	for (i = 0, mac_sum =0; i < 5; i++) mac_sum += mac[i];
-	if (mac && mac_sum) memcpy(l_mac, mac, 6);
-	else	{
+	for (i = 0, mac_sum =0; i < 5; i++) mac_sum += param->mac[i];
+	if (!mac_sum) {
 		gl_last_mac[5] = (gl_last_mac[5] + 1) &0xFF;
-		memcpy(l_mac, gl_last_mac, 6);
+		memcpy(param->mac, gl_last_mac, 6);
 	}
 
 	if ((u32_t) param->buffer_limit < max(param->stream_buf_size, param->output_buf_size) * 4) {
 		LOG_ERROR("[%p]: incorrect buffer limit %d", ctx, param->buffer_limit);
 		param->buffer_limit = max(param->stream_buf_size, param->output_buf_size) * 4;
 	}
-	
+
 	sprintf(ctx->cli_id, "%02x:%02x:%02x:%02x:%02x:%02x",
-										  l_mac[0], l_mac[1], l_mac[2],
-										  l_mac[3], l_mac[4], l_mac[5]);
+										  param->mac[0], param->mac[1], param->mac[2],
+										  param->mac[3], param->mac[4], param->mac[5]);
 
 	for (i = 0; i < 2; i++) {
 		sprintf(ctx->out_ctx[i].buf_name, "%02x-%02x-%02x-%02x-%02x-%02x-idx-%d",
-										  l_mac[0], l_mac[1], l_mac[2],
-										  l_mac[3], l_mac[4], l_mac[5], i);
+										  param->mac[0], param->mac[1], param->mac[2],
+										  param->mac[3], param->mac[4], param->mac[5], i);
 		sprintf(buf, "%s/%s", ctx->config.buffer_dir, ctx->out_ctx[i].buf_name);
 		remove(buf);
 		ctx->out_ctx[i].owner = ctx;
@@ -827,7 +825,7 @@ bool sq_run_device(sq_dev_handle_t handle, char *name, u8_t *mac, sq_dev_param_t
 	}
 #endif
 
-	slimproto_thread_init(gl_server, l_mac, name, "", ctx);
+	slimproto_thread_init(gl_server, param->mac, name, "", ctx);
 
 	return true;
 }

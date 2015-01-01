@@ -83,8 +83,6 @@ struct sMR {
 	char PresURL		[RESOURCE_LENGTH];
 	char Manufacturer	[RESOURCE_LENGTH];
 	in_addr_t ip;
-	u8_t mac			[6];
-	u8_t macSize;
 	enum eMRstate 	State;
 	char			*CurrentURI;
 	char			*NextURI;

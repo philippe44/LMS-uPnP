@@ -312,7 +312,8 @@ void SaveConfig(char *name)
 
 	XMLAddNode(doc, root, "server", glSQServer);
 	XMLAddNode(doc, root, "slimproto_stream_port", "%d", gl_slimproto_stream_port);
-	XMLAddNode(doc, root, "base_mac", "%02x:%02x:%02x:%02x:%02x:%02x", glMac[0], glMac[1], glMac[2], glMac[3], glMac[4], glMac[5]);
+	XMLAddNode(doc, root, "base_mac", "%02x:%02x:%02x:%02x:%02x:%02x", glMac[0],
+				glMac[1], glMac[2], glMac[3], glMac[4], glMac[5]);
 	XMLAddNode(doc, root, "slimproto_log", level2debug(glLog.slimproto));
 	XMLAddNode(doc, root, "stream_log", level2debug(glLog.stream));
 	XMLAddNode(doc, root, "output_log", level2debug(glLog.output));
@@ -352,6 +353,8 @@ void SaveConfig(char *name)
 		dev_node = XMLAddNode(doc, root, "device", NULL);
 		XMLAddNode(doc, dev_node, "udn", p->UDN);
 		XMLAddNode(doc, dev_node, "name", p->FriendlyName);
+		XMLAddNode(doc, dev_node, "mac", "%02x:%02x:%02x:%02x:%02x:%02x", p->sq_config.mac[0],
+					p->sq_config.mac[1], p->sq_config.mac[2], p->sq_config.mac[3], p->sq_config.mac[4], p->sq_config.mac[5]);
 		XMLAddNode(doc, dev_node, "enabled", "%d", (int) p->Config.Enabled);
 
 		if (p->sq_config.stream_buf_size != glDeviceParam.stream_buf_size)
@@ -433,12 +436,14 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "accept_nexturi")) Conf->AcceptNextURI = atol(val);
 	if (!strcmp(name, "send_metadata")) Conf->SendMetaData = atol(val);
 	if (!strcmp(name, "name")) strcpy(Conf->Name, val);
+	if (!strcmp(name, "mac"))  sscanf(val,"%2hhx:%2hhx:%2hhx:%2hhx:%2hhx:%2hhx",
+								   &sq_conf->mac[0],&sq_conf->mac[1],&sq_conf->mac[2],
+								   &sq_conf->mac[3],&sq_conf->mac[4],&sq_conf->mac[5]);
 }
 
 /*----------------------------------------------------------------------------*/
 static void LoadGlobalItem(char *name, char *val)
 {
-	int i;
 	if (!val) return;
 
 	if (!strcmp(name, "server")) strcpy(glSQServer, val);
@@ -451,13 +456,8 @@ static void LoadGlobalItem(char *name, char *val)
 	if (!strcmp(name, "upnp_log")) glLog.upnp = debug2level(val);
 	if (!strcmp(name, "main_log")) glLog.main = debug2level(val);
 	if (!strcmp(name, "sq2mr_log")) glLog.sq2mr = debug2level(val);
-	if (!strcmp(name, "base_mac")) {
-		char *p = strtok(val, ":");
-		for (i = 0; i < 5; i++) {
-			glMac[i] = atol(p) & 0xff;
-			p = strtok(NULL, ":");
-		}
-	}
+	if (!strcmp(name, "base_mac"))  sscanf(val,"%2hhx:%2hhx:%2hhx:%2hhx:%2hhx:%2hhx",
+								   &glMac[0],&glMac[1],&glMac[2],&glMac[3],&glMac[4],&glMac[5]);
  }
 
 
