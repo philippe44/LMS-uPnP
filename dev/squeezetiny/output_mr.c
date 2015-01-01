@@ -469,7 +469,7 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 		// all done, time to close the file
 		if (out->write_file && ctx->stream.state <= DISCONNECT && (!_buf_used(ctx->streambuf) || (out->sample_size == 24 && _buf_used(ctx->streambuf) < 12)))
 		{
-			LOG_INFO("[%p] wrote total %d", ctx, out->write_count_t);
+			LOG_INFO("[%p] wrote total %Ld", ctx, out->write_count_t);
 			fclose(out->write_file);
 			out->write_file = NULL;
 #ifdef __EARLY_STMd__
