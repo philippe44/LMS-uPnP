@@ -324,7 +324,8 @@ void SyncNotifState(char *State, struct sMR* Device)
 				strcpy(Device->CurrentURI, Device->NextURI);
 				NFREE(Device->NextURI);
 
-				sq_get_metadata(Device->SqueezeHandle, &MetaData, true);
+				if (Device->Config.SendMetaData) sq_get_metadata(Device->SqueezeHandle, &MetaData, true);
+				else sq_default_metadata(&MetaData, true);
 				AVTSetURI(Device->Service[AVT_SRV_IDX].ControlURL, Device->CurrentURI, Device->NextProtInfo, &MetaData, WaitFor);
 				sq_free_metadata(&MetaData);
 
