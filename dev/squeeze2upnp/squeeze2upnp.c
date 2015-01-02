@@ -23,11 +23,11 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+
+#include "squeezedefs.h"
 #if WIN
 #include <process.h>
 #endif
-
-#include "squeezedefs.h"
 #include "squeeze2upnp.h"
 #include "upnpdebug.h"
 #include "upnptools.h"
@@ -195,6 +195,7 @@ static void AddMRDevice(IXML_Document *DescDoc, const char *location, int expire
 				sq_metadata_t MetaData;
 
 				if (device->Config.SendMetaData) sq_get_metadata(device->SqueezeHandle, &MetaData, true);
+				else sq_default_metadata(&MetaData, true);
 				AVTSetNextURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info, &MetaData, device->seqN++);
 				sq_free_metadata(&MetaData);
 			}
@@ -223,6 +224,7 @@ static void AddMRDevice(IXML_Document *DescDoc, const char *location, int expire
 			// end check
 
 			if (device->Config.SendMetaData) sq_get_metadata(device->SqueezeHandle, &MetaData, false);
+			else sq_default_metadata(&MetaData, true);
 			AVTSetURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info, &MetaData, device->seqN++);
 			sq_free_metadata(&MetaData);
 
@@ -650,9 +652,10 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 			int ret;
 			struct Upnp_Discovery *d_event = (struct Upnp_Discovery *) Event;
 
-			LOG_DEBUG("Answer to uPNP search", NULL);
+			LOG_DEBUG("Answer to uPNP search %d", d_event->Location);
 			if (d_event->ErrCode != UPNP_E_SUCCESS) {
 				LOG_DEBUG("Error in Discovery Callback -- %d", d_event->ErrCode);
+				break;
 			}
 			ret = UpnpDownloadXmlDoc(d_event->Location, &DescDoc);
 			if (ret != UPNP_E_SUCCESS) {

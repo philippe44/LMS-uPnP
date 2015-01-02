@@ -307,15 +307,19 @@ bool sq_set_time(sq_dev_handle_t handle, u32_t time)
 /*--------------------------------------------------------------------------*/
 static void sq_init_metadata(sq_metadata_t *metadata)
 {
-	metadata->artist = metadata->album =
+		metadata->artist = metadata->album =
 		metadata->title = metadata->genre =
 		metadata->duration = metadata->path =
 		metadata->artwork =	NULL;
+
+		metadata->track = 0;
 }
 
 /*--------------------------------------------------------------------------*/
-static void sq_default_metadata(sq_metadata_t *metadata)
+void sq_default_metadata(sq_metadata_t *metadata, bool init)
 {
+	if (init) sq_init_metadata(metadata);
+
 	if (!metadata->title) metadata->title = strdup("[LMS to uPnP]");
 	if (!metadata->album) metadata->album = strdup("[no album]");
 	if (!metadata->artist) metadata->artist = strdup("[no artist]");
@@ -337,7 +341,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 
 	if (!handle || !ctx->cli_sock) {
 		LOG_ERROR("[%p]: no handle or CLI socket %d", ctx, handle);
-		sq_default_metadata(metadata);
+		sq_default_metadata(metadata, true);
 		return false;
 	}
 
@@ -346,7 +350,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 
 	if (!rsp) {
 		LOG_ERROR("[%p]: missing index", ctx);
-		sq_default_metadata(metadata);
+		sq_default_metadata(metadata, true);
 		return false;
 	}
 
@@ -377,7 +381,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 	sprintf(cmd, "%s playlist duration %d", ctx->cli_id, idx);
 	metadata->duration = cli_send_cmd(cmd, true, ctx);
 
-	sq_default_metadata(metadata);
+	sq_default_metadata(metadata, false);
 
 	LOG_INFO("[%p]: idx %d\n\tartist:%s\n\talbum:%s\n\ttitle:%s\n\tgenre:%s\n\tduration:%s", ctx, idx,
 				metadata->artist, metadata->album, metadata->title,

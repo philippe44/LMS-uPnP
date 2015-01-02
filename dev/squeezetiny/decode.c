@@ -149,7 +149,7 @@ void decode_init(log_level level, const char *include_codecs, const char *exclud
 
 /*---------------------------------------------------------------------------*/
 void decode_thread_init(struct thread_ctx_s *ctx) {
-	LOG_INFO("[%p]: init decode %d", ctx);
+	LOG_INFO("[%p]: init decode", ctx);
 	mutex_create(ctx->decode.mutex);
 
 #if LINUX || OSX || FREEBSD

@@ -1,4 +1,4 @@
-0.1.4.0rc15
+0.1.4.0rc17
  - <volume_on_play> can be set to -1 so that *all* LMS volume commands are ignored (use the player's volume control)
  - When pause/play directly on the player, action is feedback to LMS that should stay in sycn (still early phase ...). This does NOT work when "stop" is being used - such "stop" will be interpreted by LMS as an error and will move to next track
  - if uPnP player cannot play a format, send the proper error code to LMS (also send STMc everytime) == > that's to avoid being stuck in a middle of a playlist - LMS will gently move to the next song and a squeeze2upnp will just log the problem
@@ -29,6 +29,7 @@
  - When the same uPnP player disappears and re-apppears, re-connect was not working
  - Removed all memory leaks found by valgrind
  - metadata request can cause a fault if the list has been emptied (modulus 0 call)
+ - when disabled, metadata gathering was causing fault
  - sq_get_metadata must fill metadata in all cases, no NULL can be returned 
  - start to re-organize LOG levels
  - prepare metadata gathering for artwork and extended information (like filesize)
