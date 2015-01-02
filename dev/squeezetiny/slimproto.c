@@ -407,7 +407,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 			}
 
 			sendSTAT("STMc", 0, ctx);
-			ctx->sentSTMu = ctx->sentSTMo = ctx->sentSTMl = false;
+			ctx->sentSTMu = ctx->sentSTMo = ctx->sentSTMl = ctx->sentSTMd = false;
 
 #if 0
 			LOCK_O;
@@ -702,10 +702,15 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 				ctx_callback(ctx, SQ_PLAY, NULL, NULL);
 			}
 
-			// normal end of streaming
+			// end of streaming
 			if (!ctx->sentSTMu && ctx->status.stream_state <= DISCONNECT && ctx->track_ended) {
 				_sendSTMu = true;
 				ctx->sentSTMu = true;
+				// not normal end
+				if (!ctx->sentSTMd) {
+					_sendSTMn = true;
+					LOG_WARN("[%p]: unwanted stop, reporting error", ctx);
+				}
 				ctx->track_ended = false;
 			}
 
@@ -751,6 +756,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 				// another potential "next"
 				if (ctx->read_ended) {
 					_sendSTMd = true;
+					ctx->sentSTMd = true;
 					ctx->read_ended = false;
 				}
 			}

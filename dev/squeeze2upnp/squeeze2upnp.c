@@ -312,44 +312,34 @@ void SyncNotifState(char *State, struct sMR* Device)
 	if (!strcmp(State, "STOPPED")) {
 		if (Device->State != STOPPED) {
 			LOG_INFO("%s: uPNP stop", Device->FriendlyName);
-			if (Device->NextURI) {
+			if (Device->NextURI && !Device->Config.AcceptNextURI) {
+				u8_t *WaitFor = Device->seqN++;
+				sq_metadata_t MetaData;
+
+				// fake a "SETURI" and a "PLAY" request
+				NFREE(Device->CurrentURI);
+				Device->CurrentURI = malloc(strlen(Device->NextURI) + 1);
+				strcpy(Device->CurrentURI, Device->NextURI);
+				NFREE(Device->NextURI);
+
+				sq_get_metadata(Device->SqueezeHandle, &MetaData, true);
+				AVTSetURI(Device->Service[AVT_SRV_IDX].ControlURL, Device->CurrentURI, Device->NextProtInfo, &MetaData, WaitFor);
+				sq_free_metadata(&MetaData);
+
 				/*
-				Whether the stop was normal because the player does not accept
-				NextURI or this is a timeing issue (NextURI arrived too late),
-				there will be an extra "playing" transition detected at the next
-				state detection. This extra "playing" does not cause any side
-				effect, but check sq_notify
+				Need to queue to wait for the SetURI to be accepted, otherwise
+				the current URI will be played, creating a "blurb" effect
 				*/
-				if (!Device->Config.AcceptNextURI) {
-					u8_t *WaitFor = Device->seqN++;
-					sq_metadata_t MetaData;
+				QueueAction(Device->SqueezeHandle, Device, SQ_PLAY, WaitFor, NULL, true);
 
-					// fake a "SETURI" and a "PLAY" request
-					NFREE(Device->CurrentURI);
-					Device->CurrentURI = malloc(strlen(Device->NextURI) + 1);
-					strcpy(Device->CurrentURI, Device->NextURI);
-					NFREE(Device->NextURI);
-
-					sq_get_metadata(Device->SqueezeHandle, &MetaData, true);
-					AVTSetURI(Device->Service[AVT_SRV_IDX].ControlURL, Device->CurrentURI, Device->NextProtInfo, &MetaData, WaitFor);
-					sq_free_metadata(&MetaData);
-
-					/*
-					Need to queue to wait for the SetURI to be accepted, otherwise
-					the current URI will be played, creating a "blurb" effect
-					*/
-					QueueAction(Device->SqueezeHandle, Device, SQ_PLAY, WaitFor, NULL, true);
-
-					sq_notify(Device->SqueezeHandle, Device, SQ_TRACK_CHANGE, NULL, NULL);
-					LOG_INFO("[%p]: no gapless %s", Device, Device->CurrentURI);
-			   }
-			   else {
-					// NextURI event will be handled by the track change detection
-					LOG_INFO("[%p]: unwanted stop(n:%s)", Device, Device->NextURI);
-					AVTBasic(Device->Service[AVT_SRV_IDX].ControlURL, "Next", Device->seqN++);
-			  }
+				sq_notify(Device->SqueezeHandle, Device, SQ_TRACK_CHANGE, NULL, NULL);
+				LOG_INFO("[%p]: no gapless %s", Device, Device->CurrentURI);
 			}
 			else {
+				/*
+				If the stop is abnormal (due to a timing issue), the squeezelite
+				part will detect that and inform LMS that will send next track
+				*/
 				sq_notify(Device->SqueezeHandle, Device, SQ_STOP, NULL, NULL);
             }
 			Device->State = STOPPED;
