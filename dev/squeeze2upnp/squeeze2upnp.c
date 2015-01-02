@@ -263,7 +263,7 @@ static void AddMRDevice(IXML_Document *DescDoc, const char *location, int expire
 		case SQ_VOLUME: {
 			u32_t Volume = *(u32_t*)p;
 			int i = 0;
-			double a2, b2, a1 = 0, b1 = 0;
+			s32_t a2, b2, a1 = 0, b1 = 0;
 
 			if (device->Config.VolumeOnPlay == -1) break;
 
@@ -273,7 +273,9 @@ static void AddMRDevice(IXML_Document *DescDoc, const char *location, int expire
 			b1 = (i) ? device->VolumeCurve[i-1].b : 0;
 			a2 = device->VolumeCurve[i].a;
 			b2 = device->VolumeCurve[i].b;
-			device->Volume = Volume * (b1-b2)/(a1-a2) + b1 - a1*(b1-b2)/(a1-a2);
+			// volume and a are 16 bits, b are 8, so 7 bits precision can be added
+			if (a2) device->Volume = (((s32_t)Volume*(b1-b2)*128)/(a1-a2) + b1*128 - (a1*(b1-b2)*128)/(a1-a2)) / 128;
+			else device->Volume = 0;
 
 			if (!device->Config.VolumeOnPlay || device->sqState == SQ_PLAY)
 				SetVolume(device->Service[REND_SRV_IDX].ControlURL, device->Volume, device->seqN++);

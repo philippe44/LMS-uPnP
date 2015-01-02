@@ -1,9 +1,4 @@
-0.1.4.0rc14
-
-WARNING: version rc4 include important changes to try to remove all crashes upon player bringup/teardown 
-and program exit. This required an important change in players list management - side effects might still
-be induced
-
+0.1.4.0rc15
  - <volume_on_play> can be set to -1 so that *all* LMS volume commands are ignored (use the player's volume control)
  - When pause/play directly on the player, action is feedback to LMS that should stay in sycn (still early phase ...)
  - if uPnP player cannot play a format, send the proper error code to LMS (also send STMc everytime) == > that's to avoid being
@@ -39,6 +34,7 @@ stuck in a middle of a playlist - LMS will gently move to the next song and a sq
  - start to re-organize LOG levels
  - prepare metadata gathering for artwork and extended information (like filesize)
  - 64 bits int printed with %Ld for arm
+ - divide by 0 on volume removed (was causing volume command 0 ==> 255)
 
 
 0.1.3.3 

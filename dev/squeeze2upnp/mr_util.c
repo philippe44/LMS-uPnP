@@ -171,7 +171,7 @@ void FlushActionList(struct sMR *Device)
 
 	switch(action) {
 	case SQ_VOLUME:
-		Action->Param.Volume = *((double*) param);
+		Action->Param.Volume = *((u32_t*) param);
 		break;
 	case SQ_SEEK:
 		Action->Param.Time = *((u32_t*) param);

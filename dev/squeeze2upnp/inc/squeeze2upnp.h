@@ -115,7 +115,7 @@ struct sAction	{
 	sq_action_t 	Action;
 	u8_t 			*Cookie;
 	union {
-		double	Volume;
+		u32_t	Volume;
 		u32_t	Time;
 	} 				Param;
 	struct sAction	*Next;
