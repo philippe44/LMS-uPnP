@@ -36,6 +36,8 @@
  - prepare metadata gathering for artwork and extended information (like filesize)
  - 64 bits int printed with %Ld for arm
  - divide by 0 on volume removed (was causing volume command 0 ==> 255)
+ - volume calculation does not use float anymore (integer arithmetic only)
+ - <volumec_curve> ending pair changed so be (0x7fffffff,0x7f) to work with integer arithmetic
 
 
 0.1.3.3 

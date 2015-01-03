@@ -917,8 +917,8 @@ void SetVolumeCurve(struct sMR *Device)
 		i++;
 	} while (n < size);
 
-	Device->VolumeCurve[i].a = 0xffffffff;
-	Device->VolumeCurve[i].b = 0xff;
+	Device->VolumeCurve[i].a = 0x7fffffff;
+	Device->VolumeCurve[i].b = 0x7f;
 }
 
 
