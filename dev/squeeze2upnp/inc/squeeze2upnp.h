@@ -134,6 +134,7 @@ extern tMRConfig			glMRConfig;
 extern sq_dev_param_t		glDeviceParam;
 extern char					glSQServer[SQ_STR_LENGTH];
 extern const int			NB_SRV;
+extern u32_t				gluPNPScanInterval;
 
 struct sMR 		*mr_File2Device(const char *FileName);
 sq_dev_handle_t	mr_GetSqHandle(struct sMR *Device);

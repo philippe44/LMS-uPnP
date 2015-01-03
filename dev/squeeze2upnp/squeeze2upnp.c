@@ -108,6 +108,7 @@ struct sMR		  	*glSQ2MRList = NULL;
 void				*glConfigID = NULL;
 char				glConfigName[SQ_STR_LENGTH] = "./config.xml";
 static bool			glDiscovery = false;
+u32_t				gluPNPScanInterval = 120;
 
 /*----------------------------------------------------------------------------*/
 /* consts or pseudo-const*/
@@ -537,7 +538,6 @@ int CallbackActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 }
 
 /*----------------------------------------------------------------------------*/
-#define SCAN_POLL (120*1000)
 #define TRACK_POLL (1000)
 #define STATE_POLL (500)
 #define	SCAN_TIMEOUT (15)
@@ -602,7 +602,7 @@ void *TimerLoop(void *args)
 
 		// re-scan devices
 		ScanPoll += elapsed;
-		if (ScanPoll > SCAN_POLL) {
+		if (gluPNPScanInterval && ScanPoll > gluPNPScanInterval*1000) {
 			ScanPoll = 0;
 			// launch a new search for Media Render
 			ithread_mutex_lock(&glDeviceListMutex);
@@ -613,6 +613,7 @@ void *TimerLoop(void *args)
 			}
 			ithread_mutex_unlock(&glDeviceListMutex);
 			glDiscovery = false;
+
 			rc = UpnpSearchAsync(glControlPointHandle, SCAN_TIMEOUT, MEDIA_RENDERER, NULL);
 			if (UPNP_E_SUCCESS != rc) LOG_ERROR("Error sending search update%d", rc);
 

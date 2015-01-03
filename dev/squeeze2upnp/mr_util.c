@@ -322,6 +322,7 @@ void SaveConfig(char *name)
 	XMLAddNode(doc, root, "upnp_log", level2debug(glLog.upnp));
 	XMLAddNode(doc, root, "main_log",level2debug(glLog.main));
 	XMLAddNode(doc, root, "sq2mr_log", level2debug(glLog.sq2mr));
+	XMLAddNode(doc, root, "upnp_scan_interval", "%d", (u32_t) gluPNPScanInterval);
 
 	common = XMLAddNode(doc, root, "common", NULL);
 	XMLAddNode(doc, common, "streambuf_size", "%d", (u32_t) glDeviceParam.stream_buf_size);
@@ -458,6 +459,7 @@ static void LoadGlobalItem(char *name, char *val)
 	if (!strcmp(name, "sq2mr_log")) glLog.sq2mr = debug2level(val);
 	if (!strcmp(name, "base_mac"))  sscanf(val,"%2hhx:%2hhx:%2hhx:%2hhx:%2hhx:%2hhx",
 								   &glMac[0],&glMac[1],&glMac[2],&glMac[3],&glMac[4],&glMac[5]);
+	if (!strcmp(name, "upnp_scan_interval")) gluPNPScanInterval = atol(val);
  }
 
 

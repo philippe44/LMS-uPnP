@@ -4,6 +4,7 @@
  - if uPnP player cannot play a format, send the proper error code to LMS (also send STMc everytime) == > that's to avoid being stuck in a middle of a playlist - LMS will gently move to the next song and a squeeze2upnp will just log the problem
  - add <flac_header> parameter
  - add <send_metadata> parameter
+ - add <upnp_scan_interval> paramater (O to disable regular scan)
  - building a Linux statically linked version as well (-static)
  - <seek_after_pause> now 0,1 or 2 (2 restarts stream from that last sent byte - will stay undocumented as it does not seem to work)
  - add -4 for <stream_length> to allow usage of unkown file size to be sent *but* not using chunked-encoding (need updated libupnp webserver.c and httpreadwrite.c), responding to open-ended request (xxx-) by HTTP 206 and range xxx-yyy/*
@@ -37,7 +38,7 @@
  - 64 bits int printed with %Ld for arm
  - divide by 0 on volume removed (was causing volume command 0 ==> 255)
  - volume calculation does not use float anymore (integer arithmetic only)
- - <volumec_curve> ending pair changed so be (0x7fffffff,0x7f) to work with integer arithmetic
+ - <volume_curve> ending pair changed so be (0x7fffffff,0x7f) to work with integer arithmetic
 
 
 0.1.3.3 
