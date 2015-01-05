@@ -931,13 +931,12 @@ void AddMRDevice(IXML_Document *DescDoc, const char *location,	int expires)
 	char *URLBase = NULL;
 	char *presURL = NULL;
 	char *UDN = NULL;
-	char UsedPresURL[200];
+	char UsedPresURL[200] = "";
 	char *ServiceId = NULL;
 	char *EventURL = NULL;
 	char *ControlURL = NULL;
 	char *manufacturer = NULL;
 	struct sMR *Device, *p;
-	int rc = 1;
 
 	ithread_mutex_lock(&glDeviceListMutex);
 
@@ -951,11 +950,8 @@ void AddMRDevice(IXML_Document *DescDoc, const char *location,	int expires)
 
 	LOG_SDEBUG("UDN:\t%s\nDeviceType:\t%s\nFriendlyName:\t%s", UDN, deviceType, friendlyName);
 
-	rc = UpnpResolveURL((URLBase ? URLBase : location), presURL, UsedPresURL);
-
-	if (UPNP_E_SUCCESS != rc) {
-		LOG_SDEBUG("Error generating presURL from %s + %s", URLBase, presURL);
-	}
+	if (presURL)
+		UpnpResolveURL((URLBase ? URLBase : location), presURL, UsedPresURL);
 
 	if (strcmp(deviceType, MEDIA_RENDERER) == 0) {
 		LOG_DEBUG("MediaRenderer UDN:\t%s\nDeviceType:\t%s\nFriendlyName:\t%s", UDN, deviceType, friendlyName);
