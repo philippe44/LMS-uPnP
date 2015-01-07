@@ -216,28 +216,28 @@ struct sAction *UnQueueAction(struct sMR *Device, bool Keep)
 
 
 /*----------------------------------------------------------------------------*/
-void FlushMRList(void)
+void FlushMRDevices(void)
 {
-	struct sMR *p;
+	int i;
 
-	ithread_mutex_lock(&glDeviceListMutex);
+	// use lock so that
+	ithread_mutex_lock(&glMRMutex);
 
-	p = glDeviceList;
-	while (p) {
-		struct sMR *n = p->Next;
-		DeleteMR(p);
-		p = n;
+	for (i = 0; i < MAX_RENDERERS; i++) {
+		if (glMRDevices[i].InUse) DelMRDevice(&glMRDevices[i]);
 	}
 
-	glDeviceList = glSQ2MRList = NULL;
-
-	ithread_mutex_unlock(&glDeviceListMutex);
+	ithread_mutex_unlock(&glMRMutex);
 }
 
 /*----------------------------------------------------------------------------*/
-void DeleteMR(struct sMR *p)
+void DelMRDevice(struct sMR *p)
 {
 	int i = 0;
+
+	p->Running = false;
+	ithread_join(p->Thread, NULL);
+	p->InUse = false;
 
 	FlushActionList(p);
 	NFREE(p->CurrentURI);
@@ -246,28 +246,27 @@ void DeleteMR(struct sMR *p)
 		NFREE(p->ProtocolCap[i]);
 		i++;
 	}
-	NFREE(p);
+	memset(p, 0, sizeof(struct sMR));
 }
 
 
 /*----------------------------------------------------------------------------*/
 struct sMR* CURL2Device(char *CtrlURL)
 {
-	struct sMR *p;
+	int i, j;
 
-	ithread_mutex_lock(&glDeviceListMutex);
-	p = glSQ2MRList;
-	while (p) {
-		int i;
-		for (i = 0; i < NB_SRV; i++) {
-			if (!strcmp(p->Service[i].ControlURL, CtrlURL)) {
-				ithread_mutex_unlock(&glDeviceListMutex);
-				return p;
+	ithread_mutex_lock(&glMRMutex);
+	for (i = 0; i < MAX_RENDERERS; i++) {
+		if (!glMRDevices[i].InUse) continue;
+		for (j = 0; j < NB_SRV; j++) {
+			if (!strcmp(glMRDevices[i].Service[j].ControlURL, CtrlURL)) {
+				ithread_mutex_unlock(&glMRMutex);
+				return &glMRDevices[i];
 			}
 		}
-		p = p->NextSQ;
 	}
-	ithread_mutex_unlock(&glDeviceListMutex);
+
+	ithread_mutex_unlock(&glMRMutex);
 	return NULL;
 }
 
@@ -306,8 +305,9 @@ void SaveConfig(char *name)
 	IXML_Node	 *root, *common;
 	char *s;
 	FILE *file;
+	int i;
 
-	ithread_mutex_lock(&glDeviceListMutex);
+	ithread_mutex_lock(&glMRMutex);
 	root = XMLAddNode(doc, NULL, "squeeze2upnp", NULL);
 
 	XMLAddNode(doc, root, "server", glSQServer);
@@ -347,10 +347,12 @@ void SaveConfig(char *name)
 
 	s =  ixmlDocumenttoString(doc);
 
-	p = glDeviceList;
-	while (p)
-	{
+	for (i = 0; i < MAX_RENDERERS; i++) {
 		IXML_Node *dev_node;
+
+		if (!glMRDevices[i].InUse) continue;
+		else p = &glMRDevices[i];
+
 		dev_node = XMLAddNode(doc, root, "device", NULL);
 		XMLAddNode(doc, dev_node, "udn", p->UDN);
 		XMLAddNode(doc, dev_node, "name", p->FriendlyName);
@@ -397,7 +399,7 @@ void SaveConfig(char *name)
 
 		p = p->Next;
 	}
-	ithread_mutex_unlock(&glDeviceListMutex);
+	ithread_mutex_unlock(&glMRMutex);
 
 	file = fopen(name, "wb");
 	s = ixmlDocumenttoString(doc);

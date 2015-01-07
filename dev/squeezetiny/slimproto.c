@@ -106,7 +106,7 @@ void send_packet(u8_t *packet, size_t len, sockfd sock) {
 				usleep(1000);
 				continue;
 			}
-			LOG_INFO("failed writing to socket: %s", strerror(last_error()));
+			LOG_WARN("failed writing to socket: %s", strerror(last_error()));
 			return;
 		}
 		ptr += n;
@@ -129,7 +129,7 @@ static void sendHELO(bool reconnect, const char *fixed_cap, const char *var_cap,
 	packN(&pkt.bytes_received_L, (u64_t)ctx->status.stream_bytes & 0xffffffff);
 	memcpy(pkt.mac, mac, 6);
 
-	LOG_INFO("[%p] mac: %02x:%02x:%02x:%02x:%02x:%02x", ctx, pkt.mac[0], pkt.mac[1], pkt.mac[2], pkt.mac[3], pkt.mac[4], pkt.mac[5]);
+	LOG_DEBUG("[%p] mac: %02x:%02x:%02x:%02x:%02x:%02x", ctx, pkt.mac[0], pkt.mac[1], pkt.mac[2], pkt.mac[3], pkt.mac[4], pkt.mac[5]);
 	LOG_INFO("[%p] cap: %s%s%s", ctx, base_cap, fixed_cap, var_cap);
 
 	send_packet((u8_t *)&pkt, sizeof(pkt), ctx->sock);
@@ -235,7 +235,7 @@ static void sendSETDName(const char *name, sockfd sock) {
 static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 	struct strm_packet *strm = (struct strm_packet *)pkt;
 
-	if (strm->command != 't') {
+	if (strm->command != 't' && strm->command != 'q') {
 		LOG_INFO("[%p] strm command %c", ctx, strm->command);
 	}
 	else {
@@ -399,6 +399,8 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 							ctx->read_to = ctx->read_ended = false;
 						}
 						LOG_INFO("[%p] URI proxied by SQ2MR : %s", ctx, uri.urn);
+						ctx->out_ctx[idx].file_size = uri.file_size;
+
 					}
 					else ctx->decode.state = DECODE_ERROR;
 
@@ -459,7 +461,7 @@ static void process_aude(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 
 	LOCK_O;
 	ctx->on = (aude->enable_spdif) ? true : false;
-	LOG_INFO("[%p] on/off using aude %d", ctx, ctx->on);
+	LOG_DEBUG("[%p] on/off using aude %d", ctx, ctx->on);
 	decode_flush(ctx);
 	output_flush(ctx);
 	ctx->play_running = ctx-> track_ended = false;
@@ -505,7 +507,7 @@ static void process_setd(u8_t *pkt, int len,struct thread_ctx_s *ctx) {
 		} else if (len > 5) {
 			strncpy(ctx->player_name, setd->data, PLAYER_NAME_LEN);
 			ctx->player_name[PLAYER_NAME_LEN] = '\0';
-			LOG_INFO("[%p] set name: %s", ctx, setd->data);
+			LOG_DEBUG("[%p] set name: %s", ctx, setd->data);
 			// confirm change to server
 			sendSETDName(setd->data, ctx->sock);
 		}
@@ -514,7 +516,7 @@ static void process_setd(u8_t *pkt, int len,struct thread_ctx_s *ctx) {
 
 /*---------------------------------------------------------------------------*/
 static void process_ledc(u8_t *pkt, int len,struct thread_ctx_s *ctx) {
-	LOG_INFO("[%p] ledc", ctx);
+	LOG_DEBUG("[%p] ledc", ctx);
 }
 
 
@@ -600,7 +602,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 						if (n < 0 && last_error() == ERROR_WOULDBLOCK) {
 							continue;
 						}
-						LOG_INFO("[%p] error reading from socket: %s", ctx, n ? strerror(last_error()) : "closed");
+						LOG_WARN("[%p] error reading from socket: %s", ctx, n ? strerror(last_error()) : "closed");
 						return;
 					}
 					expect -= n;
@@ -615,7 +617,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 						if (n < 0 && last_error() == ERROR_WOULDBLOCK) {
 							continue;
 						}
-						LOG_INFO("[%p] error reading from socket: %s", ctx, n ? strerror(last_error()) : "closed");
+						LOG_WARN("[%p] error reading from socket: %s", ctx, n ? strerror(last_error()) : "closed");
 						return;
 					}
 					got += n;
@@ -643,7 +645,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 		} else if (++timeouts > 35) {
 
 			// expect message from server every 5 seconds, but 30 seconds on mysb.com so timeout after 35 seconds
-			LOG_INFO("[%p] No messages from server - connection dead", ctx);
+			LOG_WARN("[%p] No messages from server - connection dead", ctx);
 			return;
 		}
 
@@ -812,19 +814,18 @@ in_addr_t discover_server(struct thread_ctx_s *ctx) {
 	pollinfo.events = POLLIN;
 
 	do {
-
-		LOG_INFO("[%p] sending discovery", ctx);
+		LOG_DEBUG("[%p] sending discovery", ctx);
 		memset(&s, 0, sizeof(s));
 
 		if (sendto(disc_sock, buf, 1, 0, (struct sockaddr *)&d, sizeof(d)) < 0) {
-			LOG_INFO("[%p] error sending discovery", ctx);
+			LOG_WARN("[%p] error sending discovery", ctx);
 		}
 
 		if (poll(&pollinfo, 1, 5000) == 1) {
 			char readbuf[10];
 			socklen_t slen = sizeof(s);
 			recvfrom(disc_sock, readbuf, 10, 0, (struct sockaddr *)&s, &slen);
-			LOG_INFO("[%p] got response from: %s:%d", ctx, inet_ntoa(s.sin_addr), ntohs(s.sin_port));
+			LOG_DEBUG("[%p] got response from: %s:%d", ctx, inet_ntoa(s.sin_addr), ntohs(s.sin_port));
 		}
 	} while (s.sin_addr.s_addr == 0 && ctx->running);
 
@@ -857,7 +858,7 @@ static void slimproto(struct thread_ctx_s *ctx) {
 
 		if (connect_timeout(ctx->sock, (struct sockaddr *) &ctx->serv_addr, sizeof(ctx->serv_addr), 5) != 0) {
 
-			LOG_INFO("[%p] unable to connect to server %u", ctx, failed_connect);
+			LOG_WARN("[%p] unable to connect to server %u", ctx, failed_connect);
 			sleep(5);
 
 			// rediscover server if it was not set at startup

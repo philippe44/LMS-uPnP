@@ -491,7 +491,7 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 /*---------------------------------------------------------------------------*/
 void output_mr_thread_init(unsigned output_buf_size, char *params, unsigned rate[], unsigned rate_delay, struct thread_ctx_s *ctx) {
 
-	LOG_INFO("[%p] init output media renderer", ctx);
+	LOG_DEBUG("[%p] init output media renderer", ctx);
 
 #if 0
 	ctx->buf = malloc(FRAME_BLOCK * BYTES_PER_FRAME);

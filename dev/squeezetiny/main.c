@@ -175,7 +175,9 @@ static char to_hex(char code) {
 static char *cli_encode(char *str) {
   char *pstr = str, *buf = malloc(strlen(str) * 3 + 1), *pbuf = buf;
   while (*pstr) {
-	if (isalnum(*pstr) || *pstr == '-' || *pstr == '_' || *pstr == '.' || *pstr == '~' || *pstr == ' ')
+	if ( isalnum(*pstr) || *pstr == '-' || *pstr == '_' || *pstr == '.' ||
+						  *pstr == '~' || *pstr == ' ' || *pstr == ')' ||
+						  *pstr == '(' )
 	  *pbuf++ = *pstr;
 	else if (*pstr == '%') {
 	  *pbuf++ = '%',*pbuf++ = '2', *pbuf++ = '5';
@@ -194,13 +196,13 @@ static char *cli_decode(char *str) {
   char *pstr = str, *buf = malloc(strlen(str) + 1), *pbuf = buf;
   while (*pstr) {
 	if (*pstr == '%') {
-      if (pstr[1] && pstr[2]) {
-        *pbuf++ = from_hex(pstr[1]) << 4 | from_hex(pstr[2]);
-        pstr += 2;
+	  if (pstr[1] && pstr[2]) {
+		*pbuf++ = from_hex(pstr[1]) << 4 | from_hex(pstr[2]);
+		pstr += 2;
 	  }
-    } else {
-      *pbuf++ = *pstr;
-    }
+	} else {
+	  *pbuf++ = *pstr;
+	}
 	pstr++;
   }
   *pbuf = '\0';
@@ -208,7 +210,30 @@ static char *cli_decode(char *str) {
 }
 
 /*---------------------------------------------------------------------------*/
-char *cli_send_cmd(char *cmd, bool req, struct thread_ctx_s *ctx)
+/* IMPORTANT: be sure to free() the returned string after use */
+static char *cli_find_tag(char *str, char *tag)
+{
+	char *p, *res = NULL;
+	char *buf = malloc(strlen(str));
+
+	strcpy(buf, tag);
+	strcat(buf, "%3a");
+	if ((p = stristr(str, buf))) {
+		int i = 0;
+		p += strlen(buf);
+		while (*(p+i) != ' ' && *(p+i) != '\n' && *(p+i)) i++;
+		if (i) {
+			strncpy(buf, p, i);
+			buf[i] = '\0';
+			res = url_decode(buf);
+		}
+	}
+	free(buf);
+	return res;
+}
+
+/*---------------------------------------------------------------------------*/
+char *cli_send_cmd(char *cmd, bool req, bool decode, struct thread_ctx_s *ctx)
 {
 	char packet[1024];
 	int wait;
@@ -216,7 +241,7 @@ static char *cli_decode(char *str) {
 	char *rsp = NULL;
 
 	mutex_lock(ctx->cli_mutex);
-	wait = ctx->config.max_read_wait;
+    wait = ctx->config.max_read_wait;
 
 	cmd = cli_encode(cmd);
 	if (req) len = sprintf(packet, "%s ?\n", cmd);
@@ -240,7 +265,8 @@ static char *cli_decode(char *str) {
 
 	if (rsp) {
 		for (rsp += strlen(cmd); *rsp == ' '; rsp++);
-		rsp = cli_decode(rsp);
+		if (decode) rsp = cli_decode(rsp);
+		else rsp = strdup(rsp);
 		*(strrchr(rsp, '\n')) = '\0';
 		if (*rsp == '\0') NFREE(rsp);
 	}
@@ -264,7 +290,7 @@ u32_t sq_get_time(sq_dev_handle_t handle)
 	}
 
 	sprintf(cmd, "%s time", ctx->cli_id);
-	rsp = cli_send_cmd(cmd, true, ctx);
+	rsp = cli_send_cmd(cmd, true, true, ctx);
 	if (rsp) {
 		time = (u32_t) (atof(rsp) * 1000);
 	}
@@ -291,7 +317,7 @@ bool sq_set_time(sq_dev_handle_t handle, u32_t time)
 
 	sprintf(cmd, "%s time %.1lf", ctx->cli_id, (double) time / 1000);
 
-	rsp = cli_send_cmd(cmd, false, ctx);
+	rsp = cli_send_cmd(cmd, false, true, ctx);
 	if (rsp) {
 		LOG_INFO("[%p] set time %d", ctx, time);
 		rc = true;
@@ -307,24 +333,26 @@ bool sq_set_time(sq_dev_handle_t handle, u32_t time)
 /*--------------------------------------------------------------------------*/
 static void sq_init_metadata(sq_metadata_t *metadata)
 {
-		metadata->artist = metadata->album =
-		metadata->title = metadata->genre =
-		metadata->duration = metadata->path =
-		metadata->artwork =	NULL;
+	metadata->artist = NULL;
+	metadata->album = NULL;
+	metadata->title = NULL;
+	metadata->genre = NULL;
+	metadata->path = NULL;
+	metadata->artwork =	NULL;
 
-		metadata->track = 0;
+	metadata->track = 0;
+	metadata->index = 0;
+	metadata->file_size = 0;
+	metadata->duration = 0;
 }
 
 /*--------------------------------------------------------------------------*/
 void sq_default_metadata(sq_metadata_t *metadata, bool init)
 {
-	if (init) sq_init_metadata(metadata);
-
 	if (!metadata->title) metadata->title = strdup("[LMS to uPnP]");
 	if (!metadata->album) metadata->album = strdup("[no album]");
 	if (!metadata->artist) metadata->artist = strdup("[no artist]");
 	if (!metadata->genre) metadata->genre = strdup("[no genre]");
-	if (!metadata->duration) metadata->duration = strdup("[no duration]");
 	if (!metadata->path) metadata->path = strdup("[no path]");
 	if (!metadata->artwork) metadata->artwork = strdup("[no artwork]");
 }
@@ -333,11 +361,9 @@ void sq_default_metadata(sq_metadata_t *metadata, bool init)
 bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 {
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
-	char cmd[128];
-	char *rsp;
+	char cmd[1024];
+	char *rsp, *p;
 	u16_t idx;
-
-	sq_init_metadata(metadata);
 
 	if (!handle || !ctx->cli_sock) {
 		LOG_ERROR("[%p]: no handle or CLI socket %d", ctx, handle);
@@ -346,7 +372,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 	}
 
 	sprintf(cmd, "%s playlist index", ctx->cli_id);
-	rsp = cli_send_cmd(cmd, true, ctx);
+	rsp = cli_send_cmd(cmd, true, true, ctx);
 
 	if (!rsp) {
 		LOG_ERROR("[%p]: missing index", ctx);
@@ -354,38 +380,78 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 		return false;
 	}
 
+	sq_init_metadata(metadata);
+
 	idx = atol(rsp);
 	NFREE(rsp);
-	metadata->track = idx;
+	metadata->index = idx;
 
 	if (next) {
 		sprintf(cmd, "%s playlist tracks", ctx->cli_id);
-		rsp = cli_send_cmd(cmd, true, ctx);
+		rsp = cli_send_cmd(cmd, true, true, ctx);
 		if (rsp && atol(rsp)) idx = (idx + 1) % atol(rsp);
 		else idx = 0;
 		NFREE(rsp);
 	}
 
-	sprintf(cmd, "%s playlist title %d", ctx->cli_id, idx);
-	metadata->title = cli_send_cmd(cmd, true, ctx);
+	sprintf(cmd, "%s playlist path %d", ctx->cli_id, idx);
+	metadata->path = cli_send_cmd(cmd, true, true, ctx);
 
-	sprintf(cmd, "%s playlist album %d", ctx->cli_id, idx);
-	metadata->album = cli_send_cmd(cmd, true, ctx);
+	sprintf(cmd, "songinfo 0 10 url:%s tags:cfldatgr", metadata->path);
+	rsp = cli_send_cmd(cmd, false, false, ctx);
 
-	sprintf(cmd, "%s playlist artist %d", ctx->cli_id, idx);
-	metadata->artist = cli_send_cmd(cmd, true, ctx);
+	if (rsp) {
+		metadata->title = cli_find_tag(rsp, "title");
+		metadata->artist = cli_find_tag(rsp, "artist");
+		metadata->album = cli_find_tag(rsp, "album");
+		metadata->genre = cli_find_tag(rsp, "genre");
+		if ((p = cli_find_tag(rsp, "duration"))) {
+			metadata->duration = atol(p);
+			free(p);
+		}
+		if ((p = cli_find_tag(rsp, "filesize"))) {
+			metadata->file_size = atol(p);
+			/*
+			at this point, LMS sends the original filesize, not the transcoded
+			so it simply does not work
+        	*/
+			metadata->file_size = 0;
+			free(p);
+		}
+		if ((p = cli_find_tag(rsp, "tracknum"))) {
+			metadata->track = atol(p);
+			free(p);
+		}
+		if ((p = cli_find_tag(rsp, "coverid"))) {
+			// some changes to do on the coverid for form an URL
+			metadata->artwork = p;
+		}
+	}
+	else {
+		LOG_INFO("[%p]: no metadata using songinfo", ctx, idx);
 
-	sprintf(cmd, "%s playlist genre %d", ctx->cli_id, idx);
-	metadata->genre = cli_send_cmd(cmd, true, ctx);
+		sprintf(cmd, "%s playlist title %d", ctx->cli_id, idx);
+		metadata->title = cli_send_cmd(cmd, true, true, ctx);
 
-	sprintf(cmd, "%s playlist duration %d", ctx->cli_id, idx);
-	metadata->duration = cli_send_cmd(cmd, true, ctx);
+		sprintf(cmd, "%s playlist album %d", ctx->cli_id, idx);
+		metadata->album = cli_send_cmd(cmd, true, true, ctx);
 
+		sprintf(cmd, "%s playlist artist %d", ctx->cli_id, idx);
+		metadata->artist = cli_send_cmd(cmd, true, true, ctx);
+
+		sprintf(cmd, "%s playlist genre %d", ctx->cli_id, idx);
+		metadata->genre = cli_send_cmd(cmd, true, true, ctx);
+
+		sprintf(cmd, "%s playlist duration %d", ctx->cli_id, idx);
+		rsp = cli_send_cmd(cmd, true, true, ctx);
+		if (rsp) metadata->duration = atol(rsp);
+	}
+	NFREE(rsp);
 	sq_default_metadata(metadata, false);
 
-	LOG_INFO("[%p]: idx %d\n\tartist:%s\n\talbum:%s\n\ttitle:%s\n\tgenre:%s\n\tduration:%s", ctx, idx,
+	LOG_INFO("[%p]: idx %d\n\tartist:%s\n\talbum:%s\n\ttitle:%s\n\tgenre:%s\n\tduration:%d\n\tsize:%Ld", ctx, idx,
 				metadata->artist, metadata->album, metadata->title,
-				metadata->genre, metadata->duration);
+				metadata->genre, metadata->duration, metadata->file_size);
 
 	return true;
 }
@@ -397,13 +463,12 @@ void sq_free_metadata(sq_metadata_t *metadata)
 	NFREE(metadata->album);
 	NFREE(metadata->title);
 	NFREE(metadata->genre);
-	NFREE(metadata->duration);
 	NFREE(metadata->path);
 	NFREE(metadata->artwork);
 }
 
 /*---------------------------------------------------------------------------*/
-char *sq_content_type(const char *urn)
+void *sq_get_info(const char *urn, off_t *size, char **content_type)
 {
 	int i = 0;
 	out_ctx_t *out = NULL;
@@ -418,10 +483,14 @@ char *sq_content_type(const char *urn)
 	if (out) {
 		p = malloc(strlen(out->content_type) + 1);
 		strcpy(p, out->content_type);
-		return p;
+		*size = out->file_size;
+		*content_type = p;
+		return &thread_ctx[i];
 	}
-	else
-		return strdup("audio/unknown");
+	else {
+		*content_type = strdup("audio/unknown");
+		return NULL;
+	}
 }
 
 
@@ -631,7 +700,7 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 
 				LOG_INFO("[%p] uPNP unsollicited play", ctx);
 				sprintf(cmd, "%s play", ctx->cli_id);
-				rsp = cli_send_cmd(cmd, false, ctx);
+				rsp = cli_send_cmd(cmd, false, true, ctx);
 				NFREE(rsp);
 			}
 			else {
@@ -651,7 +720,7 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 
 			LOG_INFO("[%p] uPNP unsollicited pause", ctx);
 			sprintf(cmd, "%s pause", ctx->cli_id);
-			rsp = cli_send_cmd(cmd, false, ctx);
+			rsp = cli_send_cmd(cmd, false, true, ctx);
 			NFREE(rsp);
 			break;
 		}
@@ -762,8 +831,7 @@ bool sq_run_device(sq_dev_handle_t handle, char *name, sq_dev_param_t *param)
 {
 	int i;
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
-	u16_t mac_sum;
-	char buf[SQ_STR_LENGTH];
+	char buf[SQ_STR_LENGTH];
 
 #if 0
 	// set the output buffer size if not specified on the command line, take account of resampling
@@ -782,8 +850,7 @@ bool sq_run_device(sq_dev_handle_t handle, char *name, sq_dev_param_t *param)
 		return false;
 	}
 
-	for (i = 0, mac_sum =0; i < 5; i++) mac_sum += param->mac[i];
-	if (!mac_sum) {
+	if (!memcmp(param->mac, "\0\0\0\0\0\0", 6)) {
 		gl_last_mac[5] = (gl_last_mac[5] + 1) &0xFF;
 		memcpy(param->mac, gl_last_mac, 6);
 	}
@@ -792,7 +859,7 @@ bool sq_run_device(sq_dev_handle_t handle, char *name, sq_dev_param_t *param)
 		LOG_ERROR("[%p]: incorrect buffer limit %d", ctx, param->buffer_limit);
 		param->buffer_limit = max(param->stream_buf_size, param->output_buf_size) * 4;
 	}
-
+	
 	sprintf(ctx->cli_id, "%02x:%02x:%02x:%02x:%02x:%02x",
 										  param->mac[0], param->mac[1], param->mac[2],
 										  param->mac[3], param->mac[4], param->mac[5]);

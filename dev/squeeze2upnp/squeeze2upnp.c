@@ -97,49 +97,51 @@ sq_dev_param_t glDeviceParam = {
 /*----------------------------------------------------------------------------*/
 /* globals */
 /*----------------------------------------------------------------------------*/
-ithread_t 			glTimerThread;
-bool		 		glTimerOn = true;
+static ithread_t 	glMainThread;
 unsigned int 		glPort;
 char 				glIPaddress[128] = "";
-ithread_mutex_t 	glDeviceListMutex;
 UpnpClient_Handle 	glControlPointHandle;
-struct sMR 		  	*glDeviceList = NULL;
-struct sMR		  	*glSQ2MRList = NULL;
 void				*glConfigID = NULL;
 char				glConfigName[SQ_STR_LENGTH] = "./config.xml";
 static bool			glDiscovery = false;
 u32_t				gluPNPScanInterval = 120;
+struct sMR			glMRDevices[MAX_RENDERERS];
+ithread_mutex_t		glMRMutex, glMRFoundMutex;
 
 /*----------------------------------------------------------------------------*/
 /* consts or pseudo-const*/
 /*----------------------------------------------------------------------------*/
 static const char 	MEDIA_RENDERER[] 	= "urn:schemas-upnp-org:device:MediaRenderer:1";
 
-static const char 	cMRPlayer[] 		= "";
 static const char 	cLogitech[] 		= "Logitech";
 static const struct cSearchedSRV_s
 {
  char 	name[RESOURCE_LENGTH];
  int	idx;
-} cSearchedSRV[] = {	{AV_TRANSPORT, AVT_SRV_IDX},
+} cSearchedSRV[NB_SRV] = {	{AV_TRANSPORT, AVT_SRV_IDX},
 						{RENDERING_CTRL, REND_SRV_IDX},
 						{CONNECTION_MGR, CNX_MGR_IDX}
 				   };
 
-const int	NB_SRV = sizeof(cSearchedSRV) / sizeof(struct cSearchedSRV_s);
-
 /*----------------------------------------------------------------------------*/
 /* locals */
 /*----------------------------------------------------------------------------*/
-static log_level 		loglevel = lWARN;
-static char usage[];
-static char license[];
+static log_level 	loglevel = lWARN;
+static char 		usage[];
+static char 		license[];
+ithread_t			glUpdateMRThread;
+static bool			glMainRunning = true;
+static struct sLocList {
+	char 			*Location;
+	struct sLocList *Next;
+} *glMRFoundList = NULL;
 
 /*----------------------------------------------------------------------------*/
 /* prototypes */
 /*----------------------------------------------------------------------------*/
-static void *TimerLoop(void *args);
-static void AddMRDevice(IXML_Document *DescDoc, const char *location, int expires);
+static void *MRThread(void *args);
+static void *UpdateMRThread(void *args);
+static bool AddMRDevice(struct sMR *Device, char * UDN, IXML_Document *DescDoc,	const char *location);
 
 /*----------------------------------------------------------------------------*/
 bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t *cookie, void *param)
@@ -155,11 +157,11 @@ static void AddMRDevice(IXML_Document *DescDoc, const char *location, int expire
 
 	if (action == SQ_ONOFF) {
 		device->on = *((bool*) param);
-		LOG_INFO("[%p]: device set on/off %d", caller, device->on);
+		LOG_DEBUG("[%p]: device set on/off %d", caller, device->on);
 	}
 
 	if (!device->on) {
-		LOG_INFO("[%p]: device off or not controlled by LMS", caller);
+		LOG_DEBUG("[%p]: device off or not controlled by LMS", caller);
 		return false;
 	}
 
@@ -195,8 +197,14 @@ static void AddMRDevice(IXML_Document *DescDoc, const char *location, int expire
 			if (device->Config.AcceptNextURI){
 				sq_metadata_t MetaData;
 
-				if (device->Config.SendMetaData) sq_get_metadata(device->SqueezeHandle, &MetaData, true);
-				else sq_default_metadata(&MetaData, true);
+				if (device->Config.SendMetaData) {
+					sq_get_metadata(device->SqueezeHandle, &MetaData, true);
+					p->file_size = MetaData.file_size ? MetaData.file_size : device->Config.StreamLength;
+				}
+				else {
+					sq_default_metadata(&MetaData, true);
+					p->file_size = device->Config.StreamLength;
+				}
 				AVTSetNextURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info, &MetaData, device->seqN++);
 				sq_free_metadata(&MetaData);
 			}
@@ -224,8 +232,14 @@ static void AddMRDevice(IXML_Document *DescDoc, const char *location, int expire
 			NFREE(device->NextURI);
 			// end check
 
-			if (device->Config.SendMetaData) sq_get_metadata(device->SqueezeHandle, &MetaData, false);
-			else sq_default_metadata(&MetaData, true);
+			if (device->Config.SendMetaData) {
+				sq_get_metadata(device->SqueezeHandle, &MetaData, false);
+				p->file_size = MetaData.file_size ? MetaData.file_size : device->Config.StreamLength;
+			}
+			else {
+				sq_default_metadata(&MetaData, true);
+				p->file_size = device->Config.StreamLength;
+			}
 			AVTSetURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info, &MetaData, device->seqN++);
 			sq_free_metadata(&MetaData);
 
@@ -325,8 +339,7 @@ void SyncNotifState(char *State, struct sMR* Device)
 				strcpy(Device->CurrentURI, Device->NextURI);
 				NFREE(Device->NextURI);
 
-				if (Device->Config.SendMetaData) sq_get_metadata(Device->SqueezeHandle, &MetaData, true);
-				else sq_default_metadata(&MetaData, true);
+				sq_get_metadata(Device->SqueezeHandle, &MetaData, true);
 				AVTSetURI(Device->Service[AVT_SRV_IDX].ControlURL, Device->CurrentURI, Device->NextProtInfo, &MetaData, WaitFor);
 				sq_free_metadata(&MetaData);
 
@@ -462,7 +475,6 @@ void HandleStateEvent(struct Upnp_Event *Event, void *Cookie)
 }
 #endif
 
-
 /*----------------------------------------------------------------------------*/
 int CallbackActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 {
@@ -526,7 +538,6 @@ int CallbackActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 				LOG_ERROR("Error in action callback -- %d (cookie %p)",	Action->ErrCode, Cookie);
 			}
 			else p->ErrorCount = 0;
-
 			break;
 		}
 		default:
@@ -538,110 +549,6 @@ int CallbackActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 }
 
 /*----------------------------------------------------------------------------*/
-#define TRACK_POLL (1000)
-#define STATE_POLL (500)
-#define	SCAN_TIMEOUT (15)
-#define MAX_ACTION_ERRORS (5)
-
-void *TimerLoop(void *args)
-{
-	int i, rc, ScanPoll = 0;
-	unsigned last;
-	int	elapsed;
-	struct sMR *p;
-
-	last = gettime_ms();
-
-	while (glTimerOn) {
-		elapsed = gettime_ms() - last;
-		ithread_mutex_lock(&glDeviceListMutex);
-		p = glSQ2MRList;
-		while (p)	{
-
-			if (!p->on || (p->sqState == SQ_STOP && p->State == STOPPED)) {
-				p = p->NextSQ;
-				continue;
-			}
-
-			if (p->ErrorCount > MAX_ACTION_ERRORS) {
-				p = p->NextSQ;
-				continue;
-			}
-
-			// get track position & CurrentURI
-			p->TrackPoll += elapsed;
-			if (p->TrackPoll > TRACK_POLL) {
-				p->TrackPoll = 0;
-				if (p->State != STOPPED && p->State != PAUSED) {
-					AVTCallAction(p->Service[AVT_SRV_IDX].ControlURL, "GetPositionInfo", p->seqN++);
-					AVTCallAction(p->Service[AVT_SRV_IDX].ControlURL, "GetMediaInfo", p->seqN++);
-				}
-			}
-
-			// do polling as event is broken in many uPNP devices
-			p->StatePoll += elapsed;
-			if (p->StatePoll > STATE_POLL) {
-				p->StatePoll = 0;
-				AVTCallAction(p->Service[AVT_SRV_IDX].ControlURL, "GetTransportInfo", p->seqN++);
-			}
-
-#ifdef SUBSCRIBE_EVENT
-			// renew rerevice subscribtion if needed
-			for (i = 0; i < NB_SRV; i++) {
-				struct sService *s = &p->Service[cSearchedSRV[i].idx];
-				if (!s->TO--) {
-					s->TO = 60;
-					UpnpSubscribe(glControlPointHandle, s->EventURL, &s->TO, s->SID);
-				}
-			}
-#endif
-
-			p = p->NextSQ;
-		}
-		ithread_mutex_unlock(&glDeviceListMutex);
-
-		// re-scan devices
-		ScanPoll += elapsed;
-		if (gluPNPScanInterval && ScanPoll > gluPNPScanInterval*1000) {
-			ScanPoll = 0;
-			// launch a new search for Media Render
-			ithread_mutex_lock(&glDeviceListMutex);
-			p = glDeviceList;
-			while (p) {
-				p->uPNPTimeOut = true;
-				p = p->Next;
-			}
-			ithread_mutex_unlock(&glDeviceListMutex);
-			glDiscovery = false;
-
-			rc = UpnpSearchAsync(glControlPointHandle, SCAN_TIMEOUT, MEDIA_RENDERER, NULL);
-			if (UPNP_E_SUCCESS != rc) LOG_ERROR("Error sending search update%d", rc);
-
-			if (loglevel >= lDEBUG) {
-				ithread_mutex_lock(&glDeviceListMutex);
-				p = glSQ2MRList;
-				while (p)	{
-					LOG_DEBUG("uPNP renderer [%s] [%s]", p->FriendlyName, p->UDN);
-					for (i = 0; i < NB_SRV; i++) {
-						if (strcmp(p->Service[i].Id, "")) {
-							LOG_DEBUG("discovered service\n\t%s\n\t%s",	p->Service[i].ControlURL, p->Service[i].EventURL);
-						}
-					}
-					p = p->NextSQ;
-				}
-				ithread_mutex_unlock(&glDeviceListMutex);
-			}
-		}
-
-		last = gettime_ms();
-		usleep(500000);
-	}
-
-	return NULL;
-}
-
-
-/*----------------------------------------------------------------------------*/
 int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 {
 	LOG_SDEBUG("event: %i [%s] [%p]", EventType, uPNPEvent2String(EventType), Cookie);
@@ -650,88 +557,38 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 		case UPNP_DISCOVERY_ADVERTISEMENT_ALIVE:
 		break;
 		case UPNP_DISCOVERY_SEARCH_RESULT: {
-			IXML_Document *DescDoc = NULL;
-			int ret;
 			struct Upnp_Discovery *d_event = (struct Upnp_Discovery *) Event;
+			struct sLocList **p, *prev = NULL;
 
 			LOG_DEBUG("Answer to uPNP search %d", d_event->Location);
 			if (d_event->ErrCode != UPNP_E_SUCCESS) {
 				LOG_DEBUG("Error in Discovery Callback -- %d", d_event->ErrCode);
 				break;
 			}
-			ret = UpnpDownloadXmlDoc(d_event->Location, &DescDoc);
-			if (ret != UPNP_E_SUCCESS) {
-				LOG_DEBUG("Error obtaining description %s -- error = %d\n", d_event->Location, ret);
+
+			ithread_mutex_lock(&glMRFoundMutex);
+			p = &glMRFoundList;
+			while (*p) {
+				prev = *p;
+				p = &((*p)->Next);
 			}
-			else AddMRDevice(DescDoc, d_event->Location, d_event->Expires);
-			if (DescDoc) ixmlDocument_free(DescDoc);
+			(*p) = (struct sLocList*) malloc(sizeof (struct sLocList));
+			(*p)->Location = strdup(d_event->Location);
+			(*p)->Next = NULL;
+			if (prev) prev->Next = *p;
+			ithread_mutex_unlock(&glMRFoundMutex);
 			break;
 		}
 		case UPNP_DISCOVERY_SEARCH_TIMEOUT:	{
-			struct sMR *p, *pp;
+			pthread_attr_t attr;
 
-			LOG_INFO("uPNP search timeout", NULL);
-			ithread_mutex_lock(&glDeviceListMutex);
-
-			// first loop only to insert new devices
-			p = glDeviceList;
-			while (p)	{
-				// create or re-create slimdevices and associated list
-				if (!p->SqueezeHandle && p->Config.Enabled && !p->uPNPTimeOut)	{
-					p->SqueezeHandle = sq_reserve_device(p, &sq_callback);
-					if (!p->SqueezeHandle || !sq_run_device(p->SqueezeHandle, *(p->Config.Name) ? p->Config.Name : p->FriendlyName, &p->sq_config)) {
-						sq_release_device(p->SqueezeHandle);
-						p->SqueezeHandle = 0;
-						LOG_ERROR("[%p]: cannot create squeezelite instance (%s)", p, p->FriendlyName);
-					}
-				}
-
-				p  = p->Next;
-			}
-
-			/*
-			Second loop to remove "gone dark" devices and create list of active
-			squeeze devices. Two loops are needed to avoid released contexts to
-			be re-used immeditaly, as the thread require time to exit
-			*/
-			glSQ2MRList = NULL;
-			p = glDeviceList;
-			pp = NULL;
-			while (p)	{
-				/*
-				uPNP device has gone dark ... remove it from slimdevice lists. Any
-				other access to device list is mutex-protected so other thread call
-				can happen, they will be blocked till this finished
-				*/
-				if (p->uPNPTimeOut) {
-					LOG_INFO("[%p]: removing renderer (%s)", p, p->FriendlyName);
-					if (pp) pp->Next = p->Next;
-					else glDeviceList = p->Next;
-					if (p->SqueezeHandle) sq_delete_device(p->SqueezeHandle);
-					DeleteMR(p);
-					p = (pp) ? pp->Next : glDeviceList->Next;
-				}
-				// finally, if confirmed active, insert device in the SQ list
-				else {
-					if (p->SqueezeHandle) {
-						if (glSQ2MRList) p->NextSQ = glSQ2MRList;
-						else p->NextSQ = NULL;
-						glSQ2MRList = p;
-					}
-					pp = p;
-					p  = p->Next;
-				}
-    		}
-
-			ithread_mutex_unlock(&glDeviceListMutex);
-			glDiscovery = true;
+			pthread_attr_init(&attr);
+			pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN + 32*1024);
+			pthread_create(&glUpdateMRThread, &attr, &UpdateMRThread, NULL);
+			pthread_detach(glUpdateMRThread);
+			pthread_attr_destroy(&attr);
 			break;
 		}
-		case UPNP_EVENT_RECEIVED:
-#ifdef SUBSCRIBE_EVENT
-			HandleStateEvent(Event, Cookie);
-#endif
-			break;
 		case UPNP_CONTROL_GET_VAR_COMPLETE:
 			LOG_ERROR("Unexpected GetVarComplete", NULL);
 			break;
@@ -740,30 +597,18 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 			struct sMR *p;
 			char   *r;
 
-			// only case where a action_complete lands here is for GetProtocolInfo
-			ithread_mutex_lock(&glDeviceListMutex);
-			// find device in global MR list, not only in SQ list
-			p = glDeviceList;
-			while (p) {
-				int i;
-				for (i = 0; i < NB_SRV && strcmp(p->Service[i].ControlURL, Action->CtrlUrl); i++);
-				if (i < NB_SRV) break;
-				p = p->Next;
-			}
-			if (!p) {
-				ithread_mutex_unlock(&glDeviceListMutex);
-				break;
-			}
+			p = CURL2Device(Action->CtrlUrl);
+			if (!p) break;
 
 			r = XMLGetFirstDocumentItem(Action->ActionResult, "Sink");
 			if (r) {
 				LOG_DEBUG("[%p]: ProtocolInfo %s (cookie %p)", p, r, Cookie);
 				ParseProtocolInfo(p, r);
 			}
-			ithread_mutex_unlock(&glDeviceListMutex);
 			NFREE(r);
 			break;
 		}
+		case UPNP_EVENT_RECEIVED:
 		case UPNP_DISCOVERY_ADVERTISEMENT_BYEBYE:
 		case UPNP_CONTROL_ACTION_REQUEST:
 		case UPNP_EVENT_SUBSCRIBE_COMPLETE:
@@ -780,6 +625,183 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 	return 0;
 }
 
+/*----------------------------------------------------------------------------*/
+static bool RefreshTO(char *UDN)
+{
+	int i;
+
+	for (i = 0; i < MAX_RENDERERS; i++) {
+		if (glMRDevices[i].InUse && !strcmp(glMRDevices[i].UDN, UDN)) {
+			glMRDevices[i].uPNPTimeOut = false;
+			return true;
+		}
+	}
+	return false;
+}
+
+/*----------------------------------------------------------------------------*/
+static void *UpdateMRThread(void *args)
+{
+	struct sLocList *p, *m;
+	struct sMR *Device = NULL;
+	int i, TimeStamp;
+
+	LOG_INFO("Begin uPnP devices update", NULL);
+	TimeStamp = gettime_ms();
+	ithread_mutex_lock(&glMRMutex);
+
+	// first add any newly found uPNP renderer
+	ithread_mutex_lock(&glMRFoundMutex);
+	m = p = glMRFoundList;
+	glMRFoundList = NULL;
+	ithread_mutex_unlock(&glMRFoundMutex);
+
+	while (p) {
+		IXML_Document *DescDoc = NULL;
+		char *UDN = NULL, *Manufacturer = NULL;
+		int rc;
+		void *n = p->Next;
+
+		rc = UpnpDownloadXmlDoc(p->Location, &DescDoc);
+		if (rc != UPNP_E_SUCCESS) {
+			LOG_DEBUG("Error obtaining description %s -- error = %d\n", p->Location, rc);
+			if (DescDoc) ixmlDocument_free(DescDoc);
+			p = n;
+			continue;
+		}
+
+		Manufacturer = XMLGetFirstDocumentItem(DescDoc, "manufacturer");
+		UDN = XMLGetFirstDocumentItem(DescDoc, "UDN");
+		if (!strstr(Manufacturer, cLogitech) && !RefreshTO(UDN)) {
+			// new device so search a free spot
+			for (i = 0; i < MAX_RENDERERS && glMRDevices[i].InUse; i++);
+
+			// no more room !
+			if (i == MAX_RENDERERS) {
+				LOG_ERROR("Too many uPNP devices", NULL);
+				NFREE(UDN); NFREE(Manufacturer);
+				break;
+			}
+
+			Device = &glMRDevices[i];
+			if (AddMRDevice(Device, UDN, DescDoc, p->Location)) {
+				// create a new slimdevice
+				Device->SqueezeHandle = sq_reserve_device(Device, &sq_callback);
+				if (!Device->SqueezeHandle || !sq_run_device(Device->SqueezeHandle,
+					*(Device->Config.Name) ? Device->Config.Name : Device->FriendlyName,
+					&Device->sq_config)) {
+					sq_release_device(Device->SqueezeHandle);
+					Device->SqueezeHandle = 0;
+					LOG_ERROR("[%p]: cannot create squeezelite instance (%s)", Device, Device->FriendlyName);
+					DelMRDevice(Device);
+				}
+			}
+		}
+
+		if (DescDoc) ixmlDocument_free(DescDoc);
+		NFREE(UDN);	NFREE(Manufacturer);
+		p = n;
+	}
+
+	// free the list of discovered location URL's
+	p = m;
+	while (p) {
+		m = p->Next;
+		free(p->Location); free(p);
+		p = m;
+	}
+
+	// then walk through the list of devices to remove missing ones
+	for (i = 0; i < MAX_RENDERERS; i++) {
+		Device = &glMRDevices[i];
+		if (!Device->InUse || !Device->uPNPTimeOut) continue;
+
+		LOG_INFO("[%p]: removing renderer (%s)", Device, Device->FriendlyName);
+		if (Device->SqueezeHandle) sq_delete_device(Device->SqueezeHandle);
+		DelMRDevice(Device);
+	}
+
+	ithread_mutex_unlock(&glMRMutex);
+	LOG_INFO("End uPnP devices update %d", gettime_ms() - TimeStamp);
+	return NULL;
+}
+
+/*----------------------------------------------------------------------------*/
+#define	SCAN_TIMEOUT (15)
+static void *MainThread(void *args)
+{
+	unsigned last = gettime_ms();
+	int ScanPoll = 0;
+
+	while (glMainRunning) {
+		int i, rc;
+		int elapsed = gettime_ms() - last;
+
+		// reset timeout and re-scan devices
+		ScanPoll += elapsed;
+		if (gluPNPScanInterval && ScanPoll > gluPNPScanInterval*1000) {
+			ScanPoll = 0;
+
+			for (i = 0; i < MAX_RENDERERS; i++) {
+				glMRDevices[i].uPNPTimeOut = true;
+				glDiscovery = false;
+			}
+
+			// launch a new search for Media Render
+			rc = UpnpSearchAsync(glControlPointHandle, SCAN_TIMEOUT, MEDIA_RENDERER, NULL);
+			if (UPNP_E_SUCCESS != rc) LOG_ERROR("Error sending search update%d", rc);
+		}
+
+		last = gettime_ms();
+		sleep(5);
+	}
+	return NULL;
+}
+
+/*----------------------------------------------------------------------------*/
+#define TRACK_POLL (1000)
+#define STATE_POLL (500)
+#define MAX_ACTION_ERRORS (5)
+static void *MRThread(void *args)
+{
+	int elapsed;
+	unsigned last;
+	struct sMR *p = (struct sMR*) args;
+
+	last = gettime_ms();
+	for (; p->Running;  usleep(500000)) {
+		elapsed = gettime_ms() - last;
+		ithread_mutex_lock(&p->Mutex);
+
+		if (!p->on || (p->sqState == SQ_STOP && p->State == STOPPED) ||
+			 p->ErrorCount > MAX_ACTION_ERRORS) {
+			ithread_mutex_unlock(&p->Mutex);
+			continue;
+		}
+
+		// get track position & CurrentURI
+		p->TrackPoll += elapsed;
+		if (p->TrackPoll > TRACK_POLL) {
+			p->TrackPoll = 0;
+			if (p->State != STOPPED && p->State != PAUSED) {
+				AVTCallAction(p->Service[AVT_SRV_IDX].ControlURL, "GetPositionInfo", p->seqN++);
+				AVTCallAction(p->Service[AVT_SRV_IDX].ControlURL, "GetMediaInfo", p->seqN++);
+			}
+		}
+
+		// do polling as event is broken in many uPNP devices
+		p->StatePoll += elapsed;
+		if (p->StatePoll > STATE_POLL) {
+			p->StatePoll = 0;
+			AVTCallAction(p->Service[AVT_SRV_IDX].ControlURL, "GetTransportInfo", p->seqN++);
+		}
+
+		ithread_mutex_unlock(&p->Mutex);
+		last = gettime_ms();
+	}
+
+	return NULL;
+}
 
 /*----------------------------------------------------------------------------*/
 int uPNPInitialize(char *IPaddress, unsigned int *Port)
@@ -787,8 +809,9 @@ int uPNPInitialize(char *IPaddress, unsigned int *Port)
 	int rc;
 	struct UpnpVirtualDirCallbacks VirtualDirCallbacks;
 
-	ithread_mutex_init(&glDeviceListMutex, 0);
-
+	ithread_mutex_init(&glMRMutex, 0);
+	ithread_mutex_init(&glMRFoundMutex, 0);
+	memset(&glMRDevices, 0, sizeof(glMRDevices));
 
 	UpnpSetLogLevel(UPNP_ALL);
 	if (*IPaddress) rc = UpnpInit(IPaddress, *Port);
@@ -861,19 +884,21 @@ int uPNPInitialize(char *IPaddress, unsigned int *Port)
 		LOG_DEBUG("Callbacks registered for VirtualDir", NULL);
 	}
 
-	/* start a timer thread */
-	ithread_create(&glTimerThread, NULL, TimerLoop, NULL);
-	ithread_detach(glTimerThread);
-
+	/* start the main thread */
+	ithread_create(&glMainThread, NULL, &MainThread, NULL);
 	return true;
 }
 
 /*----------------------------------------------------------------------------*/
 int uPNPTerminate(void)
 {
-	ithread_join(glTimerThread, NULL);
+	LOG_DEBUG("terminate main thread ...", NULL);
+	ithread_join(glMainThread, NULL);
+	LOG_DEBUG("un-register libupnp callbacks ...", NULL);
 	UpnpUnRegisterClient(glControlPointHandle);
+	LOG_DEBUG("disable webserver ...", NULL);
 	UpnpEnableWebserver(false);
+	LOG_DEBUG("end libupnp ...", NULL);
 	UpnpFinish();
 
 	return true;
@@ -922,26 +947,29 @@ void SetVolumeCurve(struct sMR *Device)
 	Device->VolumeCurve[i].b = 0x7f;
 }
 
-
 /*----------------------------------------------------------------------------*/
-void AddMRDevice(IXML_Document *DescDoc, const char *location,	int expires)
+static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, const char *location)
 {
 	char *deviceType = NULL;
 	char *friendlyName = NULL;
 	char *URLBase = NULL;
 	char *presURL = NULL;
-	char *UDN = NULL;
-	char UsedPresURL[200] = "";
 	char *ServiceId = NULL;
 	char *EventURL = NULL;
 	char *ControlURL = NULL;
 	char *manufacturer = NULL;
-	struct sMR *Device, *p;
+	int i;
+	u8_t mac_size = 6;
+	pthread_attr_t attr;
 
-	ithread_mutex_lock(&glDeviceListMutex);
+	// read parameters from default then config file
+	memset(Device, 0, sizeof(struct sMR));
+	memcpy(&Device->Config, &glMRConfig, sizeof(tMRConfig));
+	memcpy(&Device->sq_config, &glDeviceParam, sizeof(sq_dev_param_t));
+	LoadMRConfig(glConfigID, UDN, &Device->Config, &Device->sq_config);
+	if (!Device->Config.Enabled) return false;
 
-	/* Read key elements from description document */
-	UDN = XMLGetFirstDocumentItem(DescDoc, "UDN");
+	// Read key elements from description document
 	deviceType = XMLGetFirstDocumentItem(DescDoc, "deviceType");
 	friendlyName = XMLGetFirstDocumentItem(DescDoc, "friendlyName");
 	URLBase = XMLGetFirstDocumentItem(DescDoc, "URLBase");
@@ -950,101 +978,76 @@ void AddMRDevice(IXML_Document *DescDoc, const char *location,	int expires)
 
 	LOG_SDEBUG("UDN:\t%s\nDeviceType:\t%s\nFriendlyName:\t%s", UDN, deviceType, friendlyName);
 
-	if (presURL)
+	if (presURL) {
+		char UsedPresURL[200] = "";
 		UpnpResolveURL((URLBase ? URLBase : location), presURL, UsedPresURL);
-
-	if (strcmp(deviceType, MEDIA_RENDERER) == 0) {
-		LOG_DEBUG("MediaRenderer UDN:\t%s\nDeviceType:\t%s\nFriendlyName:\t%s", UDN, deviceType, friendlyName);
-	}
-
-	// check if this device is already in the list
-	p = glDeviceList;
-	while (p && strcmp(p->UDN, UDN)) p = p->Next;
-
-	// if found, reset timeout no matter what
-	if (p) {
-		p->uPNPTimeOut = false;
-		p->ErrorCount = 0;
-	}
-
-	// create device or refresh parameters if it has gone dark
-	if (!p  && !strstr(manufacturer, cLogitech)) {
-		int i;
-		u8_t mac_size = 6;
-
-		/* Create a new device if needed */
-		Device = (struct sMR *) malloc(sizeof(struct sMR));
-		memset(Device, 0, sizeof(struct sMR));
-		ithread_mutex_init(&Device->Mutex, 0);
-		InitActionList(Device);
-
-		Device->Next = NULL;
-		if (glDeviceList) {
-			struct sMR *p = glDeviceList;
-			while (p->Next) p = p->Next;
-			p->Next = Device;
-		} else glDeviceList = Device;
-
-		LOG_INFO("[%p]: adding renderer (%s)", Device, friendlyName);
-
-		Device->Magic = MAGIC;
-		Device->uPNPTimeOut = false;
-		Device->on = false;
-		Device->SqueezeHandle = 0;
-		Device->ErrorCount = 0;
-		strcpy(Device->UDN, UDN);
-		strcpy(Device->DescDocURL, location);
-		strcpy(Device->FriendlyName, friendlyName);
-		strcpy(Device->Manufacturer, manufacturer);
 		strcpy(Device->PresURL, UsedPresURL);
-		ExtractIP(location, &Device->ip);
+	}
+	else strcpy(Device->PresURL, "");
 
-		memcpy(&Device->Config, &glMRConfig, sizeof(tMRConfig));
-		memcpy(&Device->sq_config, &glDeviceParam, sizeof(sq_dev_param_t));
+	LOG_INFO("[%p]: adding renderer (%s)", Device, friendlyName);
 
-		if (SendARP(*((in_addr_t*) &Device->ip), INADDR_ANY, Device->sq_config.mac, &mac_size)) {
-			LOG_ERROR("[%p]: cannot get mac %s", Device, Device->FriendlyName);
-			// not sure what SendARP does with the MAC if it does not find one
-			memset(Device->sq_config.mac, 0, sizeof(Device->sq_config.mac));
-		}
+	ithread_mutex_init(&Device->Mutex, 0);
+	InitActionList(Device);
+	Device->Magic = MAGIC;
+	Device->uPNPTimeOut = false;
+	Device->on = false;
+	Device->SqueezeHandle = 0;
+	Device->ErrorCount = 0;
+	Device->Running = true;
+	Device->InUse = true;
+	strcpy(Device->UDN, UDN);
+	strcpy(Device->DescDocURL, location);
+	strcpy(Device->FriendlyName, friendlyName);
+	strcpy(Device->Manufacturer, manufacturer);
+	SetVolumeCurve(Device);
 
-		for (i = 0; i < MAX_SRV; i++) strcpy(Device->Service[i].Id, "");
-
-		/* find the AVTransport service */
-		for (i = 0; i < NB_SRV; i++) {
-			if (XMLFindAndParseService(DescDoc, location, cSearchedSRV[i].name, &ServiceId, &EventURL, &ControlURL)) {
-				struct sService *s = &Device->Service[cSearchedSRV[i].idx];
-				LOG_SDEBUG("\tservice [%s] %s, %s, %s", cSearchedSRV[i].name, ServiceId, EventURL, ControlURL);
-
-				strncpy(s->Id, ServiceId, RESOURCE_LENGTH-1);
-				strncpy(s->ControlURL, ControlURL, RESOURCE_LENGTH-1);
-				strncpy(s->EventURL, EventURL, RESOURCE_LENGTH - 1);
-				strcpy(s->Type, cSearchedSRV[i].name);
-				s->TO = 60;
-#ifdef SUBSCRIBE_EVENT
-				UpnpSubscribe(glControlPointHandle, EventURL, &s->TO, s->SID);
-#endif
-			}
-			NFREE(ServiceId);
-			NFREE(EventURL);
-			NFREE(ControlURL);
-    	}
-
-		/* read parameters from config file  */
-		LoadMRConfig(glConfigID, Device->UDN, &Device->Config, &Device->sq_config);
-		SetVolumeCurve(Device);
-
-		GetProtocolInfo(Device->Service[CNX_MGR_IDX].ControlURL, Device->seqN++);
+	 ExtractIP(location, &Device->ip);
+	if (!memcmp(Device->sq_config.mac, "\0\0\0\0\0\0", mac_size) &&
+		SendARP(*((in_addr_t*) &Device->ip), INADDR_ANY, Device->sq_config.mac, &mac_size)) {
+		LOG_ERROR("[%p]: cannot get mac %s", Device, Device->FriendlyName);
+		// not sure what SendARP does with the MAC if it does not find one
+		memset(Device->sq_config.mac, 0, sizeof(Device->sq_config.mac));
 	}
 
-	ithread_mutex_unlock(&glDeviceListMutex);
+
+	LOG_INFO("trace3", NULL);
+	/* find the different services */
+	for (i = 0; i < NB_SRV; i++) {
+		strcpy(Device->Service[i].Id, "");
+		if (XMLFindAndParseService(DescDoc, location, cSearchedSRV[i].name, &ServiceId, &EventURL, &ControlURL)) {
+			struct sService *s = &Device->Service[cSearchedSRV[i].idx];
+			LOG_SDEBUG("\tservice [%s] %s, %s, %s", cSearchedSRV[i].name, ServiceId, EventURL, ControlURL);
+
+			strncpy(s->Id, ServiceId, RESOURCE_LENGTH-1);
+			strncpy(s->ControlURL, ControlURL, RESOURCE_LENGTH-1);
+			strncpy(s->EventURL, EventURL, RESOURCE_LENGTH - 1);
+			strcpy(s->Type, cSearchedSRV[i].name);
+			s->TO = 60;
+		}
+		NFREE(ServiceId);
+		NFREE(EventURL);
+		NFREE(ControlURL);
+	}
+
+	LOG_INFO("trace4", NULL);
+	// send a request for "sink" (will be returned in a callback)
+	GetProtocolInfo(Device->Service[CNX_MGR_IDX].ControlURL, Device->seqN++);
 
 	NFREE(deviceType);
 	NFREE(friendlyName);
-	NFREE(UDN);
 	NFREE(URLBase);
 	NFREE(presURL);
 	NFREE(manufacturer);
+
+	LOG_INFO("trace5", NULL);
+	pthread_attr_init(&attr);
+	pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN + 32*1024);
+	pthread_create(&Device->Thread, &attr, &MRThread, Device);
+	pthread_attr_destroy(&attr);
+	LOG_INFO("trace6", NULL);
+
+	return true;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -1057,15 +1060,16 @@ static bool Start(void)
 
 static bool Stop(void)
 {
-	glTimerOn = false;
+	LOG_DEBUG("flush renderers ...", NULL);
+	FlushMRDevices();
+	LOG_DEBUG("terminate libupnp ...", NULL);
 	uPNPTerminate();
-	FlushMRList();
 	return true;
 }
 
 /*---------------------------------------------------------------------------*/
 static void sighandler(int signum) {
-	glTimerOn = false;
+	glMainRunning = false;
 	sq_stop();
 	Stop();
 
@@ -1270,73 +1274,6 @@ int main(int argc, char *argv[])
 		i = scanf("%s", resp);
 #endif
 
-		if (!strcmp(resp, "play")) {
-			struct sMR *p;
-			char name[128];
-
-			i = scanf("%s", name);
-			if (*name == '*') *name = '\0';
-			ithread_mutex_lock(&glDeviceListMutex);
-			p = glDeviceList;
-			while (p)	{
-				if (strstr(p->FriendlyName, name))
-					AVTPlay (p->Service[AVT_SRV_IDX].ControlURL, NULL);
-				p = p->Next;
-			}
-			ithread_mutex_unlock(&glDeviceListMutex);
-		}
-
-		if (!strcmp(resp, "pause")) {
-			struct sMR *p;
-			char name[128];
-
-			i = scanf("%s", name);
-			if (*name == '*') *name = '\0';
-			ithread_mutex_lock(&glDeviceListMutex);
-			p = glDeviceList;
-			while (p)	{
-				if (strstr(p->FriendlyName, name))
-					AVTBasic (p->Service[AVT_SRV_IDX].ControlURL, "Pause", NULL);
-				p = p->Next;
-			}
-			ithread_mutex_unlock(&glDeviceListMutex);
-		}
-
-		if (!strcmp(resp, "stop")) {
-			struct sMR *p;
-			char name[128];
-
-			i = scanf("%s", name);
-			if (*name == '*') *name = '\0';
-			ithread_mutex_lock(&glDeviceListMutex);
-			p = glDeviceList;
-			while (p)	{
-				if (strstr(p->FriendlyName, name))
-					AVTBasic (p->Service[AVT_SRV_IDX].ControlURL, "Stop", NULL);
-				p = p->Next;
-			}
-			ithread_mutex_unlock(&glDeviceListMutex);
-		}
-
-		if (!strcmp(resp, "set")) {
-			char PlayURI[250];
-			char name[128];
-			struct sMR *p;
-
-			i = scanf("%s", name);
-			if (*name == '*') *name = '\0';
-			ithread_mutex_lock(&glDeviceListMutex);
-			p = glDeviceList;
-			sprintf(PlayURI, "http://%s:%d/%s/__song__.mp3", glIPaddress, glPort, glBaseVDIR);
-
-			while (p)	{
-				if (strstr(p->FriendlyName, name))
-					AVTSetURI (p->Service[AVT_SRV_IDX].ControlURL, PlayURI, NULL, NULL, NULL);
-				p = p->Next;
-			}
-    		ithread_mutex_unlock(&glDeviceListMutex);
-		}
-
 		if (!strcmp(resp, "sdbg"))	{
 			char level[20];
 			i = scanf("%s", level);
@@ -1389,16 +1326,19 @@ int main(int argc, char *argv[])
 	}
 
 	if (glConfigID) ixmlDocument_free(glConfigID);
-	glTimerOn = false;
+	glMainRunning = false;
+	LOG_INFO("stopping squeelite devices ...", NULL);
 	sq_stop();
+	LOG_INFO("stopping uPnP devices ...", NULL);
 	Stop();
+	LOG_INFO("all done", NULL);
 
 	return true;
 }
 
 
 static char usage[] =
- 			VERSION "\n"
+			VERSION "\n"
 		   "See -t for license terms\n"
 		   "Usage: [options]\n"
 		   "  -s <server>[:<port>]\tConnect to specified server, otherwise uses autodiscovery to find server\n"

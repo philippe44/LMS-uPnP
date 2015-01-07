@@ -35,8 +35,8 @@
 /* typedefs */
 /*----------------------------------------------------------------------------*/
 
-#define MAX_SRV			10
 #define MAX_PROTO		128
+#define MAX_RENDERERS	32
 #define	AV_TRANSPORT 	"urn:schemas-upnp-org:service:AVTransport:1"
 #define	RENDERING_CTRL 	"urn:schemas-upnp-org:service:RenderingControl:1"
 #define	CONNECTION_MGR 	"urn:schemas-upnp-org:service:ConnectionManager:1"
@@ -44,7 +44,7 @@
 #define RESOURCE_LENGTH	250
 
 enum eMRstate {STOPPED, PLAYING, PAUSED, TRANSITIONING};
-enum {AVT_SRV_IDX = 0, REND_SRV_IDX, CNX_MGR_IDX};
+enum {AVT_SRV_IDX = 0, REND_SRV_IDX, CNX_MGR_IDX, NB_SRV};
 
 struct sService {
 	char Id			[RESOURCE_LENGTH];
@@ -74,6 +74,7 @@ typedef struct sMRConfig
 
 struct sMR {
 	u32_t Magic;
+	bool  InUse;
 	tMRConfig Config;
 	sq_dev_param_t	sq_config;
 	bool on;
@@ -93,11 +94,12 @@ struct sMR {
 	unsigned	TrackPoll, StatePoll;
 	bool		uPNPTimeOut;
 	int	 SqueezeHandle;
-	struct sService Service[MAX_SRV];
+	struct sService Service[NB_SRV];
 	struct sAction	*Actions;
 	u8_t			*LastAckAction;
 	ithread_mutex_t  ActionsMutex;
 	ithread_mutex_t  Mutex;
+	ithread_t 		 Thread;
 	u8_t		Volume;
 	struct {
 		u32_t	a;
@@ -105,6 +107,7 @@ struct sMR {
 	} VolumeCurve[32];
 	char	*ProtocolCap[MAX_PROTO + 1];
 	u16_t	ErrorCount;
+	bool	Running;
 	struct sMR	*NextSQ;
 	struct sMR	*Next;
 };
@@ -125,16 +128,15 @@ struct sAction	{
 extern UpnpClient_Handle   	glControlPointHandle;
 extern unsigned int 		glPort;
 extern char 				glIPaddress[];
-extern ithread_mutex_t 	  	glDeviceListMutex;
-extern struct sMR 		  	*glDeviceList;
-extern struct sMR		 	*glSQ2MRList;
 extern u8_t		   			glMac[6];
 extern sq_log_level_t		glLog;
 extern tMRConfig			glMRConfig;
 extern sq_dev_param_t		glDeviceParam;
 extern char					glSQServer[SQ_STR_LENGTH];
-extern const int			NB_SRV;
+//extern const int			NB_SRV;
 extern u32_t				gluPNPScanInterval;
+extern ithread_mutex_t		glMRMutex;
+extern struct sMR			glMRDevices[MAX_RENDERERS];
 
 struct sMR 		*mr_File2Device(const char *FileName);
 sq_dev_handle_t	mr_GetSqHandle(struct sMR *Device);

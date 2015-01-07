@@ -33,7 +33,7 @@ int WebGetInfo(const char *FileName, struct File_Info *Info)
 	FILE *Handle;
 #endif
 	struct stat Status;
-	struct sMR *Device;
+	void *Ref;
 
 #ifdef TEST_IDX_BUF
 	if (strstr(FileName, "__song__.mp3")) {
@@ -46,6 +46,7 @@ int WebGetInfo(const char *FileName, struct File_Info *Info)
 #endif
 	{
 		Status.st_ctime = 0;
+#if 0
 		Device = (struct sMR*) sq_urn2MR(FileName);
 		// some uPnP device have a long memory of this ...
 		if (!Device) {
@@ -53,18 +54,19 @@ int WebGetInfo(const char *FileName, struct File_Info *Info)
 			return UPNP_E_INVALID_HANDLE;
 		}
 		Status.st_size = Device->Config.StreamLength;
+#endif
 	}
 
 	Info->is_directory = false;
 	Info->is_readable = true;
 	Info->last_modified = Status.st_ctime;
-	Info->file_length = Status.st_size;
-	Info->content_type = sq_content_type(FileName);
+	// Info->file_length = Status.st_size;
+	Ref = sq_get_info(FileName, &Info->file_length, &Info->content_type);
 #ifdef TEST_IDX_BUF
 	if (!strcmp(Info->content_type, "audio/unknown"))
 		Info->content_type = strdup("audio/mpeg");
 #endif
-	LOG_INFO("[%p]: GetInfo %s %s", Device, FileName, Info->content_type);
+	LOG_INFO("[%p]: GetInfo %s %s", Ref, FileName, Info->content_type);
 
 #if 0
 	{

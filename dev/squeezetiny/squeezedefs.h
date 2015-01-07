@@ -3,7 +3,31 @@
 
 //#define __EARLY_STMd__
 
-#define VERSION "v0.1.4.0"
+#define VERSION "v0.2.0.0a1"
+
+#if EVENTFD
+#include <sys/eventfd.h>
+#define event_event int
+#define event_handle struct pollfd
+#define wake_create(e) e = eventfd(0, 0)
+#define wake_signal(e) eventfd_write(e, 1)
+#define wake_clear(e) eventfd_t val; eventfd_read(e, &val)
+#define wake_close(e) close(e)
+#endif
+
+
+#if WINEVENT
+#define event_event HANDLE
+#define event_handle HANDLE
+#define wake_create(e) e = CreateEvent(NULL, FALSE, FALSE, NULL)
+#define wake_signal(e) SetEvent(e)
+#define wake_close(e) CloseHandle(e)
+#endif
+
+
+
+
+
 
 #if defined(linux)
 #define LINUX     1
@@ -43,8 +67,7 @@
 #include <signal.h>
 
 #define STREAM_THREAD_STACK_SIZE  64 * 1024
-#define DECODE_THREAD_STACK_SIZE 32 * 1024
-//#define DECODE_THREAD_STACK_SIZE 128 * 1024
+#define DECODE_THREAD_STACK_SIZE 128 * 1024
 #define OUTPUT_THREAD_STACK_SIZE  64 * 1024
 #define SLIMPROTO_THREAD_STACK_SIZE  64 * 1024
 #define thread_t pthread_t;
