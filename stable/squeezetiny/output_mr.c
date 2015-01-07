@@ -72,7 +72,8 @@ typedef struct flac_streaminfo_s {
 		u8_t MD5[16];
 } flac_streaminfo_t;
 
-flac_streaminfo_t FLAC_STREAMINFO = {
+
+flac_streaminfo_t FLAC_NORMAL_STREAMINFO = {
 		{ 0x00, 0x10 },
 		{ 0xff, 0xff },
 		{ 0x00, 0x00, 0x00 },
@@ -88,6 +89,26 @@ flac_streaminfo_t FLAC_STREAMINFO = {
 		{ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }
 };
+
+#define FLAC_TOTAL_SAMPLES 0xffffffff
+
+flac_streaminfo_t FLAC_FULL_STREAMINFO = {
+		{ 0x00, 0x10 },
+		{ 0xff, 0xff },
+		{ 0x00, 0x00, 0x00 },
+		{ 0x00, 0x00, 0x00 },
+		{ BYTE_1(FLAC_COMBO(44100, 2, 16)),
+		BYTE_2(FLAC_COMBO(44100, 2, 16)),
+		BYTE_3(FLAC_COMBO(44100, 2, 16)),
+		BYTE_4(FLAC_COMBO(44100, 2, 16)) | BYTE_1(QUAD_BYTE_H(FLAC_TOTAL_SAMPLES)) },
+		{ BYTE_1(QUAD_BYTE_L(FLAC_TOTAL_SAMPLES)),
+		BYTE_2(QUAD_BYTE_L(FLAC_TOTAL_SAMPLES)),
+		BYTE_3(QUAD_BYTE_L(FLAC_TOTAL_SAMPLES)),
+		BYTE_4(QUAD_BYTE_L(FLAC_TOTAL_SAMPLES)) },
+		{ 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa,
+		0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa }
+};
+
 
 static u8_t flac_vorbis_block[] = { 0x84,0x00,0x00,0x28,0x20,0x00,0x00,0x00,0x72,
 									0x65,0x66,0x65,0x72,0x65,0x6E,0x63,0x65,0x20,
@@ -194,10 +215,8 @@ static int _mr_write_frames(frames_t out_frames, bool silence, s32_t gainL, s32_
 		   }
 	)
 
-#if 0
 	_scale_and_pack_frames(ctx->buf + ctx->buffill * ctx->bytes_per_frame, (s32_t *)(void *)obuf, out_frames, gainL, gainR, ctx->output.format);
 	ctx->buffill += out_frames;
-#endif
 
 	return (int)out_frames;
 }
@@ -277,12 +296,14 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 				sprintf(buf, "%s/%s", ctx->config.buffer_dir, out->buf_name);
 				out->write_file = fopen(buf, "wb");
 				out->write_count = out->write_count_t = 0;
+				LOG_ERROR("[%p]: write file not opened %s", ctx, buf);
 			}
 
 			// re-size buffer if needed
 			if (ctx->config.buffer_limit != -1 && out->write_count > (u32_t) ctx->config.buffer_limit) {
 				u8_t *buf;
 				u32_t n;
+				int rc;
 				struct stat Status;
 
 				// LMS will need to wait for the player to consume data ...
@@ -309,12 +330,12 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 				fflush(out->write_file);
 
 				fseek(out->read_file, out->read_count, SEEK_SET);
-				fresize(out->write_file, out->write_count);
+				rc = fresize(out->write_file, out->write_count);
 				fstat(fileno(out->write_file), &Status);
-				LOG_INFO("[%p]: re-sizing w:%d r:%d rp:%d ws:%d", ctx,
+				LOG_INFO("[%p]: re-sizing w:%d r:%d rp:%d ws:%d rc:%d", ctx,
 						  out->write_count + ctx->config.buffer_limit /4,
 						  out->read_count + ctx->config.buffer_limit /4,
-						  ftell(out->read_file), Status.st_size);
+						  ftell(out->read_file), Status.st_size, rc );
 				UNLOCK_O;
 			}
 
@@ -323,7 +344,7 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 				// flac case
 				if (!strcmp(out->ext, "flac")) {
 					if (space >= FLAC_RECV_MIN) {
-						if (strncmp(_buf_readp(ctx->streambuf), "fLaC", 4)) {
+						if (strncmp(_buf_readp(ctx->streambuf), "fLaC", 4) && ctx->config.flac_header != FLAC_NO_HEADER) {
 							flac_frame_t *frame;
 							flac_streaminfo_t *streaminfo;
 							u32_t rate;
@@ -340,7 +361,10 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 								sample_size = FLAC_CODED_SAMPLE_SIZE[FLAC_GET_FRAME_SAMPLE_SIZE(frame->channels_sample_size)];
 								channels = FLAC_CODED_CHANNELS[FLAC_GET_FRAME_CHANNEL(frame->channels_sample_size)];
 								streaminfo = malloc(sizeof(flac_streaminfo_t));
-								memcpy(streaminfo, &FLAC_STREAMINFO, sizeof(flac_streaminfo_t));
+								if (ctx->config.flac_header == FLAC_NORMAL_HEADER)
+									memcpy(streaminfo, &FLAC_NORMAL_STREAMINFO, sizeof(flac_streaminfo_t));
+								else
+									memcpy(streaminfo, &FLAC_FULL_STREAMINFO, sizeof(flac_streaminfo_t));
 
 								if (!FLAC_GET_BLOCK_STRATEGY(frame->tag)) {
 									block_size = flac_block_size(FLAC_GET_BLOCK_SIZE(frame->bsize_rate));
@@ -445,9 +469,14 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 		// all done, time to close the file
 		if (out->write_file && ctx->stream.state <= DISCONNECT && (!_buf_used(ctx->streambuf) || (out->sample_size == 24 && _buf_used(ctx->streambuf) < 12)))
 		{
-			LOG_INFO("[%p] wrote total %d", ctx, out->write_count_t);
+			LOG_INFO("[%p] wrote total %Ld", ctx, out->write_count_t);
 			fclose(out->write_file);
 			out->write_file = NULL;
+#ifdef __EARLY_STMd__
+			ctx->read_ended = true;
+			wake_controller(ctx);
+#endif
+
 			UNLOCK_S;
 			buf_flush(ctx->streambuf);
 		}
@@ -494,10 +523,10 @@ void output_mr_thread_init(unsigned output_buf_size, char *params, unsigned rate
 	pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN + OUTPUT_THREAD_STACK_SIZE);
 	switch (ctx->config.mode) {
 	case SQ_FULL:
-			pthread_create(&ctx->mr_thread, &attr, &output_thread, ctx);
+			pthread_create(&ctx->mr_thread, &attr, (void *(*)(void*)) &output_thread, ctx);
 			break;
 	case SQ_STREAM:
-			pthread_create(&ctx->mr_thread, &attr, &output_thru_thread, ctx);
+			pthread_create(&ctx->mr_thread, &attr, (void *(*)(void*)) &output_thru_thread, ctx);
 			break;
 	default:
 		break;
@@ -522,9 +551,9 @@ void output_mr_thread_init(unsigned output_buf_size, char *params, unsigned rate
 void output_mr_close(struct thread_ctx_s *ctx) {
 	LOG_INFO("[%p] close media renderer", ctx);
 
-	LOCK_O;
+	LOCK_S;LOCK_O;
 	ctx->mr_running = false;
-	UNLOCK_O;
+	UNLOCK_S;UNLOCK_O;
 
 #if 0
 	free(ctx->buf);
@@ -540,7 +569,7 @@ void output_mr_close(struct thread_ctx_s *ctx) {
 void output_flush(struct thread_ctx_s *ctx) {
 	int i;
 
-	LOG_INFO("[%p] flush output buffer", ctx);
+	LOG_DEBUG("[%p]: flush output buffer", ctx);
 
 	LOCK_S;LOCK_O;
 	for (i = 0; i < 2; i++) {

@@ -1,8 +1,10 @@
 # Cross compile support - create a Makefile which defines these three variables and then includes this Makefile...
+#CC = arm-linux-gnueabi-gcc
 CFLAGS  ?= -Wall -fPIC -ggdb -O2 $(OPTS) $(INCLUDE) $(DEFINES)
-LDFLAGS ?= -lpthread -lm -lrt -L. -s
+LDFLAGS ?= -lpthread -lm -lrt -L. 
 # for LD debug -s
 EXECUTABLE ?= squeeze2upnp-x86
+EXECUTABLE_STATIC ?= squeeze2upnp-x86-static
 
 # passing one or more of these in $(OPTS) enables optional feature inclusion
 #OPT_DSD     = -DDSD
@@ -17,12 +19,13 @@ build_dir	= ./bin
 
 LIBRARY = libupnp.a libixml.a libthreadutil.a
 
-DEFINES = -DNO_CODEC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILE_SOURCE
+DEFINES = -DNO_CODEC -D_FILE_OFFSET_BITS=64 
+#-D_LARGE_FILE_SOURCE
 
-INCLUDE = -I../libupnp/1.6.19/threadutil/inc\
-          -I../libupnp/1.6.19/ixml/inc\
-          -I../libupnp/1.6.19/upnp/inc\
-          -I../libupnp/1.6.19/build/inc\
+INCLUDE = -I../../libupnp/1.6.19/threadutil/inc\
+          -I../../libupnp/1.6.19/ixml/inc\
+          -I../../libupnp/1.6.19/upnp/inc\
+          -I../../libupnp/1.6.19/build/inc\
           -I$(squeezetiny_dir)\
           -I$(squeezeupnp_dir)/inc
 
@@ -76,15 +79,20 @@ endif
 
 OBJECTS = $(SOURCES:.c=.o)
 
-all: $(EXECUTABLE)
+all: $(EXECUTABLE) $(EXECUTABLE_STATIC)
 
 $(EXECUTABLE): $(OBJECTS)
 	$(CC) $(OBJECTS) $(LIBRARY) $(LDFLAGS) -o $(build_dir)/$@
+
+$(EXECUTABLE_STATIC): $(OBJECTS)
+	$(CC) $(OBJECTS) $(LIBRARY) $(LDFLAGS) -static -o $(build_dir)/$@
 
 $(OBJECTS): $(DEPS)
 
 .c.o:
 	$(CC) $(CFLAGS) $(CPPFLAGS) $< -c -o $@
 
+
 clean:
 	rm -f $(OBJECTS) $(EXECUTABLE)
+

@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
+#include <ctype.h>
 
 #if defined(WIN32) || defined(WIN)
 #include <winsock2.h>
@@ -93,12 +94,12 @@ char* itoa(int value, char* result, int base) {
 #endif
 
 /* Converts a hex character to its integer value */
-char from_hex(char ch) {
+static char from_hex(char ch) {
   return isdigit(ch) ? ch - '0' : tolower(ch) - 'a' + 10;
 }
 
 /* Converts an integer value to its hex character*/
-char to_hex(char code) {
+static char to_hex(char code) {
   static char hex[] = "0123456789abcdef";
   return hex[code & 15];
 }
@@ -109,11 +110,12 @@ char *url_encode(char *str) {
   char *pstr = str, *buf = malloc(strlen(str) * 3 + 1), *pbuf = buf;
   while (*pstr) {
     if (isalnum(*pstr) || *pstr == '-' || *pstr == '_' || *pstr == '.' || *pstr == '~')
-      *pbuf++ = *pstr;
-    else if (*pstr == ' ')
-      *pbuf++ = '+';
-    else
-      *pbuf++ = '%', *pbuf++ = to_hex(*pstr >> 4), *pbuf++ = to_hex(*pstr & 15);
+	  *pbuf++ = *pstr;
+	else if (*pstr == ' ') {
+	  *pbuf++ = '+';
+	}
+	else
+	  *pbuf++ = '%', *pbuf++ = to_hex(*pstr >> 4), *pbuf++ = to_hex(*pstr & 15);
     pstr++;
   }
   *pbuf = '\0';
@@ -125,18 +127,46 @@ char *url_encode(char *str) {
 char *url_decode(char *str) {
   char *pstr = str, *buf = malloc(strlen(str) + 1), *pbuf = buf;
   while (*pstr) {
-    if (*pstr == '%') {
+	if (*pstr == '%') {
       if (pstr[1] && pstr[2]) {
         *pbuf++ = from_hex(pstr[1]) << 4 | from_hex(pstr[2]);
         pstr += 2;
-      }
-    } else if (*pstr == '+') {
+	  }
+	} else if (*pstr == '+') {
       *pbuf++ = ' ';
     } else {
       *pbuf++ = *pstr;
     }
-    pstr++;
+	pstr++;
   }
   *pbuf = '\0';
   return buf;
 }
+
+#if LINUX || OSX || FREEBSD
+/*---------------------------------------------------------------------------*/
+char *strlwr(char *str)
+{
+ char *p = str;
+ while (*p) {
+	*p = tolower(*p);
+	p++;
+ }
+ return str;
+}
+#endif
+
+/*---------------------------------------------------------------------------*/
+bool stristr(char *s1, char *s2)
+{
+ char *s1_lwr = strlwr(strdup(s1));
+ char *s2_lwr = strlwr(strdup(s2));
+ char *p = strstr(s1_lwr, s2_lwr);
+
+ free(s1_lwr);
+ free(s2_lwr);
+ return p ? true : false;
+}
+
+
+

@@ -83,11 +83,7 @@ bool _SetContentType(char *Cap[], sq_seturi_t *uri, int n, ...)
 			}
 			// if the proposed format accepts any rate & channel, give it a try
 			if (!strstr(*p, "channels") && !strstr(*p, "rate")) {
-#if 0
-				strcpy(uri->content_type, fmt);
-#else
 				sprintf(uri->content_type, "%s;channels=%d;rate=%d", fmt, uri->channels, uri->sample_rate);
-#endif
 				strcpy(uri->proto_info, *p);
 				break;
 			}
@@ -134,8 +130,6 @@ bool SetContentType(char *Cap[], sq_seturi_t *uri)
 		strcpy(uri->proto_info, "");
 		return false;
 	}
-
-	return true;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -161,7 +155,7 @@ void FlushActionList(struct sMR *Device)
 }
 
 /*----------------------------------------------------------------------------*/
-void QueueAction(sq_dev_handle_t handle, struct sMR *Device, sq_action_t action, int cookie, void *param, bool ordered)
+void QueueAction(sq_dev_handle_t handle, struct sMR *Device, sq_action_t action, u8_t *cookie, void *param, bool ordered)
 {
 	struct sAction *Action = malloc(sizeof(struct sAction));
 	struct sAction *p;
@@ -177,7 +171,7 @@ void FlushActionList(struct sMR *Device)
 
 	switch(action) {
 	case SQ_VOLUME:
-		Action->Param.Volume = *((double*) param);
+		Action->Param.Volume = *((u32_t*) param);
 		break;
 	case SQ_SEEK:
 		Action->Param.Time = *((u32_t*) param);
@@ -230,19 +224,29 @@ void FlushMRList(void)
 
 	p = glDeviceList;
 	while (p) {
-		int i = 0;
 		struct sMR *n = p->Next;
-		FlushActionList(p);
-		NFREE(p->CurrentURI);
-		NFREE(p->NextURI);
-		while (p->ProtocolCap[i] && i < MAX_PROTO) NFREE(p->ProtocolCap[i++]);
-        free(p);
+		DeleteMR(p);
 		p = n;
 	}
 
 	glDeviceList = glSQ2MRList = NULL;
 
 	ithread_mutex_unlock(&glDeviceListMutex);
+}
+
+/*----------------------------------------------------------------------------*/
+void DeleteMR(struct sMR *p)
+{
+	int i = 0;
+
+	FlushActionList(p);
+	NFREE(p->CurrentURI);
+	NFREE(p->NextURI);
+	while (p->ProtocolCap[i] && i < MAX_PROTO) {
+		NFREE(p->ProtocolCap[i]);
+		i++;
+	}
+	NFREE(p);
 }
 
 
@@ -288,7 +292,7 @@ void ParseProtocolInfo(struct sMR *Device, char *Info)
 	} while (i < MAX_PROTO && n < size);
 
 	// remove trailing "*" as we WILL add DLNA-related info, so some options to come
-	for (i = 0; p = Device->ProtocolCap[i]; i++)
+	for (i = 0; (p = Device->ProtocolCap[i]); i++)
 		if (p[strlen(p) - 1] == '*') p[strlen(p) - 1] = '\0';
 }
 
@@ -299,8 +303,7 @@ void SaveConfig(char *name)
 {
 	struct sMR *p;
 	IXML_Document *doc = ixmlDocument_createDocument();
-	IXML_Element  *elm, *common;
-	IXML_Node	 *node, *root;
+	IXML_Node	 *root, *common;
 	char *s;
 	FILE *file;
 
@@ -309,7 +312,8 @@ void SaveConfig(char *name)
 
 	XMLAddNode(doc, root, "server", glSQServer);
 	XMLAddNode(doc, root, "slimproto_stream_port", "%d", gl_slimproto_stream_port);
-	XMLAddNode(doc, root, "base_mac", "%02x:%02x:%02x:%02x:%02x:%02x", glMac[0], glMac[1], glMac[2], glMac[3], glMac[4], glMac[5]);
+	XMLAddNode(doc, root, "base_mac", "%02x:%02x:%02x:%02x:%02x:%02x", glMac[0],
+				glMac[1], glMac[2], glMac[3], glMac[4], glMac[5]);
 	XMLAddNode(doc, root, "slimproto_log", level2debug(glLog.slimproto));
 	XMLAddNode(doc, root, "stream_log", level2debug(glLog.stream));
 	XMLAddNode(doc, root, "output_log", level2debug(glLog.output));
@@ -318,6 +322,7 @@ void SaveConfig(char *name)
 	XMLAddNode(doc, root, "upnp_log", level2debug(glLog.upnp));
 	XMLAddNode(doc, root, "main_log",level2debug(glLog.main));
 	XMLAddNode(doc, root, "sq2mr_log", level2debug(glLog.sq2mr));
+	XMLAddNode(doc, root, "upnp_scan_interval", "%d", (u32_t) gluPNPScanInterval);
 
 	common = XMLAddNode(doc, root, "common", NULL);
 	XMLAddNode(doc, common, "streambuf_size", "%d", (u32_t) glDeviceParam.stream_buf_size);
@@ -329,13 +334,14 @@ void SaveConfig(char *name)
 	XMLAddNode(doc, common, "max_GET_bytes", "%d", (s32_t) glDeviceParam.max_get_bytes);
 	XMLAddNode(doc, common, "enabled", "%d", (int) glMRConfig.Enabled);
 	XMLAddNode(doc, common, "process_mode", "%d", (int) glMRConfig.ProcessMode);
-	XMLAddNode(doc, common, "can_pause", "%d", (int) glMRConfig.CanPause);
 	XMLAddNode(doc, common, "codecs", glDeviceParam.codecs);
 	XMLAddNode(doc, common, "sample_rate", "%d", (int) glDeviceParam.sample_rate);
 	XMLAddNode(doc, common, "L24_format", "%d", (int) glDeviceParam.L24_format);
+	XMLAddNode(doc, common, "flac_header", "%d", (int) glDeviceParam.flac_header);
 	XMLAddNode(doc, common, "seek_after_pause", "%d", (int) glMRConfig.SeekAfterPause);
 	XMLAddNode(doc, common, "force_volume", "%d", (int) glMRConfig.ForceVolume);
 	XMLAddNode(doc, common, "volume_on_play", "%d", (int) glMRConfig.VolumeOnPlay);
+	XMLAddNode(doc, common, "send_metadata", "%d", (int) glMRConfig.SendMetaData);
 	XMLAddNode(doc, common, "volume_curve", glMRConfig.VolumeCurve);
 	XMLAddNode(doc, common, "accept_nexturi", "%d", (int) glMRConfig.AcceptNextURI);
 
@@ -348,6 +354,8 @@ void SaveConfig(char *name)
 		dev_node = XMLAddNode(doc, root, "device", NULL);
 		XMLAddNode(doc, dev_node, "udn", p->UDN);
 		XMLAddNode(doc, dev_node, "name", p->FriendlyName);
+		XMLAddNode(doc, dev_node, "mac", "%02x:%02x:%02x:%02x:%02x:%02x", p->sq_config.mac[0],
+					p->sq_config.mac[1], p->sq_config.mac[2], p->sq_config.mac[3], p->sq_config.mac[4], p->sq_config.mac[5]);
 		XMLAddNode(doc, dev_node, "enabled", "%d", (int) p->Config.Enabled);
 
 		if (p->sq_config.stream_buf_size != glDeviceParam.stream_buf_size)
@@ -366,14 +374,14 @@ void SaveConfig(char *name)
 			XMLAddNode(doc, dev_node, "max_GET_size", "%d", (s32_t) p->sq_config.max_get_bytes);
 		if (p->Config.ProcessMode != glMRConfig.ProcessMode)
 			XMLAddNode(doc, dev_node, "process_mode", "%d", (int) p->Config.ProcessMode);
-		if (p->Config.CanPause != glMRConfig.CanPause)
-			XMLAddNode(doc, dev_node, "can_pause", "%d", (int) p->Config.CanPause);
 		if (p->Config.SeekAfterPause != glMRConfig.SeekAfterPause)
 			XMLAddNode(doc, dev_node, "seek_after_pause", "%d", (int) p->Config.SeekAfterPause);
 		if (p->Config.ForceVolume != glMRConfig.ForceVolume)
 			XMLAddNode(doc, dev_node, "force_volume", "%d", (int) p->Config.ForceVolume);
 		if (p->Config.VolumeOnPlay != glMRConfig.VolumeOnPlay)
 			XMLAddNode(doc, dev_node, "volume_on_play", "%d", (int) p->Config.VolumeOnPlay);
+		if (p->Config.SendMetaData != glMRConfig.SendMetaData)
+			XMLAddNode(doc, dev_node, "send_metadata", "%d", (int) p->Config.SendMetaData);
 		if (strcmp(p->Config.VolumeCurve, glMRConfig.VolumeCurve))
 			XMLAddNode(doc, dev_node, "volume_curve", p->Config.VolumeCurve);
 		if (p->Config.AcceptNextURI != glMRConfig.AcceptNextURI)
@@ -384,6 +392,8 @@ void SaveConfig(char *name)
 			XMLAddNode(doc, dev_node, "sample_rate", "%d", (int) p->sq_config.sample_rate);
 		if (p->sq_config.L24_format != glDeviceParam.L24_format)
 			XMLAddNode(doc, dev_node, "L24_format", "%d", (int) p->sq_config.L24_format);
+		if (p->sq_config.flac_header != glDeviceParam.flac_header)
+			XMLAddNode(doc, dev_node, "flac_header", "%d", (int) p->sq_config.flac_header);
 
 		p = p->Next;
 	}
@@ -413,25 +423,28 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 		Conf->ProcessMode = atol(val);
 		sq_conf->mode = Conf->ProcessMode;
 	}
-	if (!strcmp(name, "can_pause")) {
-		Conf->CanPause = atol(val);
-		sq_conf->can_pause = Conf->CanPause;
-	}
 	if (!strcmp(name, "codecs")) strcpy(sq_conf->codecs, val);
 	if (!strcmp(name, "sample_rate"))sq_conf->sample_rate = atol(val);
 	if (!strcmp(name, "L24_format"))sq_conf->L24_format = atol(val);
-	if (!strcmp(name, "seek_after_pause")) Conf->SeekAfterPause = atol(val);
+	if (!strcmp(name, "flac_header"))sq_conf->flac_header = atol(val);
+	if (!strcmp(name, "seek_after_pause")) {
+		Conf->SeekAfterPause = atol(val);
+		sq_conf->seek_after_pause = Conf->SeekAfterPause;
+	}
 	if (!strcmp(name, "force_volume")) Conf->ForceVolume = atol(val);
 	if (!strcmp(name, "volume_on_play")) Conf->VolumeOnPlay = atol(val);
 	if (!strcmp(name, "volume_curve")) strcpy(Conf->VolumeCurve, val);
 	if (!strcmp(name, "accept_nexturi")) Conf->AcceptNextURI = atol(val);
+	if (!strcmp(name, "send_metadata")) Conf->SendMetaData = atol(val);
 	if (!strcmp(name, "name")) strcpy(Conf->Name, val);
+	if (!strcmp(name, "mac"))  sscanf(val,"%2hhx:%2hhx:%2hhx:%2hhx:%2hhx:%2hhx",
+								   &sq_conf->mac[0],&sq_conf->mac[1],&sq_conf->mac[2],
+								   &sq_conf->mac[3],&sq_conf->mac[4],&sq_conf->mac[5]);
 }
 
 /*----------------------------------------------------------------------------*/
 static void LoadGlobalItem(char *name, char *val)
 {
-	int i;
 	if (!val) return;
 
 	if (!strcmp(name, "server")) strcpy(glSQServer, val);
@@ -444,13 +457,9 @@ static void LoadGlobalItem(char *name, char *val)
 	if (!strcmp(name, "upnp_log")) glLog.upnp = debug2level(val);
 	if (!strcmp(name, "main_log")) glLog.main = debug2level(val);
 	if (!strcmp(name, "sq2mr_log")) glLog.sq2mr = debug2level(val);
-	if (!strcmp(name, "base_mac")) {
-		char *p = strtok(val, ":");
-		for (i = 0; i < 5; i++) {
-			glMac[i] = atol(p) & 0xff;
-			p = strtok(NULL, ":");
-		}
-	}
+	if (!strcmp(name, "base_mac"))  sscanf(val,"%2hhx:%2hhx:%2hhx:%2hhx:%2hhx:%2hhx",
+								   &glMac[0],&glMac[1],&glMac[2],&glMac[3],&glMac[4],&glMac[5]);
+	if (!strcmp(name, "upnp_scan_interval")) gluPNPScanInterval = atol(val);
  }
 
 
@@ -465,7 +474,7 @@ void *FindMRConfig(void *ref, char *UDN)
 	unsigned i;
 
 	elm = ixmlDocument_getElementById(doc, "squeeze2upnp");
-	l1_node_list = ixmlDocument_getElementsByTagName(elm, "udn");
+	l1_node_list = ixmlDocument_getElementsByTagName((IXML_Document*) elm, "udn");
 	for (i = 0; i < ixmlNodeList_length(l1_node_list); i++) {
 		IXML_Node *l1_node, *l1_1_node;
 		l1_node = ixmlNodeList_item(l1_node_list, i);
@@ -520,7 +529,7 @@ void *LoadConfig(char *name, tMRConfig *Conf, sq_dev_param_t *sq_conf)
 		unsigned i;
 		char *n, *v;
 		IXML_NodeList *l1_node_list;
-		l1_node_list = ixmlNode_getChildNodes(elm);
+		l1_node_list = ixmlNode_getChildNodes((IXML_Node*) elm);
 		for (i = 0; i < ixmlNodeList_length(l1_node_list); i++) {
 			IXML_Node *l1_node, *l1_1_node;
 			l1_node = ixmlNodeList_item(l1_node_list, i);
@@ -532,12 +541,12 @@ void *LoadConfig(char *name, tMRConfig *Conf, sq_dev_param_t *sq_conf)
 		if (l1_node_list) ixmlNodeList_free(l1_node_list);
 	}
 
-	elm = ixmlDocument_getElementById(elm, "common");
+	elm = ixmlDocument_getElementById((IXML_Document	*)elm, "common");
 	if (elm) {
 		char *n, *v;
 		IXML_NodeList *l1_node_list;
 		unsigned i;
-		l1_node_list = ixmlNode_getChildNodes(elm);
+		l1_node_list = ixmlNode_getChildNodes((IXML_Node*) elm);
 		for (i = 0; i < ixmlNodeList_length(l1_node_list); i++) {
 			IXML_Node *l1_node, *l1_1_node;
 			l1_node = ixmlNodeList_item(l1_node_list, i);

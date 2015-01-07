@@ -1,64 +1,126 @@
-S = <stream_length> 	-1, -3, <value> = some large number > 1000000000
-A = <accept_nexturi>	0, 1
-C = <can_pause>		0, 1
-F = <force_volume>	0, 1
-L = <L24_format>	0, 1
-T = <seek_after_pause>	0, 1
+Assumed default parameters
 
-P = pause works ?
-R = repositioning works ?
-
-
-
-Compatible		codecs		S	A	C	F	T	P	R	L
-														
-Sonos			mp3,flc		<value>	1	1	1	0	Y	Y	N/A
-Marantz NR1603		pcm,mp3,flc	-3	1	1	1	0	Y	Y	N/A
-xbmc			pcm,mp3,flc	-3	1	1	1	0	Y	Y	N/A
-M1 Cl1c			pcm,mp3,flc	-3	1	1	1	0	Y(*)	Y(*)	1
-Marantz CR603 		pcm, mp3, flc	-3	0	1	1	0	Y	Y	?
-Naim Uniti2 		pcm,mp3,flc 	-3 	1 	1 	1 	?	Y 	Y	?
-Revo SuperConnect	pcm,flc,mp3	<value> 0	1	0/1	1	Y	Y	?
-Windows Media Player	mp3		-3	0	1	0/1	1	Y	Y	N/A
-XBoxOne			mp3,pcm		<value>	0(*)	1	0/1	1	Y	Y	N/A
-foobar2000		flc,mp3,pcm	-3	1	1	0/1	0	Y	Y	N/A
+<stream_length>-3</stream_length>
+<codecs>mp3</codecs>
+<sample_rate>48000</sample_rate>
+<L24_format>1</L24_format>
+<flac_header>1</flac_header>
+<seek_after_pause>0</seek_after_pause>
+<force_volume>0</force_volume>
+<volume_on_play>1</volume_on_play>
+<accept_nexturi>1</accept_nexturi>
 
 
+***********************************************************************
+SONOS: all models
+***********************************************************************
 
-Somehow			codecs		S	A	C	F	P	R
+<stream_length>1000000000</stream_length>
+<codecs>pcm,flc,mp3</codecs>
 
-JBL OnBeat		mp3,flc		-3	1	1	1	N	Y
-(device stuk in upnp "transitioning" state. same with other controllers)
+ - With <buffer_size> set, pause/unpause will not work properly
+ - <sample_rate> is limited to 48000
+ - <flac_header> can be 0,1 or 2
 
-Not compatible
+
+***********************************************************************
+Marantz: NR1603
+***********************************************************************
+
+<codecs>pcm,flc,mp3</codecs>
+
+ - <flac_header> cannot be 0
 
 
-Comments
+***********************************************************************
+Marantz: CR603
+***********************************************************************
 
-Sonos:
- - it <buffer_size> is used, then pause/unpause will not work properly. This is
- due to the fact that Sonos does not accept -3 for <stream_length> and tries to
- re-read a track from the beginning on unpause, and this fails once the buffer has
- been shrunk once (see user guide)
- - <stream_length> at -3 does not work with mp3 files.
+<codecs>pcm,flc,mp3</codecs>
+<accept_nexturi>0</accept_nexturi>
 
+
+***********************************************************************
 M1Cl1c:
+***********************************************************************
+
+<codecs>pcm,flc,mp3</codecs>
+<sample_rate>192000</sample_rate>
+
  - Repositionning with flac does not work unless the flac-to-flac transcoding is
-changed in LMS (see QUICKSTART)
+changed in LMS (see user guide)
 
-Revo SUperConnect:
+
+***********************************************************************
+Revo: SuperConnect:
+***********************************************************************
+
+<stream_length>1000000000</stream_length>
+<codecs>pcm,flc,mp3</codecs>
+
  - <stream_length> at -3 prevents proper pause as the Revo thinks that it is 
-receiving a live stream and thus refuses to pause it (despite DLNA parameters
-set to allow it to do so)
+receiving a live stream and thus refuses to pause it
+ - Revo does not display metadata so <send_metadata> can be set to 0
 
+
+***********************************************************************
+Naim : Uniti2
+***********************************************************************
+
+<codecs>pcm,flc,mp3</codecs>
+<flac_header>2</flac_header>
+<seek_after_pause>1</seek_after_pause>
+
+ - pause on Qobuz live stream restart from the beginning
+
+
+***********************************************************************
+JBL : OnBeat
+***********************************************************************
+<codecs>pcm,mp3</codecs>
+
+ - Device stuck in "transitioning" state during all play, so no pause and no playlist
+only can one track at a time
+
+
+
+***********************************************************************
+xbmc:
+***********************************************************************
+
+<codecs>pcm,flc,mp3</codecs>
+
+ - <flac_header> must be 1 or 2
+
+
+***********************************************************************
+foobar2000:
+***********************************************************************
+
+<codecs>pcm,flc,mp3</codecs>
+
+ - <flac_header> must be 1 or 2
+
+
+***********************************************************************
 Windows Media Player:
+***********************************************************************
+
+<accept_nexturi>0</accept_nexturi>
+
+ - "authorize remote control" must be enabled in GUI so that WMP appears as a UPNP player
  - WMP wants to acquire the whole stream before it starts playing - this takes a while
-(similar comments as underneath ... compliance to standards)
  - pcm, although accepted by WMP, does not play
 
-xBoxOne
+
+***********************************************************************
+xBoxOne:
+***********************************************************************
+<codecs>pcm,mp3</codecs>
+<stream_length>-2</stream_length>
+
  - Although the XBoxOne accept the upnp command SetNextAVTransportURI, it does not 
 automatically move to that URI once the current URI finishes ... (it wants a "Next"
 command). Microsoft, Microsoft I guess compliance to standards is good only for the 
-others
+others. It works on version >= 1.4.0 as the "next" is an additional workaround
 

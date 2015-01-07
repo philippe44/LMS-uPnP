@@ -66,6 +66,18 @@ int WebGetInfo(const char *FileName, struct File_Info *Info)
 #endif
 	LOG_INFO("[%p]: GetInfo %s %s", Device, FileName, Info->content_type);
 
+#if 0
+	{
+	struct Extra_Headers *Headers = Info->extra_headers;
+	while (Headers->name) {
+		if (strstr(Headers->name, "Icy")) {
+			Headers->resp = strdup("icy:blabla");
+		}
+		Headers++;
+	}
+	}
+#endif
+
 	// Some clients try to open 2 sessions : do not allow that
 	if (sq_isopen(FileName)) return -1;
 	else return UPNP_E_SUCCESS;
@@ -122,7 +134,7 @@ int WebSeek(UpnpWebFileHandle FileHandle, off_t offset, int origin)
 	rc = sq_seek(FileHandle, offset, origin);
 	if (rc == -1) rc = fseek(FileHandle, offset, origin);
 
-	LOG_INFO("[%p]: seek %d, %d (rc:%d)", FileHandle, offset, origin, rc);
+	LOG_DEBUG("[%p]: seek %d, %d (rc:%d)", FileHandle, offset, origin, rc);
 	return rc;
 }
 

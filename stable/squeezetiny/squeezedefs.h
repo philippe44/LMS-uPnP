@@ -1,7 +1,9 @@
 #ifndef __SQUEEZEDEFS_H
-#define __SQUEEZEDEFS_H                                   b
+#define __SQUEEZEDEFS_H
 
-#define VERSION "v0.1.3.3"
+//#define __EARLY_STMd__
+
+#define VERSION "v0.1.4.0"
 
 #if defined(linux)
 #define LINUX     1
@@ -41,7 +43,8 @@
 #include <signal.h>
 
 #define STREAM_THREAD_STACK_SIZE  64 * 1024
-#define DECODE_THREAD_STACK_SIZE 128 * 1024
+#define DECODE_THREAD_STACK_SIZE 32 * 1024
+//#define DECODE_THREAD_STACK_SIZE 128 * 1024
 #define OUTPUT_THREAD_STACK_SIZE  64 * 1024
 #define SLIMPROTO_THREAD_STACK_SIZE  64 * 1024
 #define thread_t pthread_t;
@@ -66,6 +69,7 @@ typedef int64_t   s64_t;
 #define thread_type pthread_t
 int SendARP(in_addr_t src, in_addr_t dst, u8_t mac[], u8_t *size);
 #define fresize(f,s) ftruncate(fileno(f), s)
+char *strlwr(char *str);
 
 #endif
 

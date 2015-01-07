@@ -31,6 +31,7 @@
 
 
 int WebGetInfo(const char *FileName, struct File_Info *Info);
+int WebSetExtraHeaders(const char *FileName, struct Extra_Headers *Headers);
 UpnpWebFileHandle WebOpen(const char *FileName, enum UpnpOpenFileMode Mode);
 int WebRead(UpnpWebFileHandle FileHandle, char *buf, size_t buflen);
 int WebWrite(UpnpWebFileHandle FileHandle, char *buf, size_t buflen);

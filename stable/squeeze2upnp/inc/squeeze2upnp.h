@@ -60,14 +60,15 @@ typedef struct sMRConfig
 	int			StreamLength;		// length of the "fake" file
 	sq_mode_t	ProcessMode;   		// DIRECT, STREAM, FULL
 	bool		NoZeroVolume;		// prevent volume to be set at 0 between tracks
-	bool		SeekAfterPause;		// ask for a SEEK after unpause ?
+	int			SeekAfterPause;		// ask for a SEEK after unpause ?
 	bool		CanPause;			// pause does not work becase seek does not
 	u16_t		VolumeCorrector;	// not yet
 	bool		Enabled;			//
 	char		Name[SQ_STR_LENGTH];
 	bool		ForceVolume;		// force volume after each state detection
-	bool 		VolumeOnPlay;		// change only volume when playing has started
+	int 		VolumeOnPlay;		// change only volume when playing has started or disable volume commands
 	bool		AcceptNextURI;
+	bool		SendMetaData;
 	char 		VolumeCurve[SQ_STR_LENGTH];
 } tMRConfig;
 
@@ -82,25 +83,19 @@ struct sMR {
 	char PresURL		[RESOURCE_LENGTH];
 	char Manufacturer	[RESOURCE_LENGTH];
 	in_addr_t ip;
-	u8_t mac			[6];
-	u8_t macSize;
 	enum eMRstate 	State;
 	char			*CurrentURI;
 	char			*NextURI;
 	char			NextProtInfo[SQ_STR_LENGTH];		// a bit patchy ... used for faulty NEXTURI players
 	sq_action_t		sqState;
 	u32_t			Elapsed;
-	u32_t			seqN;
-#if 0
-	u32_t			PausedTime;
-#endif
-	unsigned	Stalled;
+	u8_t			*seqN;
 	unsigned	TrackPoll, StatePoll;
 	bool		uPNPTimeOut;
 	int	 SqueezeHandle;
 	struct sService Service[MAX_SRV];
 	struct sAction	*Actions;
-	int				LastAckAction;
+	u8_t			*LastAckAction;
 	ithread_mutex_t  ActionsMutex;
 	ithread_mutex_t  Mutex;
 	u8_t		Volume;
@@ -109,24 +104,18 @@ struct sMR {
 		u8_t	b;
 	} VolumeCurve[32];
 	char	*ProtocolCap[MAX_PROTO + 1];
+	u16_t	ErrorCount;
 	struct sMR	*NextSQ;
 	struct sMR	*Next;
 };
-
-/*
-struct sMRList {
-	struct sMR		*device;
-	struct sMRList 	*next;
-};
-*/
 
 struct sAction	{
 	sq_dev_handle_t Handle;
 	struct sMR		*Caller;
 	sq_action_t 	Action;
-	int 			Cookie;
+	u8_t 			*Cookie;
 	union {
-		double	Volume;
+		u32_t	Volume;
 		u32_t	Time;
 	} 				Param;
 	struct sAction	*Next;
@@ -145,6 +134,7 @@ extern tMRConfig			glMRConfig;
 extern sq_dev_param_t		glDeviceParam;
 extern char					glSQServer[SQ_STR_LENGTH];
 extern const int			NB_SRV;
+extern u32_t				gluPNPScanInterval;
 
 struct sMR 		*mr_File2Device(const char *FileName);
 sq_dev_handle_t	mr_GetSqHandle(struct sMR *Device);

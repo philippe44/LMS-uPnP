@@ -783,7 +783,7 @@ static int CreateHTTPRangeResponseHeader(
 	/*! [out] SendInstruction object where the range operations will be stored. */
 	struct SendInstruction *Instr)
 {
-	off_t FirstByte, LastByte;
+	off_t FirstByte = 0, LastByte = 0;
 	char *RangeInput;
 	char *Ptr;
 	int rc = 0;
@@ -819,16 +819,15 @@ static int CreateHTTPRangeResponseHeader(
 		}
 		if (FirstByte >= 0 && LastByte == -1 && FileLength < 0) {
 			Instr->RangeOffset = FirstByte;
-			/*
-			probably readsendsize is not needed as there is no content-length
-			in chunked encoding
-			Instr->ReadSendSize = LastByte - FirstByte + 1;
-			*/
-			rc = snprintf(Instr->RangeHeader,
-				sizeof(Instr->RangeHeader),
-				"CONTENT-RANGE: bytes %" PRId64
-				"-" "*" "\r\n",
-				(int64_t)FirstByte);
+			/* UPNP_INFINITE responds with a 200, no need of CONTENT-RANGE */
+			/* UPNP_UNTIL_CLOSE headers are done in http_SendMessage */
+			if (FileLength == UPNP_USING_CHUNKED) {
+				rc = snprintf(Instr->RangeHeader,
+					sizeof(Instr->RangeHeader),
+					"CONTENT-RANGE: bytes %" PRId64
+					"-" "*" "\r\n",
+					(int64_t)FirstByte);
+			}
 			if (rc < 0 || (unsigned int) rc >= sizeof(Instr->RangeHeader)) {
 				free(RangeInput);
 				return HTTP_INTERNAL_SERVER_ERROR;
@@ -965,13 +964,6 @@ static int CheckOtherHTTPHeaders(
 				RespInstr->RecvWriteSize = atoi(TmpBuf);
 				break;
 			case HDR_RANGE:
-				/* ignore RANGE in case of chunked transmission */
-#if 0
-				if (FileSize < 0) {
-					RetCode = HTTP_OK;
-					break;
-				}
-#endif
 				RetCode = CreateHTTPRangeResponseHeader(TmpBuf,
 					FileSize, RespInstr);
 				if (RetCode != HTTP_OK) {
@@ -1035,6 +1027,81 @@ static int CheckOtherHTTPHeaders(
 }
 
 /*!
+ * \brief Build an array of unrecognized headers.
+ *
+ * \return nothing
+ */
+#define MAX_EXTRA_HEADERS 128
+static int ExtraHTTPHeaders(
+	/*! [in] HTTP Request message. */
+	http_message_t *Req,
+	struct Extra_Headers **ExtraHeaders)
+{
+	http_header_t *header;
+	ListNode *node;
+	int index, nb_extra = 0;
+	struct Extra_Headers *extra_headers;
+
+	node = ListHead(&Req->headers);
+	extra_headers = *ExtraHeaders =
+		(struct Extra_Headers*) malloc(MAX_EXTRA_HEADERS * sizeof(struct Extra_Headers));
+	if (!extra_headers) {
+		return HTTP_INTERNAL_SERVER_ERROR;
+	}
+	while (node != NULL) {
+		header = (http_header_t *) node->item;
+		/* find header type. */
+		index = map_str_to_int((const char *)header->name.buf,
+				header->name.length, Http_Header_Names,
+				NUM_HTTP_HEADER_NAMES, FALSE);
+		if (index < 0) {
+			extra_headers->name = (char *)malloc(header->name.length + 1);
+			extra_headers->value = (char *)malloc(header->value.length + 1);
+			if (!extra_headers->name || !extra_headers->value) {
+				/* cleanup will be made by caller */
+				return HTTP_INTERNAL_SERVER_ERROR;
+			}
+			memcpy(extra_headers->name, header->name.buf, header->name.length);
+			memcpy(extra_headers->value, header->value.buf, header->value.length);
+			extra_headers->name[header->name.length] = '\0';
+			extra_headers->value[header->value.length] = '\0';
+			extra_headers->resp = NULL;
+
+			extra_headers++;
+			nb_extra++;
+
+			if (nb_extra == MAX_EXTRA_HEADERS - 1) {
+				break;
+			}
+		}
+		node = ListNext(&Req->headers, node);
+	}
+	extra_headers->name = extra_headers->value = extra_headers->resp = NULL;
+	return HTTP_OK;
+}
+
+static void FreeExtraHTTPHeaders(
+	/*! [in] extra HTTP headers to free. */
+	struct Extra_Headers *ExtraHeaders)
+{
+	struct Extra_Headers *extra_headers = ExtraHeaders;
+
+	if (!ExtraHeaders) {
+		return;
+	}
+
+	while (extra_headers->name) {
+		free(extra_headers->name);
+		if (extra_headers->value) free(extra_headers->value);
+		if (extra_headers->resp) ixmlFreeDOMString(extra_headers->resp);
+		extra_headers++;
+	}
+
+	free(ExtraHeaders);
+}
+
+
+/*!
  * \brief Processes the request and returns the result in the output parameters.
  *
  * \return
@@ -1073,7 +1140,7 @@ static int process_request(
 	int resp_minor;
 	int alias_grabbed;
 	size_t dummy;
-	const char *extra_headers = NULL;
+	struct Extra_Headers *extra_headers = NULL;
 
 	print_http_headers(req);
 	url = &req->uri;
@@ -1137,7 +1204,12 @@ static int process_request(
 	}
 	if (using_virtual_dir) {
 		if (req->method != HTTPMETHOD_POST) {
+			if ((code = ExtraHTTPHeaders(req, &extra_headers)) != HTTP_OK) {
+				err_code = code;
+				goto error_handler;
+			}
 			/* get file info */
+			finfo.extra_headers = extra_headers;
 			if (virtualDirCallback.
 			    get_info(filename->buf, &finfo) != 0) {
 				err_code = HTTP_NOT_FOUND;
@@ -1231,23 +1303,20 @@ static int process_request(
 	RespInstr->ReadSendSize = finfo.file_length;
 	/* Check other header field. */
 	if ((code =
-	     CheckOtherHTTPHeaders(req, RespInstr,
+		 CheckOtherHTTPHeaders(req, RespInstr,
 				   finfo.file_length)) != HTTP_OK) {
 		err_code = code;
 		goto error_handler;
 	}
+
 	if (req->method == HTTPMETHOD_POST) {
 		*rtype = RESP_POST;
 		err_code = HTTP_OK;
 		goto error_handler;
 	}
-	/*extra_headers = UpnpFileInfo_get_ExtraHeaders(finfo); */
-	if (!extra_headers) {
-		extra_headers = "";
-	}
 
 	/* Check if chunked encoding should be used. */
-	if (using_virtual_dir && finfo.file_length == UPNP_USING_CHUNKED) {
+	if (using_virtual_dir && (finfo.file_length == UPNP_USING_CHUNKED || finfo.file_length == UPNP_USING_CHUNKED_200)) {
 		/* Chunked encoding is only supported by HTTP 1.1 clients */
 		if (resp_major == 1 && resp_minor == 1) {
 			RespInstr->IsChunkActive = 1;
@@ -1261,71 +1330,112 @@ static int process_request(
 	}
 
 	if (RespInstr->IsRangeActive && RespInstr->IsChunkActive) {
-		/* Content-Range: bytes 222-3333/4000  HTTP_PARTIAL_CONTENT */
-		/* Transfer-Encoding: chunked */
+		if (finfo.file_length == UPNP_USING_CHUNKED) {
+			/* Content-Range: bytes 222-*  HTTP_PARTIAL_CONTENT */
+			/* Transfer-Encoding: chunked */
+			if (http_MakeMessage(headers, resp_major, resp_minor,
+				"R" "T" "GKLD" "s" "tcS" "Xc" "ECc",
+				HTTP_PARTIAL_CONTENT,	/* status code */
+				finfo.content_type,	/* content type */
+				RespInstr,	/* range info */
+				RespInstr,	/* language info */
+				"LAST-MODIFIED: ",
+				&finfo.last_modified,
+				X_USER_AGENT, extra_headers) != 0) {
+				goto error_handler;
+			}
+		} else if (finfo.file_length == UPNP_USING_CHUNKED_200) {
+			/* Content-Range: bytes 222-  HTTP_OK */
+			/* Transfer-Encoding: chunked */
+			if (http_MakeMessage(headers, resp_major, resp_minor,
+				"R" "T" "KLD" "s" "tcS" "Xc" "ECc",
+				HTTP_OK,	/* status code */
+				finfo.content_type,	/* content type */
+				RespInstr,	/* language info */
+				"LAST-MODIFIED: ",
+				&finfo.last_modified,
+				X_USER_AGENT, extra_headers) != 0) {
+				goto error_handler;
+			}
+		}
+	} else if (RespInstr->IsRangeActive && !RespInstr->IsChunkActive && finfo.file_length == UPNP_UNTIL_CLOSE) {
+		/* Content-Range:  will be added later by http_SendMessage */
+		/* Content-length: (same) */
+		/* warning : trailing CRLF *must* be added by http_SendMessage */
 		if (http_MakeMessage(headers, resp_major, resp_minor,
-		    "R" "T" "GKLD" "s" "tcS" "Xc" "sCc",
+			"R" "T" "LD" "s" "tcS" "Xc" "EC",
 			HTTP_PARTIAL_CONTENT,	/* status code */
-//				HTTP_OK,	/* status code */
-		    finfo.content_type,	/* content type */
-		    RespInstr,	/* range info */
-		    RespInstr,	/* language info */
-		    "LAST-MODIFIED: ",
-		    &finfo.last_modified,
-		    X_USER_AGENT, extra_headers) != 0) {
+			finfo.content_type,	/* content type */
+			RespInstr,	/* language info */
+			"LAST-MODIFIED: ",
+			&finfo.last_modified,
+			X_USER_AGENT, extra_headers) != 0) {
+			goto error_handler;
+		}
+	} else if (RespInstr->IsRangeActive && !RespInstr->IsChunkActive && finfo.file_length == UPNP_INFINITE) {
+		/* Content-Range: serve origin seek but respond with HTTP_OK  */
+		/* Content-length: not indicated  */
+		if (http_MakeMessage(headers, resp_major, resp_minor,
+			"R" "TLD" "s" "tcS" "Xc" "ECc",
+			HTTP_OK,	/* status code */
+			finfo.content_type,	/* content type */
+			RespInstr,	/* language info */
+			"LAST-MODIFIED: ",
+			&finfo.last_modified,
+			X_USER_AGENT, extra_headers) != 0) {
 			goto error_handler;
 		}
 	} else if (RespInstr->IsRangeActive && !RespInstr->IsChunkActive) {
 		/* Content-Range: bytes 222-3333/4000  HTTP_PARTIAL_CONTENT */
 		if (http_MakeMessage(headers, resp_major, resp_minor,
-		    "R" "N" "T" "GLD" "s" "tcS" "Xc" "sCc",
-		    HTTP_PARTIAL_CONTENT,	/* status code */
-		    RespInstr->ReadSendSize,	/* content length */
-		    finfo.content_type,	/* content type */
-		    RespInstr,	/* range info */
-		    RespInstr,	/* language info */
-		    "LAST-MODIFIED: ",
-		    &finfo.last_modified,
-		    X_USER_AGENT, extra_headers) != 0) {
+			"R" "N" "T" "GLD" "s" "tcS" "Xc" "ECc",
+			HTTP_PARTIAL_CONTENT,	/* status code */
+			RespInstr->ReadSendSize,	/* content length */
+			finfo.content_type,	/* content type */
+			RespInstr,	/* range info */
+			RespInstr,	/* language info */
+			"LAST-MODIFIED: ",
+			&finfo.last_modified,
+			X_USER_AGENT, extra_headers) != 0) {
 			goto error_handler;
 		}
 	} else if (!RespInstr->IsRangeActive && RespInstr->IsChunkActive) {
 		/* Transfer-Encoding: chunked */
 		if (http_MakeMessage(headers, resp_major, resp_minor,
-		    "RK" "TLD" "s" "tcS" "Xc" "sCc",
-		    HTTP_OK,	/* status code */
-		    finfo.content_type,	/* content type */
-		    RespInstr,	/* language info */
-		    "LAST-MODIFIED: ",
-		    &finfo.last_modified,
-		    X_USER_AGENT, extra_headers) != 0) {
+			"RK" "TLD" "s" "tcS" "Xc" "ECc",
+			HTTP_OK,	/* status code */
+			finfo.content_type,	/* content type */
+			RespInstr,	/* language info */
+			"LAST-MODIFIED: ",
+			&finfo.last_modified,
+			X_USER_AGENT, extra_headers) != 0) {
 			goto error_handler;
 		}
 	} else {
 		/* !RespInstr->IsRangeActive && !RespInstr->IsChunkActive */
 		if (RespInstr->ReadSendSize >= 0) {
 			if (http_MakeMessage(headers, resp_major, resp_minor,
-				"R" "N" "TLD" "s" "tcS" "Xc" "sCc",
-			    HTTP_OK,	/* status code */
-			    RespInstr->ReadSendSize,	/* content length */
-			    finfo.content_type,	/* content type */
-			    RespInstr,	/* language info */
-			    "LAST-MODIFIED: ",
-			    &finfo.last_modified,
-			    X_USER_AGENT,
-			    extra_headers) != 0) {
+				"R" "N" "TLD" "s" "tcS" "Xc" "ECc",
+				HTTP_OK,	/* status code */
+				RespInstr->ReadSendSize,	/* content length */
+				finfo.content_type,	/* content type */
+				RespInstr,	/* language info */
+				"LAST-MODIFIED: ",
+				&finfo.last_modified,
+				X_USER_AGENT,
+				extra_headers) != 0) {
 				goto error_handler;
 			}
 		} else {
 			if (http_MakeMessage(headers, resp_major, resp_minor,
-			    "R" "TLD" "s" "tcS" "Xc" "sCc",
-			    HTTP_OK,	/* status code */
-			    finfo.content_type,	/* content type */
-			    RespInstr,	/* language info */
-			    "LAST-MODIFIED: ",
-			    &finfo.last_modified,
-			    X_USER_AGENT,
-			    extra_headers) != 0) {
+				"R" "TLD" "s" "tcS" "Xc" "ECc",
+				HTTP_OK,	/* status code */
+				finfo.content_type,	/* content type */
+				RespInstr,	/* language info */
+				"LAST-MODIFIED: ",
+				&finfo.last_modified,
+				X_USER_AGENT,
+				extra_headers) != 0) {
 				goto error_handler;
 			}
 		}
@@ -1350,6 +1460,7 @@ static int process_request(
 
  error_handler:
 	free(request_doc);
+	FreeExtraHTTPHeaders(extra_headers);
 	ixmlFreeDOMString(finfo.content_type);
 	if (err_code != HTTP_OK && alias_grabbed) {
 		alias_release(alias);
@@ -1539,15 +1650,31 @@ void web_server_callback(http_parser_t *parser, INOUT http_message_t *req,
 				&RespInstr,
 				headers.buf, headers.length,
 				filename.buf);*/
-			http_SendMessage(info, &timeout, "Ibf",
-				&RespInstr,
-				headers.buf, headers.length,
-				filename.buf);
+			if (RespInstr.IsRangeActive && RespInstr.ReadSendSize == UPNP_UNTIL_CLOSE) {
+				http_SendMessage(info, &timeout, "Ip",
+					&RespInstr,
+					&headers,
+					filename.buf);
+			}
+			else {
+				http_SendMessage(info, &timeout, "Ibf",
+					&RespInstr,
+					headers.buf, headers.length,
+					filename.buf);
+			}
 			break;
 		case RESP_HEADERS:
 			/* headers only */
-			http_SendMessage(info, &timeout, "b",
-				headers.buf, headers.length);
+			if (RespInstr.IsRangeActive && RespInstr.ReadSendSize == UPNP_UNTIL_CLOSE) {
+				http_SendMessage(info, &timeout, "Ih",
+					&RespInstr,
+					&headers,
+					filename.buf);
+			}
+			else {
+				http_SendMessage(info, &timeout, "b",
+					headers.buf, headers.length);
+			}
 			break;
 		case RESP_POST:
 			/* headers only */

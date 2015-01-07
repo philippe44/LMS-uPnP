@@ -105,11 +105,15 @@ typedef enum {
 // ready to insert the protocol option string, with room for 2 strings of options
 "<DIDL-Lite xmlns:dc=\"http://purl.org/dc/elements/1.1/\""
 " xmlns:upnp=\"urn:schemas-upnp-org:metadata-1-0/upnp/\""
-" xmlns=\"urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/\">"
-" <item>"
+" xmlns=\"urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/\""
+" xmlns:dlna=\"urn:schemas-dlna-org:metadata-1-0/\">"
+" <item id=\"1\" parentID=\"0\" restricted=\"1\">"
 " <dc:title>%s</dc:title>"
 " <dc:creator>%s</dc:creator>"
+" <upnp:artist>%s</upnp:artist>"
 " <upnp:album>%s</upnp:album>"
+" <upnp:genre>%s</upnp:genre>"
+" <upnp:originalTrackNumber>%d</upnp:originalTrackNumber>"
 " <res protocolInfo=\"%s%s\">%s</res>"
 " <upnp:class>object.item.audioItem.musicTrack</upnp:class>"
 " </item>"
@@ -123,7 +127,6 @@ so the ; might have to be removed
 
 char DLNA_OPT[] = ";DLNA.ORG_OP=01;DLNA.ORG_FLAGS=21700000000000000000000000000000";
 
-
 static log_level loglevel;
 
 /*----------------------------------------------------------------------------*/
@@ -133,22 +136,24 @@ void AVTInit(log_level level)
 }
 
 /*----------------------------------------------------------------------------*/
-int AVTSetURI(char *ControlURL, char *URI, char *ProtInfo, char *title, char *artist, char * album, void *Cookie)
+int AVTSetURI(char *ControlURL, char *URI, char *ProtInfo, struct sq_metadata_s *MetaData, void *Cookie)
 {
 	IXML_Document *ActionNode = NULL;
 	int rc;
-	char *MetaData;
+	char *DIDLData;
 
-	if (!title) title = "LMS to uPnP gateway";
-	if (!artist) artist = "squeeze2upnp";
-	if (!album) album = "N/A";
-
-	MetaData = malloc(strlen(title) + strlen(artist) + strlen(album) + strlen(ProtInfo) + strlen(URI) + strlen(DIDL) + strlen(DLNA_OPT) + 1);
+	DIDLData = malloc(strlen(MetaData->title) + 2*strlen(MetaData->artist) +
+			   strlen(MetaData->album) + strlen(MetaData->genre) + 5 +
+			   strlen(ProtInfo) + strlen(URI) + strlen(DIDL) + strlen(DLNA_OPT) + 1);
 #ifndef DIDL_PATCH
-	if (ProtInfo[strlen(ProtInfo) - 1] == ':') sprintf(MetaData, DIDL, title, artist, album, ProtInfo, DLNA_OPT + 1, URI);
-	else sprintf(MetaData, DIDL, title, artist, album, ProtInfo, DLNA_OPT, URI);
+	if (ProtInfo[strlen(ProtInfo) - 1] == ':')
+		sprintf(DIDLData, DIDL, MetaData->title, MetaData->artist, MetaData->artist,
+				MetaData->album, MetaData->genre, MetaData->track, ProtInfo, DLNA_OPT + 1, URI);
+	else
+		sprintf(DIDLData, DIDL, MetaData->title, MetaData->artist, MetaData->artist,
+				MetaData->album, MetaData->genre, MetaData->track, ProtInfo, DLNA_OPT, URI);
 #else
-	sprintf(MetaData, DIDL, URI);
+	sprintf(DIDLData, DIDL, URI);
 #endif
 
 	LOG_INFO("uPNP setURI %s for %s (cookie %p)", URI, ControlURL, Cookie);
@@ -156,7 +161,7 @@ int AVTSetURI(char *ControlURL, char *URI, char *ProtInfo, char *title, char *ar
 	UpnpAddToAction(&ActionNode, "SetAVTransportURI", AV_TRANSPORT, "InstanceID", "0");
 	UpnpAddToAction(&ActionNode, "SetAVTransportURI", AV_TRANSPORT, "CurrentURI", URI);
 
-	UpnpAddToAction(&ActionNode, "SetAVTransportURI", AV_TRANSPORT, "CurrentURIMetaData", MetaData);
+	UpnpAddToAction(&ActionNode, "SetAVTransportURI", AV_TRANSPORT, "CurrentURIMetaData", DIDLData);
 
 	rc = UpnpSendActionAsync(glControlPointHandle, ControlURL, AV_TRANSPORT, NULL,
 							 ActionNode, CallbackActionHandler, Cookie);
@@ -166,32 +171,39 @@ int AVTSetURI(char *ControlURL, char *URI, char *ProtInfo, char *title, char *ar
 		LOG_ERROR("Error in UpnpSendActionAsync -- %d", rc);
 	}
 
-	free(MetaData);
+	free(DIDLData);
 	if (ActionNode) ixmlDocument_free(ActionNode);
 
 	return rc;
 }
 
 /*----------------------------------------------------------------------------*/
-int AVTSetNextURI(char *ControlURL, char *URI, char *ProtInfo, char *title, char *artist, char *album, void *Cookie)
+int AVTSetNextURI(char *ControlURL, char *URI, char *ProtInfo, struct sq_metadata_s *MetaData, void *Cookie)
 {
 	IXML_Document *ActionNode = NULL;
 	int rc;
-	char 	*MetaData;
+	char *DIDLData;
 
-	if (!title) title = "LMS to uPnP gateway";
-	if (!artist) artist = "squeeze2upnp";
-	if (!album) album = "N/A";
+	DIDLData = malloc(strlen(MetaData->title) + 2*strlen(MetaData->artist) +
+			   strlen(MetaData->album) + strlen(MetaData->genre) +  5 +
+			   strlen(ProtInfo) + strlen(URI) + strlen(DIDL) + strlen(DLNA_OPT) + 1);
 
-	MetaData = malloc(strlen(title) + strlen(artist) + strlen(album) + strlen(ProtInfo) + strlen(URI) + strlen(DIDL) + strlen(DLNA_OPT) + 1);
-	if (ProtInfo[strlen(ProtInfo) - 1] == ':') sprintf(MetaData, DIDL, title, artist, album, ProtInfo, DLNA_OPT + 1, URI);
-	else sprintf(MetaData, DIDL, title, artist, album, ProtInfo, DLNA_OPT, URI);
+#ifndef DIDL_PATCH
+	if (ProtInfo[strlen(ProtInfo) - 1] == ':')
+		sprintf(DIDLData, DIDL, MetaData->title, MetaData->artist, MetaData->artist,
+				MetaData->album, MetaData->genre, MetaData->track, ProtInfo, DLNA_OPT + 1, URI);
+	else
+		sprintf(DIDLData, DIDL, MetaData->title, MetaData->artist, MetaData->artist,
+				MetaData->album, MetaData->genre, MetaData->track, ProtInfo, DLNA_OPT, URI);
+#else
+	sprintf(DIDLData, DIDL, URI);
+#endif
 
 	LOG_INFO("uPNP setNextURI %s for %s (cookie %p)", URI, ControlURL, Cookie);
 	ActionNode =  UpnpMakeAction("SetNextAVTransportURI", AV_TRANSPORT, 0, NULL);
 	UpnpAddToAction(&ActionNode, "SetNextAVTransportURI", AV_TRANSPORT, "InstanceID", "0");
 	UpnpAddToAction(&ActionNode, "SetNextAVTransportURI", AV_TRANSPORT, "NextURI", URI);
-	UpnpAddToAction(&ActionNode, "SetNextAVTransportURI", AV_TRANSPORT, "NextURIMetaData", MetaData);
+	UpnpAddToAction(&ActionNode, "SetNextAVTransportURI", AV_TRANSPORT, "NextURIMetaData", DIDLData);
 
 	rc = UpnpSendActionAsync(glControlPointHandle, ControlURL, AV_TRANSPORT, NULL,
 							 ActionNode, CallbackActionHandler, Cookie);
@@ -200,7 +212,7 @@ int AVTSetNextURI(char *ControlURL, char *URI, char *ProtInfo, char *title, char
 		LOG_ERROR("Error in UpnpSendActionAsync -- %d", rc);
 	}
 
-	free(MetaData);
+	free(DIDLData);
 	if (ActionNode) ixmlDocument_free(ActionNode);
 
 	return rc;
@@ -331,7 +343,7 @@ int AVTBasic(char *ControlURL, char *Action, void *Cookie)
 	IXML_Document *ActionNode = NULL;
 	int rc;
 
-	LOG_INFO("uPNP %s GetProtocolInfo (cookie %p)", ControlURL, Cookie);
+	LOG_SDEBUG("uPNP %s GetProtocolInfo (cookie %p)", ControlURL, Cookie);
 	ActionNode =  UpnpMakeAction("GetProtocolInfo", CONNECTION_MGR, 0, NULL);
 
 	rc = UpnpSendActionAsync(glControlPointHandle, ControlURL, CONNECTION_MGR, NULL,

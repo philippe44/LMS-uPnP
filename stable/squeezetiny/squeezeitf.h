@@ -21,6 +21,7 @@ typedef	sq_action_t sq_event_t;
 			   SQ_RATE_16000 = 16000, SQ_RATE_12000 = 12000, SQ_RATE_11025 = 11025,
 			   SQ_RATE_8000 = 8000, SQ_RATE_DEFAULT = 0} sq_rate_e;
 typedef enum { L24_PACKED, L24_PACKED_LPCM, L24_UNPACKED_HIGH, L24_UNPACKED_LOW } sq_L24_pack_t;
+typedef enum { FLAC_NO_HEADER = 0, FLAC_NORMAL_HEADER = 1, FLAC_FULL_HEADER = 2 } sq_flac_header_t;
 typedef	int	sq_dev_handle_t;
 typedef unsigned sq_rate_t;
 
@@ -30,7 +31,9 @@ typedef struct sq_metadata_s {
 	char *title;
 	char *genre;
 	char *duration;
-	u8_t *picture;
+	char *path;
+	char *artwork;
+	u16_t track;
 } sq_metadata_t;
 
 typedef	struct sq_dev_param_s {
@@ -38,14 +41,16 @@ typedef	struct sq_dev_param_s {
 	unsigned 	output_buf_size;
 	sq_mode_t	mode;
 	sq_rate_t	rate[MAX_SUPPORTED_SAMPLERATES];
-	bool		can_pause;
 	int			max_get_bytes;		 // max size allowed in a single read
 	int			max_read_wait;
 	char		codecs[SQ_STR_LENGTH];
 	sq_rate_e	sample_rate;
-	sq_L24_pack_t	L24_format;
+	sq_L24_pack_t		L24_format;
+	sq_flac_header_t	flac_header;
 	char		buffer_dir[SQ_STR_LENGTH];
 	s32_t		buffer_limit;
+	int			seek_after_pause;
+	u8_t		mac[6];
 } sq_dev_param_t;
 
 typedef struct sq_log_level_s {		// must be one of lERROR, lINFO, lDEBUG or lSDEBUG
@@ -75,7 +80,7 @@ typedef struct
 
 extern unsigned gl_slimproto_stream_port;
 
-typedef bool (*sq_callback_t)(sq_dev_handle_t handle, void *caller_id, sq_action_t action, int cookie, void *param);
+typedef bool (*sq_callback_t)(sq_dev_handle_t handle, void *caller_id, sq_action_t action, u8_t *cookie, void *param);
 
 char*				sq_parse_args(int argc, char**argv);
 // all params can be NULL
@@ -83,15 +88,17 @@ void				sq_init(char *server, u8_t mac[6], sq_log_level_t *);
 void				sq_stop(void);
 
 // only name cannot be NULL
-bool			 	sq_run_device(sq_dev_handle_t handle, char *name, u8_t *mac, sq_dev_param_t *param);
-bool				sq_delete_device(sq_dev_handle_t);
+bool			 	sq_run_device(sq_dev_handle_t handle, char *name, sq_dev_param_t *param);
+void				sq_delete_device(sq_dev_handle_t);
 sq_dev_handle_t		sq_reserve_device(void *caller_id, sq_callback_t callback);
+void				sq_release_device(sq_dev_handle_t);
 
 bool				sq_call(sq_dev_handle_t handle, sq_action_t action, void *param);
-void				sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, int cookie, void *param);
+void				sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *cookie, void *param);
 u32_t 				sq_get_time(sq_dev_handle_t handle);
-bool				sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next);
-void 				sq_free_metadata(sq_metadata_t *metadata);
+bool				sq_get_metadata(sq_dev_handle_t handle, struct sq_metadata_s *metadata, bool next);
+void				sq_default_metadata(struct sq_metadata_s *metadata, bool init);
+void 				sq_free_metadata(struct sq_metadata_s *metadata);
 bool 				sq_set_time(sq_dev_handle_t handle, u32_t time);
 void*				sq_urn2MR(const char *urn);
 char*				sq_content_type(const char *urn);	// string must be released by caller
@@ -100,7 +107,6 @@ void*				sq_isopen(const char *urn);
 bool				sq_close(void *desc);
 int					sq_read(void *desc, void *dst, unsigned bytes);
 int					sq_seek(void *desc, off_t bytes, int from);
-void				sq_reset(sq_dev_handle_t);
 
 void stream_loglevel(log_level level);
 void slimproto_loglevel(log_level level);

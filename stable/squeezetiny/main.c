@@ -29,6 +29,7 @@
 
 #include <math.h>
 #include <signal.h>
+#include <ctype.h>
 
 #define TITLE "Squeezelite " VERSION ", Copyright 2012-2014 Adrian Smith + Philippe."
 
@@ -90,7 +91,7 @@ static char				gl_exclude_codecs[SQ_STR_LENGTH];
 /*----------------------------------------------------------------------------*/
 /* locals */
 /*----------------------------------------------------------------------------*/
-static bool sq_wipe_device(struct thread_ctx_s *ctx);
+static void sq_wipe_device(struct thread_ctx_s *ctx);
 
 static log_level	loglevel = lWARN;
 
@@ -109,43 +110,32 @@ void sq_stop(void) {
 }
 
 /*--------------------------------------------------------------------------*/
-bool sq_wipe_device(struct thread_ctx_s *ctx) {
+void sq_wipe_device(struct thread_ctx_s *ctx) {
 	int i;
-	bool rc;
 	char buf[SQ_STR_LENGTH];
 
 	ctx->callback = NULL;
 	ctx->in_use = false;
-	rc = slimproto_close(ctx);
-	if (!rc) {
-		LOG_WARN("[%p] not able to end slimproto (1st)", ctx);
-	}
+	slimproto_close(ctx);
 	output_mr_close(ctx);
 	decode_close(ctx);
 	stream_close(ctx);
-	if (!rc) {
-		rc = slimproto_close(ctx);
-		if (!rc) {
-			LOG_ERROR("[%p] not able to end slimproto (2nd)", ctx);
-		}
-	}
 	for (i = 0; i < 2; i++) {
 		if (ctx->out_ctx[i].read_file) fclose (ctx->out_ctx[i].read_file);
 		if (ctx->out_ctx[i].write_file) fclose (ctx->out_ctx[i].write_file);
 		sprintf(buf, "%s/%s", ctx->config.buffer_dir, ctx->out_ctx[i].buf_name);
 		remove(buf);
+		ctx->out_ctx[i].read_file = ctx->out_ctx[i].write_file = NULL;
+		ctx->out_ctx[i].owner = NULL;
+
 	}
-	memset(ctx, 0, sizeof(struct thread_ctx_s));
-	return rc;
 }
 
 /*--------------------------------------------------------------------------*/
-bool sq_delete_device(sq_dev_handle_t handle) {
+void sq_delete_device(sq_dev_handle_t handle) {
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
-
-	return sq_wipe_device(ctx);
+	sq_wipe_device(ctx);
 }
-
 
 /*---------------------------------------------------------------------------*/
 void main_loglevel(log_level level)
@@ -169,6 +159,55 @@ void *sq_urn2MR(const char *urn)
 	return (out) ? thread_ctx[i-1].MR : NULL;
 }
 
+/*---------------------------------------------------------------------------*/
+static char from_hex(char ch) {
+  return isdigit(ch) ? ch - '0' : tolower(ch) - 'a' + 10;
+}
+
+/*---------------------------------------------------------------------------*/
+static char to_hex(char code) {
+  static char hex[] = "0123456789abcdef";
+  return hex[code & 15];
+}
+
+/*---------------------------------------------------------------------------*/
+/* IMPORTANT: be sure to free() the returned string after use */
+static char *cli_encode(char *str) {
+  char *pstr = str, *buf = malloc(strlen(str) * 3 + 1), *pbuf = buf;
+  while (*pstr) {
+	if (isalnum(*pstr) || *pstr == '-' || *pstr == '_' || *pstr == '.' || *pstr == '~' || *pstr == ' ')
+	  *pbuf++ = *pstr;
+	else if (*pstr == '%') {
+	  *pbuf++ = '%',*pbuf++ = '2', *pbuf++ = '5';
+	}
+	else
+	  *pbuf++ = '%', *pbuf++ = to_hex(*pstr >> 4), *pbuf++ = to_hex(*pstr & 15);
+	pstr++;
+  }
+  *pbuf = '\0';
+  return buf;
+}
+
+/*---------------------------------------------------------------------------*/
+/* IMPORTANT: be sure to free() the returned string after use */
+static char *cli_decode(char *str) {
+  char *pstr = str, *buf = malloc(strlen(str) + 1), *pbuf = buf;
+  while (*pstr) {
+	if (*pstr == '%') {
+      if (pstr[1] && pstr[2]) {
+        *pbuf++ = from_hex(pstr[1]) << 4 | from_hex(pstr[2]);
+        pstr += 2;
+	  }
+    } else {
+      *pbuf++ = *pstr;
+    }
+	pstr++;
+  }
+  *pbuf = '\0';
+  return buf;
+}
+
+/*---------------------------------------------------------------------------*/
 char *cli_send_cmd(char *cmd, bool req, struct thread_ctx_s *ctx)
 {
 	char packet[1024];
@@ -177,8 +216,9 @@ void *sq_urn2MR(const char *urn)
 	char *rsp = NULL;
 
 	mutex_lock(ctx->cli_mutex);
-
 	wait = ctx->config.max_read_wait;
+
+	cmd = cli_encode(cmd);
 	if (req) len = sprintf(packet, "%s ?\n", cmd);
 	else len = sprintf(packet, "%s\n", cmd);
 	send_packet((u8_t*) packet, len, ctx->cli_sock);
@@ -192,20 +232,20 @@ void *sq_urn2MR(const char *urn)
 		if (k < 0) continue;
 		len += k;
 		packet[len] = '\0';
-		rsp = url_decode(packet);
-		if (strchr(packet, '\n')) {
-			if (strstr(rsp, cmd)) break;
+		if (strchr(packet, '\n') && stristr(packet, cmd)) {
+			rsp = packet;
+			break;
 		}
-		NFREE(rsp);
 	}
 
 	if (rsp) {
-		char *p;
-		for (p = rsp + strlen(cmd); *p == ' '; p++);
-		strcpy(rsp, p);
+		for (rsp += strlen(cmd); *rsp == ' '; rsp++);
+		rsp = cli_decode(rsp);
 		*(strrchr(rsp, '\n')) = '\0';
+		if (*rsp == '\0') NFREE(rsp);
 	}
 
+	NFREE(cmd);
 	mutex_unlock(ctx->cli_mutex);
 	return rsp;
 }
@@ -265,6 +305,31 @@ bool sq_set_time(sq_dev_handle_t handle, u32_t time)
 }
 
 /*--------------------------------------------------------------------------*/
+static void sq_init_metadata(sq_metadata_t *metadata)
+{
+		metadata->artist = metadata->album =
+		metadata->title = metadata->genre =
+		metadata->duration = metadata->path =
+		metadata->artwork =	NULL;
+
+		metadata->track = 0;
+}
+
+/*--------------------------------------------------------------------------*/
+void sq_default_metadata(sq_metadata_t *metadata, bool init)
+{
+	if (init) sq_init_metadata(metadata);
+
+	if (!metadata->title) metadata->title = strdup("[LMS to uPnP]");
+	if (!metadata->album) metadata->album = strdup("[no album]");
+	if (!metadata->artist) metadata->artist = strdup("[no artist]");
+	if (!metadata->genre) metadata->genre = strdup("[no genre]");
+	if (!metadata->duration) metadata->duration = strdup("[no duration]");
+	if (!metadata->path) metadata->path = strdup("[no path]");
+	if (!metadata->artwork) metadata->artwork = strdup("[no artwork]");
+}
+
+/*--------------------------------------------------------------------------*/
 bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 {
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
@@ -272,11 +337,11 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 	char *rsp;
 	u16_t idx;
 
-	metadata->artist = metadata->album = metadata->title = metadata->genre = metadata->duration = NULL;
-	metadata->picture = NULL;
+	sq_init_metadata(metadata);
 
 	if (!handle || !ctx->cli_sock) {
 		LOG_ERROR("[%p]: no handle or CLI socket %d", ctx, handle);
+		sq_default_metadata(metadata, true);
 		return false;
 	}
 
@@ -285,28 +350,40 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 
 	if (!rsp) {
 		LOG_ERROR("[%p]: missing index", ctx);
+		sq_default_metadata(metadata, true);
 		return false;
 	}
 
 	idx = atol(rsp);
+	NFREE(rsp);
+	metadata->track = idx;
 
 	if (next) {
 		sprintf(cmd, "%s playlist tracks", ctx->cli_id);
 		rsp = cli_send_cmd(cmd, true, ctx);
-		idx = (rsp) ? (idx + 1) % atol(rsp) : (idx + 1);
+		if (rsp && atol(rsp)) idx = (idx + 1) % atol(rsp);
+		else idx = 0;
+		NFREE(rsp);
 	}
 
 	sprintf(cmd, "%s playlist title %d", ctx->cli_id, idx);
 	metadata->title = cli_send_cmd(cmd, true, ctx);
+
 	sprintf(cmd, "%s playlist album %d", ctx->cli_id, idx);
 	metadata->album = cli_send_cmd(cmd, true, ctx);
+
 	sprintf(cmd, "%s playlist artist %d", ctx->cli_id, idx);
 	metadata->artist = cli_send_cmd(cmd, true, ctx);
+
 	sprintf(cmd, "%s playlist genre %d", ctx->cli_id, idx);
 	metadata->genre = cli_send_cmd(cmd, true, ctx);
+
 	sprintf(cmd, "%s playlist duration %d", ctx->cli_id, idx);
 	metadata->duration = cli_send_cmd(cmd, true, ctx);
-	LOG_INFO("[%p]: idx %d, artist:%s\n\talbum:%s\n\ttitle:%s\n\tgenre%s\n\tduration:%s", ctx, idx,
+
+	sq_default_metadata(metadata, false);
+
+	LOG_INFO("[%p]: idx %d\n\tartist:%s\n\talbum:%s\n\ttitle:%s\n\tgenre:%s\n\tduration:%s", ctx, idx,
 				metadata->artist, metadata->album, metadata->title,
 				metadata->genre, metadata->duration);
 
@@ -321,6 +398,8 @@ void sq_free_metadata(sq_metadata_t *metadata)
 	NFREE(metadata->title);
 	NFREE(metadata->genre);
 	NFREE(metadata->duration);
+	NFREE(metadata->path);
+	NFREE(metadata->artwork);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -364,18 +443,12 @@ void *sq_open(const char *urn)
 
 		LOCK_S;LOCK_O;
 		if (!out->read_file) {
+			// read counters are not set here. they are set 
 			sprintf(buf, "%s/%s", thread_ctx[i-1].config.buffer_dir, out->buf_name);
 			out->read_file = fopen(buf, "rb");
-			/*
-			do no reset read_count_t after first buffer skrinkage happened.
-			some players tend to close & re-open the connection on pause, to
-			read_count must be reset
-			*/
-			if (out->read_count_t == out->read_count) out->read_count_t = 0;
-			out->read_count = 0;
 			LOG_INFO("[%p]: open", out->owner);
 			if (!out->read_file) out = NULL;
-		}
+    	}
 		// Some clients try to open 2 sessions : do not allow that
 		else out = NULL;
 		UNLOCK_S;UNLOCK_O;
@@ -407,7 +480,8 @@ bool sq_close(void *desc)
 {
 	out_ctx_t *p = (out_ctx_t*) desc;
 
-	if (&p->owner->out_ctx[p->idx] != p) {
+	// reject any pending request after the device has been stopped
+	if (!p->owner || &p->owner->out_ctx[p->idx] != p) {
 		LOG_ERROR("[%p]: unknow output context %p", p->owner, p);
 		return false;
 	}
@@ -417,6 +491,9 @@ bool sq_close(void *desc)
 		if (p->read_file) fclose(p->read_file);
 		p->read_file = NULL;
 		LOG_INFO("[%p]: read total:%Ld", p->owner, p->read_count_t);
+		p->close_count = p->read_count;
+		p->read_count_t -= p->read_count;
+		p->read_count = 0;
 		UNLOCK_S;UNLOCK_O;
 	}
 
@@ -429,7 +506,7 @@ int sq_seek(void *desc, off_t bytes, int from)
 	out_ctx_t *p = (out_ctx_t*) desc;
 	int rc = -1;
 
-	if (&p->owner->out_ctx[p->idx] != p) {
+	if (!p->owner || &p->owner->out_ctx[p->idx] != p) {
 		LOG_ERROR("[%p]: unknow output context %p", p->owner, p);
 	}
 	else {
@@ -437,21 +514,24 @@ int sq_seek(void *desc, off_t bytes, int from)
 		LOCK_S;LOCK_O;
 
 		/*
-		see comment on sq_open. Still, what to be done
-		on SEEK_CUR versus SEEK_SET is unclear
+		Although a SEEK_CUR is sent, because this is a response to a GET with a
+		range xx-yy, this must be treated as a SEEK_SET. An HTTP range -yy is
+		an illegal request, so SEEK_CUR does not make sense (see httpreadwrite.c)
 		*/
-		bytes -= p->read_count_t - p->read_count;
+
+		LOG_INFO("[%p]: seek %d (c:%d)", ctx, bytes - (p->write_count_t - p->write_count));
+		bytes -= p->write_count_t - p->write_count;
 		if (bytes < 0) {
-			LOG_INFO("[%p]: adjusting b:%d t:%d r:%d", p->owner, bytes, p->read_count_t, p->read_count);
+			LOG_INFO("[%p]: seek unreachable b:%d t:%d r:%d", p->owner, bytes, p->write_count_t, p->write_count);
 			bytes = 0;
 		}
-
-		rc = fseek(p->read_file, bytes, from);
+		if (ctx->config.seek_after_pause == 2) bytes += p->close_count;
+		rc = fseek(p->read_file, bytes, SEEK_SET);
 		p->read_count += bytes;
 		p->read_count_t += bytes;
+
 		UNLOCK_S;UNLOCK_O;
 	}
-
 	return rc;
 }
 
@@ -462,7 +542,7 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 	out_ctx_t *p = (out_ctx_t*) desc;
 	struct thread_ctx_s *ctx = p->owner;
 
-	if (&p->owner->out_ctx[p->idx] != p) {
+	if (!p->owner || &p->owner->out_ctx[p->idx] != p) {
 		LOG_ERROR("[%p]: unknow output context %p", p->owner, p);
 		return -1;
 	}
@@ -486,8 +566,17 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 			if (p->read_file) read_b += fread(dst, 1, bytes, p->read_file);
 			UNLOCK_S;LOCK_O;
 			LOG_SDEBUG("[%p] read %u bytes at %d", ctx, read_b, wait);
-			usleep(50000);
-		} while (!read_b && p->write_file && wait--);
+			if (!read_b) usleep(50000);
+		} while (!read_b && p->write_file && wait-- && p->owner);
+	}
+
+	/*
+	there is tiny chance for a race condition where the device is deleted
+	while sleeping, so check that otherwise LOCK will create a fault
+	*/
+	if (!p->owner) {
+		LOG_ERROR("[%p]: device stopped during wait %p", p, ctx);
+		return 0;
 	}
 
 	LOCK_S;LOCK_O;
@@ -502,7 +591,10 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 	the nextURI buffer and miss the end of the current track
 	*/
 	if (wait && !read_b && !p->write_file) {
+#ifndef __EARLY_STMd__
 		ctx->read_ended = true;
+		wake_controller(ctx);
+#endif
 		LOG_INFO("[%p]: read (end of track) w:%d", ctx, wait);
 	}
 
@@ -520,7 +612,7 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 
 
 /*---------------------------------------------------------------------------*/
-void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, int cookie, void *param)
+void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *cookie, void *param)
 {
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
 
@@ -533,16 +625,36 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 		case SQ_SETURI: break;
 		case SQ_UNPAUSE:
 		case SQ_PLAY:
-			// received play confirmation ==> enable time adjustement
-			LOCK_S;
-			LOG_INFO("[%p] uPNP playing notif", ctx);
-			ctx->play_running = true;
-			UNLOCK_S;
-			wake_controller(ctx);
+			if (* (bool*) param) {
+				// unsollicited PLAY done on the player direclty
+				char cmd[128], *rsp;
+
+				LOG_INFO("[%p] uPNP unsollicited play", ctx);
+				sprintf(cmd, "%s play", ctx->cli_id);
+				rsp = cli_send_cmd(cmd, false, ctx);
+				NFREE(rsp);
+			}
+			else {
+				/*
+				Be careful of what is done here in case the "playing" event if
+				an extra one generated by an unwanted stop or a lack of NextURI cap
+				*/
+				LOCK_S;
+				LOG_INFO("[%p] uPNP playing notif", ctx);
+				ctx->play_running = true;
+				UNLOCK_S;
+				wake_controller(ctx);
+			}
 			break;
-		case SQ_PAUSE:
-			LOG_INFO("[%p] uPNP pause notif", ctx);
+		case SQ_PAUSE: {
+			char cmd[128], *rsp;
+
+			LOG_INFO("[%p] uPNP unsollicited pause", ctx);
+			sprintf(cmd, "%s pause", ctx->cli_id);
+			rsp = cli_send_cmd(cmd, false, ctx);
+			NFREE(rsp);
 			break;
+		}
 		case SQ_STOP:
 			LOG_INFO("[%p] uPNP notify STOP", ctx);
 			LOCK_S;
@@ -578,13 +690,7 @@ int sq_read(void *desc, void *dst, unsigned bytes)
  }
 
 /*---------------------------------------------------------------------------*/
-void sq_reset(sq_dev_handle_t handle)
-{
-	 slimproto_reset(&thread_ctx[handle-1]);
-}
-
-/*---------------------------------------------------------------------------*/
-void sq_init(char *server, u8_t mac[6], sq_log_level_t *log)
+void sq_init(char *server, u8_t mac[6], sq_log_level_t *log)
 {
 	if (server) {
 		strcpy(_gl_server, server);
@@ -619,6 +725,12 @@ void sq_init(char *server, u8_t mac[6], sq_log_level_t *log)
 }
 
 /*---------------------------------------------------------------------------*/
+void sq_release_device(sq_dev_handle_t handle)
+{
+	if (handle) thread_ctx[handle - 1].in_use = false;
+}
+
+/*---------------------------------------------------------------------------*/
 sq_dev_handle_t sq_reserve_device(void *MR, sq_callback_t callback)
 {
 	int ctx_i;
@@ -646,12 +758,11 @@ sq_dev_handle_t sq_reserve_device(void *MR, sq_callback_t callback)
 
 
 /*---------------------------------------------------------------------------*/
-bool sq_run_device(sq_dev_handle_t handle, char *name, u8_t *mac, sq_dev_param_t *param)
+bool sq_run_device(sq_dev_handle_t handle, char *name, sq_dev_param_t *param)
 {
 	int i;
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
-	u8_t l_mac[6];
-	u16_t mac_sum;
+	u16_t mac_sum;
 	char buf[SQ_STR_LENGTH];
 
 #if 0
@@ -666,21 +777,30 @@ bool sq_run_device(sq_dev_handle_t handle, char *name, u8_t *mac, sq_dev_param_t
 	 }
 #endif
 
-	for (i = 0, mac_sum =0; i < 5; i++) mac_sum += mac[i];
-	if (mac && mac_sum) memcpy(l_mac, mac, 6);
-	else	{
+	if (access(param->buffer_dir, 2)) {
+		LOG_ERROR("[%p]: cannot access %s", ctx, param->buffer_dir);
+		return false;
+	}
+
+	for (i = 0, mac_sum =0; i < 5; i++) mac_sum += param->mac[i];
+	if (!mac_sum) {
 		gl_last_mac[5] = (gl_last_mac[5] + 1) &0xFF;
-		memcpy(l_mac, gl_last_mac, 6);
+		memcpy(param->mac, gl_last_mac, 6);
+	}
+
+	if ((u32_t) param->buffer_limit < max(param->stream_buf_size, param->output_buf_size) * 4) {
+		LOG_ERROR("[%p]: incorrect buffer limit %d", ctx, param->buffer_limit);
+		param->buffer_limit = max(param->stream_buf_size, param->output_buf_size) * 4;
 	}
 
 	sprintf(ctx->cli_id, "%02x:%02x:%02x:%02x:%02x:%02x",
-										  l_mac[0], l_mac[1], l_mac[2],
-										  l_mac[3], l_mac[4], l_mac[5]);
+										  param->mac[0], param->mac[1], param->mac[2],
+										  param->mac[3], param->mac[4], param->mac[5]);
 
 	for (i = 0; i < 2; i++) {
 		sprintf(ctx->out_ctx[i].buf_name, "%02x-%02x-%02x-%02x-%02x-%02x-idx-%d",
-										  l_mac[0], l_mac[1], l_mac[2],
-										  l_mac[3], l_mac[4], l_mac[5], i);
+										  param->mac[0], param->mac[1], param->mac[2],
+										  param->mac[3], param->mac[4], param->mac[5], i);
 		sprintf(buf, "%s/%s", ctx->config.buffer_dir, ctx->out_ctx[i].buf_name);
 		remove(buf);
 		ctx->out_ctx[i].owner = ctx;
@@ -709,7 +829,7 @@ bool sq_run_device(sq_dev_handle_t handle, char *name, u8_t *mac, sq_dev_param_t
 	}
 #endif
 
-	slimproto_thread_init(gl_server, l_mac, name, "", ctx);
+	slimproto_thread_init(gl_server, param->mac, name, "", ctx);
 
 	return true;
 }

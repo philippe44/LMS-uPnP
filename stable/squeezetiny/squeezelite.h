@@ -150,7 +150,6 @@
 #include <errno.h>
 #include <limits.h>
 #include <math.h>
-//#include <io.h>
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -213,6 +212,7 @@ struct wake {
 #define BYTES_PER_FRAME 8
 
 #define min(a,b) (((a) < (b)) ? (a) : (b))
+#define max(a,b) (((a) > (b)) ? (a) : (b))
 
 // utils.c (non logging)
 typedef enum { EVENT_TIMEOUT = 0, EVENT_READ, EVENT_WAKE } event_type;
@@ -276,7 +276,7 @@ void buf_init(struct buffer *buf, size_t size);
 void buf_destroy(struct buffer *buf);
 
 // slimproto.c
-bool slimproto_close(struct thread_ctx_s *ctx);
+void slimproto_close(struct thread_ctx_s *ctx);
 void slimproto_init(log_level level, bool full);
 void slimproto_reset(struct thread_ctx_s *ctx);
 void slimproto_thread_init(char *server, u8_t mac[], const char *name, const char *namefile, struct thread_ctx_s *ctx);
@@ -493,18 +493,18 @@ typedef struct out_ctx_s {
 	char				content_type[SQ_STR_LENGTH];
 	u32_t				read_count, write_count;
 	u64_t				read_count_t, write_count_t;
+	u32_t				close_count;
 } out_ctx_t;
 
 struct thread_ctx_s {
 	int 	self;
 	int 	autostart;
 	bool	running;
-	bool	slimproto_ended;
 	bool	in_use;
 	bool	on;
 	sq_dev_param_t	config;
 	mutex_type mutex;
-	bool 	sentSTMu, sentSTMo, sentSTMl;
+	bool 	sentSTMu, sentSTMo, sentSTMl, sentSTMd;
 	u32_t 	new_server;
 	char 	*new_server_cap;
 	char	fixed_cap[128], var_cap[128];

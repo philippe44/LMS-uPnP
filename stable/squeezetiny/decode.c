@@ -116,7 +116,9 @@ static void *decode_thread(struct thread_ctx_s *ctx) {
 
 /*---------------------------------------------------------------------------*/
 void decode_init(log_level level, const char *include_codecs, const char *exclude_codecs, bool full) {
-	int i;
+#if DSD || FFMPEG || !defined(NO_CODEC)
+	int i = 0;
+#endif
 
 	loglevel = level;
 
@@ -124,7 +126,6 @@ void decode_init(log_level level, const char *include_codecs, const char *exclud
 
 	// register codecs
 	// dsf,dff,alc,wma,wmap,wmal,aac,spt,ogg,ogf,flc,aif,pcm,mp3
-	i = 0;
 #if DSD
 	if (!strstr(exclude_codecs, "dsd")  && (!include_codecs || strstr(include_codecs, "dsd")))  codecs[i++] = register_dsd();
 #endif
@@ -148,7 +149,7 @@ void decode_init(log_level level, const char *include_codecs, const char *exclud
 
 /*---------------------------------------------------------------------------*/
 void decode_thread_init(struct thread_ctx_s *ctx) {
-	LOG_INFO("[%p]: init decode %d", ctx);
+	LOG_INFO("[%p]: init decode", ctx);
 	mutex_create(ctx->decode.mutex);
 
 #if LINUX || OSX || FREEBSD
@@ -156,7 +157,7 @@ void decode_thread_init(struct thread_ctx_s *ctx) {
 	pthread_attr_init(&attr);
 	pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN + DECODE_THREAD_STACK_SIZE);
 	if (ctx->config.mode == SQ_FULL)
-		pthread_create(&ctx->decode_thread, &attr, decode_thread, ctx);
+		pthread_create(&ctx->decode_thread, &attr, (void *(*)(void*)) decode_thread, ctx);
 	pthread_attr_destroy(&attr);
 #endif
 #if WIN
@@ -193,7 +194,7 @@ void decode_close(struct thread_ctx_s *ctx) {
 /*---------------------------------------------------------------------------*/
 void decode_flush(struct thread_ctx_s *ctx) {
 
-	LOG_INFO("[%p]: decode flush", ctx);
+	LOG_DEBUG("[%p]: decode flush", ctx);
 	LOCK_D;
 	ctx->decode.state = DECODE_STOPPED;
 	IF_PROCESS(

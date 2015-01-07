@@ -83,7 +83,7 @@ static bool get_header_urn(char *header, int header_len, char *urn)
 #endif
 
 /*---------------------------------------------------------------------------*/
-bool ctx_callback(struct thread_ctx_s *ctx, sq_action_t action, int cookie, void *param)
+bool ctx_callback(struct thread_ctx_s *ctx, sq_action_t action, u8_t *cookie, void *param)
 {
 	bool rc = false;
 
@@ -130,7 +130,6 @@ static void sendHELO(bool reconnect, const char *fixed_cap, const char *var_cap,
 	memcpy(pkt.mac, mac, 6);
 
 	LOG_INFO("[%p] mac: %02x:%02x:%02x:%02x:%02x:%02x", ctx, pkt.mac[0], pkt.mac[1], pkt.mac[2], pkt.mac[3], pkt.mac[4], pkt.mac[5]);
-
 	LOG_INFO("[%p] cap: %s%s%s", ctx, base_cap, fixed_cap, var_cap);
 
 	send_packet((u8_t *)&pkt, sizeof(pkt), ctx->sock);
@@ -257,19 +256,16 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 		if (stream_disconnect(ctx))
 			if (strm->command == 'f') sendSTAT("STMf", 0, ctx);
 		buf_flush(ctx->streambuf);
-		ctx_callback(ctx, SQ_STOP, 0, NULL);
+		ctx_callback(ctx, SQ_STOP, NULL, NULL);
 		break;
 	case 'p':
 		{
 			unsigned interval = unpackN(&strm->replay_gain);
 
-			if (!ctx->config.can_pause) {
-				break;
-			}
 			ctx->ms_pause = interval;
 			ctx->start_at = (interval) ? gettime_ms() + interval : 0;
 			ctx->track_status = TRACK_PAUSED;
-			ctx_callback(ctx, SQ_PAUSE, 0, NULL);
+			ctx_callback(ctx, SQ_PAUSE, NULL, NULL);
 			if (!interval) {
 				sendSTAT("STMp", 0, ctx);
 			}
@@ -279,7 +275,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 	case 'a':
 		{
 			unsigned interval = unpackN(&strm->replay_gain);
-			ctx_callback(ctx, SQ_SEEK, 0, &interval);
+			ctx_callback(ctx, SQ_SEEK, NULL, &interval);
 			LOG_INFO("[%p]skip ahead interval: %u", ctx, interval);
 		}
 		break;
@@ -295,7 +291,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 					ctx->track_new = true;
 					ctx->track_start_time = gettime_ms();
 				}
-				if (ctx->track_status != TRACK_STARTED) ctx_callback(ctx, SQ_UNPAUSE, 0, NULL);
+				if (ctx->track_status != TRACK_STARTED) ctx_callback(ctx, SQ_UNPAUSE, NULL, NULL);
 				ctx->track_status = TRACK_STARTED;
 			}
 			sendSTAT("STMr", 0, ctx);
@@ -303,7 +299,6 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 		break;
 	case 's':
 		{
-			bool proceed = false;
 			unsigned header_len = len - sizeof(struct strm_packet);
 			char *header = (char *)(pkt + sizeof(struct strm_packet));
 			in_addr_t ip = (in_addr_t)strm->server_ip; // keep in network byte order
@@ -361,7 +356,8 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 						fclose(ctx->out_ctx[idx].read_file);
 						ctx->out_ctx[idx].read_file = NULL;
 					}
-					ctx->out_ctx[idx].read_count = ctx->out_ctx[idx].read_count_t = 0;
+					ctx->out_ctx[idx].read_count = ctx->out_ctx[idx].read_count_t =
+												   ctx->out_ctx[idx].close_count = 0;
 
 					if (ctx->out_ctx[idx].write_file) {
 						LOG_ERROR("[%p]: write file left open", ctx, ctx->out_ctx[idx].buf_name);
@@ -382,8 +378,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 					the "upnp domain" for clarity, although it requires this
 					ackward 2 steps setup
 					*/
-					if (ctx_callback(ctx, SQ_SETFORMAT, 0, &uri)) {
-						proceed = true;
+					if (ctx_callback(ctx, SQ_SETFORMAT, NULL, &uri)) {
 						strcpy(ctx->out_ctx[idx].content_type, uri.content_type);
 						strcpy(ctx->out_ctx[idx].ext, uri.format);
 						strcpy(uri.urn, ctx->out_ctx[idx].buf_name);
@@ -393,10 +388,10 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 						strcpy(uri.urn, "__song__.mp3");
 #endif
 						if (ctx->play_running || ctx->track_status != TRACK_STOPPED) {
-							ctx_callback(ctx, SQ_SETNEXTURI, 0, &uri);
+							ctx_callback(ctx, SQ_SETNEXTURI, NULL, &uri);
 						}
 						else {
-							ctx_callback(ctx, SQ_SETURI, 0, &uri);
+							ctx_callback(ctx, SQ_SETURI, NULL, &uri);
 							ctx->track_ended = false;
 							ctx->track_status = TRACK_STOPPED;
 							ctx->track_new = true;
@@ -405,12 +400,14 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 						}
 						LOG_INFO("[%p] URI proxied by SQ2MR : %s", ctx, uri.urn);
 					}
+					else ctx->decode.state = DECODE_ERROR;
+
 					UNLOCK_S;UNLOCK_O;
 				}
 			}
 
-			if (proceed) sendSTAT("STMc", 0, ctx);
-			ctx->sentSTMu = ctx->sentSTMo = ctx->sentSTMl = false;
+			sendSTAT("STMc", 0, ctx);
+			ctx->sentSTMu = ctx->sentSTMo = ctx->sentSTMl = ctx->sentSTMd = false;
 
 #if 0
 			LOCK_O;
@@ -472,8 +469,8 @@ static void process_aude(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 	buf_flush(ctx->streambuf);
 	UNLOCK_O;
 
-	ctx_callback(ctx, SQ_STOP, 0, NULL);
-	ctx_callback(ctx, SQ_ONOFF, 0, &ctx->on);
+	ctx_callback(ctx, SQ_STOP, NULL, NULL);
+	ctx_callback(ctx, SQ_ONOFF, NULL, &ctx->on);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -492,7 +489,7 @@ static void process_audg(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 	UNLOCK_O;
 
 	gain = (audg->gainL + audg->gainL) / 2;
-	ctx_callback(ctx, SQ_VOLUME, 0, (void*) &gain);
+	ctx_callback(ctx, SQ_VOLUME, NULL, (void*) &gain);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -511,19 +508,6 @@ static void process_setd(u8_t *pkt, int len,struct thread_ctx_s *ctx) {
 			LOG_INFO("[%p] set name: %s", ctx, setd->data);
 			// confirm change to server
 			sendSETDName(setd->data, ctx->sock);
-#if 0
-			// write name to name_file if -N option set
-			if (ctx->name_file) {
-				FILE *fp = fopen(ctx->name_file, "w");
-				if (fp) {
-					LOG_INFO("[%p] storing name in %s", ctx, ctx->name_file);
-					fputs(ctx->player_name, fp);
-					fclose(fp);
-				} else {
-					LOG_WARN("[%p] unable to store new name in %s", ctx, ctx->name_file);
-				}
-			}
-#endif
 		}
 	}
 }
@@ -715,13 +699,18 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 				ctx->start_at = 0;
 				if (ctx->track_status != TRACK_PAUSED) ctx->track_new = true;
 				ctx->track_status = TRACK_STARTED;
-				ctx_callback(ctx, SQ_PLAY, 0, NULL);
+				ctx_callback(ctx, SQ_PLAY, NULL, NULL);
 			}
 
-			// normal end of streaming
+			// end of streaming
 			if (!ctx->sentSTMu && ctx->status.stream_state <= DISCONNECT && ctx->track_ended) {
 				_sendSTMu = true;
 				ctx->sentSTMu = true;
+				// not normal end
+				if (!ctx->sentSTMd) {
+					_sendSTMn = true;
+					LOG_WARN("[%p]: unwanted stop, reporting error", ctx);
+				}
 				ctx->track_ended = false;
 			}
 
@@ -739,7 +728,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 					ctx->sentSTMl = true;
 				 }
 				 else if (ctx->track_status == TRACK_STOPPED) {
-					 ctx_callback(ctx, SQ_PLAY, 0, NULL);
+					 ctx_callback(ctx, SQ_PLAY, NULL, NULL);
 					 LOCK_S;
 					 ctx->track_status = TRACK_STARTED;
 					 ctx->track_new = true;
@@ -767,6 +756,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 				// another potential "next"
 				if (ctx->read_ended) {
 					_sendSTMd = true;
+					ctx->sentSTMd = true;
 					ctx->read_ended = false;
 				}
 			}
@@ -850,7 +840,6 @@ static void slimproto(struct thread_ctx_s *ctx) {
 
 	mutex_create(ctx->mutex);
 	mutex_create(ctx->cli_mutex);
-	ctx->slimproto_ended = false;
 
 	while (ctx->running) {
 
@@ -892,8 +881,8 @@ static void slimproto(struct thread_ctx_s *ctx) {
 			getsockname(ctx->sock, (struct sockaddr *) &our_addr, &len);
 
 			if (our_addr.sin_addr.s_addr == ctx->serv_addr.sin_addr.s_addr) {
-				LOG_INFO("[%p] local player", ctx);
 #if 0
+				LOG_INFO("[%p] local player", ctx);
 				strcat(ctx->var_cap, ",loc");
 #endif
 			}
@@ -945,7 +934,6 @@ static void slimproto(struct thread_ctx_s *ctx) {
 
 	mutex_destroy(ctx->mutex);
 	mutex_destroy(ctx->cli_mutex);
-	ctx->slimproto_ended = true;
 }
 
 
@@ -955,16 +943,15 @@ static void slimproto_short(struct thread_ctx_s *ctx) {
 	unsigned port = 0;
 	sq_seturi_t	uri;
 
-	ctx->slimproto_ended = false;
 	if (ctx->slimproto_ip) {
 		bool onoff = true;
 
 		strcpy(uri.ip, inet_ntoa(ctx->serv_addr.sin_addr));
 		uri.port = gl_slimproto_stream_port;
 		strcpy(uri.urn, "stream.mp3");
-		ctx_callback(ctx, SQ_ONOFF, 0, &onoff);
-		ctx_callback(ctx, SQ_SETURI, 0, &uri);
-		ctx_callback(ctx, SQ_PLAY, 0, NULL);
+		ctx_callback(ctx, SQ_ONOFF, NULL, &onoff);
+		ctx_callback(ctx, SQ_SETURI, NULL, &uri);
+		ctx_callback(ctx, SQ_PLAY, NULL, NULL);
 		onoff = false;
 	}
 
@@ -990,48 +977,29 @@ static void slimproto_short(struct thread_ctx_s *ctx) {
 			strcpy(uri.ip, inet_ntoa(ctx->serv_addr.sin_addr));
 			uri.port = gl_slimproto_stream_port;
 			strcpy(uri.urn, "stream.mp3");
-			ctx_callback(ctx, SQ_ONOFF, 0, &onoff);
-			ctx_callback(ctx, SQ_SETURI, 0, &uri);
-			ctx_callback(ctx, SQ_PLAY, 0, NULL);
+			ctx_callback(ctx, SQ_ONOFF, NULL, &onoff);
+			ctx_callback(ctx, SQ_SETURI, NULL, &uri);
+			ctx_callback(ctx, SQ_PLAY, NULL, NULL);
 			onoff = false;
 		}
 		usleep(5000000L);
 	}
-
-	ctx->slimproto_ended = true;
 }
 
 /*---------------------------------------------------------------------------*/
-bool slimproto_close(struct thread_ctx_s *ctx) {
-	u32_t end_time = gettime_ms() + 2000;
-
+void slimproto_close(struct thread_ctx_s *ctx) {
 	LOG_INFO("[%p] slimproto stop for %s", ctx, ctx->player_name);
 	ctx->running = false;
 	wake_controller(ctx);
-	while (!ctx->slimproto_ended && (gettime_ms() < end_time)) {
-		usleep(100000);
-		LOG_SDEBUG("[%p] trying to end ...", ctx);
-	}
-	return ctx->slimproto_ended;
-
+#if LINUX || OSX || FREEBSD
+	pthread_detach(ctx->thread);
+#endif
 }
 
 /*---------------------------------------------------------------------------*/
 void slimproto_loglevel(log_level level) {
 	LOG_ERROR("slimproto change log", level);
 	loglevel = level;
-}
-
-/*---------------------------------------------------------------------------*/
-void slimproto_reset(struct thread_ctx_s *ctx)
-{
-	decode_flush(ctx);
-	output_flush(ctx);
-	ctx->play_running = ctx-> track_ended = false;
-	ctx->track_status = TRACK_STOPPED;
-	stream_disconnect(ctx);
-	if (ctx->callback) ctx_callback(ctx, SQ_STOP, 0, NULL);
-	buf_flush(ctx->streambuf);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -1060,27 +1028,6 @@ void slimproto_thread_init(char *server, u8_t mac[6], const char *name, const ch
 		strncpy(ctx->player_name, name, PLAYER_NAME_LEN);
 		ctx->player_name[PLAYER_NAME_LEN] = '\0';
 	}
-
-#if 0
-	if (namefile) {
-		FILE *fp;
-		name_file = namefile;
-		fp = fopen(namefile, "r");
-		if (fp) {
-			if (!fgets(player_name, PLAYER_NAME_LEN, fp)) {
-				player_name[PLAYER_NAME_LEN] = '\0';
-			} else {
-				// strip any \n from fgets response
-				int len = strlen(player_name);
-				if (len > 0 && player_name[len - 1] == '\n') {
-					player_name[len - 1] = '\0';
-				}
-				LOG_INFO("[%p] retrieved name %s from %s", ctx, player_name, name_file);
-			}
-			fclose(fp);
-		}
-	}
-#endif
 
 	/* could be avoided as whole context is reset at init ...*/
 	strcpy(ctx->var_cap, "");
@@ -1116,16 +1063,17 @@ void slimproto_thread_init(char *server, u8_t mac[6], const char *name, const ch
 	LOG_INFO("[%p] connecting to %s:%d", ctx, inet_ntoa(ctx->serv_addr.sin_addr), ntohs(ctx->serv_addr.sin_port));
 
 	ctx->new_server = 0;
-	slimproto_reset(ctx);
+	ctx->play_running = ctx-> track_ended = false;
+	ctx->track_status = TRACK_STOPPED;
 
 #if LINUX || OSX || FREEBSD
 	pthread_attr_t attr;
 	pthread_attr_init(&attr);
 	pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN + SLIMPROTO_THREAD_STACK_SIZE);
 if (ctx->config.mode == SQ_LMSUPNP)
-	pthread_create(&ctx->thread, &attr, slimproto_short, ctx);
+	pthread_create(&ctx->thread, &attr, (void *(*)(void*)) slimproto_short, ctx);
 else
-	pthread_create(&ctx->thread, &attr, slimproto, ctx);
+	pthread_create(&ctx->thread, &attr, (void *(*)(void*)) slimproto, ctx);
 	pthread_attr_destroy(&attr);
 #endif
 #if WIN

@@ -250,7 +250,7 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 
 					n = recv(ctx->fd, ctx->streambuf->writep, space, 0);
 					if (n == 0) {
-						LOG_INFO("[%p] end of stream (tot:%d)", ctx, ctx->stream.bytes);
+						LOG_INFO("[%p] end of stream (t:%Ld)", ctx, ctx->stream.bytes);
 						_disconnect(DISCONNECT, DISCONNECT_OK, ctx);
 					}
 					if (n < 0 && last_error() != ERROR_WOULDBLOCK) {
@@ -321,7 +321,7 @@ void stream_thread_init(unsigned stream_buf_size, struct thread_ctx_s *ctx) {
 	pthread_attr_t attr;
 	pthread_attr_init(&attr);
 	pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN + STREAM_THREAD_STACK_SIZE);
-	pthread_create(&ctx->stream_thread, &attr, stream_thread, ctx);
+	pthread_create(&ctx->stream_thread, &attr, (void *(*)(void*)) stream_thread, ctx);
 	pthread_attr_destroy(&attr);
 #endif
 #if WIN

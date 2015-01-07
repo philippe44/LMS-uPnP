@@ -24,6 +24,7 @@
 #include "squeezedefs.h"
 #include "util.h"
 #include "util_common.h"
+#include "upnptools.h"
 
 /*----------------------------------------------------------------------------*/
 /* globals */
@@ -191,15 +192,18 @@ int XMLFindAndParseService(IXML_Document *DescDoc, const char *location,
 			LOG_SDEBUG("serviceType %s", tempServiceType);
 
 			if (tempServiceType && strcmp(tempServiceType, serviceType) == 0) {
+				NFREE(*serviceId);
 				*serviceId = XMLGetFirstElementItem(service, "serviceId");
 				LOG_SDEBUG("Service %s, serviceId: %s", serviceType, serviceId);
 				relcontrolURL = XMLGetFirstElementItem(service, "controlURL");
 				releventURL = XMLGetFirstElementItem(service, "eventSubURL");
+				NFREE(*controlURL);
 				*controlURL = (char*) malloc(strlen(base) + strlen(relcontrolURL) + 1);
 				if (*controlURL) {
 					ret = UpnpResolveURL(base, relcontrolURL, *controlURL);
 					if (ret != UPNP_E_SUCCESS) LOG_ERROR("Error generating controlURL from %s + %s", base, relcontrolURL);
 				}
+				NFREE(*eventURL);
 				*eventURL = (char*) malloc(strlen(base) + strlen(releventURL) + 1);
 				if (*eventURL) {
 					ret = UpnpResolveURL(base, releventURL, *eventURL);
@@ -275,15 +279,15 @@ char *XMLGetChangeItem(IXML_Document *doc, char *Item)
 /*----------------------------------------------------------------------------*/
 IXML_Node *XMLAddNode(IXML_Document *doc, IXML_Node *parent, char *name, char *fmt, ...)
 {
-	IXML_Node *node;
-	IXML_Element *elm;
+	IXML_Node *node, *elm;
+//	IXML_Element *elm;
 
 	char buf[256];
 	va_list args;
 
-	elm =  ixmlDocument_createElement(doc, name);
+	elm = (IXML_Node*) ixmlDocument_createElement(doc, name);
 	if (parent) ixmlNode_appendChild(parent, elm);
-	else ixmlNode_appendChild(doc, elm);
+	else ixmlNode_appendChild((IXML_Node*) doc, elm);
 
 	if (fmt) {
 		va_start(args, fmt);
@@ -325,40 +329,6 @@ unsigned Time2Int(char *Time)
 
 	return ret;
 }
-
-#if 0
-/*----------------------------------------------------------------------------*/
-char *XMLGetChangeItem(IXML_Document *doc, char *Item)
-{
-	unsigned i;
-	IXML_NodeList *changenodelist, *p_list;
-	IXML_Node *changenode, *p_node;
-	char *Change;
-
-	changenodelist = ixmlDocument_getElementsByTagName(doc, "LastChange");
-	if (!changenodelist) return NULL;
-
-	for (i = 0; i < ixmlNodeList_length(changenodelist); i++) {
-		changenode = ixmlNodeList_item(changenodelist, i);
-		if (changenode) {
-			p_list = ixmlElement_getElementsByTagName((IXML_Element *)changenode, Item);
-			if (p_list) {
-					p_node = ixmlNodeList_item(p_list, 0);
-					p_node = ixmlNode_getFirstChild(p_node);
-					Change = strdup(ixmlNode_getNodeValue(p_node));
-					break;
-			}
-			free(p_list);
-		}
-	}
-
-	if (changenodelist)
-		ixmlNodeList_free(changenodelist);
-
-	return Change;
-}
-#endif
-
 
 /*----------------------------------------------------------------------------*/
 char *uPNPEvent2String(Upnp_EventType S)
