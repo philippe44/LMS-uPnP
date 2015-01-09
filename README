@@ -16,8 +16,12 @@ in ./bin, there are binaries for Windows and Linux (includes how to run it on
 - squeeze2upnp-x86-static : same as above, but libc librairies are statically 
 linked (must be used on some NAS e.G. Atom-base, that don't have the right libc
 available - squeeze2upnp-x86 launch will fail)
-- squeeze2upnp-arm6lhf : Linux (ARM CPU)
-- squeeze2upnp-arm6lhf-static : same as above, with static libraries
+- squeeze2upnp-arm6hf : Linux (ARM v6 CPU, hard float)
+- squeeze2upnp-arm6hf-static : same as above, with static libraries
+- squeeze2upnp-arm5 : Linux (ARM v5 CPU)
+- squeeze2upnp-arm5-static : same as above, with static libraries
+
+NB: ARM binaries are much less tested than Intel binaires
 
 
 Rebuilding is not necessary, but if you want to rebuild, here is what should be 
