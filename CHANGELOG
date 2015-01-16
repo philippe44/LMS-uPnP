@@ -1,4 +1,11 @@
-0.1.4.0rc18
+0.2.0.0
+ - each player uses own timer thread to poll position, track and related info instead of a single thread for all players
+ - upnp rescan dedicated thread created at each scan interval to avoid blocking libupnp caller thread in callback
+ - continue re-organizing LOG
+ - metadata using "songinfo" CLI command to allow access to more information, includign albumart (still fallback to use "playlist" info if "songinfo" fails)
+
+
+0.1.4.0
  - <volume_on_play> can be set to -1 so that *all* LMS volume commands are ignored (use the player's volume control)
  - When pause/play directly on the player, action is feedback to LMS that should stay in sycn (still early phase ...). This does NOT work when "stop" is being used - such "stop" will be interpreted by LMS as an error and will move to next track
  - if uPnP player cannot play a format, send the proper error code to LMS (also send STMc everytime) == > that's to avoid being stuck in a middle of a playlist - LMS will gently move to the next song and a squeeze2upnp will just log the problem
