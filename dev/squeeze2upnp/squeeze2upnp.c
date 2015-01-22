@@ -1002,7 +1002,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	strcpy(Device->Manufacturer, manufacturer);
 	SetVolumeCurve(Device);
 
-	 ExtractIP(location, &Device->ip);
+	ExtractIP(location, &Device->ip);
 	if (!memcmp(Device->sq_config.mac, "\0\0\0\0\0\0", mac_size) &&
 		SendARP(*((in_addr_t*) &Device->ip), INADDR_ANY, Device->sq_config.mac, &mac_size)) {
 		LOG_ERROR("[%p]: cannot get mac %s", Device, Device->FriendlyName);
@@ -1010,8 +1010,6 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 		memset(Device->sq_config.mac, 0, sizeof(Device->sq_config.mac));
 	}
 
-
-	LOG_INFO("trace3", NULL);
 	/* find the different services */
 	for (i = 0; i < NB_SRV; i++) {
 		strcpy(Device->Service[i].Id, "");
@@ -1030,7 +1028,6 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 		NFREE(ControlURL);
 	}
 
-	LOG_INFO("trace4", NULL);
 	// send a request for "sink" (will be returned in a callback)
 	GetProtocolInfo(Device->Service[CNX_MGR_IDX].ControlURL, Device->seqN++);
 
@@ -1040,12 +1037,10 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	NFREE(presURL);
 	NFREE(manufacturer);
 
-	LOG_INFO("trace5", NULL);
 	pthread_attr_init(&attr);
 	pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN + 32*1024);
 	pthread_create(&Device->Thread, &attr, &MRThread, Device);
 	pthread_attr_destroy(&attr);
-	LOG_INFO("trace6", NULL);
 
 	return true;
 }
