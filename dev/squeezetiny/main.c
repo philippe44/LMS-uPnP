@@ -365,6 +365,8 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 	char *rsp, *p;
 	u16_t idx;
 
+	sq_init_metadata(metadata);
+
 	if (!handle || !ctx->cli_sock) {
 		LOG_ERROR("[%p]: no handle or CLI socket %d", ctx, handle);
 		sq_default_metadata(metadata, true);
@@ -379,8 +381,6 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 		sq_default_metadata(metadata, true);
 		return false;
 	}
-
-	sq_init_metadata(metadata);
 
 	idx = atol(rsp);
 	NFREE(rsp);
@@ -449,7 +449,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 	NFREE(rsp);
 	sq_default_metadata(metadata, false);
 
-	LOG_INFO("[%p]: idx %d\n\tartist:%s\n\talbum:%s\n\ttitle:%s\n\tgenre:%s\n\tduration:%d\n\tsize:%Ld", ctx, idx,
+	LOG_INFO("[%p]: idx %d\n\tartist:%s\n\talbum:%s\n\ttitle:%s\n\tgenre:%s\n\tduration:%d\n\tsize:%d", ctx, idx,
 				metadata->artist, metadata->album, metadata->title,
 				metadata->genre, metadata->duration, metadata->file_size);
 
@@ -468,7 +468,7 @@ void sq_free_metadata(sq_metadata_t *metadata)
 }
 
 /*---------------------------------------------------------------------------*/
-void *sq_get_info(const char *urn, off_t *size, char **content_type)
+void *sq_get_info(const char *urn, s32_t *size, char **content_type)
 {
 	int i = 0;
 	out_ctx_t *out = NULL;

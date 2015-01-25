@@ -34,6 +34,7 @@ int WebGetInfo(const char *FileName, struct File_Info *Info)
 #endif
 	struct stat Status;
 	void *Ref;
+	s32_t FileSize;
 
 #ifdef TEST_IDX_BUF
 	if (strstr(FileName, "__song__.mp3")) {
@@ -57,16 +58,17 @@ int WebGetInfo(const char *FileName, struct File_Info *Info)
 #endif
 	}
 
+	Ref = sq_get_info(FileName, &FileSize, &Info->content_type);
 	Info->is_directory = false;
 	Info->is_readable = true;
 	Info->last_modified = Status.st_ctime;
-	// Info->file_length = Status.st_size;
-	Ref = sq_get_info(FileName, &Info->file_length, &Info->content_type);
+	Info->file_length = FileSize;
+
 #ifdef TEST_IDX_BUF
 	if (!strcmp(Info->content_type, "audio/unknown"))
 		Info->content_type = strdup("audio/mpeg");
 #endif
-	LOG_INFO("[%p]: GetInfo %s %s", Ref, FileName, Info->content_type);
+	LOG_INFO("[%p]: GetInfo %s %Ld %s", Ref, FileName, (s64_t) Info->file_length, Info->content_type);
 
 #if 0
 	{

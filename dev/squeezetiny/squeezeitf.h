@@ -35,7 +35,7 @@ typedef struct sq_metadata_s {
 	u32_t index;
 	u32_t track;
 	u32_t duration;
-	off_t file_size;
+	u32_t file_size;
 } sq_metadata_t;
 
 typedef	struct sq_dev_param_s {
@@ -104,7 +104,7 @@ void				sq_default_metadata(struct sq_metadata_s *metadata, bool init);
 void 				sq_free_metadata(struct sq_metadata_s *metadata);
 bool 				sq_set_time(sq_dev_handle_t handle, u32_t time);
 void*				sq_urn2MR(const char *urn);
-void*				sq_get_info(const char *urn, off_t *filesize, char **content_type);	// string must be released by caller
+void*				sq_get_info(const char *urn, s32_t *filesize, char **content_type);	// string must be released by caller
 void*				sq_open(const char *urn);
 void*				sq_isopen(const char *urn);
 bool				sq_close(void *desc);
