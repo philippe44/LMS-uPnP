@@ -42,6 +42,9 @@
 #define	CONNECTION_MGR 	"urn:schemas-upnp-org:service:ConnectionManager:1"
 #define MAGIC			0xAABBCCDD
 #define RESOURCE_LENGTH	250
+#define	SCAN_TIMEOUT 	15
+#define SCAN_INTERVAL	120
+
 
 enum eMRstate {STOPPED, PLAYING, PAUSED, TRANSITIONING};
 enum {AVT_SRV_IDX = 0, REND_SRV_IDX, CNX_MGR_IDX, NB_SRV};
@@ -136,6 +139,7 @@ extern sq_dev_param_t		glDeviceParam;
 extern char					glSQServer[SQ_STR_LENGTH];
 //extern const int			NB_SRV;
 extern u32_t				gluPNPScanInterval;
+extern u32_t				gluPNPScanTimeout;
 extern ithread_mutex_t		glMRMutex;
 extern struct sMR			glMRDevices[MAX_RENDERERS];
 

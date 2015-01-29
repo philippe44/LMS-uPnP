@@ -4,6 +4,8 @@
  - continue re-organizing LOG
  - metadata using "songinfo" CLI command to allow access to more information, includign albumart (still fallback to use "playlist" info if "songinfo" fails)
  - on <accept_next_uri> = 0, metadat was not properly handled, leading to random filesize being sent
+ - add <upnp_scan_timeout> to configure how long a network player *rescan* lasts (initial scan is still 15)
+ - <upnp_scan_interval> is 120 seconds minimum
 
 
 0.1.4.0

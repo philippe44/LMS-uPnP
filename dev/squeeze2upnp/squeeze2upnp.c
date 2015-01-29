@@ -104,7 +104,8 @@ UpnpClient_Handle 	glControlPointHandle;
 void				*glConfigID = NULL;
 char				glConfigName[SQ_STR_LENGTH] = "./config.xml";
 static bool			glDiscovery = false;
-u32_t				gluPNPScanInterval = 120;
+u32_t				gluPNPScanInterval = SCAN_INTERVAL;
+u32_t				gluPNPScanTimeout = SCAN_TIMEOUT;
 struct sMR			glMRDevices[MAX_RENDERERS];
 ithread_mutex_t		glMRMutex, glMRFoundMutex;
 
@@ -727,7 +728,6 @@ static void *UpdateMRThread(void *args)
 }
 
 /*----------------------------------------------------------------------------*/
-#define	SCAN_TIMEOUT (15)
 static void *MainThread(void *args)
 {
 	unsigned last = gettime_ms();
@@ -748,7 +748,7 @@ static void *MainThread(void *args)
 			}
 
 			// launch a new search for Media Render
-			rc = UpnpSearchAsync(glControlPointHandle, SCAN_TIMEOUT, MEDIA_RENDERER, NULL);
+			rc = UpnpSearchAsync(glControlPointHandle, gluPNPScanTimeout, MEDIA_RENDERER, NULL);
 			if (UPNP_E_SUCCESS != rc) LOG_ERROR("Error sending search update%d", rc);
 		}
 
@@ -808,6 +808,10 @@ int uPNPInitialize(char *IPaddress, unsigned int *Port)
 {
 	int rc;
 	struct UpnpVirtualDirCallbacks VirtualDirCallbacks;
+
+	if (gluPNPScanInterval < SCAN_INTERVAL) gluPNPScanInterval = SCAN_INTERVAL;
+	if (gluPNPScanTimeout < SCAN_TIMEOUT) gluPNPScanTimeout = SCAN_TIMEOUT;
+	if (gluPNPScanTimeout > gluPNPScanInterval - SCAN_TIMEOUT) gluPNPScanTimeout = gluPNPScanInterval - SCAN_TIMEOUT;
 
 	ithread_mutex_init(&glMRMutex, 0);
 	ithread_mutex_init(&glMRFoundMutex, 0);
