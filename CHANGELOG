@@ -1,8 +1,9 @@
-0.2.0.0
+0.2.0.0a2
  - each player uses own timer thread to poll position, track and related info instead of a single thread for all players
  - upnp rescan dedicated thread created at each scan interval to avoid blocking libupnp caller thread in callback
  - continue re-organizing LOG
  - metadata using "songinfo" CLI command to allow access to more information, includign albumart (still fallback to use "playlist" info if "songinfo" fails)
+ - on <accept_next_uri> = 0, metadat was not properly handled, leading to random filesize being sent
 
 
 0.1.4.0

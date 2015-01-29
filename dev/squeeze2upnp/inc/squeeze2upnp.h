@@ -88,6 +88,7 @@ struct sMR {
 	char			*CurrentURI;
 	char			*NextURI;
 	char			NextProtInfo[SQ_STR_LENGTH];		// a bit patchy ... used for faulty NEXTURI players
+	sq_metadata_t	NextMetaData;
 	sq_action_t		sqState;
 	u32_t			Elapsed;
 	u8_t			*seqN;

@@ -194,19 +194,20 @@ static bool AddMRDevice(struct sMR *Device, char * UDN, IXML_Document *DescDoc,	
 			NFREE(device->NextURI);
 
 			strcpy(device->NextProtInfo, p->proto_info);
-			if (device->Config.AcceptNextURI){
-				sq_metadata_t MetaData;
+			if (device->Config.SendMetaData) {
+				sq_get_metadata(device->SqueezeHandle, &device->NextMetaData, true);
+				p->file_size = device->NextMetaData.file_size ?
+							   device->NextMetaData.file_size : device->Config.StreamLength;
+			}
+			else {
+				sq_default_metadata(&device->NextMetaData, true);
+				p->file_size = device->Config.StreamLength;
+			}
 
-				if (device->Config.SendMetaData) {
-					sq_get_metadata(device->SqueezeHandle, &MetaData, true);
-					p->file_size = MetaData.file_size ? MetaData.file_size : device->Config.StreamLength;
-				}
-				else {
-					sq_default_metadata(&MetaData, true);
-					p->file_size = device->Config.StreamLength;
-				}
-				AVTSetNextURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info, &MetaData, device->seqN++);
-				sq_free_metadata(&MetaData);
+			if (device->Config.AcceptNextURI){
+				AVTSetNextURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info,
+							  &device->NextMetaData, device->seqN++);
+				sq_free_metadata(&device->NextMetaData);
 			}
 
 			// to know what is expected next
@@ -331,7 +332,6 @@ void SyncNotifState(char *State, struct sMR* Device)
 			LOG_INFO("%s: uPNP stop", Device->FriendlyName);
 			if (Device->NextURI && !Device->Config.AcceptNextURI) {
 				u8_t *WaitFor = Device->seqN++;
-				sq_metadata_t MetaData;
 
 				// fake a "SETURI" and a "PLAY" request
 				NFREE(Device->CurrentURI);
@@ -339,9 +339,9 @@ void SyncNotifState(char *State, struct sMR* Device)
 				strcpy(Device->CurrentURI, Device->NextURI);
 				NFREE(Device->NextURI);
 
-				sq_get_metadata(Device->SqueezeHandle, &MetaData, true);
-				AVTSetURI(Device->Service[AVT_SRV_IDX].ControlURL, Device->CurrentURI, Device->NextProtInfo, &MetaData, WaitFor);
-				sq_free_metadata(&MetaData);
+				AVTSetURI(Device->Service[AVT_SRV_IDX].ControlURL, Device->CurrentURI,
+						  Device->NextProtInfo, &Device->NextMetaData, WaitFor);
+				sq_free_metadata(&Device->NextMetaData);
 
 				/*
 				Need to queue to wait for the SetURI to be accepted, otherwise
