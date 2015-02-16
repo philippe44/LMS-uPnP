@@ -124,3 +124,9 @@ automatically move to that URI once the current URI finishes ... (it wants a "Ne
 command). Microsoft, Microsoft I guess compliance to standards is good only for the 
 others. It works on version >= 1.4.0 as the "next" is an additional workaround
 
+
+***********************************************************************
+Pioneer speaker XW-SMA3 (probably SMA-1 and SMA-4 as well, TBC)
+***********************************************************************
+<codecs>flc,pcm,mp3</codecs>
+<accept_nexturi>0</accept_nexturi>
