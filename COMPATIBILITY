@@ -130,3 +130,9 @@ Pioneer speaker XW-SMA3 (probably SMA-1 and SMA-4 as well, TBC)
 ***********************************************************************
 <codecs>flc,pcm,mp3</codecs>
 <accept_nexturi>0</accept_nexturi>
+
+***********************************************************************
+Raumfeld S
+***********************************************************************
+<accept_nexturi>0</accept_nexturi>
+<codecs>pcm,flc,mp3</codecs>
