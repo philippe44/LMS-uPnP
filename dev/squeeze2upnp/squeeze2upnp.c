@@ -731,6 +731,7 @@ static void *UpdateMRThread(void *args)
 	}
 
 	ithread_mutex_unlock(&glMRMutex);
+	glDiscovery = true;
 	LOG_INFO("End uPnP devices update %d", gettime_ms() - TimeStamp);
 	return NULL;
 }
