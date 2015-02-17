@@ -366,19 +366,27 @@ void SyncNotifState(char *State, struct sMR* Device)
 
 	if (!strcmp(State, "PLAYING")) {
 		if (Device->State != PLAYING) {
-			bool UnSol;
+			bool UnSol = false;
 
-			if (Device->sqState == SQ_PAUSE) {
+			switch (Device->sqState) {
+			case SQ_PAUSE:
 				UnSol = true;
 				sq_notify(Device->SqueezeHandle, Device, SQ_PLAY, NULL, &UnSol);
-			}
-			else {
-				UnSol = false;
+				break;
+			case SQ_PLAY:
 				LOG_INFO("%s: uPNP playing", Device->FriendlyName);
 				sq_notify(Device->SqueezeHandle, Device, SQ_PLAY, NULL, &UnSol);
+				break;
+			default:
+				/*
+				can be a local playing after stop or a N-1 playing after a quick
+				sequence of "next" when a N stop has been sent ==> ignore it
+				*/
+				LOG_ERROR("[%s]: unhandled playing", Device->FriendlyName);
+				break;
 			}
 
-			if (Device->Config.ForceVolume == 1 && Device->Config.ProcessMode != SQ_LMSUPNP)
+			if (Device->Config.VolumeOnPlay != -1 && Device->Config.ForceVolume == 1 && Device->Config.ProcessMode != SQ_LMSUPNP)
 					SetVolume(Device->Service[REND_SRV_IDX].ControlURL, Device->Volume, Device->seqN++);
 
 			Device->State = PLAYING;
