@@ -670,7 +670,7 @@ static void *UpdateMRThread(void *args)
 		char *UDN = NULL, *Manufacturer = NULL;
 		int rc;
 		void *n = p->Next;
-LOG_INFO("#0 uPnP devices update [%p]", p);
+
 		rc = UpnpDownloadXmlDoc(p->Location, &DescDoc);
 		if (rc != UPNP_E_SUCCESS) {
 			LOG_DEBUG("Error obtaining description %s -- error = %d\n", p->Location, rc);
@@ -678,7 +678,7 @@ LOG_INFO("#0 uPnP devices update [%p]", p);
 			p = n;
 			continue;
 		}
-LOG_INFO("#1 uPnP devices update [%p]", p);
+
 		Manufacturer = XMLGetFirstDocumentItem(DescDoc, "manufacturer");
 		UDN = XMLGetFirstDocumentItem(DescDoc, "UDN");
 		if (!strstr(Manufacturer, cLogitech) && !RefreshTO(UDN)) {
@@ -718,7 +718,6 @@ LOG_INFO("#1 uPnP devices update [%p]", p);
 		m = p->Next;
 		free(p->Location); free(p);
 		p = m;
-LOG_INFO("#2 uPnP devices update [%p]", p);
 	}
 
 	// then walk through the list of devices to remove missing ones
@@ -730,7 +729,7 @@ LOG_INFO("#2 uPnP devices update [%p]", p);
 		if (Device->SqueezeHandle) sq_delete_device(Device->SqueezeHandle);
 		DelMRDevice(Device);
 	}
-LOG_INFO("#3 uPnP devices update", NULL);
+
 	ithread_mutex_unlock(&glMRMutex);
 	glDiscovery = true;
 	LOG_INFO("End uPnP devices update %d", gettime_ms() - TimeStamp);
@@ -1029,7 +1028,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 		strcpy(Device->Service[i].Id, "");
 		if (XMLFindAndParseService(DescDoc, location, cSearchedSRV[i].name, &ServiceId, &EventURL, &ControlURL)) {
 			struct sService *s = &Device->Service[cSearchedSRV[i].idx];
-			LOG_SDEBUG("\tservice [%s] %s, %s, %s", cSearchedSRV[i].name, ServiceId, EventURL, ControlURL);
+			LOG_INFO("\tservice [%s] %s, %s, %s", cSearchedSRV[i].name, ServiceId, EventURL, ControlURL);
 
 			strncpy(s->Id, ServiceId, RESOURCE_LENGTH-1);
 			strncpy(s->ControlURL, ControlURL, RESOURCE_LENGTH-1);
@@ -1042,8 +1041,10 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 		NFREE(ControlURL);
 	}
 
+	LOG_INFO("end service add", NULL);
 	// send a request for "sink" (will be returned in a callback)
 	GetProtocolInfo(Device->Service[CNX_MGR_IDX].ControlURL, Device->seqN++);
+	LOG_INFO("end protocol info", NULL);
 
 	NFREE(deviceType);
 	NFREE(friendlyName);
