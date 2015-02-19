@@ -678,7 +678,7 @@ static void *UpdateMRThread(void *args)
 			p = n;
 			continue;
 		}
-
+LOG_INFO("#1 uPnP devices update [%p]", p);
 		Manufacturer = XMLGetFirstDocumentItem(DescDoc, "manufacturer");
 		UDN = XMLGetFirstDocumentItem(DescDoc, "UDN");
 		if (!strstr(Manufacturer, cLogitech) && !RefreshTO(UDN)) {
@@ -718,6 +718,7 @@ static void *UpdateMRThread(void *args)
 		m = p->Next;
 		free(p->Location); free(p);
 		p = m;
+LOG_INFO("#2 uPnP devices update [%p]", p);
 	}
 
 	// then walk through the list of devices to remove missing ones
@@ -729,7 +730,7 @@ static void *UpdateMRThread(void *args)
 		if (Device->SqueezeHandle) sq_delete_device(Device->SqueezeHandle);
 		DelMRDevice(Device);
 	}
-
+LOG_INFO("#3 uPnP devices update", NULL);
 	ithread_mutex_unlock(&glMRMutex);
 	glDiscovery = true;
 	LOG_INFO("End uPnP devices update %d", gettime_ms() - TimeStamp);
