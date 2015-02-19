@@ -670,7 +670,7 @@ static void *UpdateMRThread(void *args)
 		char *UDN = NULL, *Manufacturer = NULL;
 		int rc;
 		void *n = p->Next;
-
+LOG_INFO("#0 uPnP devices update [%p]", p);
 		rc = UpnpDownloadXmlDoc(p->Location, &DescDoc);
 		if (rc != UPNP_E_SUCCESS) {
 			LOG_DEBUG("Error obtaining description %s -- error = %d\n", p->Location, rc);
