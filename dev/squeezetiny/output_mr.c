@@ -569,7 +569,7 @@ void output_mr_close(struct thread_ctx_s *ctx) {
 void output_flush(struct thread_ctx_s *ctx) {
 	int i;
 
-	LOG_INFO("[%p]: flush output buffer", ctx);
+	LOG_DEBUG("[%p]: flush output buffer", ctx);
 
 	LOCK_S;LOCK_O;
 	for (i = 0; i < 2; i++) {

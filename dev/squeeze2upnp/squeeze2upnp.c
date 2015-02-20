@@ -1028,7 +1028,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 		strcpy(Device->Service[i].Id, "");
 		if (XMLFindAndParseService(DescDoc, location, cSearchedSRV[i].name, &ServiceId, &EventURL, &ControlURL)) {
 			struct sService *s = &Device->Service[cSearchedSRV[i].idx];
-			LOG_INFO("\tservice [%s] %s, %s, %s", cSearchedSRV[i].name, ServiceId, EventURL, ControlURL);
+			LOG_SDEBUG("\tservice [%s] %s, %s, %s", cSearchedSRV[i].name, ServiceId, EventURL, ControlURL);
 
 			strncpy(s->Id, ServiceId, RESOURCE_LENGTH-1);
 			strncpy(s->ControlURL, ControlURL, RESOURCE_LENGTH-1);
@@ -1041,10 +1041,8 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 		NFREE(ControlURL);
 	}
 
-	LOG_INFO("end service add", NULL);
 	// send a request for "sink" (will be returned in a callback)
 	GetProtocolInfo(Device->Service[CNX_MGR_IDX].ControlURL, Device->seqN++);
-	LOG_INFO("end protocol info", NULL);
 
 	NFREE(deviceType);
 	NFREE(friendlyName);
