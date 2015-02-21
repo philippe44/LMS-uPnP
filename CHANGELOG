@@ -9,6 +9,8 @@
  - When skipping track very quickly, a "playing" state of previous skip could be received before the "stopped" state or last skip, causing player to stall (confused with an unsollicited play)
  - force_volume was used, even when volume_on_play was set to -1 in SyncNotifyState
  - option -i was broken before a5 release
+ - context index toggle shall be done after stream mutex lock (slimproto)
+ - remove deadlock between upnp notification and LMS playback request (sq_notify call in SyncNotifyState)
 
 
 0.1.4.0

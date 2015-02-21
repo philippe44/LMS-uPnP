@@ -348,9 +348,9 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 					stream_sock(ip, port, header, header_len, strm->threshold * 1024, ctx->autostart >= 2, ctx);
 					uri.port = 0;
 					strcpy(uri.ip, "");
-					idx = ctx->out_idx = (ctx->out_idx + 1) & 0x01;
 
 					LOCK_S;LOCK_O;
+					idx = ctx->out_idx = (ctx->out_idx + 1) & 0x01;
 					if (ctx->out_ctx[idx].read_file) {
 						LOG_ERROR("[%p]: read file left open", ctx, ctx->out_ctx[idx].buf_name);
 						fclose(ctx->out_ctx[idx].read_file);

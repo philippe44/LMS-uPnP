@@ -313,6 +313,8 @@ static bool AddMRDevice(struct sMR *Device, char * UDN, IXML_Document *DescDoc,	
 void SyncNotifState(char *State, struct sMR* Device)
 {
 	struct sAction *Action = NULL;
+	sq_event_t Event = SQ_NONE;
+	bool Param = false;
 
 	ithread_mutex_lock(&Device->Mutex);
 
@@ -350,7 +352,7 @@ void SyncNotifState(char *State, struct sMR* Device)
 				*/
 				QueueAction(Device->SqueezeHandle, Device, SQ_PLAY, WaitFor, NULL, true);
 
-				sq_notify(Device->SqueezeHandle, Device, SQ_TRACK_CHANGE, NULL, NULL);
+				Event = SQ_TRACK_CHANGE;
 				LOG_INFO("[%p]: no gapless %s", Device, Device->CurrentURI);
 			}
 			else {
@@ -358,24 +360,21 @@ void SyncNotifState(char *State, struct sMR* Device)
 				If the stop is abnormal (due to a timing issue), the squeezelite
 				part will detect that and inform LMS that will send next track
 				*/
-				sq_notify(Device->SqueezeHandle, Device, SQ_STOP, NULL, NULL);
-            }
+				Event = SQ_STOP;
+			}
 			Device->State = STOPPED;
 		 }
 	}
 
 	if (!strcmp(State, "PLAYING")) {
 		if (Device->State != PLAYING) {
-			bool UnSol = false;
 
+			LOG_INFO("%s: uPNP playing", Device->FriendlyName);
 			switch (Device->sqState) {
 			case SQ_PAUSE:
-				UnSol = true;
-				sq_notify(Device->SqueezeHandle, Device, SQ_PLAY, NULL, &UnSol);
-				break;
+				Param = true;
 			case SQ_PLAY:
-				LOG_INFO("%s: uPNP playing", Device->FriendlyName);
-				sq_notify(Device->SqueezeHandle, Device, SQ_PLAY, NULL, &UnSol);
+				Event = SQ_PLAY;
 				break;
 			default:
 				/*
@@ -402,8 +401,8 @@ void SyncNotifState(char *State, struct sMR* Device)
 	if (!strcmp(State, "PAUSED_PLAYBACK")) {
 		if (Device->State != PAUSED) {
 			if (Device->sqState != SQ_PAUSE) {
-				bool UnSol = true;
-				sq_notify(Device->SqueezeHandle, Device, SQ_PAUSE, NULL, &UnSol);
+				Event = SQ_PAUSE;
+				Param = true;
 			}
 			LOG_INFO("%s: uPNP pause", Device->FriendlyName);
 			if (Action && Action->Action == SQ_PAUSE) {
@@ -436,6 +435,13 @@ void SyncNotifState(char *State, struct sMR* Device)
 	}
 
 	ithread_mutex_unlock(&Device->Mutex);
+	/*
+	Squeeze "domain" execution has the right to consume own mutexes AND callback
+	upnp "domain" function that will consume upnp "domain" mutex, but the reverse
+	cannot be true otherwise deadlocks will occur
+	*/
+	if (Event != SQ_NONE)
+		sq_notify(Device->SqueezeHandle, Device, Event, NULL, &Param);
 }
 
 #ifdef SUBSCRIBE_EVENT
