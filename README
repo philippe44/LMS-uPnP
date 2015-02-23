@@ -11,7 +11,8 @@ See "New User Guide.pdf" to know more
 in ./bin, there are binaries for Windows (does NOT run on XP) and Linux 
 (includes how to run it on 32 bits and 64 bits versions). Binaries list is 
 
-- squeeze2upnp.exe, pthreadbc2.dll, cc32160mt.dll : Windows 32 and 64 bits
+- squeeze2upnp.exe, pthreadbc2.dll, cc32160mt.dll : Windows Vista and above - 32 and 64 bits
+- squeeze2upnp-winxp.exe, pthreadvc2.dll : Windows XP
 - squeeze2upnp-x86 : Linux (Intel CPU) 32 or 64 bits (see user guide for 64 bits)
 - squeeze2upnp-x86-static : same as above, but libc librairies are statically 
 linked (must be used on some NAS e.G. Atom-base, that don't have the right libc
@@ -21,8 +22,9 @@ available - squeeze2upnp-x86 launch will fail)
 - squeeze2upnp-armv5 : Linux (ARM v5 CPU)
 - squeeze2upnp-armv5-static : same as above, with static libraries
 
-NB: ARM binaries are much less tested than Intel binaires
+(Thanks Ralphy for arm and winXP binaries)
 
+NB: ARM binaries are much less tested than Intel binaires
 
 Rebuilding is not necessary, but if you want to rebuild, here is what should be 
 done. This can be built for Linux or Windows. My main Windows environment is C++
@@ -33,7 +35,6 @@ very hardcoded.
 DEPENDENCIES
  - pthread (pthread_win32 on Windows) and dynamically linked
  - libupnp, statically linked
-
 ===========================================================================
 LIBUPNP
  - Under Win32, libupnp is build with the following defines
@@ -62,7 +63,7 @@ existing corresponding lines)
 	#define GENA_NOTIFICATION_ANSWERING_TIMEOUT 5
 
 ===========================================================================
-Main application for Windows
+Main application for Windows Vista + 
  - For compilation, use following defines
         WIN32
         UPNP_STATIC_LIB
@@ -72,6 +73,7 @@ Main application for Windows
  - For runtime
         On C++ builder, requires cc32160mt.dll
         pthread.dll
+NB: the build rules for WinXP need to be added
 ===========================================================================
 Main application for Linux
  - For compilation, use following defines
