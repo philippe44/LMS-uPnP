@@ -107,7 +107,7 @@ static bool			glDiscovery = false;
 u32_t				gluPNPScanInterval = SCAN_INTERVAL;
 u32_t				gluPNPScanTimeout = SCAN_TIMEOUT;
 struct sMR			glMRDevices[MAX_RENDERERS];
-ithread_mutex_t		glMRMutex, glMRFoundMutex;
+ithread_mutex_t		glMRFoundMutex;
 
 /*----------------------------------------------------------------------------*/
 /* consts or pseudo-const*/
@@ -663,7 +663,6 @@ static void *UpdateMRThread(void *args)
 
 	LOG_INFO("Begin uPnP devices update", NULL);
 	TimeStamp = gettime_ms();
-	ithread_mutex_lock(&glMRMutex);
 
 	// first add any newly found uPNP renderer
 	ithread_mutex_lock(&glMRFoundMutex);
@@ -688,8 +687,8 @@ static void *UpdateMRThread(void *args)
 		Manufacturer = XMLGetFirstDocumentItem(DescDoc, "manufacturer");
 		UDN = XMLGetFirstDocumentItem(DescDoc, "UDN");
 		if (!strstr(Manufacturer, cLogitech) && !RefreshTO(UDN)) {
-			// new device so search a free spot
-			for (i = 0; i < MAX_RENDERERS && glMRDevices[i].InUse; i++);
+			// new device so search a free spot.
+			for (i = 0; i < MAX_RENDERERS && glMRDevices[i].InUse; i++)
 
 			// no more room !
 			if (i == MAX_RENDERERS) {
@@ -736,7 +735,6 @@ static void *UpdateMRThread(void *args)
 		DelMRDevice(Device);
 	}
 
-	ithread_mutex_unlock(&glMRMutex);
 	glDiscovery = true;
 	LOG_INFO("End uPnP devices update %d", gettime_ms() - TimeStamp);
 	return NULL;
@@ -828,7 +826,6 @@ int uPNPInitialize(char *IPaddress, unsigned int *Port)
 	if (gluPNPScanTimeout < SCAN_TIMEOUT) gluPNPScanTimeout = SCAN_TIMEOUT;
 	if (gluPNPScanTimeout > gluPNPScanInterval - SCAN_TIMEOUT) gluPNPScanTimeout = gluPNPScanInterval - SCAN_TIMEOUT;
 
-	ithread_mutex_init(&glMRMutex, 0);
 	ithread_mutex_init(&glMRFoundMutex, 0);
 	memset(&glMRDevices, 0, sizeof(glMRDevices));
 

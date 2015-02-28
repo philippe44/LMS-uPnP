@@ -220,14 +220,9 @@ void FlushMRDevices(void)
 {
 	int i;
 
-	// use lock so that
-	ithread_mutex_lock(&glMRMutex);
-
 	for (i = 0; i < MAX_RENDERERS; i++) {
 		if (glMRDevices[i].InUse) DelMRDevice(&glMRDevices[i]);
 	}
-
-	ithread_mutex_unlock(&glMRMutex);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -235,6 +230,7 @@ void DelMRDevice(struct sMR *p)
 {
 	int i = 0;
 
+	ithread_mutex_lock(&p->Mutex);
 	p->Running = false;
 	ithread_join(p->Thread, NULL);
 	p->InUse = false;
@@ -246,6 +242,8 @@ void DelMRDevice(struct sMR *p)
 		NFREE(p->ProtocolCap[i]);
 		i++;
 	}
+	ithread_mutex_unlock(&p->Mutex);
+	ithread_mutex_destroy(&p->Mutex);
 	memset(p, 0, sizeof(struct sMR));
 }
 
@@ -255,18 +253,15 @@ struct sMR* CURL2Device(char *CtrlURL)
 {
 	int i, j;
 
-	ithread_mutex_lock(&glMRMutex);
 	for (i = 0; i < MAX_RENDERERS; i++) {
 		if (!glMRDevices[i].InUse) continue;
 		for (j = 0; j < NB_SRV; j++) {
 			if (!strcmp(glMRDevices[i].Service[j].ControlURL, CtrlURL)) {
-				ithread_mutex_unlock(&glMRMutex);
 				return &glMRDevices[i];
 			}
 		}
 	}
 
-	ithread_mutex_unlock(&glMRMutex);
 	return NULL;
 }
 
@@ -307,7 +302,6 @@ void SaveConfig(char *name)
 	FILE *file;
 	int i;
 
-	ithread_mutex_lock(&glMRMutex);
 	root = XMLAddNode(doc, NULL, "squeeze2upnp", NULL);
 
 	XMLAddNode(doc, root, "server", glSQServer);
@@ -400,7 +394,6 @@ void SaveConfig(char *name)
 
 		p = p->Next;
 	}
-	ithread_mutex_unlock(&glMRMutex);
 
 	file = fopen(name, "wb");
 	s = ixmlDocumenttoString(doc);

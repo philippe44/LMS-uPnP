@@ -140,7 +140,6 @@ extern char					glSQServer[SQ_STR_LENGTH];
 //extern const int			NB_SRV;
 extern u32_t				gluPNPScanInterval;
 extern u32_t				gluPNPScanTimeout;
-extern ithread_mutex_t		glMRMutex;
 extern struct sMR			glMRDevices[MAX_RENDERERS];
 
 struct sMR 		*mr_File2Device(const char *FileName);
