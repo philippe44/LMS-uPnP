@@ -670,6 +670,16 @@ static void *UpdateMRThread(void *args)
 	glMRFoundList = NULL;
 	ithread_mutex_unlock(&glMRFoundMutex);
 
+	if (!glMainRunning) {
+		LOG_INFO("Aborting ...", NULL);
+		while (p) {
+			m = p->Next;
+			free(p->Location); free(p);
+			p = m;
+		}
+		return NULL;
+	}
+
 	while (p) {
 		IXML_Document *DescDoc = NULL;
 		char *UDN = NULL, *Manufacturer = NULL;
