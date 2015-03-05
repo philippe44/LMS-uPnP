@@ -128,8 +128,6 @@ static const struct cSearchedSRV_s
 /* locals */
 /*----------------------------------------------------------------------------*/
 static log_level 	loglevel = lWARN;
-static char 		usage[];
-static char 		license[];
 ithread_t			glUpdateMRThread;
 static bool			glMainRunning = true;
 static struct sLocList {
@@ -137,7 +135,94 @@ static struct sLocList {
 	struct sLocList *Next;
 } *glMRFoundList = NULL;
 
-/*----------------------------------------------------------------------------*/
+static char usage[] =
+			VERSION "\n"
+		   "See -t for license terms\n"
+		   "Usage: [options]\n"
+		   "  -s <server>[:<port>]\tConnect to specified server, otherwise uses autodiscovery to find server\n"
+		   "  -x <config file>\tread config from file (default is ./config.xml)\n"
+   		   "  -i <config file>\tdiscover players, save config in <file> and then exit\n"
+//		   "  -c <codec1>,<codec2>\tRestrict codecs to those specified, otherwise load all available codecs; known codecs: " CODECS "\n"
+//		   "  -e <codec1>,<codec2>\tExplicitly exclude native support of one or more codecs; known codecs: " CODECS "\n"
+		   "  -f <logfile>\t\tWrite debug to logfile\n"
+  		   "  -p <pid file>\t\twrite PID in file\n"
+		   "  -d <log>=<level>\tSet logging level, logs: all|slimproto|stream|decode|output|web|upnp|main|sq2mr, level: info|debug|sdebug\n"
+#if RESAMPLE
+		   "  -R -u [params]\tResample, params = <recipe>:<flags>:<attenuation>:<precision>:<passband_end>:<stopband_start>:<phase_response>,\n"
+		   "  \t\t\t recipe = (v|h|m|l|q)(L|I|M)(s) [E|X], E = exception - resample only if native rate not supported, X = async - resample to max rate for device, otherwise to max sync rate\n"
+		   "  \t\t\t flags = num in hex,\n"
+		   "  \t\t\t attenuation = attenuation in dB to apply (default is -1db if not explicitly set),\n"
+		   "  \t\t\t precision = number of bits precision (NB. HQ = 20. VHQ = 28),\n"
+		   "  \t\t\t passband_end = number in percent (0dB pt. bandwidth to preserve. nyquist = 100%%),\n"
+		   "  \t\t\t stopband_start = number in percent (Aliasing/imaging control. > passband_end),\n"
+		   "  \t\t\t phase_response = 0-100 (0 = minimum / 50 = linear / 100 = maximum)\n"
+#endif
+#if DSD
+		   "  -D [delay]\t\tOutput device supports DSD over PCM (DoP), delay = optional delay switching between PCM and DoP in ms\n"
+#endif
+#if LINUX || FREEBSD
+		   "  -z \t\t\tDaemonize\n"
+#endif
+		   "  -t \t\t\tLicense terms\n"
+		   "\n"
+		   "Build options:"
+#if LINUX
+		   " LINUX"
+#endif
+#if WIN
+		   " WIN"
+#endif
+#if OSX
+		   " OSX"
+#endif
+#if FREEBSD
+		   " FREEBSD"
+#endif
+#if EVENTFD
+		   " EVENTFD"
+#endif
+#if SELFPIPE
+		   " SELFPIPE"
+#endif
+#if WINEVENT
+		   " WINEVENT"
+#endif
+#if RESAMPLE_MP
+		   " RESAMPLE_MP"
+#else
+#if RESAMPLE
+		   " RESAMPLE"
+#endif
+#endif
+#if FFMPEG
+		   " FFMPEG"
+#endif
+#if DSD
+		   " DSD"
+#endif
+#if LINKALL
+		   " LINKALL"
+#endif
+		   "\n\n";
+
+static char license[] =
+		   "This program is free software: you can redistribute it and/or modify\n"
+		   "it under the terms of the GNU General Public License as published by\n"
+		   "the Free Software Foundation, either version 3 of the License, or\n"
+		   "(at your option) any later version.\n\n"
+		   "This program is distributed in the hope that it will be useful,\n"
+		   "but WITHOUT ANY WARRANTY; without even the implied warranty of\n"
+		   "MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n"
+		   "GNU General Public License for more details.\n\n"
+		   "You should have received a copy of the GNU General Public License\n"
+		   "along with this program.  If not, see <http://www.gnu.org/licenses/>.\n\n"
+#if DSD
+		   "Contains dsd2pcm library Copyright 2009, 2011 Sebastian Gesemann which\n"
+		   "is subject to its own license.\n\n"
+#endif
+	;
+
+/*----------------------------------------------------------------------------*/
 /* prototypes */
 /*----------------------------------------------------------------------------*/
 static void *MRThread(void *args);
@@ -1358,91 +1443,5 @@ int main(int argc, char *argv[])
 }
 
 
-static char usage[] =
-			VERSION "\n"
-		   "See -t for license terms\n"
-		   "Usage: [options]\n"
-		   "  -s <server>[:<port>]\tConnect to specified server, otherwise uses autodiscovery to find server\n"
-		   "  -x <config file>\tread config from file (default is ./config.xml)\n"
-   		   "  -i <config file>\tdiscover players, save config in <file> and then exit\n"
-//		   "  -c <codec1>,<codec2>\tRestrict codecs to those specified, otherwise load all available codecs; known codecs: " CODECS "\n"
-//		   "  -e <codec1>,<codec2>\tExplicitly exclude native support of one or more codecs; known codecs: " CODECS "\n"
-		   "  -f <logfile>\t\tWrite debug to logfile\n"
-  		   "  -p <pid file>\t\twrite PID in file\n"
-		   "  -d <log>=<level>\tSet logging level, logs: all|slimproto|stream|decode|output|web|upnp|main|sq2mr, level: info|debug|sdebug\n"
-#if RESAMPLE
-		   "  -R -u [params]\tResample, params = <recipe>:<flags>:<attenuation>:<precision>:<passband_end>:<stopband_start>:<phase_response>,\n"
-		   "  \t\t\t recipe = (v|h|m|l|q)(L|I|M)(s) [E|X], E = exception - resample only if native rate not supported, X = async - resample to max rate for device, otherwise to max sync rate\n"
-		   "  \t\t\t flags = num in hex,\n"
-		   "  \t\t\t attenuation = attenuation in dB to apply (default is -1db if not explicitly set),\n"
-		   "  \t\t\t precision = number of bits precision (NB. HQ = 20. VHQ = 28),\n"
-		   "  \t\t\t passband_end = number in percent (0dB pt. bandwidth to preserve. nyquist = 100%%),\n"
-		   "  \t\t\t stopband_start = number in percent (Aliasing/imaging control. > passband_end),\n"
-		   "  \t\t\t phase_response = 0-100 (0 = minimum / 50 = linear / 100 = maximum)\n"
-#endif
-#if DSD
-		   "  -D [delay]\t\tOutput device supports DSD over PCM (DoP), delay = optional delay switching between PCM and DoP in ms\n"
-#endif
-#if LINUX || FREEBSD
-		   "  -z \t\t\tDaemonize\n"
-#endif
-		   "  -t \t\t\tLicense terms\n"
-		   "\n"
-		   "Build options:"
-#if LINUX
-		   " LINUX"
-#endif
-#if WIN
-		   " WIN"
-#endif
-#if OSX
-		   " OSX"
-#endif
-#if FREEBSD
-		   " FREEBSD"
-#endif
-#if EVENTFD
-		   " EVENTFD"
-#endif
-#if SELFPIPE
-		   " SELFPIPE"
-#endif
-#if WINEVENT
-		   " WINEVENT"
-#endif
-#if RESAMPLE_MP
-		   " RESAMPLE_MP"
-#else
-#if RESAMPLE
-		   " RESAMPLE"
-#endif
-#endif
-#if FFMPEG
-		   " FFMPEG"
-#endif
-#if DSD
-		   " DSD"
-#endif
-#if LINKALL
-		   " LINKALL"
-#endif
-		   "\n\n";
-
-static char license[] =
-		   "This program is free software: you can redistribute it and/or modify\n"
-		   "it under the terms of the GNU General Public License as published by\n"
-		   "the Free Software Foundation, either version 3 of the License, or\n"
-		   "(at your option) any later version.\n\n"
-		   "This program is distributed in the hope that it will be useful,\n"
-		   "but WITHOUT ANY WARRANTY; without even the implied warranty of\n"
-		   "MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n"
-		   "GNU General Public License for more details.\n\n"
-		   "You should have received a copy of the GNU General Public License\n"
-		   "along with this program.  If not, see <http://www.gnu.org/licenses/>.\n\n"
-#if DSD
-		   "Contains dsd2pcm library Copyright 2009, 2011 Sebastian Gesemann which\n"
-		   "is subject to its own license.\n\n"
-#endif
-	;
 
 

@@ -3,7 +3,7 @@
 
 //#define __EARLY_STMd__
 
-#define VERSION "v0.2.0.0a8"
+#define VERSION "v0.2.0.0a9"
 
 #if defined(linux)
 #define LINUX     1
