@@ -216,28 +216,24 @@ struct sAction *UnQueueAction(struct sMR *Device, bool Keep)
 
 
 /*----------------------------------------------------------------------------*/
-void FlushMRList(void)
+void FlushMRDevices(void)
 {
-	struct sMR *p;
+	int i;
 
-	ithread_mutex_lock(&glDeviceListMutex);
-
-	p = glDeviceList;
-	while (p) {
-		struct sMR *n = p->Next;
-		DeleteMR(p);
-		p = n;
+	for (i = 0; i < MAX_RENDERERS; i++) {
+		if (glMRDevices[i].InUse) DelMRDevice(&glMRDevices[i]);
 	}
-
-	glDeviceList = glSQ2MRList = NULL;
-
-	ithread_mutex_unlock(&glDeviceListMutex);
 }
 
 /*----------------------------------------------------------------------------*/
-void DeleteMR(struct sMR *p)
+void DelMRDevice(struct sMR *p)
 {
 	int i = 0;
+
+	ithread_mutex_lock(&p->Mutex);
+	p->Running = false;
+	ithread_join(p->Thread, NULL);
+	p->InUse = false;
 
 	FlushActionList(p);
 	NFREE(p->CurrentURI);
@@ -246,28 +242,26 @@ void DeleteMR(struct sMR *p)
 		NFREE(p->ProtocolCap[i]);
 		i++;
 	}
-	NFREE(p);
+	ithread_mutex_unlock(&p->Mutex);
+	ithread_mutex_destroy(&p->Mutex);
+	memset(p, 0, sizeof(struct sMR));
 }
 
 
 /*----------------------------------------------------------------------------*/
 struct sMR* CURL2Device(char *CtrlURL)
 {
-	struct sMR *p;
+	int i, j;
 
-	ithread_mutex_lock(&glDeviceListMutex);
-	p = glSQ2MRList;
-	while (p) {
-		int i;
-		for (i = 0; i < NB_SRV; i++) {
-			if (!strcmp(p->Service[i].ControlURL, CtrlURL)) {
-				ithread_mutex_unlock(&glDeviceListMutex);
-				return p;
+	for (i = 0; i < MAX_RENDERERS; i++) {
+		if (!glMRDevices[i].InUse) continue;
+		for (j = 0; j < NB_SRV; j++) {
+			if (!strcmp(glMRDevices[i].Service[j].ControlURL, CtrlURL)) {
+				return &glMRDevices[i];
 			}
 		}
-		p = p->NextSQ;
 	}
-	ithread_mutex_unlock(&glDeviceListMutex);
+
 	return NULL;
 }
 
@@ -306,11 +300,12 @@ void SaveConfig(char *name)
 	IXML_Node	 *root, *common;
 	char *s;
 	FILE *file;
+	int i;
 
-	ithread_mutex_lock(&glDeviceListMutex);
 	root = XMLAddNode(doc, NULL, "squeeze2upnp", NULL);
 
 	XMLAddNode(doc, root, "server", glSQServer);
+	XMLAddNode(doc, root, "upnp_socket", gluPNPSocket);
 	XMLAddNode(doc, root, "slimproto_stream_port", "%d", gl_slimproto_stream_port);
 	XMLAddNode(doc, root, "base_mac", "%02x:%02x:%02x:%02x:%02x:%02x", glMac[0],
 				glMac[1], glMac[2], glMac[3], glMac[4], glMac[5]);
@@ -323,6 +318,7 @@ void SaveConfig(char *name)
 	XMLAddNode(doc, root, "main_log",level2debug(glLog.main));
 	XMLAddNode(doc, root, "sq2mr_log", level2debug(glLog.sq2mr));
 	XMLAddNode(doc, root, "upnp_scan_interval", "%d", (u32_t) gluPNPScanInterval);
+	XMLAddNode(doc, root, "upnp_scan_timeout", "%d", (u32_t) gluPNPScanTimeout);
 
 	common = XMLAddNode(doc, root, "common", NULL);
 	XMLAddNode(doc, common, "streambuf_size", "%d", (u32_t) glDeviceParam.stream_buf_size);
@@ -347,10 +343,12 @@ void SaveConfig(char *name)
 
 	s =  ixmlDocumenttoString(doc);
 
-	p = glDeviceList;
-	while (p)
-	{
+	for (i = 0; i < MAX_RENDERERS; i++) {
 		IXML_Node *dev_node;
+
+		if (!glMRDevices[i].InUse) continue;
+		else p = &glMRDevices[i];
+
 		dev_node = XMLAddNode(doc, root, "device", NULL);
 		XMLAddNode(doc, dev_node, "udn", p->UDN);
 		XMLAddNode(doc, dev_node, "name", p->FriendlyName);
@@ -397,7 +395,6 @@ void SaveConfig(char *name)
 
 		p = p->Next;
 	}
-	ithread_mutex_unlock(&glDeviceListMutex);
 
 	file = fopen(name, "wb");
 	s = ixmlDocumenttoString(doc);
@@ -448,6 +445,7 @@ static void LoadGlobalItem(char *name, char *val)
 	if (!val) return;
 
 	if (!strcmp(name, "server")) strcpy(glSQServer, val);
+	if (!strcmp(name, "upnp_socket")) strcpy(gluPNPSocket, val);
 	if (!strcmp(name, "slimproto_stream_port")) gl_slimproto_stream_port = atol(val);
 	if (!strcmp(name, "slimproto_log")) glLog.slimproto = debug2level(val);
 	if (!strcmp(name, "stream_log")) glLog.stream = debug2level(val);
@@ -460,6 +458,7 @@ static void LoadGlobalItem(char *name, char *val)
 	if (!strcmp(name, "base_mac"))  sscanf(val,"%2hhx:%2hhx:%2hhx:%2hhx:%2hhx:%2hhx",
 								   &glMac[0],&glMac[1],&glMac[2],&glMac[3],&glMac[4],&glMac[5]);
 	if (!strcmp(name, "upnp_scan_interval")) gluPNPScanInterval = atol(val);
+	if (!strcmp(name, "upnp_scan_timeout")) gluPNPScanTimeout = atol(val);
  }
 
 

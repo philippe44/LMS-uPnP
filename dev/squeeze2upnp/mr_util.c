@@ -305,6 +305,7 @@ void SaveConfig(char *name)
 	root = XMLAddNode(doc, NULL, "squeeze2upnp", NULL);
 
 	XMLAddNode(doc, root, "server", glSQServer);
+	XMLAddNode(doc, root, "upnp_socket", gluPNPSocket);
 	XMLAddNode(doc, root, "slimproto_stream_port", "%d", gl_slimproto_stream_port);
 	XMLAddNode(doc, root, "base_mac", "%02x:%02x:%02x:%02x:%02x:%02x", glMac[0],
 				glMac[1], glMac[2], glMac[3], glMac[4], glMac[5]);
@@ -444,6 +445,7 @@ static void LoadGlobalItem(char *name, char *val)
 	if (!val) return;
 
 	if (!strcmp(name, "server")) strcpy(glSQServer, val);
+	if (!strcmp(name, "upnp_socket")) strcpy(gluPNPSocket, val);
 	if (!strcmp(name, "slimproto_stream_port")) gl_slimproto_stream_port = atol(val);
 	if (!strcmp(name, "slimproto_log")) glLog.slimproto = debug2level(val);
 	if (!strcmp(name, "stream_log")) glLog.stream = debug2level(val);

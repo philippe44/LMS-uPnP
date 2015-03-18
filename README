@@ -26,7 +26,7 @@ available - squeeze2upnp-x86 launch will fail)
 
 NB: ARM binaries are much less tested than Intel binaires
 
-Rebuilding is not necessary, but if you want to rebuild, here is what should be 
+REBUILDING IS NOT NEEDED, but if you want to rebuild, here is what should be 
 done. This can be built for Linux or Windows. My main Windows environment is C++
 builder, so i've not made a proper makefile. The Linux makefile is ugly and
 very hardcoded.

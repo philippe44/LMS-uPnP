@@ -1,4 +1,4 @@
-0.2.0.0a9
+0.2.0.0
  - each player uses own timer thread to poll position, track and related info instead of a single thread for all players
  - upnp rescan dedicated thread created at each scan interval to avoid blocking libupnp caller thread in callback
  - continue re-organizing LOG
@@ -13,6 +13,7 @@
  - remove deadlock between upnp notification and LMS playback request (sq_notify call in SyncNotifyState)
  - global Mutex for renderer list un-necessary now that list is a table
  - change some string definition to allow VC2008 compilation
+ - add the option to set a socket for upnp operations
 
 
 0.1.4.0

@@ -98,6 +98,7 @@ sq_dev_param_t glDeviceParam = {
 /* globals */
 /*----------------------------------------------------------------------------*/
 static ithread_t 	glMainThread;
+char				gluPNPSocket[128] = "?";
 unsigned int 		glPort;
 char 				glIPaddress[128] = "";
 UpnpClient_Handle 	glControlPointHandle;
@@ -1362,7 +1363,14 @@ int main(int argc, char *argv[])
 	AVTInit(glLog.sq2mr);
 	MRutilInit(glLog.sq2mr);
 
-	Start();
+	if (!strstr(gluPNPSocket, "?")) {
+		sscanf(gluPNPSocket, "%[^:]:%u", glIPaddress, &glPort);
+	}
+
+	if (!Start()) {
+		LOG_ERROR("Cannot start uPnP", NULL);
+		strcpy(resp, "exit");
+	}
 
 	if (glSaveConfigFile) {
 		while (!glDiscovery) sleep(1);

@@ -132,6 +132,7 @@ struct sAction	{
 extern UpnpClient_Handle   	glControlPointHandle;
 extern unsigned int 		glPort;
 extern char 				glIPaddress[];
+extern char 				gluPNPSocket[];
 extern u8_t		   			glMac[6];
 extern sq_log_level_t		glLog;
 extern tMRConfig			glMRConfig;

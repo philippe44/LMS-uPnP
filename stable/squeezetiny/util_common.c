@@ -157,15 +157,16 @@ char *strlwr(char *str)
 #endif
 
 /*---------------------------------------------------------------------------*/
-bool stristr(char *s1, char *s2)
+char *stristr(char *s1, char *s2)
 {
  char *s1_lwr = strlwr(strdup(s1));
  char *s2_lwr = strlwr(strdup(s2));
  char *p = strstr(s1_lwr, s2_lwr);
 
+ if (p) p = s1 + (p - s1_lwr);
  free(s1_lwr);
  free(s2_lwr);
- return p ? true : false;
+ return p;
 }
 
 

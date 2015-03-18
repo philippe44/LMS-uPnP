@@ -483,6 +483,7 @@ typedef enum {TRACK_STOPPED = 0, TRACK_STARTED, TRACK_PAUSED} track_status_t;
 typedef struct out_ctx_s {
 	FILE 				*read_file, *write_file;
 	char 				buf_name[SQ_STR_LENGTH];
+	s32_t				file_size;
 	struct thread_ctx_s *owner;
 	unsigned 			idx;
 	char				ext[5];

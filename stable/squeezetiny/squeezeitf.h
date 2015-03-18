@@ -6,7 +6,7 @@
 
 #define SQ_STR_LENGTH	256
 
-typedef enum {SQ_SETFORMAT, SQ_SETURI, SQ_SETNEXTURI, SQ_PLAY, SQ_PAUSE, SQ_UNPAUSE, SQ_STOP, SQ_SEEK,
+typedef enum {SQ_NONE, SQ_SETFORMAT, SQ_SETURI, SQ_SETNEXTURI, SQ_PLAY, SQ_PAUSE, SQ_UNPAUSE, SQ_STOP, SQ_SEEK,
 			  SQ_VOLUME, SQ_TIME, SQ_TRACK_CHANGE, SQ_ONOFF} sq_action_t;
 typedef enum {SQ_LMSUPNP = 0, SQ_STREAM = 2, SQ_FULL = 3} sq_mode_t;
 typedef	sq_action_t sq_event_t;
@@ -30,10 +30,12 @@ typedef struct sq_metadata_s {
 	char *album;
 	char *title;
 	char *genre;
-	char *duration;
 	char *path;
 	char *artwork;
-	u16_t track;
+	u32_t index;
+	u32_t track;
+	u32_t duration;
+	u32_t file_size;
 } sq_metadata_t;
 
 typedef	struct sq_dev_param_s {
@@ -76,6 +78,7 @@ typedef struct
 	char	format[5];
 	char	content_type[SQ_STR_LENGTH];
 	char	proto_info[SQ_STR_LENGTH];
+	off_t	file_size;
 } sq_seturi_t;
 
 extern unsigned gl_slimproto_stream_port;
@@ -101,7 +104,7 @@ void				sq_default_metadata(struct sq_metadata_s *metadata, bool init);
 void 				sq_free_metadata(struct sq_metadata_s *metadata);
 bool 				sq_set_time(sq_dev_handle_t handle, u32_t time);
 void*				sq_urn2MR(const char *urn);
-char*				sq_content_type(const char *urn);	// string must be released by caller
+void*				sq_get_info(const char *urn, s32_t *filesize, char **content_type);	// string must be released by caller
 void*				sq_open(const char *urn);
 void*				sq_isopen(const char *urn);
 bool				sq_close(void *desc);

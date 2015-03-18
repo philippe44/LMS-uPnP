@@ -3,7 +3,7 @@
 
 //#define __EARLY_STMd__
 
-#define VERSION "v0.1.4.0"
+#define VERSION "v0.2.0.0"
 
 #if defined(linux)
 #define LINUX     1
@@ -44,7 +44,6 @@
 
 #define STREAM_THREAD_STACK_SIZE  64 * 1024
 #define DECODE_THREAD_STACK_SIZE 32 * 1024
-//#define DECODE_THREAD_STACK_SIZE 128 * 1024
 #define OUTPUT_THREAD_STACK_SIZE  64 * 1024
 #define SLIMPROTO_THREAD_STACK_SIZE  64 * 1024
 #define thread_t pthread_t;

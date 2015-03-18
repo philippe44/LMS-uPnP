@@ -57,10 +57,10 @@ Revo: SuperConnect:
 
 <stream_length>1000000000</stream_length>
 <codecs>pcm,flc,mp3</codecs>
-<accept_nexturi>0</accept_nexturi>
 
  - <stream_length> at -3 prevents proper pause as the Revo thinks that it is 
 receiving a live stream and thus refuses to pause it
+ - Revo does not display metadata so <send_metadata> can be set to 0
 
 
 ***********************************************************************

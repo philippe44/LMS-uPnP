@@ -1,3 +1,21 @@
+0.2.0.0
+ - each player uses own timer thread to poll position, track and related info instead of a single thread for all players
+ - upnp rescan dedicated thread created at each scan interval to avoid blocking libupnp caller thread in callback
+ - continue re-organizing LOG
+ - metadata using "songinfo" CLI command to allow access to more information, includign albumart (still fallback to use "playlist" info if "songinfo" fails)
+ - on <accept_next_uri> = 0, metadat was not properly handled, leading to random filesize being sent
+ - add <upnp_scan_timeout> to configure how long a network player *rescan* lasts (initial scan is still 15)
+ - <upnp_scan_interval> is 30 seconds minimum
+ - When skipping track very quickly, a "playing" state of previous skip could be received before the "stopped" state or last skip, causing player to stall (confused with an unsollicited play)
+ - force_volume was used, even when volume_on_play was set to -1 in SyncNotifyState
+ - option -i was broken before a5 release
+ - context index toggle shall be done after stream mutex lock (slimproto)
+ - remove deadlock between upnp notification and LMS playback request (sq_notify call in SyncNotifyState)
+ - global Mutex for renderer list un-necessary now that list is a table
+ - change some string definition to allow VC2008 compilation
+ - add the option to set a socket for upnp operations
+
+
 0.1.4.0
  - <volume_on_play> can be set to -1 so that *all* LMS volume commands are ignored (use the player's volume control)
  - When pause/play directly on the player, action is feedback to LMS that should stay in sycn (still early phase ...). This does NOT work when "stop" is being used - such "stop" will be interpreted by LMS as an error and will move to next track
