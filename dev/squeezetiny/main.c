@@ -349,6 +349,8 @@ static void sq_init_metadata(sq_metadata_t *metadata)
 /*--------------------------------------------------------------------------*/
 void sq_default_metadata(sq_metadata_t *metadata, bool init)
 {
+	if (init) sq_init_metadata(metadata);
+
 	if (!metadata->title) metadata->title = strdup("[LMS to uPnP]");
 	if (!metadata->album) metadata->album = strdup("[no album]");
 	if (!metadata->artist) metadata->artist = strdup("[no artist]");
@@ -365,8 +367,6 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 	char *rsp, *p;
 	u16_t idx;
 
-	sq_init_metadata(metadata);
-
 	if (!handle || !ctx->cli_sock) {
 		LOG_ERROR("[%p]: no handle or CLI socket %d", ctx, handle);
 		sq_default_metadata(metadata, true);
@@ -381,6 +381,8 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 		sq_default_metadata(metadata, true);
 		return false;
 	}
+
+	sq_init_metadata(metadata);
 
 	idx = atol(rsp);
 	NFREE(rsp);
