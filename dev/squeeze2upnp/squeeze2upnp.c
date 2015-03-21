@@ -797,7 +797,7 @@ static void *UpdateMRThread(void *args)
 			}
 
 			Device = &glMRDevices[i];
-			if (AddMRDevice(Device, UDN, DescDoc, p->Location)) {
+			if (AddMRDevice(Device, UDN, DescDoc, p->Location) && !glSaveConfigFile) {
 				// create a new slimdevice
 				Device->SqueezeHandle = sq_reserve_device(Device, &sq_callback);
 				if (!Device->SqueezeHandle || !sq_run_device(Device->SqueezeHandle,
