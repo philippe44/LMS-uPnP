@@ -407,7 +407,9 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 				u8_t j, *p;
 				p = _buf_readp(ctx->streambuf);
 				// 2 or 4 bytes or 3 bytes with no packing, but changed endianness
-				if ((out->sample_size == 16 || out->sample_size == 32 || (out->sample_size == 24 && ctx->config.L24_format == L24_PACKED)) && out->endianness) {
+				if (out->endianness &&
+					(out->sample_size != 24 ||
+					(out->sample_size == 24 && (ctx->config.L24_format == L24_PACKED || out->channels == 1)))) {
 					u8_t buf[4];
 					u8_t inc = out->sample_size/8;
 					space = (space / inc) * inc;
@@ -416,14 +418,14 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 						for (j = 0; j < inc; j++) *(p++) = buf[j];
 					}
 				}
-				// 3 bytes with packing required and endianness changed
-				if (out->sample_size == 24 && ctx->config.L24_format == L24_PACKED_LPCM) {
+				// 3 bytes with packing required
+				if (out->sample_size == 24 && ctx->config.L24_format == L24_PACKED_LPCM && out->channels == 2) {
 					u8_t buf[12];
 					space = (space / 12) * 12;
 					for (i = 0; i < space; i += 12) {
 						// order after that should be L0T,L0M,L0B,R0T,R0M,R0B,L1T,L1M,L1B,R1T,R1M,R1B
 						if (out->endianness) for (j = 0; j < 12; j += 3) {
-							buf[j] = *(p+j+3-1);
+							buf[j] = *(p+j+2);
 							buf[j+1] = *(p+j+1);
 							buf[j+2] = *(p+j);
                         }

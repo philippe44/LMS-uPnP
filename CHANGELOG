@@ -1,3 +1,7 @@
+0.2.0.1
+ - Race condition where a upnp poll-response can be interrupted by the update thread that removes that device - locking a non-existing mutex happens then
+ - Handle 24 bits mono tracks with PACKED format
+
 0.2.0.0
  - each player uses own timer thread to poll position, track and related info instead of a single thread for all players
  - upnp rescan dedicated thread created at each scan interval to avoid blocking libupnp caller thread in callback

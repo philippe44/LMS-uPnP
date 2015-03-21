@@ -404,6 +404,9 @@ void SyncNotifState(char *State, struct sMR* Device)
 
 	ithread_mutex_lock(&Device->Mutex);
 
+	// an update can have happended that has destroyed the device
+	if (!Device->InUse) return;
+
 	// in transitioning mode, do nothing, just wait
 	if (!strcmp(State, "TRANSITIONING")) {
 		if (Device->State != TRANSITIONING) {
