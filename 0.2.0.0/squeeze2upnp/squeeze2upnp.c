@@ -404,9 +404,6 @@ void SyncNotifState(char *State, struct sMR* Device)
 
 	ithread_mutex_lock(&Device->Mutex);
 
-	// an update can have happended that has destroyed the device
-	if (!Device->InUse) return;
-
 	// in transitioning mode, do nothing, just wait
 	if (!strcmp(State, "TRANSITIONING")) {
 		if (Device->State != TRANSITIONING) {
@@ -461,9 +458,7 @@ void SyncNotifState(char *State, struct sMR* Device)
 			LOG_INFO("%s: uPNP playing", Device->FriendlyName);
 			switch (Device->sqState) {
 			case SQ_PAUSE:
-				if (!Action || (Action->Action != SQ_PAUSE)) {
-					Param = true;
-            	}
+				Param = true;
 			case SQ_PLAY:
 				Event = SQ_PLAY;
 				break;
@@ -491,8 +486,7 @@ void SyncNotifState(char *State, struct sMR* Device)
 
 	if (!strcmp(State, "PAUSED_PLAYBACK")) {
 		if (Device->State != PAUSED) {
-			// detect unsollicited pause, but do not confuse it with a fast pause/play
-			if (Device->sqState != SQ_PAUSE && (!Action || (Action->Action != SQ_PLAY && Action->Action != SQ_UNPAUSE))) {
+			if (Device->sqState != SQ_PAUSE) {
 				Event = SQ_PAUSE;
 				Param = true;
 			}
@@ -800,7 +794,7 @@ static void *UpdateMRThread(void *args)
 			}
 
 			Device = &glMRDevices[i];
-			if (AddMRDevice(Device, UDN, DescDoc, p->Location) && !glSaveConfigFile) {
+			if (AddMRDevice(Device, UDN, DescDoc, p->Location)) {
 				// create a new slimdevice
 				Device->SqueezeHandle = sq_reserve_device(Device, &sq_callback);
 				if (!Device->SqueezeHandle || !sq_run_device(Device->SqueezeHandle,

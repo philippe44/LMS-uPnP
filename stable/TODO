@@ -1,6 +1,6 @@
-- add one monitoring thread per upnp player instead of a single thread for all
-- fork a thread when uPnP scan interval elapses to avoid blocking libupnp caller thread
 - add matching pattern in config file to allow configuration by group
 - add option to call an external program when upnp player is locked 
-- enhance metadata management: add at minimum albumart, filesize and duration
-- use filesize to specify content-length in HTTP transfer to accomodate more players
+
+UNLIKELY
+- enhance metadata management: add albumart and filesize (LMS won't give it)
+- use filesize to specify content-length in HTTP transfer to accomodate more players (see above)

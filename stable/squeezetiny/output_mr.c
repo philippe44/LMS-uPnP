@@ -406,8 +406,9 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 				u32_t i;
 				u8_t j, *p;
 				p = _buf_readp(ctx->streambuf);
+
 				// 2 or 4 bytes or 3 bytes with no packing, but changed endianness
-				if ((out->sample_size == 16 || out->sample_size == 32 || (out->sample_size == 24 && ctx->config.L24_format == L24_PACKED)) && out->endianness) {
+				if (out->endianness && (out->sample_size != 24 || (out->sample_size == 24 && ctx->config.L24_format == L24_PACKED))) {
 					u8_t buf[4];
 					u8_t inc = out->sample_size/8;
 					space = (space / inc) * inc;
@@ -416,19 +417,20 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 						for (j = 0; j < inc; j++) *(p++) = buf[j];
 					}
 				}
-				// 3 bytes with packing required and endianness changed
-				if (out->sample_size == 24 && ctx->config.L24_format == L24_PACKED_LPCM) {
+
+				// 3 bytes with packing required, 2 channels
+				if (out->sample_size == 24 && ctx->config.L24_format == L24_PACKED_LPCM && out->channels == 2) {
 					u8_t buf[12];
 					space = (space / 12) * 12;
 					for (i = 0; i < space; i += 12) {
 						// order after that should be L0T,L0M,L0B,R0T,R0M,R0B,L1T,L1M,L1B,R1T,R1M,R1B
 						if (out->endianness) for (j = 0; j < 12; j += 3) {
-							buf[j] = *(p+j+3-1);
+							buf[j] = *(p+j+2);
 							buf[j+1] = *(p+j+1);
 							buf[j+2] = *(p+j);
-                        }
+						}
 						else for (j = 0; j < 12; j++) buf[j] = *(p+j);
- 						// L0T,L0M & R0T,R0M
+						// L0T,L0M & R0T,R0M
 						*p++ = buf[0]; *p++ = buf[1];
 						*p++ = buf[3]; *p++ = buf[4];
 						// L1T,L1M & R1T,R1M
@@ -439,6 +441,28 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 						// after that R0T,R0M,L0T,L0M,R1T,R1M,L1T,L1M,R0B,L0B,R1B,L1B
 					}
 				}
+
+				// 3 bytes with packing required
+				if (out->sample_size == 24 && ctx->config.L24_format == L24_PACKED_LPCM && out->channels == 1) {
+					u8_t buf[6];
+					space = (space / 6) * 6;
+					for (i = 0; i < space; i += 6) {
+						// order after that should be C0T,C0M,C0B,C1T,C1M,C1B
+						if (out->endianness) for (j = 0; j < 6; j += 3) {
+							buf[j] = *(p+j+2);
+							buf[j+1] = *(p+j+1);
+							buf[j+2] = *(p+j);
+						}
+						else for (j = 0; j < 6; j++) buf[j] = *(p+j);
+						// C0T,C0M,C1,C1M
+						*p++ = buf[0]; *p++ = buf[1];
+						*p++ = buf[3]; *p++ = buf[4];
+						// C0B, C1B
+						*p++ = buf[2]; *p++ = buf[5];
+						// after that C0T,C0M,C1T,C1M,C0B,C1B
+					}
+				}
+
 			}
 
 			if (!strcmp(out->ext, "wav")) {
@@ -467,8 +491,7 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 		} else sleep_time = 100000;
 
 		// all done, time to close the file
-		if (out->write_file && ctx->stream.state <= DISCONNECT && (!_buf_used(ctx->streambuf) || (out->sample_size == 24 && _buf_used(ctx->streambuf) < 12)))
-		{
+		if (out->write_file && ctx->stream.state <= DISCONNECT && (!_buf_used(ctx->streambuf) || (out->sample_size == 24 && _buf_used(ctx->streambuf) < 6*out->channels))) {
 			LOG_INFO("[%p] wrote total %Ld", ctx, out->write_count_t);
 			fclose(out->write_file);
 			out->write_file = NULL;
