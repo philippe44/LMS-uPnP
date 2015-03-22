@@ -2,6 +2,8 @@
  - Race condition where a upnp poll-response can be interrupted by the update thread that removes that device - locking a non-existing mutex happens then
  - Handle 24 bits mono tracks with PACKED format
  - when <send_metadata> was disabled, some default metadata were not initialized (was missing backport from 0.1.4.0)
+ - very quick pause/unpause created an infinite loop (created by fixing dealock issue between upnp notification and LMS playback in 0.2.0.0)
+ - on quick unpause/pause, the pause command was ignored - can be irritating if unpause was pressed by mistake
 
 0.2.0.0
  - each player uses own timer thread to poll position, track and related info instead of a single thread for all players

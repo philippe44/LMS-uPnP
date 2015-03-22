@@ -461,7 +461,9 @@ void SyncNotifState(char *State, struct sMR* Device)
 			LOG_INFO("%s: uPNP playing", Device->FriendlyName);
 			switch (Device->sqState) {
 			case SQ_PAUSE:
-				Param = true;
+				if (!Action || (Action->Action != SQ_PAUSE)) {
+					Param = true;
+            	}
 			case SQ_PLAY:
 				Event = SQ_PLAY;
 				break;
@@ -489,7 +491,8 @@ void SyncNotifState(char *State, struct sMR* Device)
 
 	if (!strcmp(State, "PAUSED_PLAYBACK")) {
 		if (Device->State != PAUSED) {
-			if (Device->sqState != SQ_PAUSE) {
+			// detect unsollicited pause, but do not confuse it with a fast pause/play
+			if (Device->sqState != SQ_PAUSE && (!Action || (Action->Action != SQ_PLAY && Action->Action != SQ_UNPAUSE))) {
 				Event = SQ_PAUSE;
 				Param = true;
 			}
