@@ -8,8 +8,8 @@ See "New User Guide.pdf" to know more
 /dev is work under progress
 /x.y.z are older versions
 
-in ./bin, there are binaries for Windows (does NOT run on XP) and Linux 
-(includes how to run it on 32 bits and 64 bits versions). Binaries list is 
+in ./bin, there are binaries for Windows and Linux (includes how to run 
+it on 32 bits and 64 bits versions). Binaries list is 
 
 - squeeze2upnp.exe, pthreadbc2.dll, cc32160mt.dll : Windows Vista and above - 32 and 64 bits
 - squeeze2upnp-winxp.exe, pthreadvc2.dll : Windows XP
