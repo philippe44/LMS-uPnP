@@ -365,7 +365,7 @@ void touch_memory(u8_t *buf, size_t size) {
 }
 #endif
 
-#if LINUX
+#if LINUX || FREEBDSD || OSX
 int SendARP(in_addr_t src, in_addr_t dst, u8_t mac[], u8_t *size) {
 	int                 s;
 	struct arpreq       areq;
