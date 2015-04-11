@@ -73,6 +73,7 @@ typedef struct sMRConfig
 	bool		AcceptNextURI;
 	bool		SendMetaData;
 	char 		VolumeCurve[SQ_STR_LENGTH];
+	int			uPNPRemoveCount;
 } tMRConfig;
 
 struct sMR {
@@ -111,6 +112,7 @@ struct sMR {
 	} VolumeCurve[32];
 	char	*ProtocolCap[MAX_PROTO + 1];
 	u16_t	ErrorCount;
+	int	uPNPMissingCount;
 	bool	Running;
 	struct sMR	*NextSQ;
 	struct sMR	*Next;

@@ -71,6 +71,7 @@ tMRConfig			glMRConfig = {
 							true,
 							true,
 							"0:0, 400:10, 700:20, 1200:30, 2050:40, 3800:50, 6600:60, 12000:70, 21000:80, 37000:90, 65536:100",
+							1
 					};
 
 sq_dev_param_t glDeviceParam = {
@@ -740,6 +741,8 @@ static bool RefreshTO(char *UDN)
 	for (i = 0; i < MAX_RENDERERS; i++) {
 		if (glMRDevices[i].InUse && !strcmp(glMRDevices[i].UDN, UDN)) {
 			glMRDevices[i].uPNPTimeOut = false;
+			glMRDevices[i].uPNPMissingCount = glMRDevices[i].Config.uPNPRemoveCount;
+			glMRDevices[i].ErrorCount = 0;
 			return true;
 		}
 	}
@@ -830,7 +833,7 @@ static void *UpdateMRThread(void *args)
 	// then walk through the list of devices to remove missing ones
 	for (i = 0; i < MAX_RENDERERS; i++) {
 		Device = &glMRDevices[i];
-		if (!Device->InUse || !Device->uPNPTimeOut) continue;
+		if (!Device->InUse || !Device->uPNPTimeOut || --Device->uPNPMissingCount) continue;
 
 		LOG_INFO("[%p]: removing renderer (%s)", Device, Device->FriendlyName);
 		if (Device->SqueezeHandle) sq_delete_device(Device->SqueezeHandle);
@@ -924,9 +927,11 @@ int uPNPInitialize(char *IPaddress, unsigned int *Port)
 	int rc;
 	struct UpnpVirtualDirCallbacks VirtualDirCallbacks;
 
-	if (gluPNPScanInterval < SCAN_INTERVAL) gluPNPScanInterval = SCAN_INTERVAL;
-	if (gluPNPScanTimeout < SCAN_TIMEOUT) gluPNPScanTimeout = SCAN_TIMEOUT;
-	if (gluPNPScanTimeout > gluPNPScanInterval - SCAN_TIMEOUT) gluPNPScanTimeout = gluPNPScanInterval - SCAN_TIMEOUT;
+	if (gluPNPScanInterval) {
+		if (gluPNPScanInterval < SCAN_INTERVAL) gluPNPScanInterval = SCAN_INTERVAL;
+		if (gluPNPScanTimeout < SCAN_TIMEOUT) gluPNPScanTimeout = SCAN_TIMEOUT;
+		if (gluPNPScanTimeout > gluPNPScanInterval - SCAN_TIMEOUT) gluPNPScanTimeout = gluPNPScanInterval - SCAN_TIMEOUT;
+	}
 
 	ithread_mutex_init(&glMRFoundMutex, 0);
 	memset(&glMRDevices, 0, sizeof(glMRDevices));
@@ -1109,6 +1114,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	InitActionList(Device);
 	Device->Magic = MAGIC;
 	Device->uPNPTimeOut = false;
+	Device->uPNPMissingCount = Device->Config.uPNPRemoveCount;
 	Device->on = false;
 	Device->SqueezeHandle = 0;
 	Device->ErrorCount = 0;

@@ -340,6 +340,7 @@ void SaveConfig(char *name)
 	XMLAddNode(doc, common, "send_metadata", "%d", (int) glMRConfig.SendMetaData);
 	XMLAddNode(doc, common, "volume_curve", glMRConfig.VolumeCurve);
 	XMLAddNode(doc, common, "accept_nexturi", "%d", (int) glMRConfig.AcceptNextURI);
+	XMLAddNode(doc, common, "upnp_remove_count", "%d", (u32_t) glMRConfig.uPNPRemoveCount);
 
 	s =  ixmlDocumenttoString(doc);
 
@@ -392,6 +393,8 @@ void SaveConfig(char *name)
 			XMLAddNode(doc, dev_node, "L24_format", "%d", (int) p->sq_config.L24_format);
 		if (p->sq_config.flac_header != glDeviceParam.flac_header)
 			XMLAddNode(doc, dev_node, "flac_header", "%d", (int) p->sq_config.flac_header);
+		if (p->Config.uPNPRemoveCount != glMRConfig.uPNPRemoveCount)
+			XMLAddNode(doc, dev_node, "upnp_remove_count", "%d", (int) p->Config.uPNPRemoveCount);
 
 		p = p->Next;
 	}
@@ -424,6 +427,7 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "sample_rate"))sq_conf->sample_rate = atol(val);
 	if (!strcmp(name, "L24_format"))sq_conf->L24_format = atol(val);
 	if (!strcmp(name, "flac_header"))sq_conf->flac_header = atol(val);
+	if (!strcmp(name, "upnp_remove_count"))Conf->uPNPRemoveCount = atol(val);
 	if (!strcmp(name, "seek_after_pause")) {
 		Conf->SeekAfterPause = atol(val);
 		sq_conf->seek_after_pause = Conf->SeekAfterPause;

@@ -123,6 +123,8 @@ xBoxOne:
 automatically move to that URI once the current URI finishes ... (it wants a "Next"
 command). Microsoft, Microsoft I guess compliance to standards is good only for the 
 others. It works on version >= 1.4.0 as the "next" is an additional workaround
+ - Seems that XboxOne can, form time to time, refuse to play a mp3 format just after
+it has ben discovered. WOrkaround is to play a pcm file first (weird)
 
 
 ***********************************************************************
