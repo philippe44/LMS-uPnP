@@ -833,7 +833,8 @@ static void *UpdateMRThread(void *args)
 	// then walk through the list of devices to remove missing ones
 	for (i = 0; i < MAX_RENDERERS; i++) {
 		Device = &glMRDevices[i];
-		if (!Device->InUse || !Device->uPNPTimeOut || --Device->uPNPMissingCount) continue;
+		if (!Device->InUse || !Device->uPNPTimeOut ||
+			!Device->uPNPMissingCount || --Device->uPNPMissingCount) continue;
 
 		LOG_INFO("[%p]: removing renderer (%s)", Device, Device->FriendlyName);
 		if (Device->SqueezeHandle) sq_delete_device(Device->SqueezeHandle);
