@@ -35,13 +35,19 @@
 #include <iphlpapi.h>
 #endif
 #if OSX
+#include <sys/socket.h>
+#include <sys/sysctl.h>
 #include <net/if_dl.h>
 #include <net/if_types.h>
+#include <net/route.h>
 #include <ifaddrs.h>
 #include <netdb.h>
+#include <netinet/in.h>
+#include <netinet/if_ether.h>
 #endif
 
 #include <fcntl.h>
+
 
 // cmdline parsing
 char *next_param(char *src, char c) {
@@ -361,11 +367,11 @@ void touch_memory(u8_t *buf, size_t size) {
 	u8_t *ptr;
 	for (ptr = buf; ptr < buf + size; ptr += sysconf(_SC_PAGESIZE)) {
 		*ptr = 0;
-   	}
+	}
 }
 #endif
 
-#if LINUX || FREEBDSD || OSX
+#if LINUX || FREEBDSD
 int SendARP(in_addr_t src, in_addr_t dst, u8_t mac[], u8_t *size) {
 	int                 s;
 	struct arpreq       areq;
@@ -393,6 +399,55 @@ int SendARP(in_addr_t src, in_addr_t dst, u8_t mac[], u8_t *size) {
 
 	memcpy(mac, &(areq.arp_ha.sa_data), *size);
 	return 0;
+}
+#elif OSX
+int SendARP(in_addr_t src, in_addr_t dst, u8_t mac[], u8_t *size)
+{
+	int mib[6];
+	size_t needed;
+	char *lim, *buf, *next;
+	struct rt_msghdr *rtm;
+	struct sockaddr_inarp *sin;
+	struct sockaddr_dl *sdl;
+	int found_entry = -1;
+
+	mib[0] = CTL_NET;
+	mib[1] = PF_ROUTE;
+	mib[2] = 0;
+	mib[3] = AF_INET;
+	mib[4] = NET_RT_FLAGS;
+	mib[5] = RTF_LLINFO;
+
+	if (sysctl(mib, 6, NULL, &needed, NULL, 0) < 0)
+		return (found_entry);
+
+	if ((buf = malloc(needed)) == NULL)
+		return (found_entry);
+
+	if (sysctl(mib, 6, buf, &needed, NULL, 0) < 0)
+		return (found_entry);
+
+	lim = buf + needed;
+	for (next = buf; next < lim; next += rtm->rtm_msglen)
+	{
+		rtm = (struct rt_msghdr *)next;
+		sin = (struct sockaddr_inarp *)(rtm + 1);
+		sdl = (struct sockaddr_dl *)(sin + 1);
+
+		if (src)
+		{
+			if (src != sin->sin_addr.s_addr)
+				continue;
+		}
+
+		if (sdl->sdl_alen)
+		{
+			found_entry = 0;
+			memcpy(mac,  LLADDR(sdl), sdl->sdl_alen);
+		}
+	}
+
+	return (found_entry);
 }
 #endif
 
