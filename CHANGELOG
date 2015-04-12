@@ -1,6 +1,7 @@
 0.2.1.0
  - <upnp_scan_timeout> at 0 was not disabling scan
  - added <upnp_remove_count> parameter to remove a device only N times after failed re-discovery
+ - add Ralphy's patch (SendARP) to compile for OSX
 
 0.2.0.1
  - Race condition where a upnp poll-response can be interrupted by the update thread that removes that device - locking a non-existing mutex happens then
