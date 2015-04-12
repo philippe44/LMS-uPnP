@@ -447,6 +447,7 @@ int SendARP(in_addr_t src, in_addr_t dst, u8_t mac[], u8_t *size)
 		}
 	}
 
+	free(buf);
 	return (found_entry);
 }
 #endif
