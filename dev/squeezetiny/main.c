@@ -634,10 +634,12 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 		do
 		{
 			LOCK_S;LOCK_O;
-			if (p->read_file) read_b += fread(dst, 1, bytes, p->read_file);
+			if (p->read_file) {
+				read_b += fread(dst, 1, bytes, p->read_file);
 #if OSX
-			fseek(p->read_file, 0, SEEK_CUR);
+				fseek(p->read_file, 0, SEEK_CUR);
 #endif
+			}
 			UNLOCK_S;LOCK_O;
 			LOG_SDEBUG("[%p] read %u bytes at %d", ctx, read_b, wait);
 			if (!read_b) usleep(50000);
