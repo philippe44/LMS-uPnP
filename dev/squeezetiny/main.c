@@ -637,6 +637,7 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 			if (p->read_file) {
 				read_b += fread(dst, 1, bytes, p->read_file);
 #if OSX
+				// to reset EOF pointer
 				fseek(p->read_file, 0, SEEK_CUR);
 #endif
 			}
