@@ -8,10 +8,10 @@ See "New User Guide.pdf" to know more
 /dev is work under progress
 /x.y.z are older versions
 
-in ./bin, there are binaries for Windows and Linux (includes how to run 
-it on 32 bits and 64 bits versions). Binaries list is 
+in ./bin, there are binaries for Windows, Linux (x86 and ARM) and OSX. 
+Binaries list is 
 
-- squeeze2upnp.exe, pthreadbc2.dll, cc32160mt.dll : Windows Vista and above - 32 and 64 bits
+- squeeze2upnp.exe, pthreadbc2.dll, cc32160mt.dll : Windows Vista and above
 - squeeze2upnp-winxp.exe, pthreadvc2.dll : Windows XP
 - squeeze2upnp-x86 : Linux (Intel CPU) 32 or 64 bits (see user guide for 64 bits)
 - squeeze2upnp-x86-static : same as above, but libc librairies are statically 
@@ -21,14 +21,16 @@ available - squeeze2upnp-x86 launch will fail)
 - squeeze2upnp-armv6hf-static : same as above, with static libraries
 - squeeze2upnp-armv5 : Linux (ARM v5 CPU)
 - squeeze2upnp-armv5-static : same as above, with static libraries
+- squeeze2upnp-osx-x86: x86 binaries for OSX 10.9 (64bits)
 
-(Thanks Ralphy for arm and winXP binaries)
+(Thanks Ralphy for arm, osx and winXP binaries)
 
-NB: ARM binaries are much less tested than Intel binaires
+NB: Main tests are on Windows Vista+ and Linux x86 versions. OSX and Linux ARM 
+are "as is"
 
 REBUILDING IS NOT NEEDED, but if you want to rebuild, here is what should be 
-done. This can be built for Linux or Windows. My main Windows environment is C++
-builder, so i've not made a proper makefile. The Linux makefile is ugly and
+done. This can be built for Linux, OSX or Windows. My main Windows environment 
+is C++builder, so I've not made a proper makefile. The Linux/OSX makefile is
 very hardcoded.
 
 ===========================================================================
@@ -75,7 +77,7 @@ Main application for Windows Vista +
         pthread.dll
 NB: the build rules for WinXP need to be added
 ===========================================================================
-Main application for Linux
+Main application for Linux and OSX
  - For compilation, use following defines
         NO_CODEC
         _FILE_OFFSET_BITS=64
