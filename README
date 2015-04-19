@@ -22,6 +22,7 @@ available - squeeze2upnp-x86 launch will fail)
 - squeeze2upnp-armv5 : Linux (ARM v5 CPU)
 - squeeze2upnp-armv5-static : same as above, with static libraries
 - squeeze2upnp-osx-x86: x86 binaries for OSX 10.9 (64bits)
+- squeeze2upnp-osx-x86_64: x86 binaries for OSX 10.6 (64bits)
 
 (Thanks Ralphy for arm, osx and winXP binaries)
 
@@ -30,7 +31,7 @@ are "as is"
 
 REBUILDING IS NOT NEEDED, but if you want to rebuild, here is what should be 
 done. This can be built for Linux, OSX or Windows. My main Windows environment 
-is C++builder, so I've not made a proper makefile. The Linux/OSX makefile is
+is C++ builder, so I've not made a proper makefile. The Linux/OSX makefile is
 very hardcoded.
 
 ===========================================================================
