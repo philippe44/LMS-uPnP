@@ -2,8 +2,25 @@ This application is a bridge between Logitech Media Server (LMS) /
 SqueezeBox Server(SBS) and uPnP devices. It allows any uPNP device 
 to be controlled as a normal SqueezeBox device.
 
-See "New User Guide.pdf" to know more
+===========================================================================
+MINIMUM TO READ
+===========================================================================
+If your do not want to RTFM at least do the following:
+- put the application on a LOCAL disk where you have read/Write access
+- launch it -i config.xml on the command line, and wait 30s till it exits
+- launch the application without parameters
+- if it does not work pay but attention to the following parameters in 
+the config.xml file 
+	try again with firewall disabled
+	<stream_length>    : if nothing is played
+	<accept_nexturi>   : if playback is stuck in playlist
+	<seek_after_pause> : if resume after pause does not restart
 
+Really, have a look at "New User Guide.pdf" in /stable/bin
+
+===========================================================================
+WHAT VERSION TO CHOOSE
+===========================================================================
 /stable is for the build I'm not changing anymore
 /dev is work under progress
 /x.y.z are older versions
@@ -21,24 +38,27 @@ available - squeeze2upnp-x86 launch will fail)
 - squeeze2upnp-armv6hf-static : same as above, with static libraries
 - squeeze2upnp-armv5 : Linux (ARM v5 CPU)
 - squeeze2upnp-armv5-static : same as above, with static libraries
-- squeeze2upnp-osx-x86: x86 binaries for OSX 10.9 (64bits)
-- squeeze2upnp-osx-x86_64: x86 binaries for OSX 10.6 (64bits)
+- squeeze2upnp-osx-x86_10.10: x86 binaries for OSX Yosemite 10.10 
+- squeeze2upnp-osx-x86: x86 binaries for OSX 10.6+
 
 (Thanks Ralphy for arm, osx and winXP binaries)
 
 NB: Main tests are on Windows Vista+ and Linux x86 versions. OSX and Linux ARM 
 are "as is"
 
+===========================================================================
+ADVANCED
+===========================================================================
 REBUILDING IS NOT NEEDED, but if you want to rebuild, here is what should be 
 done. This can be built for Linux, OSX or Windows. My main Windows environment 
 is C++ builder, so I've not made a proper makefile. The Linux/OSX makefile is
 very hardcoded.
 
-===========================================================================
+
 DEPENDENCIES
  - pthread (pthread_win32 on Windows) and dynamically linked
  - libupnp, statically linked
-===========================================================================
+
 LIBUPNP
  - Under Win32, libupnp is build with the following defines
         WIN32
@@ -77,6 +97,7 @@ Main application for Windows Vista +
         On C++ builder, requires cc32160mt.dll
         pthread.dll
 NB: the build rules for WinXP need to be added
+
 ===========================================================================
 Main application for Linux and OSX
  - For compilation, use following defines
