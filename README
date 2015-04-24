@@ -26,7 +26,6 @@ WHAT VERSION TO CHOOSE
 /x.y.z are older versions
 
 in ./bin, there are binaries for Windows, Linux (x86 and ARM) and OSX. 
-Binaries list is 
 
 - squeeze2upnp.exe, pthreadbc2.dll, cc32160mt.dll : Windows Vista and above
 - squeeze2upnp-winxp.exe, pthreadvc2.dll : Windows XP
