@@ -5,7 +5,7 @@ to be controlled as a normal SqueezeBox device.
 ===========================================================================
 MINIMUM TO READ
 ===========================================================================
-If your do not want to RTFM at least do the following:
+If you do not want to RTFM, at least do the following:
 - put the application on a LOCAL disk where you have read/Write access
 - launch it -i config.xml on the command line, and wait 30s till it exits
 - launch the application without parameters (type exit to quit)
