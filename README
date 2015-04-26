@@ -31,6 +31,8 @@ in ./bin, there are binaries for Windows, Linux (x86 and ARM) and OSX.
 - squeeze2upnp-winxp.exe, pthreadvc2.dll : Windows XP
 - squeeze2upnp-x86 : Linux (Intel CPU) 32 or 64 bits (see user guide for 64 bits)
 - squeeze2upnp-x86-static : same as above, but libc librairies are statically 
+linked (must be used on some NAS e.g. Atom-base, that don't have the right libc
+available - squeeze2upnp-x86 launch will fail)
 - squeeze2upnp-x86-64 : Linux (Intel CPU) 64 bits ONLY
 - squeeze2upnp-armv6hf : Linux (ARM v6 CPU, hard float)
 - squeeze2upnp-armv6hf-static : same as above, with static libraries
