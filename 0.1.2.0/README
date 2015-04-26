@@ -27,7 +27,7 @@ Main application for Windows
  - Link with the generated libupnp static lib and ptrhead import lib
  - For runtime
         On C++ builder, requires cc32160mt.dll
-        pthread.dll
+         pthread.dll
 
 Main application for Linux
  - For compilation, use following defines
