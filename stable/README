@@ -6,9 +6,9 @@ to be controlled as a normal SqueezeBox device.
 MINIMUM TO READ
 ===========================================================================
 If you do not want to RTFM, at least do the following:
-- put the application on a LOCAL disk where you have read/Write access
+- put the application on a LOCAL disk where you have read/write access
 - launch it with "-i config.xml" on the command line, and wait 30s till it exits
-- launch the application without parameters (type exit to quit)
+- launch the application without parameters (type exit to stop it)
 - if it does not work try again with firewall disabled and pay at least
 attention to the following parameters in the config.xml file 
 
@@ -16,7 +16,7 @@ attention to the following parameters in the config.xml file
 	<accept_nexturi>   : if playback is stuck in playlist
 	<seek_after_pause> : if resume after pause does not restart
 
-Really, have a look at "New User Guide.pdf" in /stable/bin
+Really, have a look at "New User Guide.pdf" in /stable
 
 ===========================================================================
 WHAT VERSION TO CHOOSE
@@ -31,8 +31,9 @@ in ./bin, there are binaries for Windows, Linux (x86 and ARM) and OSX.
 - squeeze2upnp-winxp.exe, pthreadvc2.dll : Windows XP
 - squeeze2upnp-x86 : Linux (Intel CPU) 32 or 64 bits (see user guide for 64 bits)
 - squeeze2upnp-x86-static : same as above, but libc librairies are statically 
-linked (must be used on some NAS e.G. Atom-base, that don't have the right libc
+linked (must be used on some NAS e.g. Atom-base, that don't have the right libc
 available - squeeze2upnp-x86 launch will fail)
+- squeeze2upnp-x86-64 : Linux (Intel CPU) 64 bits ONLY
 - squeeze2upnp-armv6hf : Linux (ARM v6 CPU, hard float)
 - squeeze2upnp-armv6hf-static : same as above, with static libraries
 - squeeze2upnp-armv5 : Linux (ARM v5 CPU)
@@ -71,10 +72,9 @@ to rebuild the library
 - TCP blocking *must* be disabled otherwise when a upnp player disappears
 "non gracefully", it will block other communication for a long delay, creating
 a "too many job" log in libupnp and all sort of nasty side effects. When 
-launching ./configure, use --disable-blocking_tcp_connections (or 
---enable-blocking_tcp_connections). Sorry, the doc is a bit confusing on that 
-topic. I choose to modify direcly the autoconfig.h in the root directory 
-(and in build/inc) to make sure that the following was commented out 
+launching ./configure, use --disable-blocking_tcp_connections to make sure that
+autoconfig.h in the root directory (and in build/inc) to make sure that the 
+following was commented out 
 	/* #define UPNP_ENABLE_BLOCKING_TCP_CONNECTIONS 1 */
 
 - It is recommended to make the following changes to config.h (find the 
