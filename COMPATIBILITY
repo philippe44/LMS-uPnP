@@ -1,3 +1,14 @@
+=========================================================================
+if your player is not listed here, it does not mean it is not compatible,
+this file is updated every time somebody informs me of a success, but I
+guess some people don't tell. 
+So, always try by launching squeeze2upnp with "-i config.xml" parameter 
+(w/o "") and post the resulting config.xml. But if your device is listed 
+in the config.xml file, it is likely that it will work, maybe with a few 
+tweaks - then let me know so I can update this file !
+=========================================================================
+
+
 Assumed default parameters
 
 <stream_length>-3</stream_length>
