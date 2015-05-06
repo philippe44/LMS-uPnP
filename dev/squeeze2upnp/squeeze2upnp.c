@@ -53,6 +53,7 @@ sq_log_level_t		glLog = { lINFO, lINFO, lINFO, lINFO, lINFO, lINFO, lINFO, lINFO
 #if LINUX || FREEBSD
 bool				glDaemonize = false;
 #endif
+bool				glInteractive = true;
 char				*glLogFile;
 static char			*glPidFile = NULL;
 static char			*glSaveConfigFile = NULL;
@@ -89,7 +90,7 @@ sq_dev_param_t glDeviceParam = {
 					SQ_RATE_48000,
 					L24_PACKED_LPCM,
 					FLAC_NORMAL_HEADER,
-					".",
+					"?",
 					-1L,
 					0,
 					{ 0x00,0x00,0x00,0x00,0x00,0x00 }
@@ -165,6 +166,7 @@ static struct sLocList {
 #if LINUX || FREEBSD
 		   "  -z \t\t\tDaemonize\n"
 #endif
+		   "  -Z \t\t\tNOT interactive\n"
 		   "  -t \t\t\tLicense terms\n"
 		   "\n"
 		   "Build options:"
@@ -1217,7 +1219,7 @@ bool ParseArgs(int argc, char **argv) {
 		if (strstr("stxdfpi", opt) && optind < argc - 1) {
 			optarg = argv[optind + 1];
 			optind += 2;
-		} else if (strstr("tz"
+		} else if (strstr("tzZ"
 #if RESAMPLE
 						  "uR"
 #endif
@@ -1256,6 +1258,10 @@ bool ParseArgs(int argc, char **argv) {
 		case 'p':
 			glPidFile = optarg;
 			break;
+		case 'Z':
+			glInteractive = false;
+			break;
+
 #if LINUX || FREEBSD
 		case 'z':
 			glDaemonize = true;
@@ -1313,6 +1319,7 @@ int main(int argc, char *argv[])
 {
 	int i;
 	char resp[20] = "";
+	char *tmpdir;
 
 	signal(SIGINT, sighandler);
 	signal(SIGTERM, sighandler);
@@ -1322,7 +1329,6 @@ int main(int argc, char *argv[])
 #if defined(SIGHUP)
 	signal(SIGHUP, sighandler);
 #endif
-
 
 	// first try to find a config file on the command line
 	for (i = 1; i < argc; i++) {
@@ -1376,7 +1382,12 @@ int main(int argc, char *argv[])
 	AVTInit(glLog.sq2mr);
 	MRutilInit(glLog.sq2mr);
 
-	if (!strstr(gluPNPSocket, "?")) {
+	tmpdir = malloc(SQ_STR_LENGTH);
+	GetTempPath(SQ_STR_LENGTH, tmpdir);
+	LOG_INFO("Buffer path %s", tmpdir);
+	free(tmpdir);
+
+	if (!strstr(gluPNPSocket, "?")) {
 		sscanf(gluPNPSocket, "%[^:]:%u", glIPaddress, &glPort);
 	}
 
@@ -1387,18 +1398,21 @@ int main(int argc, char *argv[])
 
 	if (glSaveConfigFile) {
 		while (!glDiscovery) sleep(1);
-		SaveConfig(glSaveConfigFile);
+		SaveConfig(glSaveConfigFile, glConfigID);
 	}
 
 	while (strcmp(resp, "exit") && !glSaveConfigFile) {
 
-#if LINUX || FREEBSD
-		if (!glDaemonize)
+#if LINUX || FREEBSD || OSX
+		if (!glDaemonize && glInteractive)
 			i = scanf("%s", resp);
 		else
 			pause();
 #else
-		i = scanf("%s", resp);
+		if (glInteractive)
+			i = scanf("%s", resp);
+		else
+			Sleep(INFINITE);
 #endif
 
 		if (!strcmp(resp, "sdbg"))	{
@@ -1448,7 +1462,7 @@ int main(int argc, char *argv[])
 		 if (!strcmp(resp, "save"))	{
 			char name[128];
 			i = scanf("%s", name);
-			SaveConfig(name);
+			SaveConfig(name, glConfigID);
 		}
 	}
 

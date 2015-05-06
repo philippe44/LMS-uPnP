@@ -853,37 +853,41 @@ bool sq_run_device(sq_dev_handle_t handle, char *name, sq_dev_param_t *param)
 	 }
 #endif
 
-	if (access(param->buffer_dir, 2)) {
-		LOG_ERROR("[%p]: cannot access %s", ctx, param->buffer_dir);
+	memcpy(&ctx->config, param, sizeof(sq_dev_param_t));
+
+	if (strstr(ctx->config.buffer_dir, "?")) {
+		GetTempPath(SQ_STR_LENGTH, ctx->config.buffer_dir);
+	}
+
+	if (access(ctx->config.buffer_dir, 2)) {
+		LOG_ERROR("[%p]: cannot access %s", ctx, ctx->config.buffer_dir);
 		return false;
 	}
 
-	if (!memcmp(param->mac, "\0\0\0\0\0\0", 6)) {
+	if (!memcmp(ctx->config.mac, "\0\0\0\0\0\0", 6)) {
 		gl_last_mac[5] = (gl_last_mac[5] + 1) &0xFF;
-		memcpy(param->mac, gl_last_mac, 6);
+		memcpy(ctx->config.mac, gl_last_mac, 6);
 	}
 
-	if ((u32_t) param->buffer_limit < max(param->stream_buf_size, param->output_buf_size) * 4) {
-		LOG_ERROR("[%p]: incorrect buffer limit %d", ctx, param->buffer_limit);
-		param->buffer_limit = max(param->stream_buf_size, param->output_buf_size) * 4;
+	if ((u32_t) ctx->config.buffer_limit < max(ctx->config.stream_buf_size, ctx->config.output_buf_size) * 4) {
+		LOG_ERROR("[%p]: incorrect buffer limit %d", ctx, ctx->config.buffer_limit);
+		ctx->config.buffer_limit = max(ctx->config.stream_buf_size, ctx->config.output_buf_size) * 4;
 	}
-	
+
 	sprintf(ctx->cli_id, "%02x:%02x:%02x:%02x:%02x:%02x",
-										  param->mac[0], param->mac[1], param->mac[2],
-										  param->mac[3], param->mac[4], param->mac[5]);
+										  ctx->config.mac[0], ctx->config.mac[1], ctx->config.mac[2],
+										  ctx->config.mac[3], ctx->config.mac[4], ctx->config.mac[5]);
 
 	for (i = 0; i < 2; i++) {
 		sprintf(ctx->out_ctx[i].buf_name, "%02x-%02x-%02x-%02x-%02x-%02x-idx-%d",
-										  param->mac[0], param->mac[1], param->mac[2],
-										  param->mac[3], param->mac[4], param->mac[5], i);
+										  ctx->config.mac[0], ctx->config.mac[1], ctx->config.mac[2],
+										  ctx->config.mac[3], ctx->config.mac[4], ctx->config.mac[5], i);
 		sprintf(buf, "%s/%s", ctx->config.buffer_dir, ctx->out_ctx[i].buf_name);
 		remove(buf);
 		ctx->out_ctx[i].owner = ctx;
 		ctx->out_ctx[i].idx = i;
 		strcpy(ctx->out_ctx[i].content_type, "audio/unknown");
 	}
-
-	memcpy(&ctx->config, param, sizeof(sq_dev_param_t));
 
 	stream_thread_init(ctx->config.stream_buf_size, ctx);
 	output_mr_thread_init(ctx->config.output_buf_size, NULL, ctx->config.rate, 0, ctx);
@@ -904,7 +908,7 @@ bool sq_run_device(sq_dev_handle_t handle, char *name, sq_dev_param_t *param)
 	}
 #endif
 
-	slimproto_thread_init(gl_server, param->mac, name, "", ctx);
+	slimproto_thread_init(gl_server, ctx->config.mac, name, "", ctx);
 
 	return true;
 }

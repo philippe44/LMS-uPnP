@@ -1,3 +1,10 @@
+0.2.2.0
+ - <buffer_dir> can be ? to enable use of default system "temp" dir
+ - config parameters with incorrect values (buffer_size) no longer re-written with corrected values in config
+ - config file generating (-i or 'save'  while running )do not erase existing players
+ - add command line option '-Z' to disable interactive mode, allowing backgrounding using '&' in Linux (no more consumes 100% CPU)
+
+
 0.2.1.0
  - <upnp_scan_timeout> at 0 was not disabling scan
  - added <upnp_remove_count> parameter to remove a device only N times after failed re-discovery

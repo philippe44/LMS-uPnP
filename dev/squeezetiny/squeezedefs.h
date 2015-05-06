@@ -3,7 +3,7 @@
 
 //#define __EARLY_STMd__
 
-#define VERSION "v0.2.1.1a1"
+#define VERSION "v0.2.2.0a1"
 
 #if defined(linux)
 #define LINUX     1
@@ -69,6 +69,7 @@ typedef int64_t   s64_t;
 int SendARP(in_addr_t src, in_addr_t dst, u8_t mac[], u8_t *size);
 #define fresize(f,s) ftruncate(fileno(f), s)
 char *strlwr(char *str);
+char *GetTempPath(u16_t size, char *path);
 
 #endif
 

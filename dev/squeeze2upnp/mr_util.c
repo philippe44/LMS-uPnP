@@ -293,11 +293,14 @@ void ParseProtocolInfo(struct sMR *Device, char *Info)
 
 
 /*----------------------------------------------------------------------------*/
-void SaveConfig(char *name)
+void SaveConfig(char *name, void *ref)
 {
 	struct sMR *p;
 	IXML_Document *doc = ixmlDocument_createDocument();
+	IXML_Document *old_doc = ref;
 	IXML_Node	 *root, *common;
+	IXML_NodeList *list;
+	IXML_Element *old_root;
 	char *s;
 	FILE *file;
 	int i;
@@ -398,6 +401,24 @@ void SaveConfig(char *name)
 
 		p = p->Next;
 	}
+
+	// add devices in old XML file that has not been discovered
+	old_root = ixmlDocument_getElementById(old_doc, "squeeze2upnp");
+	list = ixmlDocument_getElementsByTagName((IXML_Document*) old_root, "device");
+	for (i = 0; i < (int) ixmlNodeList_length(list); i++) {
+		char *udn;
+		IXML_Node *device, *node;
+
+		device = ixmlNodeList_item(list, i);
+		node = (IXML_Node*) ixmlDocument_getElementById((IXML_Document*) device, "udn");
+		node = ixmlNode_getFirstChild(node);
+		udn = (char*) ixmlNode_getNodeValue(node);
+		if (!FindMRConfig(doc, udn)) {
+			device = ixmlNode_cloneNode(device, true);
+			ixmlNode_appendChild((IXML_Node*) root, device);
+		}
+	}
+	free(list);
 
 	file = fopen(name, "wb");
 	s = ixmlDocumenttoString(doc);
