@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+ <extensions>
+   <details>
+     <title lang="EN">The Repository's Title</title>
+   </details>
+   <plugins>
+     <plugin name="uPnPBridge" version="0.2.2" minTarget="7.5" maxTarget="7.x">
+       <title lang="EN">uPnP/DLNA bridge</title>
+       <desc lang="EN">Makes uPnP/DLNA players become LMS devices (uses Squeezelite)</desc>
+       <changes lang="EN"></changes>
+       <creator>Philippe</creator>
+       <email>philippe44@outlook.com</email>
+       <url>url for zip file</url>
+       <sha>c43222c203fdbadcfb28a0b5d48fe70d1a6d2e7f</sha>
+     </plugin>
+   </plugins>
+ </extensions>

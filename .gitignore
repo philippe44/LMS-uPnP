@@ -81,11 +81,13 @@ Win32
 *.i??
 *.map
 *.tds
-*.xml
+c*.xml
 *.bat
 *-idx*
 *.txt
 __old_structure
 alpha
 *.save*
+Test
+uPnPBridge/
 
