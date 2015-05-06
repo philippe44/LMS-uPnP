@@ -70,7 +70,7 @@ $RECYCLE.BIN/
 
 # C++ builder related
 *.*proj
-#*.zip
+*.zip
 *.z
 *.local
 __history
@@ -81,7 +81,7 @@ Win32
 *.i??
 *.map
 *.tds
-c*.xml
+*.xml
 *.bat
 *-idx*
 *.txt
