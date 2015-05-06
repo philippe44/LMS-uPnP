@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
  <extensions>
    <details>
-     <title lang="EN">The Repository's Title</title>
+     <title lang="EN">Philippe's LMS plugins</title>
    </details>
    <plugins>
      <plugin name="uPnPBridge" version="0.2.2" minTarget="7.5" maxTarget="7.x">
@@ -10,7 +10,7 @@
        <changes lang="EN"></changes>
        <creator>Philippe</creator>
        <email>philippe44@outlook.com</email>
-       <url>http://github.com/philippe44/LMS-to-uPnP/blob/master/dev/uPnPBridge.zip</url>
+       <url>http://github.com/philippe44/LMS-to-uPnP/master/dev/uPnPBridge.zip</url>
        <sha>c43222c203fdbadcfb28a0b5d48fe70d1a6d2e7f</sha>
      </plugin>
    </plugins>
