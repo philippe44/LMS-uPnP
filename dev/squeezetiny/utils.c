@@ -452,7 +452,7 @@ int SendARP(in_addr_t src, in_addr_t dst, u8_t mac[], u8_t *size)
 }
 #endif
 
-#if LINUX || FREEBDSD
+#if LINUX || FREEBDSD || OSX
 char *GetTempPath(u16_t size, char *path)
 {
 	strncpy(path, P_tmpdir, size);

@@ -1403,7 +1403,7 @@ int main(int argc, char *argv[])
 
 	while (strcmp(resp, "exit") && !glSaveConfigFile) {
 
-#if LINUX || FREEBSD || OSX
+#if LINUX || FREEBSD
 		if (!glDaemonize && glInteractive)
 			i = scanf("%s", resp);
 		else
@@ -1411,8 +1411,11 @@ int main(int argc, char *argv[])
 #else
 		if (glInteractive)
 			i = scanf("%s", resp);
-		else
+#if OSX
+			pause();
+#else
 			Sleep(INFINITE);
+#endif
 #endif
 
 		if (!strcmp(resp, "sdbg"))	{
