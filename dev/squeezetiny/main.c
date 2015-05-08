@@ -112,7 +112,6 @@ void sq_stop(void) {
 /*--------------------------------------------------------------------------*/
 void sq_wipe_device(struct thread_ctx_s *ctx) {
 	int i;
-	char buf[SQ_STR_LENGTH];
 
 	ctx->callback = NULL;
 	ctx->in_use = false;
@@ -123,8 +122,12 @@ void sq_wipe_device(struct thread_ctx_s *ctx) {
 	for (i = 0; i < 2; i++) {
 		if (ctx->out_ctx[i].read_file) fclose (ctx->out_ctx[i].read_file);
 		if (ctx->out_ctx[i].write_file) fclose (ctx->out_ctx[i].write_file);
-		sprintf(buf, "%s/%s", ctx->config.buffer_dir, ctx->out_ctx[i].buf_name);
-		remove(buf);
+		if (!ctx->config.keep_buffer_file) {
+			char buf[SQ_STR_LENGTH];
+
+			sprintf(buf, "%s/%s", ctx->config.buffer_dir, ctx->out_ctx[i].buf_name);
+			remove(buf);
+		}
 		ctx->out_ctx[i].read_file = ctx->out_ctx[i].write_file = NULL;
 		ctx->out_ctx[i].owner = NULL;
 
@@ -839,9 +842,8 @@ bool sq_run_device(sq_dev_handle_t handle, char *name, sq_dev_param_t *param)
 {
 	int i;
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
-	char buf[SQ_STR_LENGTH];
 
-#if 0
+#if 0
 	// set the output buffer size if not specified on the command line, take account of resampling
 	if (gl_resample) {
 		unsigned scale = 8;
@@ -882,8 +884,13 @@ bool sq_run_device(sq_dev_handle_t handle, char *name, sq_dev_param_t *param)
 		sprintf(ctx->out_ctx[i].buf_name, "%02x-%02x-%02x-%02x-%02x-%02x-idx-%d",
 										  ctx->config.mac[0], ctx->config.mac[1], ctx->config.mac[2],
 										  ctx->config.mac[3], ctx->config.mac[4], ctx->config.mac[5], i);
-		sprintf(buf, "%s/%s", ctx->config.buffer_dir, ctx->out_ctx[i].buf_name);
-		remove(buf);
+		if (!ctx->config.keep_buffer_file) {
+			char buf[SQ_STR_LENGTH];
+
+			sprintf(buf, "%s/%s", ctx->config.buffer_dir, ctx->out_ctx[i].buf_name);
+			remove(buf);
+		}
+
 		ctx->out_ctx[i].owner = ctx;
 		ctx->out_ctx[i].idx = i;
 		strcpy(ctx->out_ctx[i].content_type, "audio/unknown");

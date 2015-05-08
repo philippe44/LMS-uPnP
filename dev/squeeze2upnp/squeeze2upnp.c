@@ -93,6 +93,7 @@ sq_dev_param_t glDeviceParam = {
 					"?",
 					-1L,
 					0,
+					0,
 					{ 0x00,0x00,0x00,0x00,0x00,0x00 }
 				} ;
 
@@ -1411,6 +1412,7 @@ int main(int argc, char *argv[])
 #else
 		if (glInteractive)
 			i = scanf("%s", resp);
+		else
 #if OSX
 			pause();
 #else

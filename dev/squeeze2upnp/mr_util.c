@@ -331,6 +331,7 @@ void SaveConfig(char *name, void *ref)
 	XMLAddNode(doc, common, "stream_length", "%d", (s32_t) glMRConfig.StreamLength);
 	XMLAddNode(doc, common, "max_read_wait", "%d", (int) glDeviceParam.max_read_wait);
 	XMLAddNode(doc, common, "max_GET_bytes", "%d", (s32_t) glDeviceParam.max_get_bytes);
+	XMLAddNode(doc, common, "keep_buffer_file", "%d", (int) glDeviceParam.keep_buffer_file);
 	XMLAddNode(doc, common, "enabled", "%d", (int) glMRConfig.Enabled);
 	XMLAddNode(doc, common, "process_mode", "%d", (int) glMRConfig.ProcessMode);
 	XMLAddNode(doc, common, "codecs", glDeviceParam.codecs);
@@ -396,6 +397,8 @@ void SaveConfig(char *name, void *ref)
 			XMLAddNode(doc, dev_node, "L24_format", "%d", (int) p->sq_config.L24_format);
 		if (p->sq_config.flac_header != glDeviceParam.flac_header)
 			XMLAddNode(doc, dev_node, "flac_header", "%d", (int) p->sq_config.flac_header);
+		if (p->sq_config.keep_buffer_file != glDeviceParam.keep_buffer_file)
+			XMLAddNode(doc, dev_node, "keep_buffer_file", "%d", (int) p->sq_config.keep_buffer_file);
 		if (p->Config.uPNPRemoveCount != glMRConfig.uPNPRemoveCount)
 			XMLAddNode(doc, dev_node, "upnp_remove_count", "%d", (int) p->Config.uPNPRemoveCount);
 
@@ -448,6 +451,7 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "sample_rate"))sq_conf->sample_rate = atol(val);
 	if (!strcmp(name, "L24_format"))sq_conf->L24_format = atol(val);
 	if (!strcmp(name, "flac_header"))sq_conf->flac_header = atol(val);
+	if (!strcmp(name, "keep_buffer_file"))sq_conf->keep_buffer_file = atol(val);
 	if (!strcmp(name, "upnp_remove_count"))Conf->uPNPRemoveCount = atol(val);
 	if (!strcmp(name, "seek_after_pause")) {
 		Conf->SeekAfterPause = atol(val);

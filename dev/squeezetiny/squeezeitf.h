@@ -52,6 +52,7 @@ typedef	struct sq_dev_param_s {
 	char		buffer_dir[SQ_STR_LENGTH];
 	s32_t		buffer_limit;
 	int			seek_after_pause;
+	int			keep_buffer_file;
 	u8_t		mac[6];
 } sq_dev_param_t;
 
