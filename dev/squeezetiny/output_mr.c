@@ -596,6 +596,8 @@ void output_flush(struct thread_ctx_s *ctx) {
 
 	LOCK_S;LOCK_O;
 	for (i = 0; i < 2; i++) {
+		char buf[SQ_STR_LENGTH];
+
 		if (ctx->out_ctx[i].read_file) {
 			fclose(ctx->out_ctx[i].read_file);
 			ctx->out_ctx[i].read_file = NULL;
@@ -605,6 +607,12 @@ void output_flush(struct thread_ctx_s *ctx) {
 			fclose(ctx->out_ctx[i].write_file);
 			ctx->out_ctx[i].write_file = NULL;
 		}
+
+		if (!ctx->config.keep_buffer_file) {
+			sprintf(buf, "%s/%s", ctx->config.buffer_dir, ctx->out_ctx[i].buf_name);
+			remove(buf);
+		}
+
 	}
 	UNLOCK_S;UNLOCK_O;
 }

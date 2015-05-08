@@ -73,6 +73,7 @@ typedef struct sMRConfig
 	bool		AcceptNextURI;
 	bool		SendMetaData;
 	char 		VolumeCurve[SQ_STR_LENGTH];
+	int			MaxVolume;
 	int			uPNPRemoveCount;
 } tMRConfig;
 

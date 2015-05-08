@@ -4,7 +4,8 @@
  - config file generating (-i or 'save'  while running )do not erase existing players
  - add command line option '-Z' to disable interactive mode, allowing backgrounding using '&' in Linux (no more consumes 100% CPU)
  - buffer files are now deleted each time user stops a playback unless new parameter <keep_buffer_file> is set to 1
-
+ - add <max_volume> parameter to scale and limit the <volume_curve>. Any value calculated from volume curve is scaled by <max_volume>/100
+ - Window version is renamed squeeze2upnp-win
 
 0.2.1.0
  - <upnp_scan_timeout> at 0 was not disabling scan

@@ -72,6 +72,7 @@ tMRConfig			glMRConfig = {
 							true,
 							true,
 							"0:0, 400:10, 700:20, 1200:30, 2050:40, 3800:50, 6600:60, 12000:70, 21000:80, 37000:90, 65536:100",
+							100,
 							1
 					};
 
@@ -385,6 +386,11 @@ static bool AddMRDevice(struct sMR *Device, char * UDN, IXML_Document *DescDoc,	
 			// volume and a are 16 bits, b are 8, so 7 bits precision can be added
 			if (a2) device->Volume = (((s32_t)Volume*(b1-b2)*128)/(a1-a2) + b1*128 - (a1*(b1-b2)*128)/(a1-a2)) / 128;
 			else device->Volume = 0;
+
+			if (device->Config.MaxVolume) {
+				device->Volume = ((s32_t)device->Volume * device->Config.MaxVolume) / (s32_t) 100;
+				device->Volume = min(device->Volume, 100);
+     		}
 
 			if (!device->Config.VolumeOnPlay || device->sqState == SQ_PLAY)
 				SetVolume(device->Service[REND_SRV_IDX].ControlURL, device->Volume, device->seqN++);
@@ -1349,6 +1355,8 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "error opening logfile %s: %s\n", glLogFile, strerror(errno));
 		}
 	}
+
+	LOG_ERROR("Starting squeeze2upnp version: %s\n", VERSION);
 
 	if (!glConfigID) {
 		LOG_ERROR("\n\n!!!!!!!!!!!!!!!!!! ERROR LOADING CONFIG FILE !!!!!!!!!!!!!!!!!!!!!\n", NULL);

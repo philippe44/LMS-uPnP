@@ -28,7 +28,7 @@ WHAT VERSION TO CHOOSE
 
 in ./bin, there are binaries for Windows, Linux (x86 and ARM) and OSX. 
 
-- squeeze2upnp.exe, pthreadbc2.dll, cc32160mt.dll : Windows Vista and above
+- squeeze2upnp-win.exe, pthreadbc2.dll, cc32160mt.dll : Windows Vista and above
 - squeeze2upnp-winxp.exe, pthreadvc2.dll : Windows XP
 - squeeze2upnp-x86 : Linux (Intel CPU) 32 or 64 bits (see user guide for 64 bits)
 - squeeze2upnp-x86-static : same as above, but libc librairies are statically 
