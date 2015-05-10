@@ -58,6 +58,7 @@ char				*glLogFile;
 static char			*glPidFile = NULL;
 static char			*glSaveConfigFile = NULL;
 bool				glAutoSaveConfigFile = false;
+bool				glGracefullShutdown = true;
 
 tMRConfig			glMRConfig = {
 							-3L,
@@ -147,7 +148,7 @@ static struct sLocList {
 		   "Usage: [options]\n"
 		   "  -s <server>[:<port>]\tConnect to specified server, otherwise uses autodiscovery to find server\n"
 		   "  -x <config file>\tread config from file (default is ./config.xml)\n"
-		   "  -i <config file>\tdiscover players, save config in <config file> and then exit\n"
+		   "  -i <config file>\tdiscover players, save <config file> and exit\n"
 		   "  -I \t\t\tauto save config at every network scan\n"
 //		   "  -c <codec1>,<codec2>\tRestrict codecs to those specified, otherwise load all available codecs; known codecs: " CODECS "\n"
 //		   "  -e <codec1>,<codec2>\tExplicitly exclude native support of one or more codecs; known codecs: " CODECS "\n"
@@ -171,6 +172,7 @@ static struct sLocList {
 		   "  -z \t\t\tDaemonize\n"
 #endif
 		   "  -Z \t\t\tNOT interactive\n"
+		   "  -k \t\t\tImmediate exit on SIGQUIT and SIGTERM\n"
 		   "  -t \t\t\tLicense terms\n"
 		   "\n"
 		   "Build options:"
@@ -1205,12 +1207,15 @@ static bool Stop(void)
 
 /*---------------------------------------------------------------------------*/
 static void sighandler(int signum) {
+	if (!glGracefullShutdown) {
+		LOG_INFO("forced exit", NULL);
+		exit(EXIT_SUCCESS);
+	}
+
 	glMainRunning = false;
 	sq_stop();
 	Stop();
-
-	// remove ourselves in case above does not work, second SIGINT will cause non gracefull shutdown
-	signal(signum, SIG_DFL);
+	exit(EXIT_SUCCESS);
 }
 
 
@@ -1233,7 +1238,7 @@ bool ParseArgs(int argc, char **argv) {
 		if (strstr("stxdfpi", opt) && optind < argc - 1) {
 			optarg = argv[optind + 1];
 			optind += 2;
-		} else if (strstr("tzZI"
+		} else if (strstr("tzZIk"
 #if RESAMPLE
 						  "uR"
 #endif
@@ -1277,6 +1282,9 @@ bool ParseArgs(int argc, char **argv) {
 			break;
 		case 'Z':
 			glInteractive = false;
+			break;
+		case 'k':
+			glGracefullShutdown = false;
 			break;
 
 #if LINUX || FREEBSD

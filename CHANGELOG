@@ -9,6 +9,8 @@
  - add -I command line option to auto-save config file at each scan
  - some players trigger false detectio of URI change by reporting empty nextURI, so check the nextURI contains "-idx-" pattern
  - when saving an existing device, the UPnP friendly name was used, even if a different name was set in configuration
+ - add -k option to force immediate exit on SIGINT, SIGQUIT and SIGTERM
+ - handle SIGINT, SIGQUIT and SIGTERM properly
 
 0.2.1.0
  - <upnp_scan_timeout> at 0 was not disabling scan
