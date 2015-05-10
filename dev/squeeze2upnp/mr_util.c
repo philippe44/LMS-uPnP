@@ -357,7 +357,7 @@ void SaveConfig(char *name, void *ref)
 
 		dev_node = XMLAddNode(doc, root, "device", NULL);
 		XMLAddNode(doc, dev_node, "udn", p->UDN);
-		XMLAddNode(doc, dev_node, "name", p->FriendlyName);
+		XMLAddNode(doc, dev_node, "name", *(p->Config.Name) ? p->Config.Name : p->FriendlyName);
 		XMLAddNode(doc, dev_node, "mac", "%02x:%02x:%02x:%02x:%02x:%02x", p->sq_config.mac[0],
 					p->sq_config.mac[1], p->sq_config.mac[2], p->sq_config.mac[3], p->sq_config.mac[4], p->sq_config.mac[5]);
 		XMLAddNode(doc, dev_node, "enabled", "%d", (int) p->Config.Enabled);

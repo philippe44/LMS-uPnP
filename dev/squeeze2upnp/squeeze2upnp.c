@@ -57,6 +57,7 @@ bool				glInteractive = true;
 char				*glLogFile;
 static char			*glPidFile = NULL;
 static char			*glSaveConfigFile = NULL;
+bool				glAutoSaveConfigFile = false;
 
 tMRConfig			glMRConfig = {
 							-3L,
@@ -146,7 +147,8 @@ static struct sLocList {
 		   "Usage: [options]\n"
 		   "  -s <server>[:<port>]\tConnect to specified server, otherwise uses autodiscovery to find server\n"
 		   "  -x <config file>\tread config from file (default is ./config.xml)\n"
-   		   "  -i <config file>\tdiscover players, save config in <file> and then exit\n"
+		   "  -i <config file>\tdiscover players, save config in <config file> and then exit\n"
+		   "  -I \t\t\tauto save config at every network scan\n"
 //		   "  -c <codec1>,<codec2>\tRestrict codecs to those specified, otherwise load all available codecs; known codecs: " CODECS "\n"
 //		   "  -e <codec1>,<codec2>\tExplicitly exclude native support of one or more codecs; known codecs: " CODECS "\n"
 		   "  -f <logfile>\t\tWrite debug to logfile\n"
@@ -635,7 +637,7 @@ int CallbackActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 				pending, otherwise this is false alarm due to de-sync between
 				the two players
 				*/
-				if (strcmp(r, p->CurrentURI) && (p->State == PLAYING) && p->NextURI) {
+				if (strcmp(r, p->CurrentURI) && (p->State == PLAYING) && p->NextURI && strstr(r, "-idx-")) {
 					LOG_INFO("Detected URI change %s %s", p->CurrentURI, r);
 					NFREE(p->CurrentURI);
 					NFREE(p->NextURI);
@@ -851,6 +853,11 @@ static void *UpdateMRThread(void *args)
 	}
 
 	glDiscovery = true;
+	if (glAutoSaveConfigFile && !glSaveConfigFile) {
+		LOG_INFO("Updating configuration %s", glConfigName);
+		SaveConfig(glConfigName, glConfigID);
+	}
+
 	LOG_INFO("End uPnP devices update %d", gettime_ms() - TimeStamp);
 	return NULL;
 }
@@ -1226,7 +1233,7 @@ bool ParseArgs(int argc, char **argv) {
 		if (strstr("stxdfpi", opt) && optind < argc - 1) {
 			optarg = argv[optind + 1];
 			optind += 2;
-		} else if (strstr("tzZ"
+		} else if (strstr("tzZI"
 #if RESAMPLE
 						  "uR"
 #endif
@@ -1261,6 +1268,9 @@ bool ParseArgs(int argc, char **argv) {
 			break;
 		case 'i':
 			glSaveConfigFile = optarg;
+			break;
+		case 'I':
+			glAutoSaveConfigFile = true;
 			break;
 		case 'p':
 			glPidFile = optarg;
