@@ -1,3 +1,17 @@
+0.2.2.0
+ - <buffer_dir> can be '?' (w/o the '') to enable use of default system "temp" dir (this is the default now instead of '.')
+ - config parameters with incorrect values (buffer_size) no longer re-written with corrected values in config
+ - config file generating (-i or 'save'  while running )do not erase existing players
+ - add command line option '-Z' to disable interactive mode, allowing backgrounding using '&' in Linux (no more consumes 100% CPU)
+ - buffer files are now deleted each time user stops a playback unless new parameter <keep_buffer_file> is set to 1
+ - add <max_volume> parameter to scale and limit the <volume_curve>. Any value calculated from volume curve is scaled by <max_volume>/100
+ - Window version is renamed squeeze2upnp-win
+ - add -I command line option to auto-save config file at each scan
+ - some players trigger false detectio of URI change by reporting empty nextURI, so check the nextURI contains "-idx-" pattern
+ - when saving an existing device, the UPnP friendly name was used, even if a different name was set in configuration
+ - add -k option to force immediate exit on SIGINT, SIGQUIT and SIGTERM
+ - handle SIGINT, SIGQUIT and SIGTERM properly
+
 0.2.1.0
  - <upnp_scan_timeout> at 0 was not disabling scan
  - added <upnp_remove_count> parameter to remove a device only N times after failed re-discovery

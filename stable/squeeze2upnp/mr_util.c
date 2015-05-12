@@ -293,11 +293,14 @@ void ParseProtocolInfo(struct sMR *Device, char *Info)
 
 
 /*----------------------------------------------------------------------------*/
-void SaveConfig(char *name)
+void SaveConfig(char *name, void *ref)
 {
 	struct sMR *p;
 	IXML_Document *doc = ixmlDocument_createDocument();
+	IXML_Document *old_doc = ref;
 	IXML_Node	 *root, *common;
+	IXML_NodeList *list;
+	IXML_Element *old_root;
 	char *s;
 	FILE *file;
 	int i;
@@ -328,6 +331,7 @@ void SaveConfig(char *name)
 	XMLAddNode(doc, common, "stream_length", "%d", (s32_t) glMRConfig.StreamLength);
 	XMLAddNode(doc, common, "max_read_wait", "%d", (int) glDeviceParam.max_read_wait);
 	XMLAddNode(doc, common, "max_GET_bytes", "%d", (s32_t) glDeviceParam.max_get_bytes);
+	XMLAddNode(doc, common, "keep_buffer_file", "%d", (int) glDeviceParam.keep_buffer_file);
 	XMLAddNode(doc, common, "enabled", "%d", (int) glMRConfig.Enabled);
 	XMLAddNode(doc, common, "process_mode", "%d", (int) glMRConfig.ProcessMode);
 	XMLAddNode(doc, common, "codecs", glDeviceParam.codecs);
@@ -339,6 +343,7 @@ void SaveConfig(char *name)
 	XMLAddNode(doc, common, "volume_on_play", "%d", (int) glMRConfig.VolumeOnPlay);
 	XMLAddNode(doc, common, "send_metadata", "%d", (int) glMRConfig.SendMetaData);
 	XMLAddNode(doc, common, "volume_curve", glMRConfig.VolumeCurve);
+	XMLAddNode(doc, common, "max_volume", "%d", glMRConfig.MaxVolume);
 	XMLAddNode(doc, common, "accept_nexturi", "%d", (int) glMRConfig.AcceptNextURI);
 	XMLAddNode(doc, common, "upnp_remove_count", "%d", (u32_t) glMRConfig.uPNPRemoveCount);
 
@@ -352,7 +357,7 @@ void SaveConfig(char *name)
 
 		dev_node = XMLAddNode(doc, root, "device", NULL);
 		XMLAddNode(doc, dev_node, "udn", p->UDN);
-		XMLAddNode(doc, dev_node, "name", p->FriendlyName);
+		XMLAddNode(doc, dev_node, "name", *(p->Config.Name) ? p->Config.Name : p->FriendlyName);
 		XMLAddNode(doc, dev_node, "mac", "%02x:%02x:%02x:%02x:%02x:%02x", p->sq_config.mac[0],
 					p->sq_config.mac[1], p->sq_config.mac[2], p->sq_config.mac[3], p->sq_config.mac[4], p->sq_config.mac[5]);
 		XMLAddNode(doc, dev_node, "enabled", "%d", (int) p->Config.Enabled);
@@ -383,6 +388,8 @@ void SaveConfig(char *name)
 			XMLAddNode(doc, dev_node, "send_metadata", "%d", (int) p->Config.SendMetaData);
 		if (strcmp(p->Config.VolumeCurve, glMRConfig.VolumeCurve))
 			XMLAddNode(doc, dev_node, "volume_curve", p->Config.VolumeCurve);
+		if (p->Config.MaxVolume != glMRConfig.MaxVolume)
+			XMLAddNode(doc, dev_node, "max_volume", "%d", p->Config.MaxVolume);
 		if (p->Config.AcceptNextURI != glMRConfig.AcceptNextURI)
 			XMLAddNode(doc, dev_node, "accept_nexturi", "%d", (int) p->Config.AcceptNextURI);
 		if (strcmp(p->sq_config.codecs, glDeviceParam.codecs))
@@ -393,11 +400,31 @@ void SaveConfig(char *name)
 			XMLAddNode(doc, dev_node, "L24_format", "%d", (int) p->sq_config.L24_format);
 		if (p->sq_config.flac_header != glDeviceParam.flac_header)
 			XMLAddNode(doc, dev_node, "flac_header", "%d", (int) p->sq_config.flac_header);
+		if (p->sq_config.keep_buffer_file != glDeviceParam.keep_buffer_file)
+			XMLAddNode(doc, dev_node, "keep_buffer_file", "%d", (int) p->sq_config.keep_buffer_file);
 		if (p->Config.uPNPRemoveCount != glMRConfig.uPNPRemoveCount)
 			XMLAddNode(doc, dev_node, "upnp_remove_count", "%d", (int) p->Config.uPNPRemoveCount);
 
 		p = p->Next;
 	}
+
+	// add devices in old XML file that has not been discovered
+	old_root = ixmlDocument_getElementById(old_doc, "squeeze2upnp");
+	list = ixmlDocument_getElementsByTagName((IXML_Document*) old_root, "device");
+	for (i = 0; i < (int) ixmlNodeList_length(list); i++) {
+		char *udn;
+		IXML_Node *device, *node;
+
+		device = ixmlNodeList_item(list, i);
+		node = (IXML_Node*) ixmlDocument_getElementById((IXML_Document*) device, "udn");
+		node = ixmlNode_getFirstChild(node);
+		udn = (char*) ixmlNode_getNodeValue(node);
+		if (!FindMRConfig(doc, udn)) {
+			device = ixmlNode_cloneNode(device, true);
+			ixmlNode_appendChild((IXML_Node*) root, device);
+		}
+	}
+	free(list);
 
 	file = fopen(name, "wb");
 	s = ixmlDocumenttoString(doc);
@@ -427,6 +454,7 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "sample_rate"))sq_conf->sample_rate = atol(val);
 	if (!strcmp(name, "L24_format"))sq_conf->L24_format = atol(val);
 	if (!strcmp(name, "flac_header"))sq_conf->flac_header = atol(val);
+	if (!strcmp(name, "keep_buffer_file"))sq_conf->keep_buffer_file = atol(val);
 	if (!strcmp(name, "upnp_remove_count"))Conf->uPNPRemoveCount = atol(val);
 	if (!strcmp(name, "seek_after_pause")) {
 		Conf->SeekAfterPause = atol(val);
@@ -435,6 +463,7 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "force_volume")) Conf->ForceVolume = atol(val);
 	if (!strcmp(name, "volume_on_play")) Conf->VolumeOnPlay = atol(val);
 	if (!strcmp(name, "volume_curve")) strcpy(Conf->VolumeCurve, val);
+	if (!strcmp(name, "max_volume")) Conf->MaxVolume = atol(val);
 	if (!strcmp(name, "accept_nexturi")) Conf->AcceptNextURI = atol(val);
 	if (!strcmp(name, "send_metadata")) Conf->SendMetaData = atol(val);
 	if (!strcmp(name, "name")) strcpy(Conf->Name, val);

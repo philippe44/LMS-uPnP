@@ -53,9 +53,12 @@ sq_log_level_t		glLog = { lINFO, lINFO, lINFO, lINFO, lINFO, lINFO, lINFO, lINFO
 #if LINUX || FREEBSD
 bool				glDaemonize = false;
 #endif
+bool				glInteractive = true;
 char				*glLogFile;
 static char			*glPidFile = NULL;
 static char			*glSaveConfigFile = NULL;
+bool				glAutoSaveConfigFile = false;
+bool				glGracefullShutdown = true;
 
 tMRConfig			glMRConfig = {
 							-3L,
@@ -71,6 +74,7 @@ tMRConfig			glMRConfig = {
 							true,
 							true,
 							"0:0, 400:10, 700:20, 1200:30, 2050:40, 3800:50, 6600:60, 12000:70, 21000:80, 37000:90, 65536:100",
+							100,
 							1
 					};
 
@@ -89,8 +93,9 @@ sq_dev_param_t glDeviceParam = {
 					SQ_RATE_48000,
 					L24_PACKED_LPCM,
 					FLAC_NORMAL_HEADER,
-					".",
+					"?",
 					-1L,
+					0,
 					0,
 					{ 0x00,0x00,0x00,0x00,0x00,0x00 }
 				} ;
@@ -143,7 +148,8 @@ static struct sLocList {
 		   "Usage: [options]\n"
 		   "  -s <server>[:<port>]\tConnect to specified server, otherwise uses autodiscovery to find server\n"
 		   "  -x <config file>\tread config from file (default is ./config.xml)\n"
-   		   "  -i <config file>\tdiscover players, save config in <file> and then exit\n"
+		   "  -i <config file>\tdiscover players, save <config file> and exit\n"
+		   "  -I \t\t\tauto save config at every network scan\n"
 //		   "  -c <codec1>,<codec2>\tRestrict codecs to those specified, otherwise load all available codecs; known codecs: " CODECS "\n"
 //		   "  -e <codec1>,<codec2>\tExplicitly exclude native support of one or more codecs; known codecs: " CODECS "\n"
 		   "  -f <logfile>\t\tWrite debug to logfile\n"
@@ -165,6 +171,8 @@ static struct sLocList {
 #if LINUX || FREEBSD
 		   "  -z \t\t\tDaemonize\n"
 #endif
+		   "  -Z \t\t\tNOT interactive\n"
+		   "  -k \t\t\tImmediate exit on SIGQUIT and SIGTERM\n"
 		   "  -t \t\t\tLicense terms\n"
 		   "\n"
 		   "Build options:"
@@ -382,6 +390,11 @@ static bool AddMRDevice(struct sMR *Device, char * UDN, IXML_Document *DescDoc,	
 			// volume and a are 16 bits, b are 8, so 7 bits precision can be added
 			if (a2) device->Volume = (((s32_t)Volume*(b1-b2)*128)/(a1-a2) + b1*128 - (a1*(b1-b2)*128)/(a1-a2)) / 128;
 			else device->Volume = 0;
+
+			if (device->Config.MaxVolume) {
+				device->Volume = ((s32_t)device->Volume * device->Config.MaxVolume) / (s32_t) 100;
+				device->Volume = min(device->Volume, 100);
+     		}
 
 			if (!device->Config.VolumeOnPlay || device->sqState == SQ_PLAY)
 				SetVolume(device->Service[REND_SRV_IDX].ControlURL, device->Volume, device->seqN++);
@@ -626,7 +639,7 @@ int CallbackActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 				pending, otherwise this is false alarm due to de-sync between
 				the two players
 				*/
-				if (strcmp(r, p->CurrentURI) && (p->State == PLAYING) && p->NextURI) {
+				if (strcmp(r, p->CurrentURI) && (p->State == PLAYING) && p->NextURI && strstr(r, "-idx-")) {
 					LOG_INFO("Detected URI change %s %s", p->CurrentURI, r);
 					NFREE(p->CurrentURI);
 					NFREE(p->NextURI);
@@ -842,6 +855,11 @@ static void *UpdateMRThread(void *args)
 	}
 
 	glDiscovery = true;
+	if (glAutoSaveConfigFile && !glSaveConfigFile) {
+		LOG_INFO("Updating configuration %s", glConfigName);
+		SaveConfig(glConfigName, glConfigID);
+	}
+
 	LOG_INFO("End uPnP devices update %d", gettime_ms() - TimeStamp);
 	return NULL;
 }
@@ -1189,12 +1207,15 @@ static bool Stop(void)
 
 /*---------------------------------------------------------------------------*/
 static void sighandler(int signum) {
+	if (!glGracefullShutdown) {
+		LOG_INFO("forced exit", NULL);
+		exit(EXIT_SUCCESS);
+	}
+
 	glMainRunning = false;
 	sq_stop();
 	Stop();
-
-	// remove ourselves in case above does not work, second SIGINT will cause non gracefull shutdown
-	signal(signum, SIG_DFL);
+	exit(EXIT_SUCCESS);
 }
 
 
@@ -1217,7 +1238,7 @@ bool ParseArgs(int argc, char **argv) {
 		if (strstr("stxdfpi", opt) && optind < argc - 1) {
 			optarg = argv[optind + 1];
 			optind += 2;
-		} else if (strstr("tz"
+		} else if (strstr("tzZIk"
 #if RESAMPLE
 						  "uR"
 #endif
@@ -1253,9 +1274,19 @@ bool ParseArgs(int argc, char **argv) {
 		case 'i':
 			glSaveConfigFile = optarg;
 			break;
+		case 'I':
+			glAutoSaveConfigFile = true;
+			break;
 		case 'p':
 			glPidFile = optarg;
 			break;
+		case 'Z':
+			glInteractive = false;
+			break;
+		case 'k':
+			glGracefullShutdown = false;
+			break;
+
 #if LINUX || FREEBSD
 		case 'z':
 			glDaemonize = true;
@@ -1313,6 +1344,7 @@ int main(int argc, char *argv[])
 {
 	int i;
 	char resp[20] = "";
+	char *tmpdir;
 
 	signal(SIGINT, sighandler);
 	signal(SIGTERM, sighandler);
@@ -1322,7 +1354,6 @@ int main(int argc, char *argv[])
 #if defined(SIGHUP)
 	signal(SIGHUP, sighandler);
 #endif
-
 
 	// first try to find a config file on the command line
 	for (i = 1; i < argc; i++) {
@@ -1342,6 +1373,8 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "error opening logfile %s: %s\n", glLogFile, strerror(errno));
 		}
 	}
+
+	LOG_ERROR("Starting squeeze2upnp version: %s\n", VERSION);
 
 	if (!glConfigID) {
 		LOG_ERROR("\n\n!!!!!!!!!!!!!!!!!! ERROR LOADING CONFIG FILE !!!!!!!!!!!!!!!!!!!!!\n", NULL);
@@ -1376,7 +1409,12 @@ int main(int argc, char *argv[])
 	AVTInit(glLog.sq2mr);
 	MRutilInit(glLog.sq2mr);
 
-	if (!strstr(gluPNPSocket, "?")) {
+	tmpdir = malloc(SQ_STR_LENGTH);
+	GetTempPath(SQ_STR_LENGTH, tmpdir);
+	LOG_INFO("Buffer path %s", tmpdir);
+	free(tmpdir);
+
+	if (!strstr(gluPNPSocket, "?")) {
 		sscanf(gluPNPSocket, "%[^:]:%u", glIPaddress, &glPort);
 	}
 
@@ -1387,18 +1425,25 @@ int main(int argc, char *argv[])
 
 	if (glSaveConfigFile) {
 		while (!glDiscovery) sleep(1);
-		SaveConfig(glSaveConfigFile);
+		SaveConfig(glSaveConfigFile, glConfigID);
 	}
 
 	while (strcmp(resp, "exit") && !glSaveConfigFile) {
 
 #if LINUX || FREEBSD
-		if (!glDaemonize)
+		if (!glDaemonize && glInteractive)
 			i = scanf("%s", resp);
 		else
 			pause();
 #else
-		i = scanf("%s", resp);
+		if (glInteractive)
+			i = scanf("%s", resp);
+		else
+#if OSX
+			pause();
+#else
+			Sleep(INFINITE);
+#endif
 #endif
 
 		if (!strcmp(resp, "sdbg"))	{
@@ -1448,7 +1493,7 @@ int main(int argc, char *argv[])
 		 if (!strcmp(resp, "save"))	{
 			char name[128];
 			i = scanf("%s", name);
-			SaveConfig(name);
+			SaveConfig(name, glConfigID);
 		}
 	}
 

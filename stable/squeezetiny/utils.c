@@ -1,4 +1,4 @@
-/* 
+/*
  *  Squeezelite - lightweight headless squeezebox emulator
  *
  *  (c) Adrian Smith 2012-2014, triode1@btinternet.com
@@ -451,5 +451,16 @@ int SendARP(in_addr_t src, in_addr_t dst, u8_t mac[], u8_t *size)
 	return (found_entry);
 }
 #endif
+
+#if LINUX || FREEBDSD || OSX
+char *GetTempPath(u16_t size, char *path)
+{
+	strncpy(path, P_tmpdir, size);
+	if (!strlen(path)) strncpy(path, "/var/tmp", size);
+	path[size - 1] = '\0';
+	return path;
+}
+#endif
+
 
 
