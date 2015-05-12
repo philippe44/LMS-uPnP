@@ -1,5 +1,5 @@
 0.2.2.0
- - <buffer_dir> can be '?' (w/o the '') to enable use of default system "temp" dir (this is the default now instead of '.')
+ - <buffer_dir> can be '?' (w/o the '') to enable use of default system "tmp" dir (this is the default now instead of '.')
  - config parameters with incorrect values (buffer_size) no longer re-written with corrected values in config
  - config file generating (-i or 'save'  while running )do not erase existing players
  - add command line option '-Z' to disable interactive mode, allowing backgrounding using '&' in Linux (no more consumes 100% CPU)
