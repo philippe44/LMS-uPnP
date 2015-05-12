@@ -89,7 +89,6 @@ __old_structure
 alpha
 *.save*
 Test
-uPnPBridge/
 package*.*
 Sonos/
 

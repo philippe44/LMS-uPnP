@@ -1,0 +1,221 @@
+[% PROCESS settings/header.html %]
+
+	[% YESNOBOX = [['',''], ['yes','1'], ['no','0']] %]
+
+	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_AUTORUN" desc="PLUGIN_UPNPBRIDGE_AUTORUN_DESC" %]
+		<input name="autorun" type="checkbox" [% IF autorun %] checked [% END %]> [% "PLUGIN_UPNPBRIDGE_RUNNING_$running" | string %] [% IF binary %] ([% binary %]) [% END %]
+		[%IF running %] <b><font color="red">&nbsp[% "PLUGIN_UPNPBRIDGE_WARNING" | string %]</font></b> [% END %]
+	[% END %]
+	[% IF autorun %]	
+		[% IF binaries.size > 1 %]
+			[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_BINARIES" desc="PLUGIN_UPNPBRIDGE_BINARIES_DESC" %]
+				<select class="stdedit" name="bin" id="bin">
+				[% FOREACH entry IN binaries %]
+					<option [% IF entry == bin %]selected[% found = 1 %][% END %] value="[% entry %]">[% entry %]</option>
+				[% END %]
+				[% IF not found %]
+					<option selected value="">[% "PLUGIN_UPNPBRIDGE_BINARIES" | string %]</option>
+				[% END %]
+				</select>
+			[% END %]
+		[% END %]
+	[% END %]
+	
+<!--	
+	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_OUTPUT" desc="PLUGIN_UPNPBRIDGE_OUTPUT_DESC" %]
+		<select class="stdedit" name="output" id="output">
+		[% FOREACH entry IN devices %]
+			<option [% IF entry.name == output %]selected[% END %] value="[% entry.name %]">[% entry.desc %][% IF entry.name %] - [% entry.name %][% END %]</option>
+		[% END %]
+		</select>
+	[% END %]
+-->	
+	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_OPTIONS" desc="PLUGIN_UPNPBRIDGE_OPTIONS_DESC" %]
+		<input type="text" class="stdedit" name="opts" id="opts" value="[% opts %]" size="100">
+	[% END %]
+	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_DEBUG" desc="PLUGIN_UPNPBRIDGE_DEBUG_DESC" %]
+		<select class="stdedit" name="debugs" id="debugs">
+		[% FOREACH entry IN [ '', 'all', 'output', 'stream', 'slimproto', 'decode' ] %]
+			<option [% IF entry == debugs %]selected[% END %] value="[% entry %]">[% "PLUGIN_UPNPBRIDGE_$entry" | string %]</option>
+		[% END %]
+		</select>
+	[% END %]
+	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_LOGGING" desc="PLUGIN_UPNPBRIDGE_LOGGING_DESC" %]
+		<input name="logging" type="checkbox" [% IF logging %] checked [% END %]> 
+		<a href="/upnpbridge.log" target="log">[% "PLUGIN_UPNPBRIDGE_LOGLINK" | string %]</a>
+	[% END %]
+	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_CONFIG" desc="PLUGIN_UPNPBRIDGE_CONFIG_DESC" %]
+		[% configpath %]
+		<input type="text" class="stdedit" name="configfile" id="configfile" value="[% configfile %]" size="20">
+		<a href="/configuration.xml" target="config">[% "PLUGIN_UPNPBRIDGE_CONFLINK" | string %]</a>
+		&nbsp&nbsp<input name="autosave" type="checkbox" [% IF autosave %] checked [% END %]>[% "PLUGIN_UPNPBRIDGE_AUTOSAVECONFIG" | string %]
+		&nbsp<input name="genconfig" type="submit" onclick="alert('generating configuration will take ~30 seconds')" value=[% "PLUGIN_UPNPBRIDGE_GENCONFIG" | string %]>
+		&nbsp<input name="delconfig" type="submit" value=[% "PLUGIN_UPNPBRIDGE_DELCONFIG" | string %]>
+	[% END %]
+	
+<!--
+	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_LOC" desc="PLUGIN_UPNPBRIDGE_LOC_DESC" %]
+		<input name="loc" type="checkbox" [% IF loc %] checked [% END %]>
+	[% END %]
+-->
+
+	[% IF !xmlparams %]
+		[% WRAPPER settingSection %]
+			<b><font color=red>[% "PLUGIN_UPNPBRIDGE_NOCONFIG" | string %]</font></b>
+		[% END %]	
+	[% ELSE %]
+	
+	<input hidden type="text" class="stdedit" name="xmlparams" id="xmlparams" value="1" size="5">
+	<input hidden type="text" class="stdedit" name="prevseldevice" id="prevseldevice" value="[% prevseldevice %]" size="5">
+	
+	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_UPNPSCAN" desc="PLUGIN_UPNPBRIDGE_UPNPSCAN_DESC" %]
+		[% "PLUGIN_UPNPBRIDGE_SCANINTERVAL" | string %]</th>&nbsp<td><input type="text" class="stdedit" name="upnp_scan_interval" id="upnp_scan_interval" value="[% upnp_scan_interval %]" size="2"> (s)
+		[% "PLUGIN_UPNPBRIDGE_SCANTIMEOUT" | string %]&nbsp<input type="text" class="stdedit" name="upnp_scan_timeout" id="upnp_scan_timeout" value="[% upnp_scan_timeout %]" size="2"> (s)
+	[% END %]
+	
+	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_UPNPSOCKET" desc="PLUGIN_UPNPBRIDGE_UPNPSOCKET_DESC" %]
+		<input type="text" class="stdedit" name="upnp_socket" id="upnp_socket" value="[% upnp_socket %]" size="20">
+	[% END %]
+	
+	<hr>
+
+	[% WRAPPER settingSection %]
+		<select class="stdedit" name="seldevice" id="seldevice" onchange="form.submit()">
+		[% FOREACH entry IN devices %]
+			<option [% IF entry.udn == seldevice %]selected[% END %] value="[% entry.udn %]">[% entry.name %]</option>
+		[% END %]
+		</select>
+		[% IF seldevice == '.common.' %]<b><font color=red>&nbsp&nbsp&nbsp[% "PLUGIN_UPNPBRIDGE_COMMONPARAMINFO" | string %]</font></b>
+		[% ELSE %]<b><font color=red>&nbsp&nbsp&nbsp[% "PLUGIN_UPNPBRIDGE_PARAMINFO" | string %]</font></b>[% END %]
+	[% END %]
+	
+	[% IF seldevice != '.common.' %]
+		[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_USEPROFILE" desc="PLUGIN_UPNPBRIDGE_USEPROFILE_DESC" %]
+			[%IF devicesprofiles %]
+				<select class="stdedit" name="selprofile" id="selprofile">
+				[% FOREACH entry IN devicesprofiles %]
+					<option value="[% entry %]">[% entry %]</option>
+				[% END %]
+				</select>
+				&nbsp<input name="applyprofile" type="checkbox">[% "PLUGIN_UPNPBRIDGE_APPLYPROFILE" | string %] 
+			[% END %]	
+			&nbsp&nbsp<input name="updateprofiles" type="submit" onclick="alert('fetching will take a few seconds')" value=[% "PLUGIN_UPNPBRIDGE_UPDATEPROFILES" | string %]> 
+			&nbsp[% "PLUGIN_UPNPBRIDGE_UPDATEPROFILESFROM" | string %]&nbsp&nbsp<input type="text" class="stdedit" name="updatefrom" id="updatefrom" value="[% updatefrom %]" size="30">
+		[% END %]
+		
+		[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_PLAYERINFO" desc="PLUGIN_UPNPBRIDGE_PLAYERINFO_DESC" %]
+			<th>[% "PLUGIN_UPNPBRIDGE_PLAYERNAME" | string %]</th>
+			<td><input type="text" class="stdedit" name="name" id="name" value="[% name %]" size="25"></td>
+			<th>[% "PLUGIN_UPNPBRIDGE_PLAYERMAC" | string %]</th>
+			<td><input type="text" class="stdedit" name="mac" id="mac" value="[% mac %]" size="20"></td>
+		[% END %]
+	[% END %]		
+<!--
+	[% WRAPPER setting %]
+		<div><b><i>[% "PLUGIN_UPNPBRIDGE_TEXTDEFAULT" | string %]</i></b></div>
+	[% END %]
+-->	
+	<font color=blue> 
+	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_STREAMLENGTH" desc="PLUGIN_UPNPBRIDGE_STREAMLENGTH_DESC" %]
+		<select class="stdedit" name="stream_length" id="stream_length">
+		[% FOREACH entry IN [ ['',''], ['chunked','-3'], ['chunked (open range)','-2'], ['no size','-1'], ['no size (open range)','-4'], ['fixed large size','1000000000'] ] %]
+			<option [% IF entry.1 == stream_length %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+		[% END %]
+		</select>
+	[% END %]
+	</font> 
+	
+	<font color=blue> 
+	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_ACCEPTNEXTURI" desc="PLUGIN_UPNPBRIDGE_ACCEPTNEXTURI_DESC" %]
+		<select class="stdedit" name="accept_nexturi" id="accept_nexturi">
+		[% FOREACH entry IN YESNOBOX %] 
+			<option [% IF entry.1 == accept_nexturi %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+		[% END %]
+		</select>
+	[% END %]
+	</font>
+		
+	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_SEEKAFTERPAUSE" desc="PLUGIN_UPNPBRIDGE_SEEKAFTERPAUSE_DESC" %]
+		<select class="stdedit" name="seek_after_pause" id="seek_after_pause">
+		[% FOREACH entry IN YESNOBOX %] 
+			<option [% IF entry.1 == seek_after_pause %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+		[% END %]
+		</select>
+	[% END %]
+	
+	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_BUFFERS" desc="PLUGIN_UPNPBRIDGE_BUFFERS_DESC" %]
+		[% "PLUGIN_UPNPBRIDGE_BUFFERDIR" | string %]&nbsp<input type="text" class="stdedit" name="buffer_dir" id="buffer_dir" value="[% buffer_dir %]" size="30">
+		[% "PLUGIN_UPNPBRIDGE_BUFFERLIMIT" | string %]&nbsp<input type="text" class="stdedit" name="buffer_limit" id="buffer_limit" value="[% buffer_limit %]" size="10">
+	[% END %]
+	
+	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_CODECSPARAM" desc="PLUGIN_UPNPBRIDGE_CODECSPARAM_DESC" %]
+		<table><tr>
+		<th><font color=blue>[% "PLUGIN_UPNPBRIDGE_CODECS" | string %]</font></th><td><input type="text" class="stdedit" name="codecs" id="codecs" value="[% codecs %]" size="20">&nbsp</td>
+		<td><font color=blue>[% "PLUGIN_UPNPBRIDGE_SAMPLERATE" | string %]</font></td><td><select class="stdedit" name="sample_rate" id="sample_rate">
+		[% FOREACH entry IN [ '', '44100', '48000', '96000', '192000' ] %]
+			<option [% IF entry == sample_rate %]selected[% END %] value="[% entry %]">[% entry %]</option>
+		[% END %]
+		</select></td></tr>
+						
+		<tr><th>[% "PLUGIN_UPNPBRIDGE_L24FORMAT" | string %]</th><td><select class="stdedit" name="L24_format" id="L24_format">
+		[% FOREACH entry IN [ ['',''], ['plain 24 bits','0'], ['packed type 1','1'] ] %]
+			<option [% IF entry.1 == L24_format %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+		[% END %]
+		</select></td>
+		
+		<th>[% "PLUGIN_UPNPBRIDGE_FLACHEADER" | string %]</th><td><select class="stdedit" name="flac_header" id="flac_header">
+		[% FOREACH entry IN [ ['',''], ['none','0'], ['normal','1'], ['fixed size','2'] ] %]
+			<option [% IF entry.1 == flac_header %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+		[% END %]
+		</select></td></tr></table>
+	[% END %]
+	
+	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_UPNPMGMT" desc="PLUGIN_UPNPBRIDGE_UPNPMGMT_DESC" %]
+		[% "PLUGIN_UPNPBRIDGE_ENABLEDEFS" | string %]
+		<select class="stdedit" name="enabled" id="enabled">
+		[% FOREACH entry IN YESNOBOX %] 
+			<option [% IF entry.1 == enabled %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+		[% END %]
+		</select>
+		[% "PLUGIN_UPNPBRIDGE_UPNPREMOVECOUNT_1" | string %]<input type="text" class="stdedit" name="upnp_remove_count" id="upnp_remove_count" value="[% upnp_remove_count %]" size="2">&nbsp[% "PLUGIN_UPNPBRIDGE_UPNPREMOVECOUNT_2" | string %]
+	[% END %]
+	
+	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_VOLUMEMGMT" desc="PLUGIN_UPNPBRIDGE_VOLUMEMGMT_DESC" %]
+		[% "PLUGIN_UPNPBRIDGE_MAXVOLUME" | string %]&nbsp</th><input type="text" class="stdedit" name="max_volume" id="max_volume" value="[% max_volume %]" size="3">
+		&nbsp&nbsp<font color=blue>[% "PLUGIN_UPNPBRIDGE_VOLUMEONPLAY" | string %]</font>&nbsp<select class="stdedit" name="volume_on_play" id="volume_on_play">
+		[% FOREACH entry IN [ ['',''], ['only when playing','1'], ['ignore all changes','-1'], ['transparent forward','0'] ] %]
+			<option [% IF entry.1 == volume_on_play %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+		[% END %]
+		</select>
+		
+	[% END %]
+	
+	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_SENDMETADATA" desc="PLUGIN_UPNPBRIDGE_SENDMETADATA_DESC" %]
+		<select class="stdedit" name="send_metadata" id="send_metadata">
+		[% FOREACH entry IN YESNOBOX %] 
+			<option [% IF entry.1 == send_metadata %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+		[% END %]
+		</select>
+	[% END %]
+	
+	<hr>
+	<b>[% "PLUGIN_UPNPBRIDGE_PLAYERLIST" | string %]</b><br>
+	<br><table>
+	[% FOREACH entry IN devices %]
+		[% IF entry.udn != '.common.' %]
+			<tr><td><input name="enabled.[% entry.udn %]" type="checkbox" value="1" [% IF entry.enabled %] checked [% END %]></td>
+			<th>[% entry.name %]<th>[% entry.mac %]</th><th>&nbsp[% entry.udn %]</th></tr>
+		[% END %]
+	[% END %]
+	</table>
+	
+	[% END %]
+
+	<!--
+	<hr>
+	[% WRAPPER settingSection %]
+		<div>[% "PLUGIN_UPNPBRIDGE_INFO_$arch" | string %]</div>
+	[% END %]
+	-->
+		
+[% PROCESS settings/footer.html %]
