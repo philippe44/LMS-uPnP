@@ -265,7 +265,7 @@ sub handler2 {
 		my $profiles = loadprofiles();
 		if ($profiles) {
 		
-			my @list = sort { lc($a) cmp lc($b) } (keys loadprofiles());
+			my @list = sort { lc($a) cmp lc($b) } (keys %$profiles);
 			$params->{'devicesprofiles'} = \@list;
 		}	
 		
@@ -280,7 +280,7 @@ sub handler2 {
 sub mergeprofile{
 	my ($p1, $p2) = @_;
 	
-	foreach my $m (keys $p2) {
+	foreach my $m (keys %$p2) {
 		$p1->{ $m } = $p2-> { $m };
 	}	
 }
