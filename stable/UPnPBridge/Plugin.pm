@@ -25,8 +25,9 @@ sub initPlugin {
 
 	$class->SUPER::initPlugin(@_);
 		
+	require Plugins::UPnPBridge::Squeeze2upnp;		
+	
 	if ($prefs->get('autorun')) {
-		require Plugins::UPnPBridge::Squeeze2upnp;
 		Plugins::UPnPBridge::Squeeze2upnp->start;
 	}
 	

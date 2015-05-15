@@ -207,8 +207,6 @@ sub handler2 {
 
 	if ($prefs->get('autorun')) {
 
-		$params->{'binary'}   = Plugins::UPnPBridge::Squeeze2upnp->bin;
-		$params->{'binaries'} = [ Plugins::UPnPBridge::Squeeze2upnp->binaries ];
 		$params->{'running'}  = Plugins::UPnPBridge::Squeeze2upnp->alive;
 
 	} else {
@@ -216,6 +214,8 @@ sub handler2 {
 		$params->{'running'} = 0;
 	}
 
+	$params->{'binary'}   = Plugins::UPnPBridge::Squeeze2upnp->bin;
+	$params->{'binaries'} = [ Plugins::UPnPBridge::Squeeze2upnp->binaries ];
 	for my $param (qw(autorun output bin opts debugs logging configfile autosave)) {
 		$params->{ $param } = $prefs->get($param);
 	}

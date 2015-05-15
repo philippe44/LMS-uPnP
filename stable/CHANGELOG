@@ -1,3 +1,7 @@
+0.2.2.1
+ - mac_size in AddMR was wrong type causing a stack corruption on WinXP
+ - version now works for XP and above
+
 0.2.2.0
  - <buffer_dir> can be '?' (w/o the '') to enable use of default system "temp" dir (this is the default now instead of '.')
  - config parameters with incorrect values (buffer_size) no longer re-written with corrected values in config

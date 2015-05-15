@@ -3,7 +3,12 @@ SqueezeBox Server(SBS) and uPnP devices. It allows any uPNP device
 to be controlled as a normal SqueezeBox device.
 
 ===========================================================================
-MINIMUM TO READ
+There is now a LMS plugin for automatic installation and easy configuration
+http://dl.dropboxusercontent.com/u/26754471/squeezecenter/repo-stable.xml
+===========================================================================
+
+===========================================================================
+MINIMUM TO READ FOR ADVANCED USE
 ===========================================================================
 If you do not want to RTFM, at least do the following:
 - put the application on a LOCAL disk where you have read/write access
@@ -17,7 +22,7 @@ If you do not want to RTFM, at least do the following:
 	<accept_nexturi>   : if playback is stuck in playlist
 	<seek_after_pause> : if resume after pause does not restart
 
-Really, have a look at "New User Guide.pdf" in /stable
+Really, have a look at "New User Guide (with plugin).pdf" in /stable
 
 ===========================================================================
 WHAT VERSION TO CHOOSE

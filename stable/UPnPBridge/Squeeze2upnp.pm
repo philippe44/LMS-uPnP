@@ -21,6 +21,7 @@ sub binaries {
 	my $os = Slim::Utils::OSDetect::details();
 	
 	if ($os->{'os'} eq 'Linux') {
+
 		if ($os->{'osArch'} =~ /x86_64/) {
 			return qw(squeeze2upnp-x86-64);
 		}
@@ -28,22 +29,29 @@ sub binaries {
 			return qw(squeeze2upnp-x86 squeeze2upnp-x86-static);
 		}
 		if ($os->{'binArch'} =~ /arm/) {
-			return qw(squeeze2upnp-armv6hf squeeze2upnp-armv6hf-static squeeze2upnp-armv5 squeeze2upnp-armv5-static);
+			return qw(squeeze2upnp-arm6hf);
 		}
+
 		# fallback to offering all linux options for case when architecture detection does not work
-		return qw(squeeze2upnp-x86-64 squeeze2upnp-x86 squeeze2upnp-armv6hf squeeze2upnp-armv6hf-static squeeze2upnp-armv5 squeeze2upnp-armv5-static);
+		return qw(squeeze2upnp-x86-64 squeeze2upnp-x86 squeeze2upnp-armv6hf);
 	}
+	
 	if ($os->{'os'} eq 'Darwin') {
 		return qw(squeeze2upnp-osx-x86);
 	}
+	
 	if ($os->{'os'} eq 'Windows') {
+		return qw(squeeze2upnp-win.exe);
+	}	
+	
+=comment	
 		if ($os->{'isWin6+'} ne '') {
 			return qw(squeeze2upnp-win.exe);
 		} else {
 			return qw(squeeze2upnp-winxp.exe);
 		}	
 	}
-	
+=cut	
 	
 }
 

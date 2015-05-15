@@ -6,21 +6,20 @@
 		<input name="autorun" type="checkbox" [% IF autorun %] checked [% END %]> [% "PLUGIN_UPNPBRIDGE_RUNNING_$running" | string %] [% IF binary %] ([% binary %]) [% END %]
 		[%IF running %] <b><font color="red">&nbsp[% "PLUGIN_UPNPBRIDGE_WARNING" | string %]</font></b> [% END %]
 	[% END %]
-	[% IF autorun %]	
-		[% IF binaries.size > 1 %]
-			[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_BINARIES" desc="PLUGIN_UPNPBRIDGE_BINARIES_DESC" %]
-				<select class="stdedit" name="bin" id="bin">
-				[% FOREACH entry IN binaries %]
-					<option [% IF entry == bin %]selected[% found = 1 %][% END %] value="[% entry %]">[% entry %]</option>
-				[% END %]
-				[% IF not found %]
-					<option selected value="">[% "PLUGIN_UPNPBRIDGE_BINARIES" | string %]</option>
-				[% END %]
-				</select>
+	
+	[% IF binaries.size > 1 %]
+		[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_BINARIES" desc="PLUGIN_UPNPBRIDGE_BINARIES_DESC" %]
+			<select class="stdedit" name="bin" id="bin">
+			[% FOREACH entry IN binaries %]
+				<option [% IF entry == bin %]selected[% found = 1 %][% END %] value="[% entry %]">[% entry %]</option>
 			[% END %]
+			[% IF not found %]
+				<option selected value="">[% "PLUGIN_UPNPBRIDGE_BINARIES" | string %]</option>
+			[% END %]
+			</select>
 		[% END %]
 	[% END %]
-	
+		
 <!--	
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_OUTPUT" desc="PLUGIN_UPNPBRIDGE_OUTPUT_DESC" %]
 		<select class="stdedit" name="output" id="output">
@@ -49,7 +48,9 @@
 		<input type="text" class="stdedit" name="configfile" id="configfile" value="[% configfile %]" size="20">
 		<a href="/configuration.xml" target="config">[% "PLUGIN_UPNPBRIDGE_CONFLINK" | string %]</a>
 		&nbsp&nbsp<input name="autosave" type="checkbox" [% IF autosave %] checked [% END %]>[% "PLUGIN_UPNPBRIDGE_AUTOSAVECONFIG" | string %]
-		&nbsp<input name="genconfig" type="submit" onclick="alert('generating configuration will take ~30 seconds')" value=[% "PLUGIN_UPNPBRIDGE_GENCONFIG" | string %]>
+		[% IF binary %]
+			&nbsp<input name="genconfig" type="submit" onclick="alert('generating configuration will take ~30 seconds')" value=[% "PLUGIN_UPNPBRIDGE_GENCONFIG" | string %]>
+		[% END %]	
 		&nbsp<input name="delconfig" type="submit" value=[% "PLUGIN_UPNPBRIDGE_DELCONFIG" | string %]>
 	[% END %]
 	

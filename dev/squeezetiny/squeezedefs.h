@@ -3,7 +3,7 @@
 
 //#define __EARLY_STMd__
 
-#define VERSION "v0.2.2.0"
+#define VERSION "v0.2.2.1"
 
 #if defined(linux)
 #define LINUX     1
@@ -69,7 +69,7 @@ typedef int64_t   s64_t;
 #define mutex_unlock(m) pthread_mutex_unlock(&m)
 #define mutex_destroy(m) pthread_mutex_destroy(&m)
 #define thread_type pthread_t
-int SendARP(in_addr_t src, in_addr_t dst, u8_t mac[], u8_t *size);
+int SendARP(in_addr_t src, in_addr_t dst, u8_t mac[], u32_t *size);
 #define fresize(f,s) ftruncate(fileno(f), s)
 char *strlwr(char *str);
 char *GetTempPath(u16_t size, char *path);
