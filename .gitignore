@@ -81,14 +81,16 @@ Win32
 *.i??
 *.map
 *.tds
-*.xml
+config.xml
++strings.txt
 *.bat
 *-idx*
-*.txt
 __old_structure
 alpha
 *.save*
 Test
 package*.*
 Sonos/
+#*.txt
+
 

@@ -1,0 +1,279 @@
+PLUGIN_UPNPBRIDGE
+	EN	UPnP/DLNA bridge
+
+PLUGIN_UPNPBRIDGE_DESC
+	EN	Makes UPnP/DLNA players become LMS devices (using squeezelite)
+	
+PLUGIN_UPNPBRIDGE_YES
+	EN	Yes
+		
+PLUGIN_UPNPBRIDGE_NO
+	EN	No
+	
+PLUGIN_UPNPBRIDGE_AUTORUN
+	EN	Start With Server
+
+PLUGIN_UPNPBRIDGE_AUTORUN_DESC
+	EN	Automatically start the UPnP/DLNA bridge instance when the server starts.
+
+PLUGIN_UPNPBRIDGE_RUNNING_0
+	EN	Not Running
+
+PLUGIN_UPNPBRIDGE_RUNNING_1
+	EN	Running
+
+PLUGIN_UPNPBRIDGE_BINARIES
+	EN	Select Binary
+
+PLUGIN_UPNPBRIDGE_BINARIES_DESC
+	EN	Select the Squeeze2upnp binary which best matches your machine's architecture. 
+	EN	This option is only needed for arm based devices where multiple options are available and autodetection is not reliable.)
+
+PLUGIN_UPNPBRIDGE_WARNING
+	EN	It is HIGHLY recommended to stop the bridge before changing parameters
+	
+PLUGIN_UPNPBRIDGE_PARAMINFO
+	EN	An EMPTY parameter value means that [default parameter] is used
+	
+PLUGIN_UPNPBRIDGE_COMMONPARAMINFO
+	EN	These parameters set the defaults for all players (EMPTY value means use built-in default)
+
+PLUGIN_UPNPBRIDGE_OUTPUT
+	EN	N/A
+
+PLUGIN_UPNPBRIDGE_OUTPUT_DESC
+	EN	N/A
+
+PLUGIN_UPNPBRIDGE_OPTIONS
+	EN	Extra command line options
+
+PLUGIN_UPNPBRIDGE_OPTIONS_DESC
+	EN	Add additional Squeeze2upnp startup command line options here.  See the user guide in https://github.com/philippe44/LMS-to-UPnP 
+	EN	for details.
+
+PLUGIN_UPNPBRIDGE_DEBUG
+	EN	Debug Settings
+
+PLUGIN_UPNPBRIDGE_DEBUG_DESC
+	EN	Specify debugging level for writing to the log file.
+
+PLUGIN_UPNPBRIDGE_ALL
+	EN	All
+
+PLUGIN_UPNPBRIDGE_
+	EN	None
+
+PLUGIN_UPNPBRIDGE_OUTPUT
+	EN	Output device debugging
+
+PLUGIN_UPNPBRIDGE_STREAM
+	EN	Stream debugging
+
+PLUGIN_UPNPBRIDGE_SLIMPROTO
+	EN	Control protocol debugging (slimproto)
+
+PLUGIN_UPNPBRIDGE_DECODE
+	EN	Decode debugging
+
+PLUGIN_UPNPBRIDGE_LOGGING
+	EN	Enable Logging
+
+PLUGIN_UPNPBRIDGE_LOGGING_DESC
+	EN	Enable logging of error and debug messages.
+
+PLUGIN_UPNPBRIDGE_LOGLINK
+	EN	Log
+	
+PLUGIN_UPNPBRIDGE_PLAYER
+	EN	Select UPnP player
+		
+PLUGIN_UPNPBRIDGE_CONFIG
+	EN	Configuration file
+
+PLUGIN_UPNPBRIDGE_CONFIG_DESC
+	EN	<i>Generate</i> re-scans the network and builds a configuration file including all discovered players while retaining
+	EN	existing parameters and players (this will stop the bridge for ~30s)
+	EN	<br>When autosave is checked, the configuration file will be automatically updated at every network scan (see UPnP scanning options)
+
+PLUGIN_UPNPBRIDGE_CONFLINK
+	EN	View
+	
+PLUGIN_UPNPBRIDGE_GENCONFIG
+	EN	Generate
+
+PLUGIN_UPNPBRIDGE_AUTOSAVECONFIG
+	EN	Autosave
+
+PLUGIN_UPNPBRIDGE_DELCONFIG
+	EN	Erase
+	
+PLUGIN_UPNPBRIDGE_UPNPSCAN
+	EN	UPnP device scanning options
+
+PLUGIN_UPNPBRIDGE_UPNPSCAN_DESC
+	EN	How often and for how long the network is scanned for added/removed UPnP players on your network
+
+PLUGIN_UPNPBRIDGE_UPNPSOCKET
+	EN	Network socket to use
+
+PLUGIN_UPNPBRIDGE_UPNPSOCKET_DESC
+	EN	The socket (IP:port) used by the bridge. This is especially useful if you have a computer with multiple network interfaces.
+	EN	Use "?" (without ") to let the bridge decide
+	
+PLUGIN_UPNPBRIDGE_SCANINTERVAL
+	EN	Scan for UPnP devices every
+	
+PLUGIN_UPNPBRIDGE_SCANTIMEOUT
+	EN	during 	
+	
+PLUGIN_UPNPBRIDGE_TEXTDEFAULT
+	EN	The following parameters apply to ALL players - enter "default" (without ") in text boxes to set to default values
+
+PLUGIN_UPNPBRIDGE_STREAMLENGTH
+	EN	HTTP streaming option
+
+PLUGIN_UPNPBRIDGE_STREAMLENGTH_DESC
+	EN	The true size of the stream is unknown by LMS. Some UPnP players are not happy with "chunked" HTTP streaming and require
+	EN	a true length (see the user guide in https://github.com/philippe44/LMS-to-UPnP for details.)
+
+PLUGIN_UPNPBRIDGE_ACCEPTNEXTURI
+	EN	Player handles "next track"
+
+PLUGIN_UPNPBRIDGE_ACCEPTNEXTURI_DESC
+	EN	Some UPnP players get stuck on the current track on playlist. <b>UNCHECK</b> to solve this (will create an audio gap between tracks)
+
+PLUGIN_UPNPBRIDGE_SEEKAFTERPAUSE
+	EN	LMS seeks on resume
+
+PLUGIN_UPNPBRIDGE_SEEKAFTERPAUSE_DESC
+	EN	Some UPnP players do not resume properly after pause. CHECK to have LMS handle the resume on behalf of the player 
+	EN	(this will create a small change in position). This <b>CANNOT</b> work if you have set a password for LMS command access
+	
+PLUGIN_UPNPBRIDGE_BUFFERS
+	EN	Audio file buffers
+
+PLUGIN_UPNPBRIDGE_BUFFERS_DESC
+	EN	Audio streams are buffered locally while sending to the UPnP player. <br>- Enter ? to let the system decide which directory 
+	EN	to use<br>- "Max Size" defines the largest size a single file can take before it is shrunk. Set to -1 for unlimited
+
+PLUGIN_UPNPBRIDGE_BUFFERDIR
+	EN	Directory
+
+PLUGIN_UPNPBRIDGE_BUFFERLIMIT
+	EN	Max Size
+
+PLUGIN_UPNPBRIDGE_CODECSPARAM
+	EN	Audio codec parameters
+
+PLUGIN_UPNPBRIDGE_CODECSPARAM_DESC
+	EN	Several codecs are supported by the UPnP player. They will be reported to LMS to decide when to do transcoding. 
+	EN	<br><i>- Codecs</i> is an ordered, comma-separated, list made of mp3, flc and pcm 
+	EN	For example, to support (in order of preference) PCM then FLAC and then MP3 , enter "pcm,flc,mp3" (without "")
+	EN	(<i>note that aac and alc are allowed but untested</i>. 
+	EN	<br>- a FLAC header is required by some players.<br>
+	
+PLUGIN_UPNPBRIDGE_SAMPLERATE
+	EN	Max Sample Rate
+
+PLUGIN_UPNPBRIDGE_CODECS
+	EN	Codecs
+
+PLUGIN_UPNPBRIDGE_L24FORMAT
+	EN	24 bits PCM
+	
+PLUGIN_UPNPBRIDGE_FLACHEADER
+	EN	FLAC header
+	
+PLUGIN_UPNPBRIDGE_ENABLED
+	EN	Enabled
+	
+PLUGIN_UPNPBRIDGE_PLAYERINFO
+	EN	Player information
+	
+PLUGIN_UPNPBRIDGE_PLAYERINFO_DESC
+	EN	The Name and MAC address of the player can be changed here. The <i>Name</i> is superseded by value in LMS player's configuration page
+		
+PLUGIN_UPNPBRIDGE_PLAYERNAME
+	EN	Name
+	
+PLUGIN_UPNPBRIDGE_PLAYERMAC
+	EN	MAC address
+	
+PLUGIN_UPNPBRIDGE_UPNPMGMT
+	EN	Player discovery options
+	
+PLUGIN_UPNPBRIDGE_UPNPMGMT_DESC
+	EN	Misc options<br>- For the default list newly discovered players can be automatically added to LMS – For individual players a 
+	EN	player can be enabled or disabled<br>- Number of UPnP scan cycles a player can be found missing before being removed
+
+PLUGIN_UPNPBRIDGE_ENABLEDEFS
+	EN	Player is enabled
+
+PLUGIN_UPNPBRIDGE_UPNPREMOVECOUNT_1
+	EN	but removed after  
+	
+PLUGIN_UPNPBRIDGE_UPNPREMOVECOUNT_2
+	EN	UPnP failed scans
+	
+PLUGIN_UPNPBRIDGE_SENDMETADATA
+	EN	Send LMS metadata to player
+
+PLUGIN_UPNPBRIDGE_SENDMETADATA_DESC
+	EN	When a UPnP player has a display, LMS can send metadata (title, artist, album) to it. This <b>DOES NOT</b> work if you have set
+	EN	a password for LMS command access
+	
+PLUGIN_UPNPBRIDGE_VOLUMEMGMT
+	EN	Player volume management
+	
+PLUGIN_UPNPBRIDGE_VOLUMEMGMT_DESC
+	EN	Defines how LMS volume commands are sent to player. Normal values are 0..100 but some players have a lower maximum that can bet 
+	EN	set here. See also &ltvolume_curve&gt in the XML configuration file for advanced settings 
+
+PLUGIN_UPNPBRIDGE_VOLUMEONPLAY
+	EN	LMS volume changes
+	
+PLUGIN_UPNPBRIDGE_VOLUMECURVE
+	EN	Translation curve
+	
+PLUGIN_UPNPBRIDGE_MAXVOLUME
+	EN	Maximum volume
+
+PLUGIN_UPNPBRIDGE_USEPROFILE
+	EN	Apply pre-defined player profile
+	
+PLUGIN_UPNPBRIDGE_USEPROFILE_DESC
+	EN	This is a list of well-known players. Applying the model with overwrite parameters with the selected model. 
+	EN	Update list fetches an updated list - this takes a few seconds 
+
+PLUGIN_UPNPBRIDGE_APPLYPROFILE
+	EN	Apply
+	
+PLUGIN_UPNPBRIDGE_UPDATEPROFILES
+	EN	Fetch
+
+PLUGIN_UPNPBRIDGE_UPDATEPROFILESFROM
+	EN	from
+
+PLUGIN_UPNPBRIDGE_PLAYERLIST
+	EN	List of players currently in configuration file - Note that more devices might have been discovered
+		
+PLUGIN_UPNPBRIDGE_NOCONFIG
+	EN	Configuration file missing - create one by clicking "generate" or, if autosave is on, refresh this page
+
+PLUGIN_UPNPBRIDGE_INFO_UNIX
+	EN	UPnP/DLNA bridge uses the Squeeze2upnp software player which is installed as part of the plugin.  You can control it from the server
+	EN	web interface or any other Squeezebox control application.
+
+PLUGIN_UPNPBRIDGE_INFO_WIN
+	EN	UPnP/DLNA bridge uses the Squeeze2upnp software player which is installed as part of the plugin.  You can control it from the server
+	EN	web interface or any other Squeezebox control application.
+
+PLUGIN_UPNPBRIDGE_INFO_MAC
+	EN	UPnP/DLNA bridge uses the Squeeze2upnp software player which is installed as part of the plugin.  You can control it from the server
+	EN	web interface or any other Squeezebox control application.
+	
+	
+	
+
+	
+
