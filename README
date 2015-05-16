@@ -8,8 +8,9 @@ http://dl.dropboxusercontent.com/u/26754471/squeezecenter/repo-stable.xml
 - or the version under development -
 http://dl.dropboxusercontent.com/u/26754471/squeezecenter/repo-dev.xml
 
-As this is a dropbox repository, only HTTPS is allowed and some perl 
-installation don't have IO::Socket::SSL. On some NAS, it can be installed by
+As this is a dropbox repository, there will be a redirection on HTTP and 
+some perl installation don't have IO::Socket::SSL installed. On some NAS, 
+it can be installed by:
 		apt-get install libio-socket-ssl-perl 
 ===========================================================================
 
