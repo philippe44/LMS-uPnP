@@ -92,5 +92,7 @@ Test
 package*.*
 Sonos/
 #*.txt
+/repo*.xml
+/profiles.xml
 
 
