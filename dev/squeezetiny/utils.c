@@ -401,7 +401,7 @@ int SendARP(in_addr_t src, in_addr_t dst, u8_t mac[], u32_t *size) {
 	return 0;
 }
 #elif OSX
-int SendARP(in_addr_t src, in_addr_t dst, u8_t mac[], u8_t *size)
+int SendARP(in_addr_t src, in_addr_t dst, u8_t mac[], u32_t *size)
 {
 	int mib[6];
 	size_t needed;

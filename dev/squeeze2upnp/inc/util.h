@@ -40,6 +40,7 @@ void 		ExtractIP(const char *URL, in_addr_t *IP);
 unsigned 	Time2Int(char *Time);
 char 		*XMLGetChangeItem(IXML_Document *doc, char *Item);
 IXML_Node 	*XMLAddNode(IXML_Document *doc, IXML_Node *parent, char *name, char *fmt, ...);
+int 		XMLAddAttribute(IXML_Document *doc, IXML_Node *parent, char *name, char *fmt, ...);
 
 void uPNPLogLevel(log_level level);
 

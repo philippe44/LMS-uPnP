@@ -276,6 +276,7 @@ char *XMLGetChangeItem(IXML_Document *doc, char *Item)
 	return buf;
 }
 
+
 /*----------------------------------------------------------------------------*/
 IXML_Node *XMLAddNode(IXML_Document *doc, IXML_Node *parent, char *name, char *fmt, ...)
 {
@@ -301,6 +302,23 @@ IXML_Node *XMLAddNode(IXML_Document *doc, IXML_Node *parent, char *name, char *f
 
 	return elm;
 }
+
+
+/*----------------------------------------------------------------------------*/
+int XMLAddAttribute(IXML_Document *doc, IXML_Node *parent, char *name, char *fmt, ...)
+{
+	char buf[256];
+	int ret;
+	va_list args;
+
+	va_start(args, fmt);
+	vsnprintf(buf, 256, fmt, args);
+	ret = ixmlElement_setAttribute((IXML_Element*) parent, name, buf);
+	va_end(args);
+
+	return ret;
+}
+
 
 /*----------------------------------------------------------------------------*/
 unsigned Time2Int(char *Time)

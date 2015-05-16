@@ -35,6 +35,7 @@ char *level2debug(log_level level);
 char *url_encode(char *str);
 char *url_decode(char *str);
 char *stristr(char *s1, char *s2);
+char *toxml(char *src);
 
 #define LOG_ERROR(fmt, ...) logprint("%s %s:%d " fmt "\n", logtime(), __FUNCTION__, __LINE__, ##__VA_ARGS__)
 #define LOG_WARN(fmt, ...)  if (loglevel >= lWARN)  logprint("%s %s:%d " fmt "\n", logtime(), __FUNCTION__, __LINE__, ##__VA_ARGS__)

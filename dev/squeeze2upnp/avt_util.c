@@ -101,33 +101,15 @@ typedef enum {
 
 #endif
 
-char DIDL[]=
-// ready to insert the protocol option string, with room for 2 strings of options
-"<DIDL-Lite xmlns:dc=\"http://purl.org/dc/elements/1.1/\""
-" xmlns:upnp=\"urn:schemas-upnp-org:metadata-1-0/upnp/\""
-" xmlns=\"urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/\""
-" xmlns:dlna=\"urn:schemas-dlna-org:metadata-1-0/\">"
-" <item id=\"1\" parentID=\"0\" restricted=\"1\">"
-" <dc:title>%s</dc:title>"
-" <dc:creator>%s</dc:creator>"
-" <upnp:artist>%s</upnp:artist>"
-" <upnp:album>%s</upnp:album>"
-" <upnp:genre>%s</upnp:genre>"
-" <upnp:originalTrackNumber>%d</upnp:originalTrackNumber>"
-" <res protocolInfo=\"%s%s\">%s</res>"
-" <upnp:class>object.item.audioItem.musicTrack</upnp:class>"
-" </item>"
-"</DIDL-Lite>"
-;
-
-/*
-DLNA options, that *might* be the only ones or might be added to other options
+/*
+DLNA options, that *might* be the only ones or might be added to other options
 so the ; might have to be removed
 */
 
 char DLNA_OPT[] = ";DLNA.ORG_OP=01;DLNA.ORG_FLAGS=21700000000000000000000000000000";
 
 static log_level loglevel;
+static char *CreateDIDL(char *URI, char *ProtInfo, struct sq_metadata_s *MetaData);
 
 /*----------------------------------------------------------------------------*/
 void AVTInit(log_level level)
@@ -142,19 +124,7 @@ int AVTSetURI(char *ControlURL, char *URI, char *ProtInfo, struct sq_metadata_s 
 	int rc;
 	char *DIDLData;
 
-	DIDLData = malloc(strlen(MetaData->title) + 2*strlen(MetaData->artist) +
-			   strlen(MetaData->album) + strlen(MetaData->genre) + 5 +
-			   strlen(ProtInfo) + strlen(URI) + strlen(DIDL) + strlen(DLNA_OPT) + 1);
-#ifndef DIDL_PATCH
-	if (ProtInfo[strlen(ProtInfo) - 1] == ':')
-		sprintf(DIDLData, DIDL, MetaData->title, MetaData->artist, MetaData->artist,
-				MetaData->album, MetaData->genre, MetaData->track, ProtInfo, DLNA_OPT + 1, URI);
-	else
-		sprintf(DIDLData, DIDL, MetaData->title, MetaData->artist, MetaData->artist,
-				MetaData->album, MetaData->genre, MetaData->track, ProtInfo, DLNA_OPT, URI);
-#else
-	sprintf(DIDLData, DIDL, URI);
-#endif
+	DIDLData = CreateDIDL(URI, ProtInfo, MetaData);
 
 	LOG_INFO("uPNP setURI %s for %s (cookie %p)", URI, ControlURL, Cookie);
 	ActionNode =  UpnpMakeAction("SetAVTransportURI", AV_TRANSPORT, 0, NULL);
@@ -184,20 +154,7 @@ int AVTSetNextURI(char *ControlURL, char *URI, char *ProtInfo, struct sq_metadat
 	int rc;
 	char *DIDLData;
 
-	DIDLData = malloc(strlen(MetaData->title) + 2*strlen(MetaData->artist) +
-			   strlen(MetaData->album) + strlen(MetaData->genre) +  5 +
-			   strlen(ProtInfo) + strlen(URI) + strlen(DIDL) + strlen(DLNA_OPT) + 1);
-
-#ifndef DIDL_PATCH
-	if (ProtInfo[strlen(ProtInfo) - 1] == ':')
-		sprintf(DIDLData, DIDL, MetaData->title, MetaData->artist, MetaData->artist,
-				MetaData->album, MetaData->genre, MetaData->track, ProtInfo, DLNA_OPT + 1, URI);
-	else
-		sprintf(DIDLData, DIDL, MetaData->title, MetaData->artist, MetaData->artist,
-				MetaData->album, MetaData->genre, MetaData->track, ProtInfo, DLNA_OPT, URI);
-#else
-	sprintf(DIDLData, DIDL, URI);
-#endif
+	DIDLData = CreateDIDL(URI, ProtInfo, MetaData);
 
 	LOG_INFO("uPNP setNextURI %s for %s (cookie %p)", URI, ControlURL, Cookie);
 	ActionNode =  UpnpMakeAction("SetNextAVTransportURI", AV_TRANSPORT, 0, NULL);
@@ -356,6 +313,47 @@ int AVTBasic(char *ControlURL, char *Action, void *Cookie)
 	if (ActionNode) ixmlDocument_free(ActionNode);
 
 	return rc;
+}
+
+
+/*----------------------------------------------------------------------------*/
+char *CreateDIDL(char *URI, char *ProtInfo, struct sq_metadata_s *MetaData)
+{
+	char *s;
+
+	IXML_Document *doc = ixmlDocument_createDocument();
+	IXML_Node	 *node, *root;
+
+	root = XMLAddNode(doc, NULL, "DIDL-Lite", NULL);
+	XMLAddAttribute(doc, root, "xmlns:dc", "http://purl.org/dc/elements/1.1/");
+	XMLAddAttribute(doc, root, "xmlns:upnp", "urn:schemas-upnp-org:metadata-1-0/upnp/");
+	XMLAddAttribute(doc, root, "xmlns", "urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/");
+	XMLAddAttribute(doc, root, "xmlns:dlna", "urn:schemas-dlna-org:metadata-1-0/");
+
+	node = XMLAddNode(doc, root, "item", NULL);
+	XMLAddAttribute(doc, node, "id", "1");
+	XMLAddAttribute(doc, node, "parentID", "0");
+	XMLAddAttribute(doc, node, "restricted", "1");
+
+	XMLAddNode(doc, node, "dc:title", MetaData->title);
+	XMLAddNode(doc, node, "dc:creator", MetaData->artist);
+	XMLAddNode(doc, node, "upnp:artist", MetaData->artist);
+	XMLAddNode(doc, node, "upnp:album", MetaData->album);
+	XMLAddNode(doc, node, "upnp:genre", MetaData->genre);
+	XMLAddNode(doc, node, "upnp:originalTrackNumber", "%d", MetaData->track);
+	XMLAddNode(doc, node, "upnp:class", "object.item.audioItem.musicTrack", NULL);
+
+	node = XMLAddNode(doc, node, "res", URI);
+	if (ProtInfo[strlen(ProtInfo) - 1] == ':')
+		XMLAddAttribute(doc, node, "protocolInfo", "%s%s", ProtInfo, DLNA_OPT + 1);
+	else
+		XMLAddAttribute(doc, node, "protocolInfo", "%s%s", ProtInfo, DLNA_OPT);
+
+	s = ixmlNodetoString((IXML_Node*) doc);
+
+	ixmlDocument_free(doc);
+
+	return s;
 }
 
 

@@ -1,3 +1,6 @@
+0.2.2.2
+ - XML special char were not properly handled in DIDL header ==> moved to a full XML constructor, not a sprintf patch
+
 0.2.2.1
  - mac_size in AddMR was wrong type causing a stack corruption on WinXP
  - version now works for XP and above

@@ -128,15 +128,15 @@ char *url_decode(char *str) {
   char *pstr = str, *buf = malloc(strlen(str) + 1), *pbuf = buf;
   while (*pstr) {
 	if (*pstr == '%') {
-      if (pstr[1] && pstr[2]) {
-        *pbuf++ = from_hex(pstr[1]) << 4 | from_hex(pstr[2]);
-        pstr += 2;
+	  if (pstr[1] && pstr[2]) {
+		*pbuf++ = from_hex(pstr[1]) << 4 | from_hex(pstr[2]);
+		pstr += 2;
 	  }
 	} else if (*pstr == '+') {
-      *pbuf++ = ' ';
-    } else {
-      *pbuf++ = *pstr;
-    }
+	  *pbuf++ = ' ';
+	} else {
+	  *pbuf++ = *pstr;
+	}
 	pstr++;
   }
   *pbuf = '\0';
@@ -169,5 +169,48 @@ char *stristr(char *s1, char *s2)
  return p;
 }
 
+/*---------------------------------------------------------------------------*/
+/* IMPORTANT: be sure to free() the returned string after use */
+#define QUOT 	"&quot;"
+#define AMP	 	"&amp;"
+#define LT		"&lt;"
+#define GT		"&gt;"
+char *toxml(char *src)
+{
+	char *p, *q, *res;
+	int i;
+
+	for (i = 0, p = src; *p; p++) {
+		switch (*p) {
+			case '\"': i += strlen(QUOT); break;
+			case '&':  i += strlen(AMP); break;
+			case '<':  i += strlen(LT); break;
+			case '>':  i += strlen(GT); break;
+		}
+	}
+
+	res = malloc(strlen(src) + i + 1);
+	if (!res) return NULL;
+
+	for (q = res, p = src; *p; p++) {
+		char *rep = NULL;
+		switch (*p) {
+			case '\"': rep = QUOT; break;
+			case '&':  rep = AMP; break;
+			case '<':  rep = LT; break;
+			case '>':  rep = GT; break;
+		}
+		if (rep) {
+			memcpy(q, rep, strlen(rep));
+			q += strlen(rep);
+		}
+		else {
+			*q = *p;
+			q++;
+		}
+	}
+
+	return res;
+}
 
 
