@@ -631,6 +631,9 @@ int CallbackActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 
 			// URI detection response
 			r = XMLGetFirstDocumentItem(Action->ActionResult, "CurrentURI");
+			if (r) {
+				LOG_INFO("r:%s C:%s N:%s", r, p->CurrentURI, p->NextURI);
+			}
 			if (r && p->CurrentURI) {
 				// mutex has to be set BEFORE test and unset BEFORE notification
 				ithread_mutex_lock(&p->Mutex);
@@ -857,7 +860,7 @@ static void *UpdateMRThread(void *args)
 	glDiscovery = true;
 	if (glAutoSaveConfigFile && !glSaveConfigFile) {
 		LOG_INFO("Updating configuration %s", glConfigName);
-		SaveConfig(glConfigName, glConfigID);
+		SaveConfig(glConfigName, glConfigID, false);
 	}
 
 	LOG_INFO("End uPnP devices update %d", gettime_ms() - TimeStamp);
@@ -1198,10 +1201,23 @@ static bool Start(void)
 
 static bool Stop(void)
 {
+	struct sLocList *p, *m;
+
 	LOG_DEBUG("flush renderers ...", NULL);
 	FlushMRDevices();
 	LOG_DEBUG("terminate libupnp ...", NULL);
 	uPNPTerminate();
+
+	ithread_mutex_lock(&glMRFoundMutex);
+	m = p = glMRFoundList;
+	glMRFoundList = NULL;
+	ithread_mutex_unlock(&glMRFoundMutex);
+	while (p) {
+		m = p->Next;
+		free(p->Location); free(p);
+		p = m;
+	}
+
 	return true;
 }
 
@@ -1425,7 +1441,7 @@ int main(int argc, char *argv[])
 
 	if (glSaveConfigFile) {
 		while (!glDiscovery) sleep(1);
-		SaveConfig(glSaveConfigFile, glConfigID);
+		SaveConfig(glSaveConfigFile, glConfigID, true);
 	}
 
 	while (strcmp(resp, "exit") && !glSaveConfigFile) {
@@ -1493,7 +1509,7 @@ int main(int argc, char *argv[])
 		 if (!strcmp(resp, "save"))	{
 			char name[128];
 			i = scanf("%s", name);
-			SaveConfig(name, glConfigID);
+			SaveConfig(name, glConfigID, true);
 		}
 	}
 

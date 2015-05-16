@@ -1,5 +1,9 @@
 0.2.2.2
  - XML special char were not properly handled in DIDL header ==> moved to a full XML constructor, not a sprintf patch
+ - using autosave, only <device> sections are written unless there is no existing config file
+ - removed memory leak in SaveConfig (nodelist using wrong free)
+ - add the full channel and sample rate in DIDL header, not only in content-type
+ - OSX version is now multi-architecture, named squeeze2upnp-osx-multi
 
 0.2.2.1
  - mac_size in AddMR was wrong type causing a stack corruption on WinXP

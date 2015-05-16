@@ -35,17 +35,23 @@ sub binaries {
 		# fallback to offering all linux options for case when architecture detection does not work
 		return qw(squeeze2upnp-x86-64 squeeze2upnp-x86 squeeze2upnp-armv6hf);
 	}
+	
 	if ($os->{'os'} eq 'Darwin') {
-		return qw(squeeze2upnp-osx-x86);
+		return qw(squeeze2upnp-osx-multi);
 	}
+	
 	if ($os->{'os'} eq 'Windows') {
+		return qw(squeeze2upnp-win.exe);
+	}	
+	
+=comment	
 		if ($os->{'isWin6+'} ne '') {
 			return qw(squeeze2upnp-win.exe);
 		} else {
 			return qw(squeeze2upnp-winxp.exe);
 		}	
 	}
-	
+=cut	
 	
 }
 
@@ -85,7 +91,7 @@ sub start {
 	if ($prefs->get('debugs') ne '') {
 		push @params, ("-d", $prefs->get('debugs') . "=debug");
 	}
-	
+		
 	if ($prefs->get('autosave')) {
 		push @params, ("-I");
 	}

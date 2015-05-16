@@ -83,8 +83,13 @@ bool _SetContentType(char *Cap[], sq_seturi_t *uri, int n, ...)
 			}
 			// if the proposed format accepts any rate & channel, give it a try
 			if (!strstr(*p, "channels") && !strstr(*p, "rate")) {
+				int size = strstr(*p, fmt) - *p;
+
 				sprintf(uri->content_type, "%s;channels=%d;rate=%d", fmt, uri->channels, uri->sample_rate);
-				strcpy(uri->proto_info, *p);
+				strncpy(uri->proto_info, *p, size);
+				*(uri->proto_info + size) = '\0';
+				strcat(uri->proto_info, uri->content_type);
+				if (*(*p + size + strlen(fmt))) strcat(uri->proto_info, *p + size + strlen(fmt));
 				break;
 			}
 			// if PCM, try to find an exact match
@@ -293,7 +298,7 @@ void ParseProtocolInfo(struct sMR *Device, char *Info)
 
 
 /*----------------------------------------------------------------------------*/
-void SaveConfig(char *name, void *ref)
+void SaveConfig(char *name, void *ref, bool full)
 {
 	struct sMR *p;
 	IXML_Document *doc = ixmlDocument_createDocument();
@@ -305,49 +310,65 @@ void SaveConfig(char *name, void *ref)
 	FILE *file;
 	int i;
 
-	root = XMLAddNode(doc, NULL, "squeeze2upnp", NULL);
+	old_root = ixmlDocument_getElementById(old_doc, "squeeze2upnp");
 
-	XMLAddNode(doc, root, "server", glSQServer);
-	XMLAddNode(doc, root, "upnp_socket", gluPNPSocket);
-	XMLAddNode(doc, root, "slimproto_stream_port", "%d", gl_slimproto_stream_port);
-	XMLAddNode(doc, root, "base_mac", "%02x:%02x:%02x:%02x:%02x:%02x", glMac[0],
-				glMac[1], glMac[2], glMac[3], glMac[4], glMac[5]);
-	XMLAddNode(doc, root, "slimproto_log", level2debug(glLog.slimproto));
-	XMLAddNode(doc, root, "stream_log", level2debug(glLog.stream));
-	XMLAddNode(doc, root, "output_log", level2debug(glLog.output));
-	XMLAddNode(doc, root, "decode_log", level2debug(glLog.decode));
-	XMLAddNode(doc, root, "web_log", level2debug(glLog.web));
-	XMLAddNode(doc, root, "upnp_log", level2debug(glLog.upnp));
-	XMLAddNode(doc, root, "main_log",level2debug(glLog.main));
-	XMLAddNode(doc, root, "sq2mr_log", level2debug(glLog.sq2mr));
-	XMLAddNode(doc, root, "upnp_scan_interval", "%d", (u32_t) gluPNPScanInterval);
-	XMLAddNode(doc, root, "upnp_scan_timeout", "%d", (u32_t) gluPNPScanTimeout);
+	if (!full && ref) {
+		root = ixmlNode_cloneNode((IXML_Node*) old_root, true);
+		ixmlNode_appendChild((IXML_Node*) doc, root);
 
-	common = XMLAddNode(doc, root, "common", NULL);
-	XMLAddNode(doc, common, "streambuf_size", "%d", (u32_t) glDeviceParam.stream_buf_size);
-	XMLAddNode(doc, common, "output_size", "%d", (u32_t) glDeviceParam.output_buf_size);
-	XMLAddNode(doc, common, "buffer_dir", glDeviceParam.buffer_dir);
-	XMLAddNode(doc, common, "buffer_limit", "%d", (u32_t) glDeviceParam.buffer_limit);
-	XMLAddNode(doc, common, "stream_length", "%d", (s32_t) glMRConfig.StreamLength);
-	XMLAddNode(doc, common, "max_read_wait", "%d", (int) glDeviceParam.max_read_wait);
-	XMLAddNode(doc, common, "max_GET_bytes", "%d", (s32_t) glDeviceParam.max_get_bytes);
-	XMLAddNode(doc, common, "keep_buffer_file", "%d", (int) glDeviceParam.keep_buffer_file);
-	XMLAddNode(doc, common, "enabled", "%d", (int) glMRConfig.Enabled);
-	XMLAddNode(doc, common, "process_mode", "%d", (int) glMRConfig.ProcessMode);
-	XMLAddNode(doc, common, "codecs", glDeviceParam.codecs);
-	XMLAddNode(doc, common, "sample_rate", "%d", (int) glDeviceParam.sample_rate);
-	XMLAddNode(doc, common, "L24_format", "%d", (int) glDeviceParam.L24_format);
-	XMLAddNode(doc, common, "flac_header", "%d", (int) glDeviceParam.flac_header);
-	XMLAddNode(doc, common, "seek_after_pause", "%d", (int) glMRConfig.SeekAfterPause);
-	XMLAddNode(doc, common, "force_volume", "%d", (int) glMRConfig.ForceVolume);
-	XMLAddNode(doc, common, "volume_on_play", "%d", (int) glMRConfig.VolumeOnPlay);
-	XMLAddNode(doc, common, "send_metadata", "%d", (int) glMRConfig.SendMetaData);
-	XMLAddNode(doc, common, "volume_curve", glMRConfig.VolumeCurve);
-	XMLAddNode(doc, common, "max_volume", "%d", glMRConfig.MaxVolume);
-	XMLAddNode(doc, common, "accept_nexturi", "%d", (int) glMRConfig.AcceptNextURI);
-	XMLAddNode(doc, common, "upnp_remove_count", "%d", (u32_t) glMRConfig.uPNPRemoveCount);
+		list = ixmlDocument_getElementsByTagName((IXML_Document*) root, "device");
+		for (i = 0; i < (int) ixmlNodeList_length(list); i++) {
+			IXML_Node *device;
 
-	s =  ixmlDocumenttoString(doc);
+			device = ixmlNodeList_item(list, i);
+			ixmlNode_removeChild(root, device, &device);
+			ixmlNode_free(device);
+		}
+		if (list) ixmlNodeList_free(list);
+	}
+	else {
+		root = XMLAddNode(doc, NULL, "squeeze2upnp", NULL);
+
+		XMLAddNode(doc, root, "server", glSQServer);
+		XMLAddNode(doc, root, "upnp_socket", gluPNPSocket);
+		XMLAddNode(doc, root, "slimproto_stream_port", "%d", gl_slimproto_stream_port);
+		XMLAddNode(doc, root, "base_mac", "%02x:%02x:%02x:%02x:%02x:%02x", glMac[0],
+					glMac[1], glMac[2], glMac[3], glMac[4], glMac[5]);
+		XMLAddNode(doc, root, "slimproto_log", level2debug(glLog.slimproto));
+		XMLAddNode(doc, root, "stream_log", level2debug(glLog.stream));
+		XMLAddNode(doc, root, "output_log", level2debug(glLog.output));
+		XMLAddNode(doc, root, "decode_log", level2debug(glLog.decode));
+		XMLAddNode(doc, root, "web_log", level2debug(glLog.web));
+		XMLAddNode(doc, root, "upnp_log", level2debug(glLog.upnp));
+		XMLAddNode(doc, root, "main_log",level2debug(glLog.main));
+		XMLAddNode(doc, root, "sq2mr_log", level2debug(glLog.sq2mr));
+		XMLAddNode(doc, root, "upnp_scan_interval", "%d", (u32_t) gluPNPScanInterval);
+		XMLAddNode(doc, root, "upnp_scan_timeout", "%d", (u32_t) gluPNPScanTimeout);
+
+		common = XMLAddNode(doc, root, "common", NULL);
+		XMLAddNode(doc, common, "streambuf_size", "%d", (u32_t) glDeviceParam.stream_buf_size);
+		XMLAddNode(doc, common, "output_size", "%d", (u32_t) glDeviceParam.output_buf_size);
+		XMLAddNode(doc, common, "buffer_dir", glDeviceParam.buffer_dir);
+		XMLAddNode(doc, common, "buffer_limit", "%d", (u32_t) glDeviceParam.buffer_limit);
+		XMLAddNode(doc, common, "stream_length", "%d", (s32_t) glMRConfig.StreamLength);
+		XMLAddNode(doc, common, "max_read_wait", "%d", (int) glDeviceParam.max_read_wait);
+		XMLAddNode(doc, common, "max_GET_bytes", "%d", (s32_t) glDeviceParam.max_get_bytes);
+		XMLAddNode(doc, common, "keep_buffer_file", "%d", (int) glDeviceParam.keep_buffer_file);
+		XMLAddNode(doc, common, "enabled", "%d", (int) glMRConfig.Enabled);
+		XMLAddNode(doc, common, "process_mode", "%d", (int) glMRConfig.ProcessMode);
+		XMLAddNode(doc, common, "codecs", glDeviceParam.codecs);
+		XMLAddNode(doc, common, "sample_rate", "%d", (int) glDeviceParam.sample_rate);
+		XMLAddNode(doc, common, "L24_format", "%d", (int) glDeviceParam.L24_format);
+		XMLAddNode(doc, common, "flac_header", "%d", (int) glDeviceParam.flac_header);
+		XMLAddNode(doc, common, "seek_after_pause", "%d", (int) glMRConfig.SeekAfterPause);
+		XMLAddNode(doc, common, "force_volume", "%d", (int) glMRConfig.ForceVolume);
+		XMLAddNode(doc, common, "volume_on_play", "%d", (int) glMRConfig.VolumeOnPlay);
+		XMLAddNode(doc, common, "send_metadata", "%d", (int) glMRConfig.SendMetaData);
+		XMLAddNode(doc, common, "volume_curve", glMRConfig.VolumeCurve);
+		XMLAddNode(doc, common, "max_volume", "%d", glMRConfig.MaxVolume);
+		XMLAddNode(doc, common, "accept_nexturi", "%d", (int) glMRConfig.AcceptNextURI);
+		XMLAddNode(doc, common, "upnp_remove_count", "%d", (u32_t) glMRConfig.uPNPRemoveCount);
+	}
 
 	for (i = 0; i < MAX_RENDERERS; i++) {
 		IXML_Node *dev_node;
@@ -409,7 +430,6 @@ void SaveConfig(char *name, void *ref)
 	}
 
 	// add devices in old XML file that has not been discovered
-	old_root = ixmlDocument_getElementById(old_doc, "squeeze2upnp");
 	list = ixmlDocument_getElementsByTagName((IXML_Document*) old_root, "device");
 	for (i = 0; i < (int) ixmlNodeList_length(list); i++) {
 		char *udn;
@@ -424,7 +444,7 @@ void SaveConfig(char *name, void *ref)
 			ixmlNode_appendChild((IXML_Node*) root, device);
 		}
 	}
-	free(list);
+	if (list) ixmlNodeList_free(list);
 
 	file = fopen(name, "wb");
 	s = ixmlDocumenttoString(doc);

@@ -19,7 +19,7 @@ struct sMR* 	CURL2Device(char *CtrlURL);
 struct sMR 		*IsDevice(void *Cookie);
 bool 			SetContentType(char *Cap[], sq_seturi_t *uri);
 
-void			SaveConfig(char *name, void *ref);
+void			SaveConfig(char *name, void *ref, bool full);
 void		 	*LoadConfig(char *name, tMRConfig *Conf, sq_dev_param_t *sq_conf);
 void	 		*FindMRConfig(void *ref, char *UDN);
 void 			*LoadMRConfig(void *ref, char *UDN, tMRConfig *Conf, sq_dev_param_t *sq_conf);
