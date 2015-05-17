@@ -29,14 +29,10 @@ Really, have a look at "New User Guide (with plugin).pdf" in /stable
 ===========================================================================
 WHAT VERSION TO CHOOSE
 ===========================================================================
-/stable is for the build I'm not changing anymore
-/dev is work under progress
-/x.y.z are older versions
-
-in ./bin, there are binaries for Windows, Linux (x86 and ARM) and OSX. 
+Download UPnPBridge.zip and in /Bin, there are binaries for Windows, Linux 
+(x86 and ARM) and OSX. 
 
 - squeeze2upnp-win.exe, pthreadbc2.dll, cc32160mt.dll : Windows Vista and above
-- squeeze2upnp-winxp.exe, pthreadvc2.dll : Windows XP
 - squeeze2upnp-x86 : Linux (Intel CPU) 32 or 64 bits (see user guide for 64 bits)
 - squeeze2upnp-x86-static : same as above, but libc librairies are statically 
 linked (must be used on some NAS e.g. Atom-base, that don't have the right libc
@@ -46,9 +42,9 @@ available - squeeze2upnp-x86 launch will fail)
 - squeeze2upnp-armv6hf-static : same as above, with static libraries
 - squeeze2upnp-armv5 : Linux (ARM v5 CPU)
 - squeeze2upnp-armv5-static : same as above, with static libraries
-- squeeze2upnp-osx-x86: x86 binaries for OSX 10.4+
+- squeeze2upnp-osx-multi: binaries for OSX 10.5+
 
-(Thanks Ralphy for arm, osx and winXP binaries)
+(Thanks Ralphy for ARM and OSX binaries)
 
 NB: Main tests are on Windows Vista+ and Linux x86 versions. OSX and Linux ARM 
 are "as is"
