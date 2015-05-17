@@ -1,6 +1,0 @@
-- add matching pattern in config file to allow configuration by group
-- add option to call an external program when upnp player is locked 
-
-UNLIKELY
-- enhance metadata management: add albumart and filesize (LMS won't give it)
-- use filesize to specify content-length in HTTP transfer to accomodate more players (see above)
