@@ -87,6 +87,9 @@ config.xml
 tests/
 sonos/
 misc/
+bin/
+bin.old/
+#plugin/Bin
 /repo*.xml
 /package*.*
 
