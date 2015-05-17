@@ -4,9 +4,9 @@ to be controlled as a normal SqueezeBox device.
 
 ===========================================================================
 There is now a LMS plugin for automatic installation and easy configuration
-http://sourceforge.net/projects/lms-to-upnp/files/repo-sf-stable.xml
+http://sourceforge.net/projects/lms-to-upnp/files/stable/repo-sf.xml
 - or the version under development -
-http://sourceforge.net/projects/lms-to-upnp/files/repo-sf-dev.xml
+http://sourceforge.net/projects/lms-to-upnp/files/dev/repo-sf.xml
 ===========================================================================
 
 ===========================================================================

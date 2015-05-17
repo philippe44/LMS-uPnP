@@ -1,17 +1,17 @@
 <?xml version='1.0' standalone='yes'?>
 <extensions>
-  <profilesURL>http://dl.dropboxusercontent.com/u/26754471/squeezecenter/profiles.xml</profilesURL>
-  <defaultState>enabled</defaultState>
-  <description>PLUGIN_UPNPBRIDGE_DESC</description>
+  <name>PLUGIN_UPNPBRIDGE</name>
   <module>Plugins::UPnPBridge::Plugin</module>
-  <version>0.2.2.2-a2</version>
+  <email>philippe_44@outlook.com</email>
+  <version>0.2.2.1</version>
+  <optionsURL>plugins/UPnPBridge/settings/basic.html</optionsURL>
+  <defaultState>enabled</defaultState>
   <targetApplication>
+    <id>SlimServer</id>
     <maxVersion>*.*</maxVersion>
     <minVersion>7.5</minVersion>
-    <id>SlimServer</id>
   </targetApplication>
+  <profilesURL>http://dl.dropboxusercontent.com/u/26754471/squeezecenter/profiles.xml</profilesURL>
   <creator>Philippe</creator>
-  <optionsURL>plugins/UPnPBridge/settings/basic.html</optionsURL>
-  <email>philippe_44@outlook.com</email>
-  <name>PLUGIN_UPNPBRIDGE</name>
+  <description>PLUGIN_UPNPBRIDGE_DESC</description>
 </extensions>
