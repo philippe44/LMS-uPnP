@@ -631,9 +631,26 @@ int CallbackActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 
 			// URI detection response
 			r = XMLGetFirstDocumentItem(Action->ActionResult, "CurrentURI");
-			if (r) {
-				LOG_INFO("r:%s C:%s N:%s", r, p->CurrentURI, p->NextURI);
+
+			if (r && (*r = '\0' || !strstr(r, "-idx-") || 1)) {
+				char *s;
+				IXML_Document *doc;
+				IXML_Node *node;
+
+				NFREE(r);
+				s = XMLGetFirstDocumentItem(Action->ActionResult, "CurrentURIMetaData");
+				doc = ixmlParseBuffer(s);
+				NFREE(s);
+
+				node = (IXML_Node*) ixmlDocument_getElementById(doc, "res");
+				node = (IXML_Node*) ixmlNode_getFirstChild(node);
+				r = strdup(ixmlNode_getNodeValue(node));
+
+				LOG_INFO("[%p]: no Current URI, use MetaData %s", p, r);
+				if (doc) ixmlDocument_free(doc);
 			}
+
+
 			if (r && p->CurrentURI) {
 				// mutex has to be set BEFORE test and unset BEFORE notification
 				ithread_mutex_lock(&p->Mutex);
