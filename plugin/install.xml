@@ -11,7 +11,7 @@
     <maxVersion>*.*</maxVersion>
     <minVersion>7.5</minVersion>
   </targetApplication>
-  <profilesURL>http://dl.dropboxusercontent.com/u/26754471/squeezecenter/profiles.xml</profilesURL>
+  <profilesURL>http://sourceforge.net/projects/lms-to-upnp/files/profiles.xml/download</profilesURL>
   <creator>Philippe</creator>
   <description>PLUGIN_UPNPBRIDGE_DESC</description>
 </extensions>
