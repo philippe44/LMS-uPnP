@@ -74,7 +74,6 @@ $RECYCLE.BIN/
 *.z
 *.local
 __history
-doc
 tests
 Win32
 *.res
@@ -82,17 +81,13 @@ Win32
 *.map
 *.tds
 config.xml
-+strings.txt
 *.bat
 *-idx*
-__old_structure
-alpha
 *.save*
-Test
-package*.*
-Sonos/
-#*.txt
+tests/
+sonos/
+misc/
 /repo*.xml
-/profiles.xml
+/package*.*
 
 
