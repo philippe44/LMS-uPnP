@@ -4,14 +4,9 @@ to be controlled as a normal SqueezeBox device.
 
 ===========================================================================
 There is now a LMS plugin for automatic installation and easy configuration
-http://dl.dropboxusercontent.com/u/26754471/squeezecenter/repo-stable.xml
+http://sourceforge.net/projects/lms-to-upnp/files/repo-sf-stable.xml
 - or the version under development -
-http://dl.dropboxusercontent.com/u/26754471/squeezecenter/repo-dev.xml
-
-As this is a dropbox repository, there will be a redirection to HTTPS and 
-some Perl installations don't have IO::Socket::SSL installed. In some cases, 
-it can be installed by:
-		apt-get install libio-socket-ssl-perl 
+http://sourceforge.net/projects/lms-to-upnp/files/repo-sf-dev.xml
 ===========================================================================
 
 ===========================================================================
