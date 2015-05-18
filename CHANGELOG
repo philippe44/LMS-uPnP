@@ -1,4 +1,7 @@
-0.2.2.2
+0.2.3.0
+ - Support fully AIFF => build header on the fly
+
+0.2.2.2 (not published=
  - XML special char were not properly handled in DIDL header ==> moved to a full XML constructor, not a sprintf patch
  - using autosave, only <device> sections are written unless there is no existing config file
  - removed memory leak in SaveConfig (nodelist using wrong free)
@@ -7,6 +10,9 @@
  - Some players do not feel "CurrentURI" properly in GetMediaInfo. Use the "CurrentURIMetaData" and parse it instead
  - Added partial AIFF support (not sending AIFF to player but accepting AIFF=PCM from LMS) ==> less byte-reordering needed
  - Codecs capabilities send to LMS only include codecs supported by UPnP player
+ - added <raw_audio_format> as a comma-separated, ordered, list of file format sent to UPnP players amongst (pcm, aif, wav)
+ - added <match_endianness> to try to match (within the priority of <raw_audio_format> byte orders between LMS and player to avoid CPU consuming byte re-ordering
+
 
 0.2.2.1
  - mac_size in AddMR was wrong type causing a stack corruption on WinXP

@@ -77,11 +77,14 @@ bool _SetContentType(char *Cap[], sq_seturi_t *uri, int n, ...)
 			if (!strstr(*p, "audio/L")) {
 				strcpy(uri->content_type, fmt);
 				strcpy(uri->proto_info, *p);
-				// special case of wave, need to alter the file extension here
+				// special case of wave and aiff, need to change file extension
 				if (strstr(*p, "wav")) strcpy(uri->format, "wav");
+				if (strstr(*p, "aiff")) strcpy(uri->format, "aif");
 				break;
 			}
-			// if the proposed format accepts any rate & channel, give it a try
+			// re-set file extension
+			strcpy(uri->format, "pcm");
+            // if the proposed format accepts any rate & channel, give it a try
 			if (!strstr(*p, "channels") && !strstr(*p, "rate")) {
 				int size = strstr(*p, fmt) - *p;
 
@@ -114,7 +117,38 @@ bool _SetContentType(char *Cap[], sq_seturi_t *uri, int n, ...)
 }
 
 /*----------------------------------------------------------------------------*/
-bool SetContentType(char *Cap[], sq_seturi_t *uri)
+static bool SetContentTypeRawAudio(char *Cap[], sq_seturi_t *uri, char *RawAudioFormat, bool MatchEndianness)
+{
+	bool ret = false;
+	char buf[SQ_STR_LENGTH];
+	char *p;
+
+	sprintf(buf, "audio/L%d", uri->sample_size);
+	p = strdup(RawAudioFormat);
+
+	while (!ret && p && *p) {
+		u8_t order = 0xff;
+		char *q = strchr(p, ',');
+
+		if (q) *q = '\0';
+
+		if (strstr(p, "pcm")) { ret = _SetContentType(Cap, uri, 1, buf); order = 0;}
+		if (strstr(p, "wav")) { ret = _SetContentType(Cap, uri, 3, "audio/wav", "audio/x-wav", "audio/wave"); order = 1;}
+		if (strstr(p, "aif")) { ret = _SetContentType(Cap, uri, 2, "audio/aiff", "audio/x-aiff"); order = 0;}
+
+		if (MatchEndianness && (order != uri->endianness)) ret = false;
+
+		p = (q) ? q + 1 : NULL;
+	}
+
+	if (!ret && MatchEndianness) ret = SetContentTypeRawAudio(Cap, uri, RawAudioFormat, false);
+
+	NFREE(p);
+	return ret;
+}
+
+/*----------------------------------------------------------------------------*/
+bool SetContentType(char *Cap[], sq_seturi_t *uri, char *RawAudioFormat, bool MatchEndianness)
 {
 	strcpy(uri->format, format2ext(uri->content_type[0]));
 
@@ -125,16 +159,7 @@ bool SetContentType(char *Cap[], sq_seturi_t *uri)
 	case 'o': return _SetContentType(Cap, uri, 1, "audio/ogg");
 	case 'a': return _SetContentType(Cap, uri, 4, "audio/x-aac", "audio/aac", "audio/m4a", "audio/mp4");
 	case 'l': return _SetContentType(Cap, uri, 1, "audio/m4a");
-	case 'p': {
-		char p[SQ_STR_LENGTH];
-		sprintf(p, "audio/L%d", uri->sample_size);
-		// endian = 1 so WAV format is preferred to Lxx
-		if (uri->endianness)
-			return _SetContentType(Cap, uri, 4, "audio/wav", "audio/x-wav", "audio/wave", p);
-		// endian = 0 then Lxx format is preferred to WAV
-		else
-			return _SetContentType(Cap, uri, 4, p, "audio/wav", "audio/x-wav", "audio/wave");
-	}
+	case 'p': return SetContentTypeRawAudio(Cap, uri, RawAudioFormat, MatchEndianness);
 	default:
 		strcpy(uri->content_type, "unknown");
 		strcpy(uri->proto_info, "");
@@ -428,6 +453,8 @@ void SaveConfig(char *name, void *ref, bool full)
 		XMLAddNode(doc, common, "max_volume", "%d", glMRConfig.MaxVolume);
 		XMLAddNode(doc, common, "accept_nexturi", "%d", (int) glMRConfig.AcceptNextURI);
 		XMLAddNode(doc, common, "upnp_remove_count", "%d", (u32_t) glMRConfig.uPNPRemoveCount);
+		XMLAddNode(doc, common, "raw_audio_format", glMRConfig.RawAudioFormat);
+		XMLAddNode(doc, common, "match_endianness", "%d", (int) glMRConfig.MatchEndianness);
 	}
 
 	for (i = 0; i < MAX_RENDERERS; i++) {
@@ -485,6 +512,10 @@ void SaveConfig(char *name, void *ref, bool full)
 			XMLAddNode(doc, dev_node, "keep_buffer_file", "%d", (int) p->sq_config.keep_buffer_file);
 		if (p->Config.uPNPRemoveCount != glMRConfig.uPNPRemoveCount)
 			XMLAddNode(doc, dev_node, "upnp_remove_count", "%d", (int) p->Config.uPNPRemoveCount);
+		if (strcmp(p->Config.RawAudioFormat, glMRConfig.RawAudioFormat))
+			XMLAddNode(doc, dev_node, "raw_audio_format", p->Config.RawAudioFormat);
+		if (p->Config.MatchEndianness != glMRConfig.MatchEndianness)
+			XMLAddNode(doc, dev_node, "match_endianness", "%d", (int) p->Config.MatchEndianness);
 
 		p = p->Next;
 	}
@@ -536,6 +567,8 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "flac_header"))sq_conf->flac_header = atol(val);
 	if (!strcmp(name, "keep_buffer_file"))sq_conf->keep_buffer_file = atol(val);
 	if (!strcmp(name, "upnp_remove_count"))Conf->uPNPRemoveCount = atol(val);
+	if (!strcmp(name, "raw_audio_format")) strcpy(Conf->RawAudioFormat, val);
+	if (!strcmp(name, "match_endianness")) Conf->MatchEndianness = atol(val);
 	if (!strcmp(name, "seek_after_pause")) {
 		Conf->SeekAfterPause = atol(val);
 		sq_conf->seek_after_pause = Conf->SeekAfterPause;

@@ -17,7 +17,7 @@ struct sMR* 	mr_File2Device(const char *FileName);
 struct sMR* 	SID2Device(Upnp_SID Sid);
 struct sMR* 	CURL2Device(char *CtrlURL);
 struct sMR 		*IsDevice(void *Cookie);
-bool 			SetContentType(char *Cap[], sq_seturi_t *uri);
+bool 			SetContentType(char *Cap[], sq_seturi_t *uri, char *RawAudioFormat, bool MatchEndianness);
 
 void			SaveConfig(char *name, void *ref, bool full);
 void		 	*LoadConfig(char *name, tMRConfig *Conf, sq_dev_param_t *sq_conf);

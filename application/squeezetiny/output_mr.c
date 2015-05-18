@@ -158,6 +158,39 @@ static struct wave_header_s {
 		1000000000 - sizeof(struct wave_header_s) - 8 - 8
 	};
 
+/*---------------------------------- AIFF ------------------------------------*/
+static struct aiff_header_s {
+	u8_t 	chunk_id[4];
+	u8_t	chunk_size[4];
+	u8_t	format[4];
+	u8_t	common_id[4];
+	u8_t	common_size[4];
+	u8_t	channels[2];
+	u8_t 	frames[4];
+	u8_t	sample_size[2];
+	u8_t	sample_rate_exp[2];
+	u8_t	sample_rate_num[8];
+	u8_t    data_id[4];
+	u8_t	data_size[4];
+	u32_t	offset;
+	u32_t	blocksize;
+} aiff_header = {
+		{ 'F', 'O', 'R', 'M' },
+		{ 0x3B, 0x9A, 0xCA, 0x2E },		// adding comm, ssnd and AIFF sizes
+		{ 'A', 'I', 'F', 'F' },
+		{ 'C', 'O', 'M', 'M' },
+		{ 0x00, 0x00, 0x00, 0x12 },
+		{ 0x00, 0x00 },
+		{ 0x0E, 0xE6, 0xB2, 0x80 },		// 250x10^6 frames of 2 channels and 2 bytes each
+		{ 0x00, 0x00 },
+		{ 0x40, 0x0E },
+		{ 0x00, 0x00 },
+		{ 'S', 'S', 'N', 'D' },
+		{ 0x3B, 0x9A, 0xCA, 0x08 },		// one chunk of 10^9 bytes + 8
+		0,
+		0
+	};
+
 #define LOCK_S   mutex_lock(ctx->streambuf->mutex)
 #define UNLOCK_S mutex_unlock(ctx->streambuf->mutex)
 #if 0
@@ -483,6 +516,37 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 				}
 
 				if (!out->endianness) {
+					u32_t i;
+					u8_t j, *p, buf[3], inc;
+
+					inc = out->sample_size/8;
+					p = _buf_readp(ctx->streambuf);
+					space = (space / inc) * inc;
+					for (i = 0; i < space; i += inc) {
+						for (j = 0; j < inc; j++) buf[inc-1-j] = *(p+j);
+						for (j = 0; j < inc; j++) *(p++) = buf[j];
+					}
+				}
+
+			}
+
+			/*
+			AIF selected, then a header must be added. Also, if source format
+			is endian = 0 (aiff), then byte ordering is correct otherwise, byte
+			re-ordering is needed (same as PCM)
+			*/
+			if (!strcmp(out->ext, "aif")) {
+				if (!out->write_count) {
+					aiff_header.channels[1] = (u8_t) out->channels;
+					aiff_header.sample_size[1] = (u8_t) out->sample_size;
+					aiff_header.sample_rate_num[0] = (u8_t) (out->sample_rate >> 8);
+					aiff_header.sample_rate_num[1] = (u8_t) out->sample_rate;
+					out->write_count = fwrite(&aiff_header, 1, sizeof(struct aiff_header_s), out->write_file);
+					out->write_count_t = out->write_count;
+					LOG_INFO("[%p]: aiff header", ctx);
+				}
+
+				if (out->endianness) {
 					u32_t i;
 					u8_t j, *p, buf[3], inc;
 

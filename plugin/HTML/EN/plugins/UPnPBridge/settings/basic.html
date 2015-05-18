@@ -156,19 +156,26 @@
 		[% FOREACH entry IN [ '', '44100', '48000', '96000', '192000' ] %]
 			<option [% IF entry == sample_rate %]selected[% END %] value="[% entry %]">[% entry %]</option>
 		[% END %]
-		</select></td></tr>
-						
-		<tr><th>[% "PLUGIN_UPNPBRIDGE_L24FORMAT" | string %]</th><td><select class="stdedit" name="L24_format" id="L24_format">
-		[% FOREACH entry IN [ ['',''], ['plain 24 bits','0'], ['packed type 1','1'] ] %]
-			<option [% IF entry.1 == L24_format %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
-		[% END %]
 		</select></td>
-		
 		<th>[% "PLUGIN_UPNPBRIDGE_FLACHEADER" | string %]</th><td><select class="stdedit" name="flac_header" id="flac_header">
 		[% FOREACH entry IN [ ['',''], ['none','0'], ['normal','1'], ['fixed size','2'] ] %]
 			<option [% IF entry.1 == flac_header %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
 		[% END %]
-		</select></td></tr></table>
+		</select></td></tr>
+		
+		<tr><th>[% "PLUGIN_UPNPBRIDGE_RAWAUDIOFORMAT" | string %]</th><td><input type="text" class="stdedit" name="raw_audio_format" id="raw_audio_format" value="[% raw_audio_format %]" size="20">&nbsp</td>		
+		<th>[% "PLUGIN_UPNPBRIDGE_MATCHENDIANNESS" | string %]</th><td><select class="stdedit" name="match_endianness" id="match_endianness">
+		[% FOREACH entry IN YESNOBOX %] 
+			<option [% IF entry.1 == match_endianness %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+		[% END %]
+		</select></td>
+		<th>[% "PLUGIN_UPNPBRIDGE_L24FORMAT" | string %]</th><td><select class="stdedit" name="L24_format" id="L24_format">
+		[% FOREACH entry IN [ ['',''], ['plain 24 bits','0'], ['packed type 1','1'] ] %]
+			<option [% IF entry.1 == L24_format %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+		[% END %]
+		</select></td></tr>
+		
+		</table>
 	[% END %]
 	
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_UPNPMGMT" desc="PLUGIN_UPNPBRIDGE_UPNPMGMT_DESC" %]

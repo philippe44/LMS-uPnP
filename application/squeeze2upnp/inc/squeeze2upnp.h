@@ -46,8 +46,8 @@
 #define SCAN_INTERVAL	30
 
 
-enum eMRstate {STOPPED, PLAYING, PAUSED, TRANSITIONING};
-enum {AVT_SRV_IDX = 0, REND_SRV_IDX, CNX_MGR_IDX, NB_SRV};
+enum 	eMRstate { STOPPED, PLAYING, PAUSED, TRANSITIONING };
+enum 	{ AVT_SRV_IDX = 0, REND_SRV_IDX, CNX_MGR_IDX, NB_SRV };
 
 struct sService {
 	char Id			[RESOURCE_LENGTH];
@@ -75,6 +75,8 @@ typedef struct sMRConfig
 	char 		VolumeCurve[SQ_STR_LENGTH];
 	int			MaxVolume;
 	int			uPNPRemoveCount;
+	char		RawAudioFormat[SQ_STR_LENGTH];
+	bool		MatchEndianness;
 } tMRConfig;
 
 struct sMR {

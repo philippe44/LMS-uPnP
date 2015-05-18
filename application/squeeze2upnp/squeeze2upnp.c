@@ -75,6 +75,8 @@ tMRConfig			glMRConfig = {
 							true,
 							"0:0, 400:10, 700:20, 1200:30, 2050:40, 3800:50, 6600:60, 12000:70, 21000:80, 37000:90, 65536:100",
 							100,
+							1,
+							"wav,aif,pcm",
 							1
 					};
 
@@ -271,7 +273,7 @@ static bool AddMRDevice(struct sMR *Device, char * UDN, IXML_Document *DescDoc,	
 
 			LOG_INFO("[%p]: codec:%c, ch:%d, s:%d, r:%d", device, p->content_type[0],
 										p->channels, p->sample_size, p->sample_rate);
-			if (!SetContentType(device->ProtocolCap, param)) {
+			if (!SetContentType(device->ProtocolCap, param, device->Config.RawAudioFormat, device->Config.MatchEndianness)) {
 				LOG_ERROR("[%p]: no matching codec in player (%s)", caller, p->proto_info);
 				rc = false;
 			}
@@ -632,7 +634,7 @@ int CallbackActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 			// URI detection response
 			r = XMLGetFirstDocumentItem(Action->ActionResult, "CurrentURI");
 
-			if (r && (*r = '\0' || !strstr(r, "-idx-"))) {
+			if (r && (*r == '\0' || !strstr(r, "-idx-"))) {
 				char *s;
 				IXML_Document *doc;
 				IXML_Node *node;

@@ -170,7 +170,9 @@ PLUGIN_UPNPBRIDGE_CODECSPARAM_DESC
 	EN	<br><i>- Codecs</i> is an ordered, comma-separated, list made of mp3, flc and pcm 
 	EN	For example, to support (in order of preference) PCM then FLAC and then MP3 , enter "pcm,flc,mp3" (without "")
 	EN	(<i>note that aac and alc are allowed but untested</i>. 
-	EN	<br>- a FLAC header is required by some players.<br>
+	EN	<br>- a FLAC header is required by some players.
+	EN	<br>- Comma-separated list (<b>ordered</b>) of raw audio formats can be specified (amongst wav, aif, pcm)
+	EN	<br>- To avoid CPU consuming byte re-ordering, let the application decide amongst the authorized non-encoded formats
 	
 PLUGIN_UPNPBRIDGE_SAMPLERATE
 	EN	Max Sample Rate
@@ -178,12 +180,18 @@ PLUGIN_UPNPBRIDGE_SAMPLERATE
 PLUGIN_UPNPBRIDGE_CODECS
 	EN	Codecs
 
+PLUGIN_UPNPBRIDGE_FLACHEADER
+	EN	FLAC header
+
 PLUGIN_UPNPBRIDGE_L24FORMAT
 	EN	24 bits PCM
 	
-PLUGIN_UPNPBRIDGE_FLACHEADER
-	EN	FLAC header
-	
+PLUGIN_UPNPBRIDGE_RAWAUDIOFORMAT
+	EN	RAW format preference
+
+PLUGIN_UPNPBRIDGE_MATCHENDIANNESS
+	EN	Match byte order
+
 PLUGIN_UPNPBRIDGE_ENABLED
 	EN	Enabled
 	
