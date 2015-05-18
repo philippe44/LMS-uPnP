@@ -112,6 +112,7 @@ struct sMR {
 		u8_t	b;
 	} VolumeCurve[32];
 	char	*ProtocolCap[MAX_PROTO + 1];
+	bool	ProtocolCapReady;
 	u16_t	ErrorCount;
 	int	uPNPMissingCount;
 	bool	Running;

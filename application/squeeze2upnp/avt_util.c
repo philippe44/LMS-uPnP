@@ -125,6 +125,7 @@ int AVTSetURI(char *ControlURL, char *URI, char *ProtInfo, struct sq_metadata_s 
 	char *DIDLData;
 
 	DIDLData = CreateDIDL(URI, ProtInfo, MetaData);
+	LOG_DEBUG("DIDL header: %s", DIDLData);
 
 	LOG_INFO("uPNP setURI %s for %s (cookie %p)", URI, ControlURL, Cookie);
 	ActionNode =  UpnpMakeAction("SetAVTransportURI", AV_TRANSPORT, 0, NULL);
@@ -153,6 +154,7 @@ int AVTSetNextURI(char *ControlURL, char *URI, char *ProtInfo, struct sq_metadat
 	char *DIDLData;
 
 	DIDLData = CreateDIDL(URI, ProtInfo, MetaData);
+	LOG_DEBUG("DIDL header: %s", DIDLData);
 
 	LOG_INFO("uPNP setNextURI %s for %s (cookie %p)", URI, ControlURL, Cookie);
 	ActionNode =  UpnpMakeAction("SetNextAVTransportURI", AV_TRANSPORT, 0, NULL);

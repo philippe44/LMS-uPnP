@@ -4,7 +4,9 @@
  - removed memory leak in SaveConfig (nodelist using wrong free)
  - add the full channel and sample rate in DIDL header, not only in content-type
  - OSX version is now multi-architecture, named squeeze2upnp-osx-multi
- - Some players do not feel "CurrentURI" properly in GetMediaInfo. Use the "CurrentURIMetaData" and parse is instead
+ - Some players do not feel "CurrentURI" properly in GetMediaInfo. Use the "CurrentURIMetaData" and parse it instead
+ - Added partial AIFF support (not sending AIFF to player but accepting AIFF=PCM from LMS) ==> less byte-reordering needed
+ - Codecs capabilities send to LMS only include codecs supported by UPnP player
 
 0.2.2.1
  - mac_size in AddMR was wrong type causing a stack corruption on WinXP

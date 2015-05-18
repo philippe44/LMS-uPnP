@@ -128,7 +128,12 @@ bool SetContentType(char *Cap[], sq_seturi_t *uri)
 	case 'p': {
 		char p[SQ_STR_LENGTH];
 		sprintf(p, "audio/L%d", uri->sample_size);
-		return _SetContentType(Cap, uri, 4, p, "audio/wav", "audio/x-wav", "audio/wave");
+		// endian = 1 so WAV format is preferred to Lxx
+		if (uri->endianness)
+			return _SetContentType(Cap, uri, 4, "audio/wav", "audio/x-wav", "audio/wave", p);
+		// endian = 0 then Lxx format is preferred to WAV
+		else
+			return _SetContentType(Cap, uri, 4, p, "audio/wav", "audio/x-wav", "audio/wave");
 	}
 	default:
 		strcpy(uri->content_type, "unknown");
@@ -293,9 +298,64 @@ void ParseProtocolInfo(struct sMR *Device, char *Info)
 	// remove trailing "*" as we WILL add DLNA-related info, so some options to come
 	for (i = 0; (p = Device->ProtocolCap[i]); i++)
 		if (p[strlen(p) - 1] == '*') p[strlen(p) - 1] = '\0';
+
+	Device->ProtocolCapReady = true;
 }
 
+/*----------------------------------------------------------------------------*/
+static void _CheckCodecs(struct sMR *Device, char *codec, int n, ...)
+{
+	int i;
+	va_list args;
 
+	va_start(args, n);
+
+	for (i = 0; i < n; i++) {
+		char **p, *lookup = va_arg(args, char*);
+
+		p = Device->ProtocolCap;
+		// there is always a last "ProtocolCap" that is NULL
+		while (*p) {
+			if (strstr(*p, lookup)) {
+				if (strlen(Device->sq_config.codecs)) {
+					strcat(Device->sq_config.codecs, ",");
+					strcat(Device->sq_config.codecs, codec);
+				}
+				else strcpy(Device->sq_config.codecs, codec);
+				return;
+			}
+			p++;
+		}
+	}
+
+	va_end(args);
+}
+
+/*----------------------------------------------------------------------------*/
+void CheckCodecs(struct sMR *Device)
+{
+	char *p = strdup(Device->sq_config.codecs);
+
+	*Device->sq_config.codecs = '\0';
+
+	while (p && *p) {
+		char *q = strchr(p, ',');
+		if (q) *q = '\0';
+
+		if (strstr(p,"mp3")) _CheckCodecs(Device, "mp3", 2, "mp3", "mpeg");
+		if (strstr(p,"flc")) _CheckCodecs(Device, "flc", 1, "flac");
+		if (strstr(p,"wma")) _CheckCodecs(Device, "wma", 1, "wma");
+		if (strstr(p,"ogg")) _CheckCodecs(Device, "ogg", 1, "ogg");
+		if (strstr(p,"aac")) _CheckCodecs(Device, "aac", 3, "aac", "m4a", "mp4");
+		if (strstr(p,"alc")) _CheckCodecs(Device, "alc", 1, "m4a");
+		if (strstr(p,"pcm")) _CheckCodecs(Device, "pcm", 2, "wav", "audio/L");
+		if (strstr(p,"aif")) _CheckCodecs(Device, "aif", 2, "wav", "audio/L");
+
+		p = (q) ? q + 1 : NULL;
+	}
+
+	NFREE(p);
+}
 
 /*----------------------------------------------------------------------------*/
 void SaveConfig(char *name, void *ref, bool full)

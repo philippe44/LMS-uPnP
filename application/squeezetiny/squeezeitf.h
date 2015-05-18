@@ -76,6 +76,7 @@ typedef struct
 	u8_t	channels;
 	u8_t	sample_size;
 	u32_t	sample_rate;
+	u8_t	endianness;
 	char	format[5];
 	char	content_type[SQ_STR_LENGTH];
 	char	proto_info[SQ_STR_LENGTH];

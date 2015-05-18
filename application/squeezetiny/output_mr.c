@@ -398,9 +398,9 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 			}
 
 			/*
-			endianness re-ordering for PCM (1 = little endian)
-			this could be highly optimized ... and is similar to the functions
-			found in output_pack of original squeezelite
+			PCM selected, if source format is endian = 1 (wav), then byte
+			re-ordering	is needed as PCM is endian = 0
+			There might be a need for 24 bits compacting as well
 			*/
 			if (!strcmp(out->ext, "pcm")) {
 				u32_t i;
@@ -465,6 +465,11 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 
 			}
 
+			/*
+			WAV selected, then a header must be added. Also, if source format
+			is endian = 1 (wav), then byte ordering is correct otherwise, byte
+			re-ordering is needed (opposite of PCM)
+			*/
 			if (!strcmp(out->ext, "wav")) {
 				if (!out->write_count) {
 					wave_header.channels = out->channels;
@@ -476,6 +481,20 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 					out->write_count_t = out->write_count;
 					LOG_INFO("[%p]: wave header", ctx);
 				}
+
+				if (!out->endianness) {
+					u32_t i;
+					u8_t j, *p, buf[3], inc;
+
+					inc = out->sample_size/8;
+					p = _buf_readp(ctx->streambuf);
+					space = (space / inc) * inc;
+					for (i = 0; i < space; i += inc) {
+						for (j = 0; j < inc; j++) buf[inc-1-j] = *(p+j);
+						for (j = 0; j < inc; j++) *(p++) = buf[j];
+					}
+				}
+
 			}
 
 			// write in the file

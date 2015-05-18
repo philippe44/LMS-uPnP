@@ -632,7 +632,7 @@ int CallbackActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 			// URI detection response
 			r = XMLGetFirstDocumentItem(Action->ActionResult, "CurrentURI");
 
-			if (r && (*r = '\0' || !strstr(r, "-idx-") || 1)) {
+			if (r && (*r = '\0' || !strstr(r, "-idx-"))) {
 				char *s;
 				IXML_Document *doc;
 				IXML_Node *node;
@@ -1192,6 +1192,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	}
 
 	// send a request for "sink" (will be returned in a callback)
+	Device->ProtocolCapReady = false;
 	GetProtocolInfo(Device->Service[CNX_MGR_IDX].ControlURL, Device->seqN++);
 
 	NFREE(deviceType);
@@ -1204,6 +1205,19 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN + 32*1024);
 	pthread_create(&Device->Thread, &attr, &MRThread, Device);
 	pthread_attr_destroy(&attr);
+
+	/*
+	Wait for protocol cap to be filled. This is really ugly but safe as this is
+	executed in a different thread than the GetProtocolInfo
+	*/
+	for (i = 0; i < 50 && !Device->ProtocolCapReady; i++) usleep(10000);
+	if (!Device->ProtocolCapReady) {
+		LOG_INFO("[%p]: timeout waiting ProtocolInfo, cannot adjust codecs", Device);
+	}
+	else {
+		LOG_DEBUG("[%p]: waited %d ms for protocolinfo", Device, i*10);
+		CheckCodecs(Device);
+	}
 
 	return true;
 }

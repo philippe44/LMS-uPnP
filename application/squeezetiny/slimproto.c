@@ -336,6 +336,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 				uri.sample_size = (strm->pcm_sample_size != '?') ? pcm_sample_size[strm->pcm_sample_size - '0'] : 0xff;
 				uri.sample_rate = (strm->pcm_sample_rate != '?') ? pcm_sample_rate[strm->pcm_sample_rate - '0'] : 0xff;
 				uri.channels = (strm->pcm_channels != '?') ? pcm_channels[strm->pcm_channels - '1'] : 0xff;
+				uri.endianness = (strm->pcm_endianness != '?') ? strm->pcm_endianness - '0' : 0;
 				// real content_type and format will be set by the SETURI, according to player cap
 				uri.content_type[0] = strm->format;
 
@@ -370,7 +371,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 
 					ctx->out_ctx[idx].sample_size = uri.sample_size;
 					ctx->out_ctx[idx].sample_rate = uri.sample_rate;
-					ctx->out_ctx[idx].endianness = strm->pcm_endianness - '0';
+					ctx->out_ctx[idx].endianness = uri.endianness;
 					ctx->out_ctx[idx].channels = uri.channels;
 
 					/*
