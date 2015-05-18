@@ -1,6 +1,6 @@
 This application is a bridge between Logitech Media Server (LMS) /
-SqueezeBox Server(SBS) and UPnP devices. It allows any uPNP device 
-to be controlled as a normal SqueezeBox device.
+SqueezeBox Server(SBS) and UPnP devices. It allows any UPnP device 
+to be used as a normal SqueezeBox device.
 
 ===========================================================================
 There is now a LMS plugin for automatic installation and easy configuration
