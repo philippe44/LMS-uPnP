@@ -76,7 +76,7 @@ tMRConfig			glMRConfig = {
 							"0:0, 400:10, 700:20, 1200:30, 2050:40, 3800:50, 6600:60, 12000:70, 21000:80, 37000:90, 65536:100",
 							100,
 							1,
-							"wav,aif,pcm",
+							"pcm",
 							1
 					};
 
@@ -632,8 +632,11 @@ int CallbackActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 			NFREE(r);
 
 			// URI detection response
-			r = XMLGetFirstDocumentItem(Action->ActionResult, "CurrentURI");
+#if 1
+			r = XMLGetFirstDocumentItem(Action->ActionResult, "TrackURI");
 
+#else
+			r = XMLGetFirstDocumentItem(Action->ActionResult, "CurrentURI");
 			if (r && (*r == '\0' || !strstr(r, "-idx-"))) {
 				char *s;
 				IXML_Document *doc;
@@ -651,7 +654,7 @@ int CallbackActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 				LOG_INFO("[%p]: no Current URI, use MetaData %s", p, r);
 				if (doc) ixmlDocument_free(doc);
 			}
-
+#endif
 
 			if (r && p->CurrentURI) {
 				// mutex has to be set BEFORE test and unset BEFORE notification
@@ -944,7 +947,9 @@ static void *MRThread(void *args)
 			p->TrackPoll = 0;
 			if (p->State != STOPPED && p->State != PAUSED) {
 				AVTCallAction(p->Service[AVT_SRV_IDX].ControlURL, "GetPositionInfo", p->seqN++);
+#if 0
 				AVTCallAction(p->Service[AVT_SRV_IDX].ControlURL, "GetMediaInfo", p->seqN++);
+#endif
 			}
 		}
 
