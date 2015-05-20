@@ -15,7 +15,7 @@ use Slim::Utils::Log;
 
 my $prefs = preferences('plugin.upnpbridge');
 my $log   = logger('plugin.upnpbridge');
-my @xmlmain = qw(upnp_socket upnp_scan_interval upnp_scan_timeout);
+my @xmlmain = qw(upnp_socket upnp_scan_interval upnp_scan_timeout log_limit);
 my @xmldevice = qw(name mac stream_length accept_nexturi seek_after_pause buffer_dir buffer_limit sample_rate codecs L24_format flac_header enabled upnp_remove_count send_metadata volume_on_play max_volume match_endianness raw_audio_format);
 
 sub name { 'PLUGIN_UPNPBRIDGE' }
@@ -26,6 +26,9 @@ sub handler {
 	my ($class, $client, $params, $callback, @args) = @_;
 
 	my $update;
+	
+	require Plugins::UPnPBridge::Squeeze2upnp;
+	require Plugins::UPnPBridge::Plugin;
 			
 	if ($params->{'updateprofiles'}) {			
 	
@@ -48,7 +51,6 @@ sub handler {
 	
 	if ($params->{ 'delconfig' }) {
 				
-		require Plugins::UPnPBridge::Squeeze2upnp;
 		my $conf = Plugins::UPnPBridge::Squeeze2upnp->configFile($class);
 		unlink $conf;							
 		$log->info("deleting configuration $conf");
@@ -61,7 +63,6 @@ sub handler {
 		
 	if ($params->{ 'genconfig' }) {
 			
-		require Plugins::UPnPBridge::Squeeze2upnp;
 		my $conf = Plugins::UPnPBridge::Squeeze2upnp->configFile($class);
 		Plugins::UPnPBridge::Squeeze2upnp->stop;
 		Plugins::UPnPBridge::Squeeze2upnp->start( "-i", $conf );
@@ -74,11 +75,22 @@ sub handler {
 		$update = 1;
 	}
 	
+	if ($params->{ 'cleanlog' }) {
+				
+		my $logfile = Plugins::UPnPBridge::Squeeze2upnp->logFile($class);
+		open my $fh, ">", $logfile;
+		print $fh;
+		close $fh;
+		
+		#okay, this is hacky, will change in the future, just don't want another indent layer :-(
+		$params->{'saveSettings'} = 0;
+	}
+	
 	if ($params->{'saveSettings'}) {
 
 		$log->debug("save settings required");
 		
-		my @bool  = qw(autorun logging autosave);
+		my @bool  = qw(autorun logging autosave eraselog);
 		my @other = qw(output bin debugs opts);
 		my $skipxml;
 				
@@ -90,11 +102,7 @@ sub handler {
 					
 				$prefs->set($param, $val);
 				$update = 1;
-				
-				if ($param eq 'autorun') {
-					require Plugins::UPnPBridge::Squeeze2upnp;
-				}
-	
+					
 			}
 		}
 		
@@ -216,7 +224,7 @@ sub handler2 {
 
 	$params->{'binary'}   = Plugins::UPnPBridge::Squeeze2upnp->bin;
 	$params->{'binaries'} = [ Plugins::UPnPBridge::Squeeze2upnp->binaries ];
-	for my $param (qw(autorun output bin opts debugs logging configfile autosave)) {
+	for my $param (qw(autorun output bin opts debugs logging configfile autosave eraselog)) {
 		$params->{ $param } = $prefs->get($param);
 	}
 	
@@ -346,7 +354,6 @@ sub readconfig {
 	my ($class,@args) = @_;
 	my $ret;
 	
-	require Plugins::UPnPBridge::Squeeze2upnp;
 	my $file = Plugins::UPnPBridge::Squeeze2upnp->configFile($class);
 	if (-e $file) {
 		$ret = XMLin($file, ForceArray => ['device'], KeepRoot => 0, NoAttr => 1, @args);

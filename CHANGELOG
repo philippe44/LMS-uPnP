@@ -2,6 +2,9 @@
  - Support fully AIFF => build header on the fly
  - Use TrackURI from GetPositionInfo and not from GetMediaInfo - this is more reliable and saves one polling UPnP request 
  - by default, only use pcm in <raw_audio_format> because wav and aiff require a filesize and some players are stuck on the current URI when the whole size has not been received
+ - Some players do not fill "TrackURI" so get it from "TrackMetaData"
+ - add <log_limit> to limit the size of logfile
+ - by default, codecs are <pcm,aif,flc,mp3>
 
 0.2.2.2 (not published=
  - XML special char were not properly handled in DIDL header ==> moved to a full XML constructor, not a sprintf patch

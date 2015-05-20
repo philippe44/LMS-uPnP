@@ -132,7 +132,7 @@ static bool SetContentTypeRawAudio(char *Cap[], sq_seturi_t *uri, char *RawAudio
 
 		if (q) *q = '\0';
 
-		if (strstr(p, "pcm")) { ret = _SetContentType(Cap, uri, 1, buf); order = 0;}
+		if (strstr(p, "pcm") || strstr(p,"raw")) { ret = _SetContentType(Cap, uri, 1, buf); order = 0;}
 		if (strstr(p, "wav")) { ret = _SetContentType(Cap, uri, 3, "audio/wav", "audio/x-wav", "audio/wave"); order = 1;}
 		if (strstr(p, "aif")) { ret = _SetContentType(Cap, uri, 2, "audio/aiff", "audio/x-aiff"); order = 0;}
 
@@ -429,6 +429,7 @@ void SaveConfig(char *name, void *ref, bool full)
 		XMLAddNode(doc, root, "sq2mr_log", level2debug(glLog.sq2mr));
 		XMLAddNode(doc, root, "upnp_scan_interval", "%d", (u32_t) gluPNPScanInterval);
 		XMLAddNode(doc, root, "upnp_scan_timeout", "%d", (u32_t) gluPNPScanTimeout);
+		XMLAddNode(doc, root, "log_limit", "%d", (s32_t) glLogLimit);
 
 		common = XMLAddNode(doc, root, "common", NULL);
 		XMLAddNode(doc, common, "streambuf_size", "%d", (u32_t) glDeviceParam.stream_buf_size);
@@ -605,6 +606,7 @@ static void LoadGlobalItem(char *name, char *val)
 								   &glMac[0],&glMac[1],&glMac[2],&glMac[3],&glMac[4],&glMac[5]);
 	if (!strcmp(name, "upnp_scan_interval")) gluPNPScanInterval = atol(val);
 	if (!strcmp(name, "upnp_scan_timeout")) gluPNPScanTimeout = atol(val);
+	if (!strcmp(name, "log_limit")) glLogLimit = atol(val);
  }
 
 

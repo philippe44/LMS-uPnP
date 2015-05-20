@@ -55,6 +55,7 @@ bool				glDaemonize = false;
 #endif
 bool				glInteractive = true;
 char				*glLogFile;
+s32_t				glLogLimit = -1;
 static char			*glPidFile = NULL;
 static char			*glSaveConfigFile = NULL;
 bool				glAutoSaveConfigFile = false;
@@ -76,7 +77,7 @@ tMRConfig			glMRConfig = {
 							"0:0, 400:10, 700:20, 1200:30, 2050:40, 3800:50, 6600:60, 12000:70, 21000:80, 37000:90, 65536:100",
 							100,
 							1,
-							"pcm",
+							"raw",
 							1
 					};
 
@@ -91,7 +92,7 @@ sq_dev_param_t glDeviceParam = {
 						SQ_RATE_12000, SQ_RATE_11025, SQ_RATE_8000, 0 },
 					-1,
 					100,
-					"mp3",
+					"flc,pcm,aif,mp3",
 					SQ_RATE_48000,
 					L24_PACKED_LPCM,
 					FLAC_NORMAL_HEADER,
@@ -634,16 +635,17 @@ int CallbackActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 			// URI detection response
 #if 1
 			r = XMLGetFirstDocumentItem(Action->ActionResult, "TrackURI");
-
+			if (r) *r = 0;
 #else
 			r = XMLGetFirstDocumentItem(Action->ActionResult, "CurrentURI");
+#endif
 			if (r && (*r == '\0' || !strstr(r, "-idx-"))) {
 				char *s;
 				IXML_Document *doc;
 				IXML_Node *node;
 
 				NFREE(r);
-				s = XMLGetFirstDocumentItem(Action->ActionResult, "CurrentURIMetaData");
+				s = XMLGetFirstDocumentItem(Action->ActionResult, "TrackMetaData");
 				doc = ixmlParseBuffer(s);
 				NFREE(s);
 
@@ -651,10 +653,9 @@ int CallbackActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 				node = (IXML_Node*) ixmlNode_getFirstChild(node);
 				r = strdup(ixmlNode_getNodeValue(node));
 
-				LOG_INFO("[%p]: no Current URI, use MetaData %s", p, r);
+				LOG_DEBUG("[%p]: no Current URI, use MetaData %s", p, r);
 				if (doc) ixmlDocument_free(doc);
 			}
-#endif
 
 			if (r && p->CurrentURI) {
 				// mutex has to be set BEFORE test and unset BEFORE notification
@@ -912,6 +913,30 @@ static void *MainThread(void *args)
 			// launch a new search for Media Render
 			rc = UpnpSearchAsync(glControlPointHandle, gluPNPScanTimeout, MEDIA_RENDERER, NULL);
 			if (UPNP_E_SUCCESS != rc) LOG_ERROR("Error sending search update%d", rc);
+		}
+
+		if (glLogFile && glLogLimit != - 1) {
+			u32_t size = ftell(stderr);
+
+			if (size > glLogLimit*1024*1024) {
+				u32_t Sum, BufSize = 16384;
+				u8_t *buf = malloc(BufSize);
+
+				FILE *rlog = fopen(glLogFile, "rb");
+				FILE *wlog = fopen(glLogFile, "r+b");
+				LOG_INFO("Resizing log", NULL);
+				for (Sum = 0, fseek(rlog, size - (glLogLimit*1024*1024) / 2, SEEK_SET);
+					 (BufSize = fread(buf, 1, BufSize, rlog));
+					 Sum += BufSize, fwrite(buf, 1, BufSize, wlog));
+
+				Sum = fresize(wlog, Sum);
+				fclose(wlog);
+				fclose(rlog);
+				NFREE(buf);
+				if (!freopen(glLogFile, "a", stderr)) {
+					LOG_ERROR("re-open error while truncating log", NULL);
+				}
+            }
 		}
 
 		last = gettime_ms();

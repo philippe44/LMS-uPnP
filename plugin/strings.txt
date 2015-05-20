@@ -11,7 +11,7 @@ PLUGIN_UPNPBRIDGE_NO
 	EN	No
 	
 PLUGIN_UPNPBRIDGE_AUTORUN
-	EN	Start With Server
+	EN	Start the Bridge
 
 PLUGIN_UPNPBRIDGE_AUTORUN_DESC
 	EN	Automatically start the UPnP/DLNA bridge instance when the server starts.
@@ -56,7 +56,7 @@ PLUGIN_UPNPBRIDGE_DEBUG
 
 PLUGIN_UPNPBRIDGE_DEBUG_DESC
 	EN	Specify debugging level for writing to the log file.
-
+	
 PLUGIN_UPNPBRIDGE_ALL
 	EN	All
 
@@ -76,13 +76,26 @@ PLUGIN_UPNPBRIDGE_DECODE
 	EN	Decode debugging
 
 PLUGIN_UPNPBRIDGE_LOGGING
-	EN	Enable Logging
-
+	EN	Logging options
+	
 PLUGIN_UPNPBRIDGE_LOGGING_DESC
 	EN	Enable logging of error and debug messages.
+	EN	<br>- Set a value in MB to limit log size (-1 for unlimited)
+
+PLUGIN_UPNPBRIDGE_LOGENABLE
+	EN	Enable
 
 PLUGIN_UPNPBRIDGE_LOGLINK
-	EN	Log
+	EN	View
+	
+PLUGIN_UPNPBRIDGE_ERASELOG
+	EN	Erase at start
+	
+PLUGIN_UPNPBRIDGE_LOGSIZE
+	EN	Max size (MB)
+
+PLUGIN_UPNPBRIDGE_CLEANLOG
+	EN	Clean
 	
 PLUGIN_UPNPBRIDGE_PLAYER
 	EN	Select UPnP player
@@ -167,18 +180,18 @@ PLUGIN_UPNPBRIDGE_CODECSPARAM
 
 PLUGIN_UPNPBRIDGE_CODECSPARAM_DESC
 	EN	Several codecs are supported by the UPnP player. They will be reported to LMS to decide when to do transcoding. 
-	EN	<br><i>- Codecs</i> is an ordered, comma-separated, list made of mp3, flc and pcm 
+	EN	<i>- Supported Codecs</i> is an ordered, comma-separated, list made of mp3, flc, aif, pcm, aac and alc
 	EN	For example, to support (in order of preference) PCM then FLAC and then MP3 , enter "pcm,flc,mp3" (without "")
-	EN	(<i>note that aac and alc are allowed but untested</i>. 
-	EN	<br>- a FLAC header is required by some players.
-	EN	<br>- Comma-separated list (<b>ordered</b>) of raw audio formats can be specified (amongst wav, aif, pcm)
-	EN	<br>- To avoid CPU consuming byte re-ordering, let the application decide amongst the authorized non-encoded formats
+	EN	(<b>aac and alc are untested</b>. 
+	EN	<br>- <i> FLAC header:</i> a FLAC header is required by some players.
+	EN	<br>- <i>Uncompressed format:</i> comma-separated list (<b>ordered</b>) of authorized uncompressed audio formats (amongst wave, aiff, raw)
+	EN	<br>- <i>Match byte order:</i> let the bridge choose which authorized uncompressed format avoids byte re-ordering (reduces CPU) 
 	
 PLUGIN_UPNPBRIDGE_SAMPLERATE
 	EN	Max Sample Rate
 
 PLUGIN_UPNPBRIDGE_CODECS
-	EN	Codecs
+	EN	Supported codecs
 
 PLUGIN_UPNPBRIDGE_FLACHEADER
 	EN	FLAC header
@@ -187,7 +200,7 @@ PLUGIN_UPNPBRIDGE_L24FORMAT
 	EN	24 bits PCM
 	
 PLUGIN_UPNPBRIDGE_RAWAUDIOFORMAT
-	EN	RAW format preference
+	EN	Uncompressed format
 
 PLUGIN_UPNPBRIDGE_MATCHENDIANNESS
 	EN	Match byte order

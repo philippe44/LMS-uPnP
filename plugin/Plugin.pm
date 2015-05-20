@@ -12,7 +12,7 @@ use Slim::Utils::Log;
 
 my $prefs = preferences('plugin.upnpbridge');
 
-$prefs->init({ autorun => 0, opts => '', debugs => '', logging => 0, bin => undef, configfile => "upnpbridge.xml", profilesURL => initProfilesURL(), autosave => 1});
+$prefs->init({ autorun => 0, opts => '', debugs => '', logging => 0, bin => undef, configfile => "upnpbridge.xml", profilesURL => initProfilesURL(), autosave => 1, eraselog => 0});
 
 my $log = Slim::Utils::Log->addLogCategory({
 	'category'     => 'plugin.upnpbridge',

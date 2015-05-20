@@ -126,7 +126,6 @@ static u8_t flac_header[] = {
 
 
 /*---------------------------------- WAVE ------------------------------------*/
-
 static struct wave_header_s {
 	u8_t 	chunk_id[4];
 	u32_t	chunk_size;
@@ -141,7 +140,6 @@ static struct wave_header_s {
 	u16_t	bits_per_sample;
 	u8_t	subchunk2_id[4];
 	u32_t	subchunk2_size;
-
 } wave_header = {
 		{ 'R', 'I', 'F', 'F' },
 		1000000000 + 8,
@@ -157,6 +155,7 @@ static struct wave_header_s {
 		{ 'd', 'a', 't', 'a' },
 		1000000000 - sizeof(struct wave_header_s) - 8 - 8
 	};
+
 
 /*---------------------------------- AIFF ------------------------------------*/
 static struct aiff_header_s {
@@ -309,6 +308,20 @@ void wake_output(struct thread_ctx_s *ctx) {
 }
 
 /*---------------------------------------------------------------------------*/
+void change_endianness(u8_t *p, size_t *space, u8_t inc)
+{
+	int i, j;
+	u8_t buf[4];
+
+	*space = (*space / inc) * inc;
+	for (i = 0; i < *space; i += inc) {
+			for (j = 0; j < inc; j++) buf[inc-1-j] = *(p+j);
+			for (j = 0; j < inc; j++) *(p++) = buf[j];
+	}
+}
+
+
+/*---------------------------------------------------------------------------*/
 static void output_thru_thread(struct thread_ctx_s *ctx) {
 	while (ctx->mr_running) {
 		size_t	space;
@@ -442,13 +455,7 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 
 				// 2 or 4 bytes or 3 bytes with no packing, but changed endianness
 				if (out->endianness && (out->sample_size != 24 || (out->sample_size == 24 && ctx->config.L24_format == L24_PACKED))) {
-					u8_t buf[4];
-					u8_t inc = out->sample_size/8;
-					space = (space / inc) * inc;
-					for (i = 0; i < space; i += inc) {
-						for (j = 0; j < inc; j++) buf[inc-1-j] = *(p+j);
-						for (j = 0; j < inc; j++) *(p++) = buf[j];
-					}
+					change_endianness(p, &space, out->sample_size / 8);
 				}
 
 				// 3 bytes with packing required, 2 channels
@@ -504,6 +511,7 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 			re-ordering is needed (opposite of PCM)
 			*/
 			if (!strcmp(out->ext, "wav")) {
+
 				if (!out->write_count) {
 					wave_header.channels = out->channels;
 					wave_header.bits_per_sample = out->sample_size;
@@ -516,18 +524,8 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 				}
 
 				if (!out->endianness) {
-					u32_t i;
-					u8_t j, *p, buf[3], inc;
-
-					inc = out->sample_size/8;
-					p = _buf_readp(ctx->streambuf);
-					space = (space / inc) * inc;
-					for (i = 0; i < space; i += inc) {
-						for (j = 0; j < inc; j++) buf[inc-1-j] = *(p+j);
-						for (j = 0; j < inc; j++) *(p++) = buf[j];
-					}
+					change_endianness(_buf_readp(ctx->streambuf), &space, out->sample_size / 8);
 				}
-
 			}
 
 			/*
@@ -547,18 +545,8 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 				}
 
 				if (out->endianness) {
-					u32_t i;
-					u8_t j, *p, buf[3], inc;
-
-					inc = out->sample_size/8;
-					p = _buf_readp(ctx->streambuf);
-					space = (space / inc) * inc;
-					for (i = 0; i < space; i += inc) {
-						for (j = 0; j < inc; j++) buf[inc-1-j] = *(p+j);
-						for (j = 0; j < inc; j++) *(p++) = buf[j];
-					}
+					change_endianness(_buf_readp(ctx->streambuf), &space, out->sample_size / 8);
 				}
-
 			}
 
 			// write in the file

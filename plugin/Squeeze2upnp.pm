@@ -95,6 +95,10 @@ sub start {
 	if ($prefs->get('autosave')) {
 		push @params, ("-I");
 	}
+	
+	if ($prefs->get('eraselog')) {
+		unlink $class->logFile;
+	}
 
 	if ($prefs->get('logging') || $prefs->get('debugs') ne '') {
 		push @params, ("-f", $class->logFile);

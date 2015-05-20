@@ -40,8 +40,11 @@
 		</select>
 	[% END %]
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_LOGGING" desc="PLUGIN_UPNPBRIDGE_LOGGING_DESC" %]
-		<input name="logging" type="checkbox" [% IF logging %] checked [% END %]> 
-		<a href="/upnpbridge.log" target="log">[% "PLUGIN_UPNPBRIDGE_LOGLINK" | string %]</a>
+		<input name="logging" type="checkbox" [% IF logging %] checked [% END %]>&nbsp[% "PLUGIN_UPNPBRIDGE_LOGENABLE" | string %]
+		&nbsp<a href="/upnpbridge.log" target="log">[% "PLUGIN_UPNPBRIDGE_LOGLINK" | string %]</a>
+		&nbsp[% "PLUGIN_UPNPBRIDGE_LOGSIZE" | string %]&nbsp<input type="text" class="stdedit" name="log_limit" id="log_limit" value="[% log_limit %]" size="2"> 
+		&nbsp<input name="eraselog" type="checkbox" [% IF eraselog %] checked [% END %]>&nbsp[% "PLUGIN_UPNPBRIDGE_ERASELOG" | string %]
+		&nbsp<input name="cleanlog" type="submit" value=[% "PLUGIN_UPNPBRIDGE_CLEANLOG" | string %]> 
 	[% END %]
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_CONFIG" desc="PLUGIN_UPNPBRIDGE_CONFIG_DESC" %]
 		[% configpath %]
@@ -151,7 +154,7 @@
 	
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_CODECSPARAM" desc="PLUGIN_UPNPBRIDGE_CODECSPARAM_DESC" %]
 		<table><tr>
-		<th><font color=blue>[% "PLUGIN_UPNPBRIDGE_CODECS" | string %]</font></th><td><input type="text" class="stdedit" name="codecs" id="codecs" value="[% codecs %]" size="20">&nbsp</td>
+		<th><font color=blue>[% "PLUGIN_UPNPBRIDGE_CODECS" | string %]</font></th><td>&nbsp<input type="text" class="stdedit" name="codecs" id="codecs" value="[% codecs %]" size="10">&nbsp</td>
 		<td><font color=blue>[% "PLUGIN_UPNPBRIDGE_SAMPLERATE" | string %]</font></td><td><select class="stdedit" name="sample_rate" id="sample_rate">
 		[% FOREACH entry IN [ '', '44100', '48000', '96000', '192000' ] %]
 			<option [% IF entry == sample_rate %]selected[% END %] value="[% entry %]">[% entry %]</option>
@@ -163,7 +166,7 @@
 		[% END %]
 		</select></td></tr>
 		
-		<tr><th>[% "PLUGIN_UPNPBRIDGE_RAWAUDIOFORMAT" | string %]</th><td><input type="text" class="stdedit" name="raw_audio_format" id="raw_audio_format" value="[% raw_audio_format %]" size="20">&nbsp</td>		
+		<tr><th>[% "PLUGIN_UPNPBRIDGE_RAWAUDIOFORMAT" | string %]</th><td>&nbsp<input type="text" class="stdedit" name="raw_audio_format" id="raw_audio_format" value="[% raw_audio_format %]" size="10">&nbsp</td>		
 		<th>[% "PLUGIN_UPNPBRIDGE_MATCHENDIANNESS" | string %]</th><td><select class="stdedit" name="match_endianness" id="match_endianness">
 		[% FOREACH entry IN YESNOBOX %] 
 			<option [% IF entry.1 == match_endianness %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
