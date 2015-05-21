@@ -320,6 +320,32 @@ void change_endianness(u8_t *p, size_t *space, u8_t inc)
 	}
 }
 
+/*---------------------------------------------------------------------------*/
+void _change_endianness(u8_t *p, size_t *space, u8_t inc)
+{
+	int i;
+	u8_t buf;
+
+	*space = (*space / inc) * inc;
+
+	switch (inc) {
+		case 1: break;
+		case 2: {
+			for (i = 0; i < *space; i += 2, p += 2) {
+				buf = *p;
+				*p = *(p+1);
+				*(p+1) = buf;
+			}
+		}
+		case 3: {
+			for (i = 0; i < *space; i += 3, p += 3) {
+				buf = *p;
+				*p = *(p+2);
+				*(p+2) = buf;
+			}
+		}
+	}
+}
 
 /*---------------------------------------------------------------------------*/
 static void output_thru_thread(struct thread_ctx_s *ctx) {
