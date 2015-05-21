@@ -991,7 +991,7 @@ static void slimproto_short(struct thread_ctx_s *ctx) {
 /*---------------------------------------------------------------------------*/
 void slimproto_close(struct thread_ctx_s *ctx) {
 	LOG_INFO("[%p] slimproto stop for %s", ctx, ctx->player_name);
-	ctx->running = false;
+  	ctx->running = false;
 	wake_controller(ctx);
 #if LINUX || OSX || FREEBSD
 	pthread_detach(ctx->thread);

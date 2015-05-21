@@ -1084,7 +1084,7 @@ int uPNPInitialize(char *IPaddress, unsigned int *Port)
 }
 
 /*----------------------------------------------------------------------------*/
-int uPNPTerminate(void)
+int uPNPTerminate()
 {
 	LOG_DEBUG("terminate main thread ...", NULL);
 	ithread_join(glMainThread, NULL);
@@ -1286,12 +1286,20 @@ static bool Stop(void)
 
 /*---------------------------------------------------------------------------*/
 static void sighandler(int signum) {
+	int i;
+
+	glMainRunning = false;
+
 	if (!glGracefullShutdown) {
+		for (i = 0; i < MAX_RENDERERS; i++) {
+			struct sMR *p = &glMRDevices[i];
+			if (p->InUse && p->sqState == SQ_PLAY)
+				AVTBasic(p->Service[AVT_SRV_IDX].ControlURL, "Stop", p->seqN++);
+		}
 		LOG_INFO("forced exit", NULL);
 		exit(EXIT_SUCCESS);
 	}
 
-	glMainRunning = false;
 	sq_stop();
 	Stop();
 	exit(EXIT_SUCCESS);

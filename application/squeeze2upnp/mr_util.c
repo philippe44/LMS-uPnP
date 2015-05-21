@@ -256,7 +256,12 @@ void FlushMRDevices(void)
 	int i;
 
 	for (i = 0; i < MAX_RENDERERS; i++) {
-		if (glMRDevices[i].InUse) DelMRDevice(&glMRDevices[i]);
+		struct sMR *p = &glMRDevices[i];
+		if (p->InUse) {
+			if (p->sqState == SQ_PLAY)
+				AVTBasic(p->Service[AVT_SRV_IDX].ControlURL, "Stop", p->seqN++);
+			DelMRDevice(p);
+		}
 	}
 }
 
@@ -374,7 +379,7 @@ void CheckCodecs(struct sMR *Device)
 		if (strstr(p,"aac")) _CheckCodecs(Device, "aac", 3, "aac", "m4a", "mp4");
 		if (strstr(p,"alc")) _CheckCodecs(Device, "alc", 1, "m4a");
 		if (strstr(p,"pcm")) _CheckCodecs(Device, "pcm", 2, "wav", "audio/L");
-		if (strstr(p,"aif")) _CheckCodecs(Device, "aif", 2, "wav", "audio/L");
+		if (strstr(p,"aif")) _CheckCodecs(Device, "aif", 3, "aif", "wav", "audio/L");
 
 		p = (q) ? q + 1 : NULL;
 	}

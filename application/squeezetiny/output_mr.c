@@ -323,6 +323,7 @@ void change_endianness(u8_t *p, size_t *space, u8_t inc)
 
 /*---------------------------------------------------------------------------*/
 static void output_thru_thread(struct thread_ctx_s *ctx) {
+
 	while (ctx->mr_running) {
 		size_t	space;
 		unsigned sleep_time;

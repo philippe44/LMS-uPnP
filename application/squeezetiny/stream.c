@@ -79,7 +79,8 @@ static void _disconnect(stream_state state, disconnect_code disconnect, struct t
 }
 
 static void *stream_thread(struct thread_ctx_s *ctx) {
-		while (ctx->stream_running) {
+
+	while (ctx->stream_running) {
 
 		struct pollfd pollinfo;
 		size_t space;

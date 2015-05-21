@@ -5,6 +5,8 @@
  - Some players do not fill "TrackURI" so get it from "TrackMetaData"
  - add <log_limit> to limit the size of logfile
  - by default, codecs are <pcm,aif,flc,mp3>
+ - Send a STOP to playing renderers at exit
+ - when checking codecs list, 'aif' was not in the matching list for 'aif' (only audio/L and wav)
 
 0.2.2.2 (not published=
  - XML special char were not properly handled in DIDL header ==> moved to a full XML constructor, not a sprintf patch

@@ -96,7 +96,7 @@ static void sq_wipe_device(struct thread_ctx_s *ctx);
 static log_level	loglevel = lWARN;
 
 /*---------------------------------------------------------------------------*/
-void sq_stop(void) {
+void sq_stop() {
 	int i;
 
 	for (i = 0; i < MAX_PLAYER; i++) {
@@ -115,10 +115,12 @@ void sq_wipe_device(struct thread_ctx_s *ctx) {
 
 	ctx->callback = NULL;
 	ctx->in_use = false;
+
 	slimproto_close(ctx);
 	output_mr_close(ctx);
 	decode_close(ctx);
 	stream_close(ctx);
+
 	for (i = 0; i < 2; i++) {
 		if (ctx->out_ctx[i].read_file) fclose (ctx->out_ctx[i].read_file);
 		if (ctx->out_ctx[i].write_file) fclose (ctx->out_ctx[i].write_file);
@@ -130,7 +132,6 @@ void sq_wipe_device(struct thread_ctx_s *ctx) {
 		}
 		ctx->out_ctx[i].read_file = ctx->out_ctx[i].write_file = NULL;
 		ctx->out_ctx[i].owner = NULL;
-
 	}
 }
 
