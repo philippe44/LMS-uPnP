@@ -308,9 +308,37 @@ void wake_output(struct thread_ctx_s *ctx) {
 }
 
 /*---------------------------------------------------------------------------*/
-void change_endianness(u8_t *p, size_t *space, u8_t inc)
+size_t truncate16(u8_t *p, size_t *space, bool src_endianness, bool dst_endianness)
 {
-	int i, j;
+	u8_t *q;
+	size_t i;
+
+	*space = (*space / 3) * 3;
+	q = (src_endianness) ? p + 1 : p;
+
+	if (src_endianness == dst_endianness) {
+		for (i = 0; i < *space; i += 3) {
+			*(p++) = *(q++);
+			*(p++) = *(q++);
+			q++;
+		}
+	}
+	else {
+		for (i = 0; i < *space; i += 3) {
+			*(p++) = *(q + 1);
+			*(p++) = *(q);
+			q += 3;
+		}
+	}
+
+	return (*space * 2) / 3;
+}
+
+/*---------------------------------------------------------------------------*/
+size_t _change_endianness(u8_t *p, size_t *space, u8_t inc)
+{
+	int j;
+	size_t i;
 	u8_t buf[4];
 
 	*space = (*space / inc) * inc;
@@ -318,40 +346,61 @@ void change_endianness(u8_t *p, size_t *space, u8_t inc)
 			for (j = 0; j < inc; j++) buf[inc-1-j] = *(p+j);
 			for (j = 0; j < inc; j++) *(p++) = buf[j];
 	}
+
+	return *space;
 }
 
 /*---------------------------------------------------------------------------*/
-void _change_endianness(u8_t *p, size_t *space, u8_t inc)
+size_t change_endianness(u8_t *p, size_t *space, u8_t inc)
 {
-	int i;
-	u8_t buf;
+	size_t i;
+	u8_t buf, buf2;
 
 	*space = (*space / inc) * inc;
+	i = *space;
 
 	switch (inc) {
 		case 1: break;
 		case 2: {
-			for (i = 0; i < *space; i += 2, p += 2) {
+			while (i) {
 				buf = *p;
 				*p = *(p+1);
 				*(p+1) = buf;
+				i -= 2;
+				p += 2;
 			}
 		}
 		case 3: {
-			for (i = 0; i < *space; i += 3, p += 3) {
+			while (i) {
 				buf = *p;
 				*p = *(p+2);
 				*(p+2) = buf;
+				i -= 3;
+				p += 3;
+			}
+		}
+		 case 4: {
+			while (i)	{
+				buf = *p;
+				buf2 = *(p+1);
+				*p = *(p+3);
+				*(p+1) = *(p+2);
+				*(p+2) = buf2;
+				*(p+3) = buf;
+				i -= 4;
+				p += 4;
 			}
 		}
 	}
+
+	return *space;
 }
 
 /*---------------------------------------------------------------------------*/
 static void output_thru_thread(struct thread_ctx_s *ctx) {
 
 	while (ctx->mr_running) {
-		size_t	space;
+		size_t	space, nb_write;
 		unsigned sleep_time;
 		out_ctx_t *out;
 
@@ -360,7 +409,7 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 
 		if (_buf_used(ctx->streambuf)) {
 			bool ready = true;
-			space = _buf_cont_read(ctx->streambuf);
+			nb_write = space = _buf_cont_read(ctx->streambuf);
 
 			// open the buffer if needed (should be opened in slimproto)
 			if (!out->write_file) {
@@ -476,18 +525,34 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 			There might be a need for 24 bits compacting as well
 			*/
 			if (!strcmp(out->ext, "pcm")) {
-				u32_t i;
-				u8_t j, *p;
+				u8_t *p;
+
+				/*
+				AIFF: there is a blocksize + offset of 8 bytes, just skip them
+				but also need to realign buffer to sample_size boundary.
+				NB: assumes there are at least 8 bytes in the buffer
+				*/
+				if (!out->write_count && !out->endianness) {
+					_buf_move(ctx->streambuf, 8);
+					 space -= 8;
+				}
+
 				p = _buf_readp(ctx->streambuf);
 
+				// 3 bytes but truncate that to 2 bytes
+				if (out->sample_size == 24 && ctx->config.L24_format == L24_TRUNC_16) {
+					nb_write = truncate16(p, &space, out->endianness, 0);
+				}
 				// 2 or 4 bytes or 3 bytes with no packing, but changed endianness
-				if (out->endianness && (out->sample_size != 24 || (out->sample_size == 24 && ctx->config.L24_format == L24_PACKED))) {
-					change_endianness(p, &space, out->sample_size / 8);
+				else if (out->endianness && (out->sample_size != 24 || (out->sample_size == 24 && ctx->config.L24_format == L24_PACKED))) {
+						nb_write = change_endianness(p, &space, out->sample_size / 8);
 				}
 
 				// 3 bytes with packing required, 2 channels
 				if (out->sample_size == 24 && ctx->config.L24_format == L24_PACKED_LPCM && out->channels == 2) {
-					u8_t buf[12];
+					u32_t i;
+					u8_t j, buf[12];
+
 					space = (space / 12) * 12;
 					for (i = 0; i < space; i += 12) {
 						// order after that should be L0T,L0M,L0B,R0T,R0M,R0B,L1T,L1M,L1B,R1T,R1M,R1B
@@ -509,9 +574,11 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 					}
 				}
 
-				// 3 bytes with packing required
+				// 3 bytes with packing required, 1 channel
 				if (out->sample_size == 24 && ctx->config.L24_format == L24_PACKED_LPCM && out->channels == 1) {
-					u8_t buf[6];
+					u32_t i;
+					u8_t j, buf[6];
+
 					space = (space / 6) * 6;
 					for (i = 0; i < space; i += 6) {
 						// order after that should be C0T,C0M,C0B,C1T,C1M,C1B
@@ -535,23 +602,38 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 			/*
 			WAV selected, then a header must be added. Also, if source format
 			is endian = 1 (wav), then byte ordering is correct otherwise, byte
-			re-ordering is needed (opposite of PCM)
+			re-ordering is needed (opposite of PCM case) and offset mist be skipped
 			*/
 			if (!strcmp(out->ext, "wav")) {
 
 				if (!out->write_count) {
+					u8_t sample_size = (out->sample_size == 24 && ctx->config.L24_format == L24_TRUNC_16) ? 16 : out->sample_size;
 					wave_header.channels = out->channels;
-					wave_header.bits_per_sample = out->sample_size;
+					wave_header.bits_per_sample = sample_size;
 					wave_header.sample_rate = out->sample_rate;
-					wave_header.byte_rate = out->sample_rate * out->channels * (out->sample_size / 8);
-					wave_header.block_align = out->channels * (out->sample_size / 8);
+					wave_header.byte_rate = out->sample_rate * out->channels * (sample_size / 8);
+					wave_header.block_align = out->channels * (sample_size / 8);
 					out->write_count = fwrite(&wave_header, 1, sizeof(struct wave_header_s), out->write_file);
 					out->write_count_t = out->write_count;
 					LOG_INFO("[%p]: wave header", ctx);
+
+					/*
+					AIFF: there is a blocksize + offset of 8 bytes, just skip them
+					but also need to realign buffer to sample_size boundary.
+					NB: assumes there are at least 8 bytes in the buffer
+					*/
+					if (!out->endianness) {
+						_buf_move(ctx->streambuf, 8);
+						 space -= 8;
+					}
 				}
 
-				if (!out->endianness) {
-					change_endianness(_buf_readp(ctx->streambuf), &space, out->sample_size / 8);
+				// 3 bytes truncated to 2 bytes or simply change indianess
+				if (out->sample_size == 24 && ctx->config.L24_format == L24_TRUNC_16) {
+					nb_write = truncate16(_buf_readp(ctx->streambuf), &space, out->endianness, 1);
+				}
+				else if (!out->endianness) {
+					nb_write = change_endianness(_buf_readp(ctx->streambuf), &space, out->sample_size / 8);
 				}
 			}
 
@@ -562,27 +644,43 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 			*/
 			if (!strcmp(out->ext, "aif")) {
 				if (!out->write_count) {
+					u8_t sample_size = (out->sample_size == 24 && ctx->config.L24_format == L24_TRUNC_16) ? 16 : out->sample_size;
 					aiff_header.channels[1] = (u8_t) out->channels;
-					aiff_header.sample_size[1] = (u8_t) out->sample_size;
+					aiff_header.sample_size[1] = sample_size;
 					aiff_header.sample_rate_num[0] = (u8_t) (out->sample_rate >> 8);
 					aiff_header.sample_rate_num[1] = (u8_t) out->sample_rate;
 					out->write_count = fwrite(&aiff_header, 1, sizeof(struct aiff_header_s), out->write_file);
 					out->write_count_t = out->write_count;
 					LOG_INFO("[%p]: aiff header", ctx);
+
+					/*
+					AIFF: there is a blocksize + offset of 8 bytes that is sent
+					by LMS, so need to remove it so that data are aligned inside
+					the buffer. Otherwise, when 24 bits samples are send, buffer
+					contains 8*3*n and is not aligned to an integer number of samples
+					*/
+					if (!out->endianness) {
+						_buf_move(ctx->streambuf, 8);
+						 space -= 8;
+					}
 				}
 
-				if (out->endianness) {
-					change_endianness(_buf_readp(ctx->streambuf), &space, out->sample_size / 8);
+				// 3 bytes truncated to 2 bytes or simply change indianess
+				if (out->sample_size == 24 && ctx->config.L24_format == L24_TRUNC_16) {
+					nb_write = truncate16(_buf_readp(ctx->streambuf), &space, out->endianness, 0);
+				}
+				else if (out->endianness) {
+					nb_write = change_endianness(_buf_readp(ctx->streambuf), &space, out->sample_size / 8);
 				}
 			}
 
 			// write in the file
 			if (ready) {
-				fwrite(_buf_readp(ctx->streambuf), 1, space, out->write_file);
+				fwrite(_buf_readp(ctx->streambuf), 1, nb_write, out->write_file);
 				fflush(out->write_file);
 				_buf_inc_readp(ctx->streambuf, space);
-				out->write_count += space;
-				out->write_count_t += space;
+				out->write_count += nb_write;
+				out->write_count_t += nb_write;
 			}
 
 			sleep_time = 10000;

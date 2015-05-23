@@ -117,14 +117,14 @@ bool _SetContentType(char *Cap[], sq_seturi_t *uri, int n, ...)
 }
 
 /*----------------------------------------------------------------------------*/
-static bool SetContentTypeRawAudio(char *Cap[], sq_seturi_t *uri, char *RawAudioFormat, bool MatchEndianness)
+static bool SetContentTypeRawAudio(struct sMR *Device, sq_seturi_t *uri, bool MatchEndianness)
 {
 	bool ret = false;
-	char buf[SQ_STR_LENGTH];
-	char *p;
+	char *p, *buf;
+	char fmt[SQ_STR_LENGTH];
 
-	sprintf(buf, "audio/L%d", uri->sample_size);
-	p = strdup(RawAudioFormat);
+	sprintf(fmt, "audio/L%d", (Device->sq_config.L24_format != L24_TRUNC_16) ? uri->sample_size : 16);
+	p = buf = strdup(Device->Config.RawAudioFormat);
 
 	while (!ret && p && *p) {
 		u8_t order = 0xff;
@@ -132,34 +132,34 @@ static bool SetContentTypeRawAudio(char *Cap[], sq_seturi_t *uri, char *RawAudio
 
 		if (q) *q = '\0';
 
-		if (strstr(p, "pcm") || strstr(p,"raw")) { ret = _SetContentType(Cap, uri, 1, buf); order = 0;}
-		if (strstr(p, "wav")) { ret = _SetContentType(Cap, uri, 3, "audio/wav", "audio/x-wav", "audio/wave"); order = 1;}
-		if (strstr(p, "aif")) { ret = _SetContentType(Cap, uri, 2, "audio/aiff", "audio/x-aiff"); order = 0;}
+		if (strstr(p, "pcm") || strstr(p,"raw")) { ret = _SetContentType(Device->ProtocolCap, uri, 1, fmt); order = 0;}
+		if (strstr(p, "wav")) { ret = _SetContentType(Device->ProtocolCap, uri, 3, "audio/wav", "audio/x-wav", "audio/wave"); order = 1;}
+		if (strstr(p, "aif")) { ret = _SetContentType(Device->ProtocolCap, uri, 2, "audio/aiff", "audio/x-aiff"); order = 0;}
 
 		if (MatchEndianness && (order != uri->endianness)) ret = false;
 
 		p = (q) ? q + 1 : NULL;
 	}
 
-	if (!ret && MatchEndianness) ret = SetContentTypeRawAudio(Cap, uri, RawAudioFormat, false);
+	if (!ret && MatchEndianness) ret = SetContentTypeRawAudio(Device, uri, false);
 
-	NFREE(p);
+	NFREE(buf);
 	return ret;
 }
 
 /*----------------------------------------------------------------------------*/
-bool SetContentType(char *Cap[], sq_seturi_t *uri, char *RawAudioFormat, bool MatchEndianness)
+bool SetContentType(struct sMR *Device, sq_seturi_t *uri)
 {
 	strcpy(uri->format, format2ext(uri->content_type[0]));
 
 	switch (uri->content_type[0]) {
-	case 'm': return _SetContentType(Cap, uri, 3, "audio/mp3", "audio/mpeg", "audio/mpeg3");
-	case 'f': return _SetContentType(Cap, uri, 2, "audio/x-flac", "audio/flac");
-	case 'w': return _SetContentType(Cap, uri, 2, "audio/x-wma", "audio/wma");
-	case 'o': return _SetContentType(Cap, uri, 1, "audio/ogg");
-	case 'a': return _SetContentType(Cap, uri, 4, "audio/x-aac", "audio/aac", "audio/m4a", "audio/mp4");
-	case 'l': return _SetContentType(Cap, uri, 1, "audio/m4a");
-	case 'p': return SetContentTypeRawAudio(Cap, uri, RawAudioFormat, MatchEndianness);
+	case 'm': return _SetContentType(Device->ProtocolCap, uri, 3, "audio/mp3", "audio/mpeg", "audio/mpeg3");
+	case 'f': return _SetContentType(Device->ProtocolCap, uri, 2, "audio/x-flac", "audio/flac");
+	case 'w': return _SetContentType(Device->ProtocolCap, uri, 2, "audio/x-wma", "audio/wma");
+	case 'o': return _SetContentType(Device->ProtocolCap, uri, 1, "audio/ogg");
+	case 'a': return _SetContentType(Device->ProtocolCap, uri, 4, "audio/x-aac", "audio/aac", "audio/m4a", "audio/mp4");
+	case 'l': return _SetContentType(Device->ProtocolCap, uri, 1, "audio/m4a");
+	case 'p': return SetContentTypeRawAudio(Device, uri, Device->Config.MatchEndianness);
 	default:
 		strcpy(uri->content_type, "unknown");
 		strcpy(uri->proto_info, "");
@@ -258,7 +258,8 @@ void FlushMRDevices(void)
 	for (i = 0; i < MAX_RENDERERS; i++) {
 		struct sMR *p = &glMRDevices[i];
 		if (p->InUse) {
-			if (p->sqState == SQ_PLAY)
+			// critical to stop the device otherwise libupnp mean wait forever
+			if (p->sqState == SQ_PLAY || p->sqState == SQ_PAUSE)
 				AVTBasic(p->Service[AVT_SRV_IDX].ControlURL, "Stop", p->seqN++);
 			DelMRDevice(p);
 		}
@@ -364,8 +365,9 @@ static void _CheckCodecs(struct sMR *Device, char *codec, int n, ...)
 /*----------------------------------------------------------------------------*/
 void CheckCodecs(struct sMR *Device)
 {
-	char *p = strdup(Device->sq_config.codecs);
+	char *p, *buf;
 
+	p = buf = strdup(Device->sq_config.codecs);
 	*Device->sq_config.codecs = '\0';
 
 	while (p && *p) {
@@ -384,7 +386,7 @@ void CheckCodecs(struct sMR *Device)
 		p = (q) ? q + 1 : NULL;
 	}
 
-	NFREE(p);
+	NFREE(buf);
 }
 
 /*----------------------------------------------------------------------------*/

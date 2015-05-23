@@ -21,7 +21,7 @@ my @xmldevice = qw(name mac stream_length accept_nexturi seek_after_pause buffer
 sub name { 'PLUGIN_UPNPBRIDGE' }
 
 sub page { 'plugins/UPnPBridge/settings/basic.html' }
-
+	
 sub handler {
 	my ($class, $client, $params, $callback, @args) = @_;
 
@@ -42,9 +42,6 @@ sub handler {
 			close $fh;
 		}
 		
-		#my $ff = File::Fetch->new($prefs->get('profilesURL'));
-		#$ff->fetch( to => catdir(Slim::Utils::PluginManager->allPlugins->{'UPnPBridge'}->{'basedir'}, 'profiles.xml')); 
-		
 		#okay, this is hacky, will change in the future, just don't want another indent layer :-(
 		$params->{'saveSettings'} = 0;
 	}
@@ -62,17 +59,11 @@ sub handler {
 	}
 		
 	if ($params->{ 'genconfig' }) {
-			
-		my $conf = Plugins::UPnPBridge::Squeeze2upnp->configFile($class);
+	
 		Plugins::UPnPBridge::Squeeze2upnp->stop;
-		Plugins::UPnPBridge::Squeeze2upnp->start( "-i", $conf );
-		Plugins::UPnPBridge::Squeeze2upnp->wait;
-		$log->info("generation configuration $conf");
-		
-		#okay, this is hacky, will change in the future, just don't want another indent layer :-(
-		$params->{'saveSettings'} = 0;
-		
-		$update = 1;
+		waitEndHandler(\&genConfig, $class, $client, $params, $callback, 30, @args);
+	
+		return undef;
 	}
 	
 	if ($params->{ 'cleanlog' }) {
@@ -182,10 +173,11 @@ sub handler {
 			}
 			
 			$log->info("writing XML config");
-			Plugins::UPnPBridge::Squeeze2upnp->stop;
-			XMLout($xmlconfig, RootName => "squeeze2upnp", NoSort => 1, NoAttr => 1, OutputFile => Plugins::UPnPBridge::Squeeze2upnp->configFile($class));
-			$update = 1;
 			$log->debug(Dumper($xmlconfig));
+			Plugins::UPnPBridge::Squeeze2upnp->stop;
+			waitEndHandler( sub { XMLout($xmlconfig, RootName => "squeeze2upnp", NoSort => 1, NoAttr => 1, OutputFile => Plugins::UPnPBridge::Squeeze2upnp->configFile($class)); }, 
+							$class, $client, $params, $callback, 30, @args);
+			$update = 1;
 		}	
 	}
 
@@ -194,21 +186,51 @@ sub handler {
 
 		$log->debug("updating");
 				
-		$prefs->get('autorun') ? Plugins::UPnPBridge::Squeeze2upnp->restart : Plugins::UPnPBridge::Squeeze2upnp->stop;
-
-		Slim::Utils::Timers::setTimer($class, Time::HiRes::time() + 1, sub {
-			$class->handler2( $client, $params, $callback, @args);		  
-		});
-
+		Plugins::UPnPBridge::Squeeze2upnp->stop;
+		waitEndHandler(undef, $class, $client, $params, $callback, 30, @args);
+		
 	#no update detected or first time looping
 	} else {
 
 		$log->debug("not updating");
-		$class->handler2( $client, $params, $callback, @args);		  
+		$class->handler2($client, $params, $callback, @args);		  
 	}
 
 	return undef;
 }
+
+sub waitEndHandler	{
+	my ($func, $class, $client, $params, $callback, $wait, @args) = @_;
+	
+	if (Plugins::UPnPBridge::Squeeze2upnp->alive()) {
+		$log->debug('Waiting for squeeze2upnp to end');
+		$wait--;
+		if ($wait) {
+			Slim::Utils::Timers::setTimer($class, Time::HiRes::time() + 1, sub {
+				waitEndHandler($func, $class, $client, $params, $callback, $wait, @args); });
+		}		
+
+	} else {
+		if (defined $func) {
+			$func->($class, $client, $params, $callback, @args);
+		}
+		else {
+			if ($prefs->get('autorun')) {
+				Plugins::UPnPBridge::Squeeze2upnp->start
+			}
+	
+			$class->handler2($client, $params, $callback, @args);		  
+		}	
+	}
+}
+
+sub genConfig {
+	my ($class, $client, $params, $callback, @args) = @_;
+	
+	my $conf = Plugins::UPnPBridge::Squeeze2upnp->configFile($class);
+	Plugins::UPnPBridge::Squeeze2upnp->start( "-i", $conf );
+	waitEndHandler(undef, $class, $client, $params, $callback, 120, @args);
+}	
 
 sub handler2 {
 	my ($class, $client, $params, $callback, @args) = @_;

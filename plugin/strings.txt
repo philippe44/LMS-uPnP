@@ -27,7 +27,7 @@ PLUGIN_UPNPBRIDGE_BINARIES
 
 PLUGIN_UPNPBRIDGE_BINARIES_DESC
 	EN	Select the Squeeze2upnp binary which best matches your machine's architecture. 
-	EN	This option is only needed for arm based devices where multiple options are available and autodetection is not reliable.)
+	EN	This option is only needed for arm based devices where multiple options are available and autodetection is not reliable.
 
 PLUGIN_UPNPBRIDGE_WARNING
 	EN	It is HIGHLY recommended to stop the bridge before changing parameters
@@ -181,11 +181,13 @@ PLUGIN_UPNPBRIDGE_CODECSPARAM
 PLUGIN_UPNPBRIDGE_CODECSPARAM_DESC
 	EN	Several codecs are supported by the UPnP player. They will be reported to LMS to decide when to do transcoding. 
 	EN	<i>- Supported Codecs</i> is an ordered, comma-separated, list made of mp3, flc, aif, pcm, aac and alc
-	EN	For example, to support (in order of preference) PCM then FLAC and then MP3 , enter "pcm,flc,mp3" (without "")
+	EN	For example, to only support (in order of preference) PCM then FLAC and then MP3 , enter "pcm,flc,mp3" (without "")
 	EN	(<b>aac and alc are untested</b>. 
+	EN  <br><b>NB: if a codec listed here is NOT supported by the player, it will be removed from the list sent to LMS</b>
 	EN	<br>- <i> FLAC header:</i> a FLAC header is required by some players.
-	EN	<br>- <i>Uncompressed format:</i> comma-separated list (<b>ordered</b>) of authorized uncompressed audio formats (amongst wave, aiff, raw)
-	EN	<br>- <i>Match byte order:</i> let the bridge choose which authorized uncompressed format avoids byte re-ordering (reduces CPU) 
+	EN	<br>- <i>Uncompressed format:</i> comma-separated list (<b>ordered</b>) of supported uncompressed audio formats (amongst wav, aiff, raw)
+	EN	<br>- <i>Match byte order:</i> let the bridge choose which supported uncompressed format avoids byte re-ordering (so as to reduces CPU) 
+	EN	<br>- <i>24 bits PCM:</i> 24 bits sample tweaking, including possibility to shrink them to 16 bits
 	
 PLUGIN_UPNPBRIDGE_SAMPLERATE
 	EN	Max Sample Rate

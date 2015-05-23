@@ -5,8 +5,12 @@
  - Some players do not fill "TrackURI" so get it from "TrackMetaData"
  - add <log_limit> to limit the size of logfile
  - by default, codecs are <pcm,aif,flc,mp3>
- - Send a STOP to playing renderers at exit
+ - Send a STOP to playing renderers at exit - critical otherwise libupnp does not stop (deadlock)
  - when checking codecs list, 'aif' was not in the matching list for 'aif' (only audio/L and wav)
+ - when LMS is sending pcm but in AIFF format, there is an 8 bytes header to skip if the data is forwarded as PCM or WAV
+ - add option 2 to L24_format to truncate 24 bits in 16 bits for players that do only 16 bits (only for pm/aiff, not flac)
+ - MainThread only sleeps 1 sec to speed up exit
+ - optimize endianness changes
 
 0.2.2.2 (not published=
  - XML special char were not properly handled in DIDL header ==> moved to a full XML constructor, not a sprintf patch

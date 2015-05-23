@@ -86,7 +86,7 @@ sub start {
 	my @params;
 	my $logging;
 
-	push @params, ("-Z", "-k");
+	push @params, ("-Z");
 	
 	if ($prefs->get('debugs') ne '') {
 		push @params, ("-d", $prefs->get('debugs') . "=debug");
@@ -168,9 +168,6 @@ sub stop {
 	if ($squeeze2upnp && $squeeze2upnp->alive) {
 		$log->info("killing squeeze2upnp");
 		$squeeze2upnp->die;
-		# not sure it is needed, but squeeze2upnp takes some time to stop when killed properly
-		# it might as be a problem to have that in the main loop
-		$squeeze2upnp->wait;
 	}
 }
 

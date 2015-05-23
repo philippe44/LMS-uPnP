@@ -83,6 +83,19 @@ void _buf_inc_writep(struct buffer *buf, unsigned by) {
 	}
 }
 
+void _buf_move(struct buffer *buf, unsigned by) {
+	by = min(by, _buf_used(buf));
+	if (buf->writep >= buf->readp) {
+		memcpy(buf->readp, buf->readp + by, buf->writep - buf->readp);
+	}
+	else {
+		memcpy(buf->readp, buf->readp + by, buf->wrap - buf->readp);
+		memcpy(buf->wrap - by, buf->buf, by);
+		memcpy(buf->buf, buf->buf + by, buf->writep - buf->buf - by);
+	}
+	buf->writep -= by;
+}
+
 void buf_flush(struct buffer *buf) {
 	mutex_lock(buf->mutex);
 	buf->readp  = buf->buf;

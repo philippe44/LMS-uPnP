@@ -241,6 +241,7 @@ static char license[] =
 static void *MRThread(void *args);
 static void *UpdateMRThread(void *args);
 static bool AddMRDevice(struct sMR *Device, char * UDN, IXML_Document *DescDoc,	const char *location);
+static int	uPNPTerminate(void);
 
 /*----------------------------------------------------------------------------*/
 bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t *cookie, void *param)
@@ -274,7 +275,7 @@ static bool AddMRDevice(struct sMR *Device, char * UDN, IXML_Document *DescDoc,	
 
 			LOG_INFO("[%p]: codec:%c, ch:%d, s:%d, r:%d", device, p->content_type[0],
 										p->channels, p->sample_size, p->sample_rate);
-			if (!SetContentType(device->ProtocolCap, param, device->Config.RawAudioFormat, device->Config.MatchEndianness)) {
+			if (!SetContentType(device, param)) {
 				LOG_ERROR("[%p]: no matching codec in player (%s)", caller, p->proto_info);
 				rc = false;
 			}
@@ -940,7 +941,7 @@ static void *MainThread(void *args)
 		}
 
 		last = gettime_ms();
-		sleep(5);
+		sleep(1);
 	}
 	return NULL;
 }
@@ -1084,13 +1085,14 @@ int uPNPInitialize(char *IPaddress, unsigned int *Port)
 }
 
 /*----------------------------------------------------------------------------*/
-int uPNPTerminate()
+int uPNPTerminate(void)
 {
 	LOG_DEBUG("terminate main thread ...", NULL);
 	ithread_join(glMainThread, NULL);
 	LOG_DEBUG("un-register libupnp callbacks ...", NULL);
 	UpnpUnRegisterClient(glControlPointHandle);
 	LOG_DEBUG("disable webserver ...", NULL);
+	UpnpRemoveVirtualDir(glBaseVDIR);
 	UpnpEnableWebserver(false);
 	LOG_DEBUG("end libupnp ...", NULL);
 	UpnpFinish();

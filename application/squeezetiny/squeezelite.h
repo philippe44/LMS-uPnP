@@ -265,6 +265,7 @@ void _buf_inc_writep(struct buffer *buf, unsigned by);
 unsigned _buf_read(void *dst, struct buffer *src, unsigned btes);
 void	*_buf_readp(struct buffer *buf);
 int	 _buf_seek(struct buffer *src, unsigned from, unsigned by);
+void _buf_move(struct buffer *buf, unsigned by);
 unsigned _buf_size(struct buffer *src);
 void buf_flush(struct buffer *buf);
 void buf_adjust(struct buffer *buf, size_t mod);
