@@ -476,6 +476,7 @@ typedef enum {TRACK_STOPPED = 0, TRACK_STARTED, TRACK_PAUSED} track_status_t;
 
 #define PLAYER_NAME_LEN 64
 #define SERVER_NAME_LEN	250
+#define SERVER_VERSION_LEN	32
 #define MAX_PLAYER		32
 
 typedef struct out_ctx_s {
@@ -525,10 +526,12 @@ struct thread_ctx_s {
 	in_addr_t 	slimproto_ip;
 	unsigned 	slimproto_port;
 	char		server[SERVER_NAME_LEN + 1];
+	char		server_version[SERVER_VERSION_LEN + 1];
 	sockfd 		sock, fd, cli_sock;
 	u8_t 		mac[6];
 	char		cli_id[18];		// (6*2)+(5*':')+NULL
 	mutex_type	cli_mutex;
+	bool		aiff_header;
 //	u8_t *buf;					// for output_mr
 //	unsigned buffill;			// for output_mr
 	int bytes_per_frame;		// for output_mr

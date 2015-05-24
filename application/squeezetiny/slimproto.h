@@ -119,6 +119,12 @@ struct aude_packet {
 };
 
 // S:P:Squeezebox2
+struct vers_packet {
+	char  opcode[4];
+	char  version[32];
+};
+
+// S:P:Squeezebox2
 struct audg_packet {
 	char  opcode[4];
 	u32_t old_gainL;     // unused

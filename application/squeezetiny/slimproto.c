@@ -547,6 +547,13 @@ static void process_serv(u8_t *pkt, int len,struct thread_ctx_s *ctx) {
 	}
 }
 
+/*---------------------------------------------------------------------------*/
+static void process_vers(u8_t *pkt, int len,struct thread_ctx_s *ctx) {
+	struct vers_packet *vers = (struct vers_packet *)pkt;
+
+	LOG_INFO("[%p] version %s", ctx, vers->version);
+}
+
 struct handler {
 	char opcode[6];
 	void (*handler)(u8_t *, int, struct thread_ctx_s *);
@@ -561,6 +568,7 @@ static struct handler handlers[] = {
 	{ "setd", process_setd },
 	{ "serv", process_serv },
 	{ "ledc", process_ledc },
+	{ "vers", process_vers },
 	{ "",     NULL  },
 };
 
@@ -585,6 +593,9 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 	u32_t now;
 	event_handle ehandles[2];
 	int timeouts = 0;
+
+	ctx->aiff_header = false;
+	if (strstr(ctx->server_version, "7.7")) ctx->aiff_header = true;
 
 	set_readwake_handles(ehandles, ctx->sock, ctx->wake_e);
 
@@ -796,7 +807,7 @@ void wake_controller(struct thread_ctx_s *ctx) {
 in_addr_t discover_server(struct thread_ctx_s *ctx) {
 	struct sockaddr_in d;
 	struct sockaddr_in s;
-	char *buf;
+	char buf[32], vers[] = "VERS";
 	struct pollfd pollinfo;
 
 	int disc_sock = socket(AF_INET, SOCK_DGRAM, 0);
@@ -804,7 +815,7 @@ in_addr_t discover_server(struct thread_ctx_s *ctx) {
 	socklen_t enable = 1;
 	setsockopt(disc_sock, SOL_SOCKET, SO_BROADCAST, (const void *)&enable, sizeof(enable));
 
-	buf = "e";
+	sprintf(buf,"e%s", vers);
 
 	memset(&d, 0, sizeof(d));
 	d.sin_family = AF_INET;
@@ -818,14 +829,22 @@ in_addr_t discover_server(struct thread_ctx_s *ctx) {
 		LOG_DEBUG("[%p] sending discovery", ctx);
 		memset(&s, 0, sizeof(s));
 
-		if (sendto(disc_sock, buf, 1, 0, (struct sockaddr *)&d, sizeof(d)) < 0) {
+		if (sendto(disc_sock, buf, strlen(buf) + 1, 0, (struct sockaddr *)&d, sizeof(d)) < 0) {
 			LOG_WARN("[%p] error sending discovery", ctx);
 		}
 
 		if (poll(&pollinfo, 1, 5000) == 1) {
-			char readbuf[10];
+			char readbuf[32], *p;
+
 			socklen_t slen = sizeof(s);
-			recvfrom(disc_sock, readbuf, 10, 0, (struct sockaddr *)&s, &slen);
+			memset(readbuf, 0, 32);
+			recvfrom(disc_sock, readbuf, 32 - 1, 0, (struct sockaddr *)&s, &slen);
+			if ((p = strstr(readbuf, vers))) {
+				p += strlen(vers);
+				*(p + (*p+1)) = '\0';
+				strncpy(ctx->server_version, p + 1, SERVER_VERSION_LEN);
+				ctx->server_version[SERVER_VERSION_LEN] = '\0';
+			}
 			LOG_DEBUG("[%p] got response from: %s:%d", ctx, inet_ntoa(s.sin_addr), ntohs(s.sin_port));
 		}
 	} while (s.sin_addr.s_addr == 0 && ctx->running);

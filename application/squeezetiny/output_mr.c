@@ -531,8 +531,9 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 				AIFF: there is a blocksize + offset of 8 bytes, just skip them
 				but also need to realign buffer to sample_size boundary.
 				NB: assumes there are at least 8 bytes in the buffer
+				!!! only in 7.7x !!!
 				*/
-				if (!out->write_count && !out->endianness) {
+				if (!out->write_count && !out->endianness && ctx->aiff_header) {
 					_buf_move(ctx->streambuf, 8);
 					 space -= 8;
 				}
@@ -621,8 +622,10 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 					AIFF: there is a blocksize + offset of 8 bytes, just skip them
 					but also need to realign buffer to sample_size boundary.
 					NB: assumes there are at least 8 bytes in the buffer
+					!!! only in 7.7x !!!
 					*/
-					if (!out->endianness) {
+					if (!out->endianness && ctx->aiff_header) {
+						LOG_INFO("[%p]: stripping AIFF un-needed data", ctx);
 						_buf_move(ctx->streambuf, 8);
 						 space -= 8;
 					}
@@ -655,11 +658,12 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 
 					/*
 					AIFF: there is a blocksize + offset of 8 bytes that is sent
-					by LMS, so need to remove it so that data are aligned inside
-					the buffer. Otherwise, when 24 bits samples are send, buffer
-					contains 8*3*n and is not aligned to an integer number of samples
-					*/
-					if (!out->endianness) {
+					by LMS *only* on version 7.7.x, so need to remove it so that
+					data are aligned inside the buffer. Otherwise, when 24 bits
+					samples are send, buffer contains 8*3*n and is not aligned
+					to an integer number of samples */
+					if (!out->endianness && ctx->aiff_header) {
+						LOG_INFO("[%p]: stripping AIFF un-needed data", ctx);
 						_buf_move(ctx->streambuf, 8);
 						 space -= 8;
 					}

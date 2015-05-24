@@ -7,7 +7,8 @@
  - by default, codecs are <pcm,aif,flc,mp3>
  - Send a STOP to playing renderers at exit - critical otherwise libupnp does not stop (deadlock)
  - when checking codecs list, 'aif' was not in the matching list for 'aif' (only audio/L and wav)
- - when LMS is sending pcm but in AIFF format, there is an 8 bytes header to skip if the data is forwarded as PCM or WAV
+ - In LMS 7.7, when sending pcm in AIFF format, there is an 8 bytes header to skip if the data is forwarded as PCM or WAV. Does not exist in 7.9 (don't know for 7.8)
+ - Query LMS version at discovery do differentiate between different AIFF option
  - add option 2 to L24_format to truncate 24 bits in 16 bits for players that do only 16 bits (only for pm/aiff, not flac)
  - MainThread only sleeps 1 sec to speed up exit
  - optimize endianness changes
