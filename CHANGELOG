@@ -1,3 +1,9 @@
+0.2.3.0-rc2
+ - AIFF problem is for all versions before 7.9
+ - AIFF partial header' in not sent in LMS < 7.9 when transcoding happens, so try to detect source file format
+ - aif removed from default codec list, too troublesome
+ - fwrite for 24 bits pcm was not using adjusted buffer size
+
 0.2.3.0
  - Support fully AIFF => build header on the fly
  - Use TrackURI from GetPositionInfo and not from GetMediaInfo - this is more reliable and saves one polling UPnP request 

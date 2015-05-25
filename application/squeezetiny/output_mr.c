@@ -171,11 +171,25 @@ static struct aiff_header_s {
 	u8_t	sample_rate_num[8];
 	u8_t    data_id[4];
 	u8_t	data_size[4];
+#ifdef AIFF_MARKER
+	u8_t	marker_chunk[4];
+	u8_t	marker_size[4];
+	u8_t	nb_marker[2];
+	u8_t	marker_id[2];
+	u8_t	marker_pos[4];
+	u8_t	marke_name[4];
+#endif
 	u32_t	offset;
 	u32_t	blocksize;
+#define AIFF_PAD_SIZE	2				// C compiler adds a padding to that structure, need to discount it
+	u8_t	pad[2];
 } aiff_header = {
 		{ 'F', 'O', 'R', 'M' },
+#ifdef AIFF_MARKER
+		{ 0x3B, 0x9A, 0xCA, 0x48 },		// adding comm, mark, ssnd and AIFF sizes
+#else
 		{ 0x3B, 0x9A, 0xCA, 0x2E },		// adding comm, ssnd and AIFF sizes
+#endif
 		{ 'A', 'I', 'F', 'F' },
 		{ 'C', 'O', 'M', 'M' },
 		{ 0x00, 0x00, 0x00, 0x12 },
@@ -186,6 +200,14 @@ static struct aiff_header_s {
 		{ 0x00, 0x00 },
 		{ 'S', 'S', 'N', 'D' },
 		{ 0x3B, 0x9A, 0xCA, 0x08 },		// one chunk of 10^9 bytes + 8
+#ifdef AIFF_MARKER
+		{ 'M', 'A', 'R', 'K' },
+		{ 0x00, 0x00, 0x00, 0x0C },
+		{ 0x00, 0x01 },
+		{ 0x00, 0x01 },
+		{ 0x00, 0x00, 0x00, 0x00 },
+		{ 0x03, 'b', 'e', 'g' },
+#endif
 		0,
 		0
 	};
@@ -528,14 +550,16 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 				u8_t *p;
 
 				/*
-				AIFF: there is a blocksize + offset of 8 bytes, just skip them
-				but also need to realign buffer to sample_size boundary.
+				!!! only if LMS < 7.9.x !!!
+				if the source file is an AIF, there is a blocksize + offset of
+				8 bytes, just skip them	but also need to realign buffer to
+				sample_size boundary.
 				NB: assumes there are at least 8 bytes in the buffer
-				!!! only in 7.7x !!!
+				!!! only if LMS < 7.9.x !!!
 				*/
-				if (!out->write_count && !out->endianness && ctx->aiff_header) {
+				if (!out->write_count && !out->endianness && ctx->aiff_header && (out->src_format == 'i')) {
 					_buf_move(ctx->streambuf, 8);
-					 space -= 8;
+					 nb_write = space -= 8;
 				}
 
 				p = _buf_readp(ctx->streambuf);
@@ -544,7 +568,7 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 				if (out->sample_size == 24 && ctx->config.L24_format == L24_TRUNC_16) {
 					nb_write = truncate16(p, &space, out->endianness, 0);
 				}
-				// 2 or 4 bytes or 3 bytes with no packing, but changed endianness
+				// 2 or 4 bytes or 3 bytes with no packing, but change endianness
 				else if (out->endianness && (out->sample_size != 24 || (out->sample_size == 24 && ctx->config.L24_format == L24_PACKED))) {
 						nb_write = change_endianness(p, &space, out->sample_size / 8);
 				}
@@ -554,7 +578,7 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 					u32_t i;
 					u8_t j, buf[12];
 
-					space = (space / 12) * 12;
+					nb_write = space = (space / 12) * 12;
 					for (i = 0; i < space; i += 12) {
 						// order after that should be L0T,L0M,L0B,R0T,R0M,R0B,L1T,L1M,L1B,R1T,R1M,R1B
 						if (out->endianness) for (j = 0; j < 12; j += 3) {
@@ -580,7 +604,7 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 					u32_t i;
 					u8_t j, buf[6];
 
-					space = (space / 6) * 6;
+					nb_write = space = (space / 6) * 6;
 					for (i = 0; i < space; i += 6) {
 						// order after that should be C0T,C0M,C0B,C1T,C1M,C1B
 						if (out->endianness) for (j = 0; j < 6; j += 3) {
@@ -619,15 +643,17 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 					LOG_INFO("[%p]: wave header", ctx);
 
 					/*
-					AIFF: there is a blocksize + offset of 8 bytes, just skip them
-					but also need to realign buffer to sample_size boundary.
+					!!! only if LMS < 7.9.x !!!
+					if the source file is an AIF, there is a blocksize + offset of
+					8 bytes, just skip them	but also need to realign buffer to
+					sample_size boundary.
 					NB: assumes there are at least 8 bytes in the buffer
-					!!! only in 7.7x !!!
+					!!! only if LMS < 7.9.x !!!
 					*/
-					if (!out->endianness && ctx->aiff_header) {
+					if (!out->endianness && ctx->aiff_header && (out->src_format == 'i')) {
 						LOG_INFO("[%p]: stripping AIFF un-needed data", ctx);
 						_buf_move(ctx->streambuf, 8);
-						 space -= 8;
+						 nb_write = space -= 8;
 					}
 				}
 
@@ -652,20 +678,22 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 					aiff_header.sample_size[1] = sample_size;
 					aiff_header.sample_rate_num[0] = (u8_t) (out->sample_rate >> 8);
 					aiff_header.sample_rate_num[1] = (u8_t) out->sample_rate;
-					out->write_count = fwrite(&aiff_header, 1, sizeof(struct aiff_header_s), out->write_file);
+					out->write_count = fwrite(&aiff_header, 1, sizeof(struct aiff_header_s) - AIFF_PAD_SIZE, out->write_file);
 					out->write_count_t = out->write_count;
 					LOG_INFO("[%p]: aiff header", ctx);
 
 					/*
-					AIFF: there is a blocksize + offset of 8 bytes that is sent
-					by LMS *only* on version 7.7.x, so need to remove it so that
-					data are aligned inside the buffer. Otherwise, when 24 bits
-					samples are send, buffer contains 8*3*n and is not aligned
-					to an integer number of samples */
-					if (!out->endianness && ctx->aiff_header) {
+					!!! only if LMS < 7.9.x !!!
+					if the source file is an AIF, there is a blocksize + offset of
+					8 bytes, just skip them	but also need to realign buffer to
+					sample_size boundary.
+					NB: assumes there are at least 8 bytes in the buffer
+					!!! only if LMS < 7.9.x !!!
+					*/
+					if (!out->endianness && ctx->aiff_header && (out->src_format == 'i')) {
 						LOG_INFO("[%p]: stripping AIFF un-needed data", ctx);
 						_buf_move(ctx->streambuf, 8);
-						 space -= 8;
+						 nb_write = space -= 8;
 					}
 				}
 

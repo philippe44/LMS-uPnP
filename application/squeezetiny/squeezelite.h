@@ -486,6 +486,7 @@ typedef struct out_ctx_s {
 	struct thread_ctx_s *owner;
 	unsigned 			idx;
 	char				ext[5];
+	char				src_format;
 	u8_t				sample_size;
 	u32_t				sample_rate;
 	bool				endianness;

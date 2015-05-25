@@ -51,6 +51,23 @@ static char *format2ext(u8_t format)
 	}
 }
 
+/*---------------------------------------------------------------------------*/
+u8_t ext2format(char *ext)
+{
+	if (!ext) return ' ';
+
+	if (strstr(ext, "wav")) return 'p';
+	if (strstr(ext, "flac") || strstr(ext, "flc")) return 'f';
+	if (strstr(ext, "mp3")) return 'm';
+	if (strstr(ext, "wma")) return 'w';
+	if (strstr(ext, "ogg")) return 'o';
+	if (strstr(ext, "m4a")) return 'a';
+	if (strstr(ext, "mp4")) return 'l';
+	if (strstr(ext, "aif")) return 'i';
+
+	return ' ';
+}
+
 /*----------------------------------------------------------------------------*/
 bool _SetContentType(char *Cap[], sq_seturi_t *uri, int n, ...)
 {
@@ -78,12 +95,12 @@ bool _SetContentType(char *Cap[], sq_seturi_t *uri, int n, ...)
 				strcpy(uri->content_type, fmt);
 				strcpy(uri->proto_info, *p);
 				// special case of wave and aiff, need to change file extension
-				if (strstr(*p, "wav")) strcpy(uri->format, "wav");
-				if (strstr(*p, "aiff")) strcpy(uri->format, "aif");
+				if (strstr(*p, "wav")) strcpy(uri->ext, "wav");
+				if (strstr(*p, "aiff")) strcpy(uri->ext, "aif");
 				break;
 			}
 			// re-set file extension
-			strcpy(uri->format, "pcm");
+			strcpy(uri->ext, "pcm");
             // if the proposed format accepts any rate & channel, give it a try
 			if (!strstr(*p, "channels") && !strstr(*p, "rate")) {
 				int size = strstr(*p, fmt) - *p;
@@ -150,7 +167,7 @@ static bool SetContentTypeRawAudio(struct sMR *Device, sq_seturi_t *uri, bool Ma
 /*----------------------------------------------------------------------------*/
 bool SetContentType(struct sMR *Device, sq_seturi_t *uri)
 {
-	strcpy(uri->format, format2ext(uri->content_type[0]));
+	strcpy(uri->ext, format2ext(uri->content_type[0]));
 
 	switch (uri->content_type[0]) {
 	case 'm': return _SetContentType(Device->ProtocolCap, uri, 3, "audio/mp3", "audio/mpeg", "audio/mpeg3");

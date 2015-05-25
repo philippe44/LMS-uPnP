@@ -1,8 +1,8 @@
-- add matching pattern in config file to allow configuration by group
-- add option to call an external program when upnp player is locked 
-- create a small optimizer that parses the discovered config.xml and tweaks it according to COMPATIBILITY 
+- Need to refactor the code of SQ_SETFORMAT and SQ_SETXXXURI to put the metadata gathering in SQ_SETFORMAT and so in Device context. Be cautious with potential reace conditons with device that don't handle nexturi
 - On Pi B+, FLAC and WAV fail to play on Sonos - seems to be a CPU/network speed issue (works on Pi 2) but not as clear as PCM and FLAC works fine on other some other players. Need to investigate why Sonos seems to be starved by audio data
 
 UNLIKELY
 - enhance metadata management: add albumart and filesize (LMS won't give it)
 - use filesize to specify content-length in HTTP transfer to accomodate more players (see above)
+- add matching pattern in config file to allow configuration by group
+- add option to call an external program when upnp player is locked 

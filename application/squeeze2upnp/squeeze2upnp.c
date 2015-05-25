@@ -92,7 +92,7 @@ sq_dev_param_t glDeviceParam = {
 						SQ_RATE_12000, SQ_RATE_11025, SQ_RATE_8000, 0 },
 					-1,
 					100,
-					"flc,pcm,aif,mp3",
+					"flc,pcm,mp3",
 					SQ_RATE_48000,
 					L24_PACKED_LPCM,
 					FLAC_NORMAL_HEADER,
@@ -293,7 +293,6 @@ static int	uPNPTerminate(void);
 
 			NFREE(device->NextURI);
 
-			strcpy(device->NextProtInfo, p->proto_info);
 			if (device->Config.SendMetaData) {
 				sq_get_metadata(device->SqueezeHandle, &device->NextMetaData, true);
 				p->file_size = device->NextMetaData.file_size ?
@@ -303,6 +302,9 @@ static int	uPNPTerminate(void);
 				sq_default_metadata(&device->NextMetaData, true);
 				p->file_size = device->Config.StreamLength;
 			}
+
+			strcpy(device->NextProtInfo, p->proto_info);
+			p->src_format = ext2format(device->NextMetaData.path);
 
 			if (device->Config.AcceptNextURI){
 				AVTSetNextURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info,
@@ -341,6 +343,8 @@ static int	uPNPTerminate(void);
 				sq_default_metadata(&MetaData, true);
 				p->file_size = device->Config.StreamLength;
 			}
+			p->src_format = ext2format(MetaData.path);
+
 			AVTSetURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info, &MetaData, device->seqN++);
 			sq_free_metadata(&MetaData);
 
@@ -636,7 +640,6 @@ int CallbackActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 			// URI detection response
 #if 1
 			r = XMLGetFirstDocumentItem(Action->ActionResult, "TrackURI");
-			if (r) *r = 0;
 #else
 			r = XMLGetFirstDocumentItem(Action->ActionResult, "CurrentURI");
 #endif
@@ -651,8 +654,8 @@ int CallbackActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 				NFREE(s);
 
 				node = (IXML_Node*) ixmlDocument_getElementById(doc, "res");
-				node = (IXML_Node*) ixmlNode_getFirstChild(node);
-				r = strdup(ixmlNode_getNodeValue(node));
+				if (node) node = (IXML_Node*) ixmlNode_getFirstChild(node);
+				if (node) r = strdup(ixmlNode_getNodeValue(node));
 
 				LOG_DEBUG("[%p]: no Current URI, use MetaData %s", p, r);
 				if (doc) ixmlDocument_free(doc);

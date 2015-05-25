@@ -26,4 +26,6 @@ void 			*LoadMRConfig(void *ref, char *UDN, tMRConfig *Conf, sq_dev_param_t *sq_
 void 			ParseProtocolInfo(struct sMR *Device, char *Info);
 void			CheckCodecs(struct sMR *Device);
 
+u8_t 			ext2format(char *ext);
+
 #endif

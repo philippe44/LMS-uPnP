@@ -381,7 +381,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 					*/
 					if (ctx_callback(ctx, SQ_SETFORMAT, NULL, &uri)) {
 						strcpy(ctx->out_ctx[idx].content_type, uri.content_type);
-						strcpy(ctx->out_ctx[idx].ext, uri.format);
+						strcpy(ctx->out_ctx[idx].ext, uri.ext);
 						strcpy(uri.urn, ctx->out_ctx[idx].buf_name);
 						strcat(uri.urn, ".");
 						strcat(uri.urn, ctx->out_ctx[idx].ext);
@@ -401,6 +401,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 						}
 						LOG_INFO("[%p] URI proxied by SQ2MR : %s", ctx, uri.urn);
 						ctx->out_ctx[idx].file_size = uri.file_size;
+						ctx->out_ctx[idx].src_format = uri.src_format;
 
 					}
 					else ctx->decode.state = DECODE_ERROR;
@@ -595,7 +596,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 	int timeouts = 0;
 
 	ctx->aiff_header = false;
-	if (strstr(ctx->server_version, "7.7")) ctx->aiff_header = true;
+	if ((strstr(ctx->server_version, "7.7")) || strstr(ctx->server_version, "7.8")) ctx->aiff_header = true;
 
 	set_readwake_handles(ehandles, ctx->sock, ctx->wake_e);
 
