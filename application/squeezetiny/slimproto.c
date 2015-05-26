@@ -840,7 +840,7 @@ in_addr_t discover_server(struct thread_ctx_s *ctx) {
 			socklen_t slen = sizeof(s);
 			memset(readbuf, 0, 32);
 			recvfrom(disc_sock, readbuf, 32 - 1, 0, (struct sockaddr *)&s, &slen);
-			if ((p = strstr(readbuf, vers))) {
+			if ((p = strstr(readbuf, vers)) != NULL) {
 				p += strlen(vers);
 				*(p + (*p+1)) = '\0';
 				strncpy(ctx->server_version, p + 1, SERVER_VERSION_LEN);

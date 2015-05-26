@@ -344,7 +344,7 @@ void ParseProtocolInfo(struct sMR *Device, char *Info)
 	} while (i < MAX_PROTO && n < size);
 
 	// remove trailing "*" as we WILL add DLNA-related info, so some options to come
-	for (i = 0; (p = Device->ProtocolCap[i]); i++)
+	for (i = 0; (p = Device->ProtocolCap[i]) != NULL; i++)
 		if (p[strlen(p) - 1] == '*') p[strlen(p) - 1] = '\0';
 
 	Device->ProtocolCapReady = true;
@@ -421,7 +421,7 @@ void SaveConfig(char *name, void *ref, bool full)
 
 	old_root = ixmlDocument_getElementById(old_doc, "squeeze2upnp");
 
-	if (!full && ref) {
+	if (!full && old_doc) {
 		root = ixmlNode_cloneNode((IXML_Node*) old_root, true);
 		ixmlNode_appendChild((IXML_Node*) doc, root);
 
@@ -488,61 +488,18 @@ void SaveConfig(char *name, void *ref, bool full)
 		if (!glMRDevices[i].InUse) continue;
 		else p = &glMRDevices[i];
 
-		dev_node = XMLAddNode(doc, root, "device", NULL);
-		XMLAddNode(doc, dev_node, "udn", p->UDN);
-		XMLAddNode(doc, dev_node, "name", *(p->Config.Name) ? p->Config.Name : p->FriendlyName);
-		XMLAddNode(doc, dev_node, "mac", "%02x:%02x:%02x:%02x:%02x:%02x", p->sq_config.mac[0],
-					p->sq_config.mac[1], p->sq_config.mac[2], p->sq_config.mac[3], p->sq_config.mac[4], p->sq_config.mac[5]);
-		XMLAddNode(doc, dev_node, "enabled", "%d", (int) p->Config.Enabled);
-
-		if (p->sq_config.stream_buf_size != glDeviceParam.stream_buf_size)
-			XMLAddNode(doc, dev_node, "streambuf_size", "%d", (u32_t) p->sq_config.stream_buf_size);
-		if (p->sq_config.output_buf_size != glDeviceParam.output_buf_size)
-			XMLAddNode(doc, dev_node, "output_size", "%d", (u32_t) p->sq_config.output_buf_size);
-		if (strcmp(p->sq_config.buffer_dir, glDeviceParam.buffer_dir))
-			XMLAddNode(doc, dev_node, "buffer_dir", p->sq_config.buffer_dir);
-		if (p->sq_config.buffer_limit != glDeviceParam.buffer_limit)
-			XMLAddNode(doc, dev_node, "buffer_limit", "%d", (u32_t) p->sq_config.buffer_limit);
-		if (p->Config.StreamLength != glMRConfig.StreamLength)
-			XMLAddNode(doc, dev_node, "stream_length", "%d", (s32_t) p->Config.StreamLength);
-		if (p->sq_config.max_read_wait != glDeviceParam.max_read_wait)
-			XMLAddNode(doc, dev_node, "max_read_wait", "%d", (int) p->sq_config.max_read_wait);
-		if (p->sq_config.max_get_bytes != glDeviceParam.max_get_bytes)
-			XMLAddNode(doc, dev_node, "max_GET_size", "%d", (s32_t) p->sq_config.max_get_bytes);
-		if (p->Config.ProcessMode != glMRConfig.ProcessMode)
-			XMLAddNode(doc, dev_node, "process_mode", "%d", (int) p->Config.ProcessMode);
-		if (p->Config.SeekAfterPause != glMRConfig.SeekAfterPause)
-			XMLAddNode(doc, dev_node, "seek_after_pause", "%d", (int) p->Config.SeekAfterPause);
-		if (p->Config.ForceVolume != glMRConfig.ForceVolume)
-			XMLAddNode(doc, dev_node, "force_volume", "%d", (int) p->Config.ForceVolume);
-		if (p->Config.VolumeOnPlay != glMRConfig.VolumeOnPlay)
-			XMLAddNode(doc, dev_node, "volume_on_play", "%d", (int) p->Config.VolumeOnPlay);
-		if (p->Config.SendMetaData != glMRConfig.SendMetaData)
-			XMLAddNode(doc, dev_node, "send_metadata", "%d", (int) p->Config.SendMetaData);
-		if (strcmp(p->Config.VolumeCurve, glMRConfig.VolumeCurve))
-			XMLAddNode(doc, dev_node, "volume_curve", p->Config.VolumeCurve);
-		if (p->Config.MaxVolume != glMRConfig.MaxVolume)
-			XMLAddNode(doc, dev_node, "max_volume", "%d", p->Config.MaxVolume);
-		if (p->Config.AcceptNextURI != glMRConfig.AcceptNextURI)
-			XMLAddNode(doc, dev_node, "accept_nexturi", "%d", (int) p->Config.AcceptNextURI);
-		if (strcmp(p->sq_config.codecs, glDeviceParam.codecs))
-			XMLAddNode(doc, dev_node, "codecs", p->sq_config.codecs);
-		if (p->sq_config.sample_rate != glDeviceParam.sample_rate)
-			XMLAddNode(doc, dev_node, "sample_rate", "%d", (int) p->sq_config.sample_rate);
-		if (p->sq_config.L24_format != glDeviceParam.L24_format)
-			XMLAddNode(doc, dev_node, "L24_format", "%d", (int) p->sq_config.L24_format);
-		if (p->sq_config.flac_header != glDeviceParam.flac_header)
-			XMLAddNode(doc, dev_node, "flac_header", "%d", (int) p->sq_config.flac_header);
-		if (p->sq_config.keep_buffer_file != glDeviceParam.keep_buffer_file)
-			XMLAddNode(doc, dev_node, "keep_buffer_file", "%d", (int) p->sq_config.keep_buffer_file);
-		if (p->Config.uPNPRemoveCount != glMRConfig.uPNPRemoveCount)
-			XMLAddNode(doc, dev_node, "upnp_remove_count", "%d", (int) p->Config.uPNPRemoveCount);
-		if (strcmp(p->Config.RawAudioFormat, glMRConfig.RawAudioFormat))
-			XMLAddNode(doc, dev_node, "raw_audio_format", p->Config.RawAudioFormat);
-		if (p->Config.MatchEndianness != glMRConfig.MatchEndianness)
-			XMLAddNode(doc, dev_node, "match_endianness", "%d", (int) p->Config.MatchEndianness);
-
-		p = p->Next;
+		if (old_doc && ((dev_node = (IXML_Node*) FindMRConfig(old_doc, p->UDN)) != NULL)) {
+			dev_node = ixmlNode_cloneNode(dev_node, true);
+			ixmlNode_appendChild((IXML_Node*) doc, root);
+		}
+		else {
+			dev_node = XMLAddNode(doc, root, "device", NULL);
+			XMLAddNode(doc, dev_node, "udn", p->UDN);
+			XMLAddNode(doc, dev_node, "name", *(p->Config.Name) ? p->Config.Name : p->FriendlyName);
+			XMLAddNode(doc, dev_node, "mac", "%02x:%02x:%02x:%02x:%02x:%02x", p->sq_config.mac[0],
+						p->sq_config.mac[1], p->sq_config.mac[2], p->sq_config.mac[3], p->sq_config.mac[4], p->sq_config.mac[5]);
+			XMLAddNode(doc, dev_node, "enabled", "%d", (int) p->Config.Enabled);
+		}
 	}
 
 	// add devices in old XML file that has not been discovered

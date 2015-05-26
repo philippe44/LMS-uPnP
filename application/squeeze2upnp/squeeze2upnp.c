@@ -886,7 +886,7 @@ static void *UpdateMRThread(void *args)
 
 	glDiscovery = true;
 	if (glAutoSaveConfigFile && !glSaveConfigFile) {
-		LOG_INFO("Updating configuration %s", glConfigName);
+		LOG_DEBUG("Updating configuration %s", glConfigName);
 		SaveConfig(glConfigName, glConfigID, false);
 	}
 
@@ -930,7 +930,7 @@ static void *MainThread(void *args)
 				FILE *wlog = fopen(glLogFile, "r+b");
 				LOG_INFO("Resizing log", NULL);
 				for (Sum = 0, fseek(rlog, size - (glLogLimit*1024*1024) / 2, SEEK_SET);
-					 (BufSize = fread(buf, 1, BufSize, rlog));
+					 (BufSize = fread(buf, 1, BufSize, rlog)) != 0;
 					 Sum += BufSize, fwrite(buf, 1, BufSize, wlog));
 
 				Sum = fresize(wlog, Sum);
