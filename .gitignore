@@ -92,5 +92,6 @@ bin.old/
 #plugin/Bin
 /repo*.xml
 /package*.*
+alpha/
 
 

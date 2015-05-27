@@ -1,3 +1,6 @@
+0.2.3.0-rc3 (plugin)
+ - when log is disable, no log shall be generated eveen if extra debug options are set
+
 0.2.3.0-rc2
  - AIFF problem is for all versions before 7.9
  - AIFF partial header' in not sent in LMS < 7.9 when transcoding happens, so try to detect source file format

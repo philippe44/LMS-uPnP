@@ -88,10 +88,6 @@ sub start {
 
 	push @params, ("-Z");
 	
-	if ($prefs->get('debugs') ne '') {
-		push @params, ("-d", $prefs->get('debugs') . "=debug");
-	}
-		
 	if ($prefs->get('autosave')) {
 		push @params, ("-I");
 	}
@@ -100,8 +96,12 @@ sub start {
 		unlink $class->logFile;
 	}
 
-	if ($prefs->get('logging') || $prefs->get('debugs') ne '') {
+	if ($prefs->get('logging')) {
 		push @params, ("-f", $class->logFile);
+		
+		if ($prefs->get('debugs') ne '') {
+			push @params, ("-d", $prefs->get('debugs') . "=debug");
+		}
 		$logging = 1;
 	}
 	
