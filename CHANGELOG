@@ -1,18 +1,14 @@
-0.2.3.1.3
- - changing naming
- - cleaning LOG
-
-0.2.3.1.3 (plugin)
+0.2.3.0 (plugin)
  - when log is disable, no log shall be generated eveen if extra debug options are set
  - space char instead of thab on line 186
 
-0.2.3.0-rc2
+0.2.3.0
+ - changing naming
+ - cleaning LOG
  - AIFF problem is for all versions before 7.9
  - AIFF partial header' in not sent in LMS < 7.9 when transcoding happens, so try to detect source file format
  - aif removed from default codec list, too troublesome
  - fwrite for 24 bits pcm was not using adjusted buffer size
-
-0.2.3.0
  - Support fully AIFF => build header on the fly
  - Use TrackURI from GetPositionInfo and not from GetMediaInfo - this is more reliable and saves one polling UPnP request 
  - by default, only use pcm in <raw_audio_format> because wav and aiff require a filesize and some players are stuck on the current URI when the whole size has not been received
@@ -27,7 +23,7 @@
  - MainThread only sleeps 1 sec to speed up exit
  - optimize endianness changes
 
-0.2.2.2 (not published=
+0.2.2.2 (not published)
  - XML special char were not properly handled in DIDL header ==> moved to a full XML constructor, not a sprintf patch
  - using autosave, only <device> sections are written unless there is no existing config file
  - removed memory leak in SaveConfig (nodelist using wrong free)
