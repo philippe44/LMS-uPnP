@@ -44,7 +44,7 @@ static void send_header(struct thread_ctx_s *ctx) {
 				usleep(1000);
 				continue;
 			}
-			LOG_INFO("[%p] failed writing to socket: %s", ctx, strerror(last_error()));
+			LOG_WARN("[%p] failed writing to socket: %s", ctx, strerror(last_error()));
 			ctx->stream.disconnect = LOCAL_DISCONNECT;
 			ctx->stream.state = DISCONNECT;
 			wake_controller(ctx);
@@ -159,7 +159,7 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 							UNLOCK_S;
 							continue;
 						}
-						LOG_INFO("[%p] error reading headers: %s", ctx, n ? strerror(last_error()) : "closed");
+						LOG_WARN("[%p] error reading headers: %s", ctx, n ? strerror(last_error()) : "closed");
 						_disconnect(STOPPED, LOCAL_DISCONNECT, ctx);
 						UNLOCK_S;
 						continue;
@@ -201,7 +201,7 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 								UNLOCK_S;
 								continue;
 							}
-							LOG_INFO("[%p] error reading icy meta: %s", ctx, n ? strerror(last_error()) : "closed");
+							LOG_WARN("[%p] error reading icy meta: %s", ctx, n ? strerror(last_error()) : "closed");
 							_disconnect(STOPPED, LOCAL_DISCONNECT, ctx);
 							UNLOCK_S;
 							continue;
@@ -218,7 +218,7 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 								UNLOCK_S;
 								continue;
 							}
-							LOG_INFO("[%p] error reading icy meta: %s", ctx, n ? strerror(last_error()) : "closed");
+							LOG_WARN("[%p] error reading icy meta: %s", ctx, n ? strerror(last_error()) : "closed");
 							_disconnect(STOPPED, LOCAL_DISCONNECT, ctx);
 							UNLOCK_S;
 							continue;
@@ -255,7 +255,7 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 						_disconnect(DISCONNECT, DISCONNECT_OK, ctx);
 					}
 					if (n < 0 && last_error() != ERROR_WOULDBLOCK) {
-						LOG_INFO("[%p] error reading: %s", ctx, strerror(last_error()));
+						LOG_WARN("[%p] error reading: %s", ctx, strerror(last_error()));
 						_disconnect(DISCONNECT, REMOTE_DISCONNECT, ctx);
 					}
 
@@ -361,7 +361,7 @@ void stream_file(const char *header, size_t header_len, unsigned threshold, stru
 
 	ctx->stream.state = STREAMING_FILE;
 	if (ctx->fd < 0) {
-		LOG_INFO("[%p] can't open file: %s", ctx, ctx->stream.header);
+		LOG_WARN("[%p] can't open file: %s", ctx, ctx->stream.header);
 		ctx->stream.state = DISCONNECT;
 	}
 	wake_controller(ctx);
@@ -399,7 +399,7 @@ void stream_sock(u32_t ip, u16_t port, const char *header, size_t header_len, un
 	set_nosigpipe(sock);
 
 	if (connect_timeout(sock, (struct sockaddr *) &addr, sizeof(addr), 10) < 0) {
-		LOG_INFO("[%p] unable to connect to server", ctx);
+		LOG_WARN("[%p] unable to connect to server", ctx);
 		LOCK_S;
 		ctx->stream.state = DISCONNECT;
 		ctx->stream.disconnect = UNREACHABLE;

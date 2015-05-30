@@ -177,7 +177,7 @@ void decode_thread_init(struct thread_ctx_s *ctx) {
 /*---------------------------------------------------------------------------*/
 void decode_close(struct thread_ctx_s *ctx) {
 
-	LOG_INFO("close decode", NULL);
+	LOG_DEBUG("close decode", NULL);
 	LOCK_D;
 	if (ctx->codec) {
 		ctx->codec->close();

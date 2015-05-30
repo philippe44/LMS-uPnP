@@ -552,7 +552,7 @@ static void process_serv(u8_t *pkt, int len,struct thread_ctx_s *ctx) {
 static void process_vers(u8_t *pkt, int len,struct thread_ctx_s *ctx) {
 	struct vers_packet *vers = (struct vers_packet *)pkt;
 
-	LOG_INFO("[%p] version %s", ctx, vers->version);
+	LOG_DEBUG("[%p] version %s", ctx, vers->version);
 }
 
 struct handler {

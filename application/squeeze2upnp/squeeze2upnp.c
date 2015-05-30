@@ -265,7 +265,7 @@ static int	uPNPTerminate(void);
 		return false;
 	}
 
-	LOG_DEBUG("callback for %s", device->FriendlyName);
+	LOG_SDEBUG("callback for %s", device->FriendlyName);
 	ithread_mutex_lock(&device->Mutex);
 
 	switch (action) {
@@ -713,7 +713,7 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 
 			LOG_DEBUG("Answer to uPNP search %d", d_event->Location);
 			if (d_event->ErrCode != UPNP_E_SUCCESS) {
-				LOG_DEBUG("Error in Discovery Callback -- %d", d_event->ErrCode);
+				LOG_SDEBUG("Error in Discovery Callback -- %d", d_event->ErrCode);
 				break;
 			}
 
@@ -799,7 +799,7 @@ static void *UpdateMRThread(void *args)
 	struct sMR *Device = NULL;
 	int i, TimeStamp;
 
-	LOG_INFO("Begin uPnP devices update", NULL);
+	LOG_DEBUG("Begin uPnP devices update", NULL);
 	TimeStamp = gettime_ms();
 
 	// first add any newly found uPNP renderer
@@ -809,7 +809,7 @@ static void *UpdateMRThread(void *args)
 	ithread_mutex_unlock(&glMRFoundMutex);
 
 	if (!glMainRunning) {
-		LOG_INFO("Aborting ...", NULL);
+		LOG_DEBUG("Aborting ...", NULL);
 		while (p) {
 			m = p->Next;
 			free(p->Location); free(p);
@@ -890,7 +890,7 @@ static void *UpdateMRThread(void *args)
 		SaveConfig(glConfigName, glConfigID, false);
 	}
 
-	LOG_INFO("End uPnP devices update %d", gettime_ms() - TimeStamp);
+	LOG_DEBUG("End uPnP devices update %d", gettime_ms() - TimeStamp);
 	return NULL;
 }
 
@@ -928,7 +928,7 @@ static void *MainThread(void *args)
 
 				FILE *rlog = fopen(glLogFile, "rb");
 				FILE *wlog = fopen(glLogFile, "r+b");
-				LOG_INFO("Resizing log", NULL);
+				LOG_DEBUG("Resizing log", NULL);
 				for (Sum = 0, fseek(rlog, size - (glLogLimit*1024*1024) / 2, SEEK_SET);
 					 (BufSize = fread(buf, 1, BufSize, rlog)) != 0;
 					 Sum += BufSize, fwrite(buf, 1, BufSize, wlog));
@@ -1249,7 +1249,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	*/
 	for (i = 0; i < 50 && !Device->ProtocolCapReady; i++) usleep(10000);
 	if (!Device->ProtocolCapReady) {
-		LOG_INFO("[%p]: timeout waiting ProtocolInfo, cannot adjust codecs", Device);
+		LOG_ERROR("[%p]: timeout waiting ProtocolInfo, cannot adjust codecs", Device);
 	}
 	else {
 		LOG_DEBUG("[%p]: waited %d ms for protocolinfo", Device, i*10);

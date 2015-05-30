@@ -597,7 +597,7 @@ int sq_seek(void *desc, off_t bytes, int from)
 		LOG_INFO("[%p]: seek %d (c:%d)", ctx, bytes - (p->write_count_t - p->write_count));
 		bytes -= p->write_count_t - p->write_count;
 		if (bytes < 0) {
-			LOG_INFO("[%p]: seek unreachable b:%d t:%d r:%d", p->owner, bytes, p->write_count_t, p->write_count);
+			LOG_WARN("[%p]: seek unreachable b:%d t:%d r:%d", p->owner, bytes, p->write_count_t, p->write_count);
 			bytes = 0;
 		}
 		if (ctx->config.seek_after_pause == 2) bytes += p->close_count;
@@ -710,7 +710,7 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 				// unsollicited PLAY done on the player direclty
 				char cmd[128], *rsp;
 
-				LOG_INFO("[%p] uPNP unsollicited play", ctx);
+				LOG_WARN("[%p] uPNP unsollicited play", ctx);
 				sprintf(cmd, "%s play", ctx->cli_id);
 				rsp = cli_send_cmd(cmd, false, true, ctx);
 				NFREE(rsp);
@@ -730,7 +730,7 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 		case SQ_PAUSE: {
 			char cmd[128], *rsp;
 
-			LOG_INFO("[%p] uPNP unsollicited pause", ctx);
+			LOG_WARN("[%p] uPNP unsollicited pause", ctx);
 			sprintf(cmd, "%s pause", ctx->cli_id);
 			rsp = cli_send_cmd(cmd, false, true, ctx);
 			NFREE(rsp);

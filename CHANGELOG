@@ -1,5 +1,10 @@
-0.2.3.0-rc3 (plugin)
+0.2.3.1.3
+ - changing naming
+ - cleaning LOG
+
+0.2.3.1.3 (plugin)
  - when log is disable, no log shall be generated eveen if extra debug options are set
+ - space char instead of thab on line 186
 
 0.2.3.0-rc2
  - AIFF problem is for all versions before 7.9

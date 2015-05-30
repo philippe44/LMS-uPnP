@@ -300,7 +300,7 @@ int AVTBasic(char *ControlURL, char *Action, void *Cookie)
 	IXML_Document *ActionNode = NULL;
 	int rc;
 
-	LOG_SDEBUG("uPNP %s GetProtocolInfo (cookie %p)", ControlURL, Cookie);
+	LOG_DEBUG("uPNP %s GetProtocolInfo (cookie %p)", ControlURL, Cookie);
 	ActionNode =  UpnpMakeAction("GetProtocolInfo", CONNECTION_MGR, 0, NULL);
 
 	rc = UpnpSendActionAsync(glControlPointHandle, ControlURL, CONNECTION_MGR, NULL,
