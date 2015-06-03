@@ -3,7 +3,7 @@
 
 //#define __EARLY_STMd__
 
-#define VERSION "v0.2.3.0"
+#define VERSION "v0.2.3.1"
 
 #if defined(linux)
 #define LINUX     1
@@ -69,6 +69,8 @@ typedef int64_t   s64_t;
 #define mutex_unlock(m) pthread_mutex_unlock(&m)
 #define mutex_destroy(m) pthread_mutex_destroy(&m)
 #define thread_type pthread_t
+#define mutex_timedlock(m, t) _mutex_timedlock(&m, t)
+int _mutex_timedlock(mutex_type *m, u32_t wait);
 int SendARP(in_addr_t src, in_addr_t dst, u8_t mac[], u32_t *size);
 #define fresize(f,s) ftruncate(fileno(f), s)
 char *strlwr(char *str);
@@ -107,6 +109,7 @@ typedef BOOL bool;
 #define mutex_create_p mutex_create
 // in Windows, a mutex never locks if the owner tries to lock it
 #define mutex_lock(m) WaitForSingleObject(m, INFINITE)
+#define mutex_timedlock(m,t) WaitForSingleObject(m, t)
 #define mutex_unlock(m) ReleaseMutex(m)
 #define mutex_destroy(m) CloseHandle(m)
 #define thread_type HANDLE

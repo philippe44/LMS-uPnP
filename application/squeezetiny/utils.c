@@ -83,6 +83,39 @@ u32_t gettime_ms(void) {
 #endif
 }
 
+// mutex wait with timeout
+#if LINUX || FREEBSD
+int _mutex_timedlock(pthread_mutex_t *m, u32_t ms_wait)
+{
+	int rc = -1;
+	struct timespec ts;
+
+	if (!clock_gettime(CLOCK_REALTIME, &ts)) {
+		ts.tv_sec += ms_wait / 1000;
+		ts.tv_nsec += (ms_wait % 1000) * 1000000;
+		rc = pthread_mutex_timedlock(m, &ts);
+	}
+	return rc;
+}
+#endif
+
+#if OSX
+int _mutex_timedlock(pthread_mutex_t *m, u32_t ms_wait)
+{
+	int rc;
+	s32_t wait = (s32_t) ms_wait;
+
+	/* Try to acquire the lock and, if we fail, sleep for 10ms. */
+	while (((rc = pthread_mutex_trylock (m)) == EBUSY) && (wait > 0)) {
+		wait -= 10;
+		usleep(10000);
+	}
+
+	return rc;
+}
+#endif
+
+
 // mac address
 #if LINUX
 // search first 4 interfaces returned by IFCONF

@@ -132,6 +132,7 @@ void sq_wipe_device(struct thread_ctx_s *ctx) {
 		}
 		ctx->out_ctx[i].read_file = ctx->out_ctx[i].write_file = NULL;
 		ctx->out_ctx[i].owner = NULL;
+		mutex_destroy(ctx->out_ctx[i].mutex);
 	}
 }
 
@@ -245,7 +246,7 @@ static char *cli_decode(char *str) {
 	char *rsp = NULL;
 
 	mutex_lock(ctx->cli_mutex);
-    wait = ctx->config.max_read_wait;
+	wait = ctx->config.max_read_wait;
 
 	cmd = cli_encode(cmd);
 	if (req) len = sprintf(packet, "%s ?\n", cmd);
@@ -516,14 +517,26 @@ void *sq_open(const char *urn)
 		char buf[SQ_STR_LENGTH];
 		struct thread_ctx_s *ctx = out->owner; 		// for the macro to work ... ugh
 
+		/*
+		Some players send to GET for the same URL - this is not supported. But
+		others send a GET after the SETURI and then, when they receive the PLAY,
+		they close the socket and send another GET, but the close might be
+		received after the GET (threading) and might be confused with a 2nd GET
+		so a mutex with timeout should solve this
+		*/
+		if (mutex_timedlock(out->mutex, 1000) && out->read_file) {
+			LOG_WARN("[%p]: cannot open file twice %s", out->owner, urn);
+			return NULL;
+		}
+
 		LOCK_S;LOCK_O;
 		if (!out->read_file) {
-			// read counters are not set here. they are set 
+			// read counters are not set here. they are set
 			sprintf(buf, "%s/%s", thread_ctx[i-1].config.buffer_dir, out->buf_name);
 			out->read_file = fopen(buf, "rb");
 			LOG_INFO("[%p]: open", out->owner);
 			if (!out->read_file) out = NULL;
-    	}
+		}
 		// Some clients try to open 2 sessions : do not allow that
 		else out = NULL;
 		UNLOCK_S;UNLOCK_O;
@@ -569,6 +582,7 @@ bool sq_close(void *desc)
 		p->close_count = p->read_count;
 		p->read_count_t -= p->read_count;
 		p->read_count = 0;
+		mutex_unlock(p->mutex);
 		UNLOCK_S;UNLOCK_O;
 	}
 
@@ -892,6 +906,7 @@ bool sq_run_device(sq_dev_handle_t handle, char *name, sq_dev_param_t *param)
 			remove(buf);
 		}
 
+		mutex_create(ctx->out_ctx[i].mutex);
 		ctx->out_ctx[i].owner = ctx;
 		ctx->out_ctx[i].idx = i;
 		strcpy(ctx->out_ctx[i].content_type, "audio/unknown");

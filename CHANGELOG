@@ -1,3 +1,7 @@
+0.2.3.1
+ - Some players (moode) open the URL on SETURI, then close and re-open it on PLAY. But re-open might be received before close (threading), causing confusion with a double-open request. So use a mutex with timeout in sq_open
+ - create a fake pthread_mutex_timedlock for OSX
+
 0.2.3.0 (plugin)
  - when log is disable, no log shall be generated eveen if extra debug options are set
  - space char instead of thab on line 186

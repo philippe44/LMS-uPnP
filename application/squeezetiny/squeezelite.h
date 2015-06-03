@@ -495,6 +495,7 @@ typedef struct out_ctx_s {
 	u32_t				read_count, write_count;
 	u64_t				read_count_t, write_count_t;
 	u32_t				close_count;
+	mutex_type			mutex;
 } out_ctx_t;
 
 struct thread_ctx_s {

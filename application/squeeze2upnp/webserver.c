@@ -47,44 +47,32 @@ int WebGetInfo(const char *FileName, struct File_Info *Info)
 #endif
 	{
 		Status.st_ctime = 0;
-#if 0
-		Device = (struct sMR*) sq_urn2MR(FileName);
-		// some uPnP device have a long memory of this ...
-		if (!Device) {
-			LOG_ERROR("No context for %s", FileName);
-			return UPNP_E_INVALID_HANDLE;
-		}
-		Status.st_size = Device->Config.StreamLength;
-#endif
-	}
-
-	Ref = sq_get_info(FileName, &FileSize, &Info->content_type);
-	Info->is_directory = false;
-	Info->is_readable = true;
-	Info->last_modified = Status.st_ctime;
-	Info->file_length = FileSize;
+		Ref = sq_get_info(FileName, &FileSize, &Info->content_type);
+		Info->is_directory = false;
+		Info->is_readable = true;
+		Info->last_modified = Status.st_ctime;
+		Info->file_length = FileSize;
 
 #ifdef TEST_IDX_BUF
-	if (!strcmp(Info->content_type, "audio/unknown"))
-		Info->content_type = strdup("audio/mpeg");
+		if (!strcmp(Info->content_type, "audio/unknown"))
+			Info->content_type = strdup("audio/mpeg");
 #endif
-	LOG_INFO("[%p]: GetInfo %s %Ld %s", Ref, FileName, (s64_t) Info->file_length, Info->content_type);
+		LOG_INFO("[%p]: GetInfo %s %Ld %s", Ref, FileName, (s64_t) Info->file_length, Info->content_type);
 
 #if 0
-	{
-	struct Extra_Headers *Headers = Info->extra_headers;
-	while (Headers->name) {
-		if (strstr(Headers->name, "Icy")) {
-			Headers->resp = strdup("icy:blabla");
+		{
+			struct Extra_Headers *Headers = Info->extra_headers;
+			while (Headers->name) {
+				if (strstr(Headers->name, "Icy")) {
+					Headers->resp = strdup("icy:blabla");
+				}
+				Headers++;
+			}
 		}
-		Headers++;
-	}
-	}
 #endif
+	}
 
-	// Some clients try to open 2 sessions : do not allow that
-	if (sq_isopen(FileName)) return -1;
-	else return UPNP_E_SUCCESS;
+	return UPNP_E_SUCCESS;
 }
 
 UpnpWebFileHandle WebOpen(const char *FileName, enum UpnpOpenFileMode Mode)
