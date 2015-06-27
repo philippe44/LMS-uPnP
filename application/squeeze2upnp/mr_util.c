@@ -480,6 +480,7 @@ void SaveConfig(char *name, void *ref, bool full)
 		XMLAddNode(doc, common, "upnp_remove_count", "%d", (u32_t) glMRConfig.uPNPRemoveCount);
 		XMLAddNode(doc, common, "raw_audio_format", glMRConfig.RawAudioFormat);
 		XMLAddNode(doc, common, "match_endianness", "%d", (int) glMRConfig.MatchEndianness);
+		XMLAddNode(doc, common, "pause_volume", "%d", (int) glMRConfig.PauseVolume);
 	}
 
 	for (i = 0; i < MAX_RENDERERS; i++) {
@@ -559,6 +560,7 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "volume_on_play")) Conf->VolumeOnPlay = atol(val);
 	if (!strcmp(name, "volume_curve")) strcpy(Conf->VolumeCurve, val);
 	if (!strcmp(name, "max_volume")) Conf->MaxVolume = atol(val);
+	if (!strcmp(name, "pause_volume")) Conf->PauseVolume = atol(val);
 	if (!strcmp(name, "accept_nexturi")) Conf->AcceptNextURI = atol(val);
 	if (!strcmp(name, "send_metadata")) Conf->SendMetaData = atol(val);
 	if (!strcmp(name, "name")) strcpy(Conf->Name, val);

@@ -16,7 +16,7 @@ use Slim::Utils::Log;
 my $prefs = preferences('plugin.upnpbridge');
 my $log   = logger('plugin.upnpbridge');
 my @xmlmain = qw(upnp_socket upnp_scan_interval upnp_scan_timeout log_limit);
-my @xmldevice = qw(name mac stream_length accept_nexturi seek_after_pause buffer_dir buffer_limit sample_rate codecs L24_format flac_header enabled upnp_remove_count send_metadata volume_on_play max_volume match_endianness raw_audio_format);
+my @xmldevice = qw(name mac stream_length accept_nexturi seek_after_pause buffer_dir buffer_limit sample_rate codecs L24_format flac_header enabled upnp_remove_count send_metadata volume_on_play max_volume match_endianness raw_audio_format pause_volume);
 
 sub name { 'PLUGIN_UPNPBRIDGE' }
 
@@ -142,35 +142,43 @@ sub handler {
 					}
 				}	
 				
-			# save player specific parameters
 			} else {
 			
-				$params->{'devices'} = \@{$xmlconfig->{'device'}};
-				my $device = findUDN($params->{'seldevice'}, $params->{'devices'});
-								
-				for my $p (@xmldevice) {
-					if ($params->{ $p } eq '') {
-						delete $device->{ $p };
-					} else {
-						$device->{ $p } = $params->{ $p };
-					}
-				}	
+				if ($params->{'deldevice'}) {
+					#delete current device	
+					$log->error(@{$xmlconfig->{'device'}});
+					@{$xmlconfig->{'device'}} = grep $_->{'udn'} ne $params->{'seldevice'}, @{$xmlconfig->{'device'}};
+					$params->{'seldevice'} = '.common.';
+					
+				} else {
+					# save player specific parameters
+					$params->{'devices'} = \@{$xmlconfig->{'device'}};
+					my $device = findUDN($params->{'seldevice'}, $params->{'devices'});
+					
+					for my $p (@xmldevice) {
+						if ($params->{ $p } eq '') {
+							delete $device->{ $p };
+						} else {
+							$device->{ $p } = $params->{ $p };
+						}
+					}	
 				
-				# a profile has been applied, then overwrite some of the above
-				if ($params->{ 'applyprofile' }) {
+					# a profile has been applied, then overwrite some of the above
+					if ($params->{ 'applyprofile' }) {
 			
-					my $profile = loadprofiles()->{ $params->{'selprofile'} };
-					mergeprofile($device, $profile);
-				}	
-			}
+						my $profile = loadprofiles()->{ $params->{'selprofile'} };
+						mergeprofile($device, $profile);
+					}	
+				}
 			
-			# get enabled status for all device, except the selected one
-			foreach my $device (@{$xmlconfig->{'device'}}) {
-				if ($device->{'udn'} ne $params->{'seldevice'}) {
-					my $enabled = $params->{ 'enabled.'.$device->{ 'udn' } };
-					$device->{'enabled'} = defined $enabled ? $enabled : 0;
-				}	
-			}
+				# get enabled status for all device, except the selected one
+				foreach my $device (@{$xmlconfig->{'device'}}) {
+					if ($device->{'udn'} ne $params->{'seldevice'}) {
+						my $enabled = $params->{ 'enabled.'.$device->{ 'udn' } };
+						$device->{'enabled'} = defined $enabled ? $enabled : 0;
+					}	
+				}
+			}	
 			
 			$log->info("writing XML config");
 			$log->debug(Dumper($xmlconfig));
@@ -266,7 +274,6 @@ sub handler2 {
 				
 		#read global parameters
 		for my $p (@xmlmain) {
-			#$params->{ $p } = defined $xmlconfig->{ $p } ? $xmlconfig->{ $p } : 'default';
 			$params->{ $p } = $xmlconfig->{ $p };
 			$log->debug("reading: ", $p, " ", $xmlconfig->{ $p });
 		}
@@ -276,14 +283,12 @@ sub handler2 {
 			$params->{'seldevice'} = '.common.';
 			
 			for my $p (@xmldevice) {
-				#$params->{ $p } = defined $xmlconfig->{common}->{ $p } ? $xmlconfig->{common}->{ $p } : '';
 				$params->{ $p } = $xmlconfig->{common}->{ $p };
 			}	
 		} else {
 			my $device = findUDN($params->{'seldevice'}, $params->{'devices'});
 			
 			for my $p (@xmldevice) {
-				#$params->{ $p } = defined $device->{ $p } ? $device->{ $p } : '';
 				$params->{ $p } = $device->{ $p };
 			}
 		}

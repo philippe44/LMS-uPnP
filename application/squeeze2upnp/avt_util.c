@@ -106,7 +106,7 @@ typedef enum {
 so the ; might have to be removed
 */
 
-char DLNA_OPT[] = ";DLNA.ORG_OP=01;DLNA.ORG_FLAGS=21700000000000000000000000000000";
+char DLNA_OPT[] = ";DLNA.ORG_OP=00;DLNA.ORG_FLAGS=21700000000000000000000000000000";
 
 static log_level loglevel;
 static char *CreateDIDL(char *URI, char *ProtInfo, struct sq_metadata_s *MetaData);
@@ -206,6 +206,29 @@ int AVTPlay(char *ControlURL, void *Cookie)
 	ActionNode =  UpnpMakeAction("Play", AV_TRANSPORT, 0, NULL);
 	UpnpAddToAction(&ActionNode, "Play", AV_TRANSPORT, "InstanceID", "0");
 	UpnpAddToAction(&ActionNode, "Play", AV_TRANSPORT, "Speed", "1");
+
+	rc = UpnpSendActionAsync(glControlPointHandle, ControlURL, AV_TRANSPORT, NULL,
+							 ActionNode, CallbackActionHandler, Cookie);
+
+	if (rc != UPNP_E_SUCCESS) {
+		LOG_ERROR("Error in UpnpSendActionAsync -- %d", rc);
+	}
+
+	if (ActionNode) ixmlDocument_free(ActionNode);
+
+	return rc;
+}
+
+/*----------------------------------------------------------------------------*/
+int AVTSetPlayMode(char *ControlURL, void *Cookie)
+{
+	IXML_Document *ActionNode = NULL;
+	int rc;
+
+	LOG_INFO("uPNP set play mode for %s (cookie %p)", ControlURL, Cookie);
+	ActionNode =  UpnpMakeAction("SetPlayMode", AV_TRANSPORT, 0, NULL);
+	UpnpAddToAction(&ActionNode, "SetPlayMode", AV_TRANSPORT, "InstanceID", "0");
+	UpnpAddToAction(&ActionNode, "SetPlayMode", AV_TRANSPORT, "NewPlayMode", "NORMAL");
 
 	rc = UpnpSendActionAsync(glControlPointHandle, ControlURL, AV_TRANSPORT, NULL,
 							 ActionNode, CallbackActionHandler, Cookie);

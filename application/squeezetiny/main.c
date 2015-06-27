@@ -273,7 +273,7 @@ static char *cli_decode(char *str) {
 		if (decode) rsp = cli_decode(rsp);
 		else rsp = strdup(rsp);
 		*(strrchr(rsp, '\n')) = '\0';
-		if (*rsp == '\0') NFREE(rsp);
+//		if (*rsp == '\0') NFREE(rsp);
 	}
 
 	NFREE(cmd);
@@ -296,7 +296,7 @@ u32_t sq_get_time(sq_dev_handle_t handle)
 
 	sprintf(cmd, "%s time", ctx->cli_id);
 	rsp = cli_send_cmd(cmd, true, true, ctx);
-	if (rsp) {
+	if (rsp && *rsp) {
 		time = (u32_t) (atof(rsp) * 1000);
 	}
 	else {
@@ -313,26 +313,23 @@ bool sq_set_time(sq_dev_handle_t handle, u32_t time)
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
 	char cmd[128];
 	char *rsp;
-	bool rc = false;
 
 	if (!handle || !ctx->cli_sock) {
 		LOG_ERROR("[%p]: no handle or cli socket %d", ctx, handle);
 		return false;
 	}
 
-	sprintf(cmd, "%s time %.1lf", ctx->cli_id, (double) time / 1000);
+	sprintf(cmd, "%s time %.1f", ctx->cli_id, (double) time / 1000);
+	LOG_INFO("[%p] time cmd %s", ctx, cmd);
 
 	rsp = cli_send_cmd(cmd, false, true, ctx);
-	if (rsp) {
-		LOG_INFO("[%p] set time %d", ctx, time);
-		rc = true;
-	}
-	else {
+	if (!rsp) {
 		LOG_ERROR("[%p] cannot settime %d", ctx, time);
+		return false;
 	}
 
 	NFREE(rsp);
-	return rc;
+	return true;
 }
 
 /*--------------------------------------------------------------------------*/
@@ -381,7 +378,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 	sprintf(cmd, "%s playlist index", ctx->cli_id);
 	rsp = cli_send_cmd(cmd, true, true, ctx);
 
-	if (!rsp) {
+	if (!rsp || (rsp && !*rsp)) {
 		LOG_ERROR("[%p]: missing index", ctx);
 		sq_default_metadata(metadata, true);
 		return false;
@@ -407,7 +404,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 	sprintf(cmd, "songinfo 0 10 url:%s tags:cfldatgr", metadata->path);
 	rsp = cli_send_cmd(cmd, false, false, ctx);
 
-	if (rsp) {
+	if (rsp && *rsp) {
 		metadata->title = cli_find_tag(rsp, "title");
 		metadata->artist = cli_find_tag(rsp, "artist");
 		metadata->album = cli_find_tag(rsp, "album");
@@ -518,7 +515,7 @@ void *sq_open(const char *urn)
 		struct thread_ctx_s *ctx = out->owner; 		// for the macro to work ... ugh
 
 		/*
-		Some players send to GET for the same URL - this is not supported. But
+		Some players send 2 GET for the same URL - this is not supported. But
 		others send a GET after the SETURI and then, when they receive the PLAY,
 		they close the socket and send another GET, but the close might be
 		received after the GET (threading) and might be confused with a 2nd GET

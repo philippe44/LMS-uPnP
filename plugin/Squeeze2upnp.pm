@@ -207,7 +207,7 @@ sub logHandler {
 	if ($file){
 
 		my @lines;
-		my $count = $params->{lines} || 100;
+		my $count = $params->{lines} || 200;
 
 		while ( --$count && (my $line = $file->readline()) ) {
 			unshift (@lines, $line);
@@ -236,6 +236,12 @@ sub configHandler {
 	}	
 
 	return \$body;
+}
+
+sub guideHandler {
+	my ($client, $params) = @_;
+		
+	return Slim::Web::HTTP::filltemplatefile('plugins/UPnPBridge/userguide.htm', $params);
 }
 
 1;

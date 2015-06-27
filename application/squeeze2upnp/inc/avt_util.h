@@ -31,6 +31,7 @@ int AVTSetURI(char *ControlURL, char *URI, char *ProtocolInfo, struct sq_metadat
 int AVTSetNextURI(char *ControlURL, char *URI, char *ProtocolInfo, struct sq_metadata_s *MetaData, void *Cookie);
 int AVTCallAction(char *ControlURL, char *Var, void *Cookie);
 int AVTPlay(char *ControlURL, void *Cookie);
+int AVTSetPlayMode(char *ControlURL, void *Cookie);
 int SetVolume(char *ControlURL, u8_t Volume, void *Cookie);
 int AVTSeek(char *ControlURL, unsigned Interval, void *Cookie);
 int AVTBasic(char *ControlURL, char *Action, void *Cookie);

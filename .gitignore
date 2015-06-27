@@ -93,5 +93,6 @@ bin.old/
 /repo*.xml
 /package*.*
 alpha/
+_backup/
 
 

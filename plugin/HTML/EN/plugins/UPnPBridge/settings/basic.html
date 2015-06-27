@@ -2,9 +2,11 @@
 
 	[% YESNOBOX = [['',''], ['yes','1'], ['no','0']] %]
 
+		
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_AUTORUN" desc="PLUGIN_UPNPBRIDGE_AUTORUN_DESC" %]
 		<input name="autorun" type="checkbox" [% IF autorun %] checked [% END %]> [% "PLUGIN_UPNPBRIDGE_RUNNING_$running" | string %] [% IF binary %] ([% binary %]) [% END %]
-		[%IF running %] <b><font color="red">&nbsp[% "PLUGIN_UPNPBRIDGE_WARNING" | string %]</font></b> [% END %]
+		&nbsp&nbsp<b><a href="[% webroot %]plugins/UPnPBridge/userguide.htm" target="user guide">[% "PLUGIN_UPNPBRIDGE_USERGUIDELINK" | string %]</a></b>
+		[%IF running %] <b><font color="red">&nbsp&nbsp[% "PLUGIN_UPNPBRIDGE_WARNING" | string %]</font></b> [% END %]
 	[% END %]
 	
 	[% IF binaries.size > 1 %]
@@ -112,6 +114,8 @@
 			<td><input type="text" class="stdedit" name="name" id="name" value="[% name %]" size="25"></td>
 			<th>[% "PLUGIN_UPNPBRIDGE_PLAYERMAC" | string %]</th>
 			<td><input type="text" class="stdedit" name="mac" id="mac" value="[% mac %]" size="20"></td>
+			<td><input name="deldevice" type="checkbox"></td>
+			<th>[% "PLUGIN_UPNPBRIDGE_DELETEPLAYER" | string %]</th>
 		[% END %]
 	[% END %]		
 <!--
@@ -196,6 +200,11 @@
 		&nbsp&nbsp<font color=blue>[% "PLUGIN_UPNPBRIDGE_VOLUMEONPLAY" | string %]</font>&nbsp<select class="stdedit" name="volume_on_play" id="volume_on_play">
 		[% FOREACH entry IN [ ['',''], ['only when playing','1'], ['ignore all changes','-1'], ['transparent forward','0'] ] %]
 			<option [% IF entry.1 == volume_on_play %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+		[% END %]
+		</select>
+		&nbsp&nbsp[% "PLUGIN_UPNPBRIDGE_PAUSEVOLUME" | string %]&nbsp<select class="stdedit" name="pause_volume" id="pause_volume">
+		[% FOREACH entry IN YESNOBOX %] 
+			<option [% IF entry.1 == pause_volume %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
 		[% END %]
 		</select>
 		

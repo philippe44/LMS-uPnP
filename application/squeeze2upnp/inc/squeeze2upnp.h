@@ -74,6 +74,7 @@ typedef struct sMRConfig
 	bool		SendMetaData;
 	char 		VolumeCurve[SQ_STR_LENGTH];
 	int			MaxVolume;
+	bool		PauseVolume;
 	int			uPNPRemoveCount;
 	char		RawAudioFormat[SQ_STR_LENGTH];
 	bool		MatchEndianness;
@@ -108,7 +109,7 @@ struct sMR {
 	ithread_mutex_t  ActionsMutex;
 	ithread_mutex_t  Mutex;
 	ithread_t 		 Thread;
-	u8_t		Volume;
+	u8_t		Volume, PreviousVolume;
 	struct {
 		u32_t	a;
 		u8_t	b;

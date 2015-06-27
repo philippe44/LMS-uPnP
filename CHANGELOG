@@ -1,6 +1,14 @@
-0.2.3.1
+0.2.4.dev.0
  - Some players (moode) open the URL on SETURI, then close and re-open it on PLAY. But re-open might be received before close (threading), causing confusion with a double-open request. So use a mutex with timeout in sq_open
  - create a fake pthread_mutex_timedlock for OSX
+ - DLNA.ORG_OP set to 00 (limited random availability) 
+ - cli_send_cmd must return NULL only if command is not responded, otherwise allow respond with an empty string
+ - sq_set_time: double format shoudl be %.1f not %.1lf
+ - Do not send self-generated volume command on unpause, wait for the real volume request
+ - Add <null_volume> when set (default) allow 0 to be set as volume
+ - (P) increase web UI log line to 200
+ - (P) manual now available to view in a web browser tab
+ - (p) add option to delete a player
 
 0.2.3.0 (plugin)
  - when log is disable, no log shall be generated eveen if extra debug options are set

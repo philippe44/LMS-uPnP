@@ -21,7 +21,10 @@ PLUGIN_UPNPBRIDGE_RUNNING_0
 
 PLUGIN_UPNPBRIDGE_RUNNING_1
 	EN	Running
-
+	
+PLUGIN_UPNPBRIDGE_USERGUIDELINK
+	EN	View User Guide
+	
 PLUGIN_UPNPBRIDGE_BINARIES
 	EN	Select Binary
 
@@ -221,7 +224,10 @@ PLUGIN_UPNPBRIDGE_PLAYERNAME
 	
 PLUGIN_UPNPBRIDGE_PLAYERMAC
 	EN	MAC address
-	
+
+PLUGIN_UPNPBRIDGE_DELETEPLAYER
+	EN	Delete
+
 PLUGIN_UPNPBRIDGE_UPNPMGMT
 	EN	Player discovery options
 	
@@ -250,7 +256,8 @@ PLUGIN_UPNPBRIDGE_VOLUMEMGMT
 	
 PLUGIN_UPNPBRIDGE_VOLUMEMGMT_DESC
 	EN	Defines how LMS volume commands are sent to player. Normal values are 0..100 but some players have a lower maximum that can bet 
-	EN	set here. See also &ltvolume_curve&gt in the XML configuration file for advanced settings 
+	EN	set here. See also &ltvolume_curve&gt in the XML configuration file for advanced settings.
+	EN	This section also controls how LMS volume commands are sent to player. LMS mute request when pausing can be blocked as well
 
 PLUGIN_UPNPBRIDGE_VOLUMEONPLAY
 	EN	LMS volume changes
@@ -260,6 +267,9 @@ PLUGIN_UPNPBRIDGE_VOLUMECURVE
 	
 PLUGIN_UPNPBRIDGE_MAXVOLUME
 	EN	Maximum volume
+
+PLUGIN_UPNPBRIDGE_PAUSEVOLUME
+	EN	Mute on pause
 
 PLUGIN_UPNPBRIDGE_USEPROFILE
 	EN	Apply pre-defined player profile

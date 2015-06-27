@@ -76,6 +76,7 @@ tMRConfig			glMRConfig = {
 							true,
 							"0:0, 400:10, 700:20, 1200:30, 2050:40, 3800:50, 6600:60, 12000:70, 21000:80, 37000:90, 65536:100",
 							100,
+							true,
 							1,
 							"raw",
 							1
@@ -359,8 +360,14 @@ static int	uPNPTerminate(void);
 				u32_t PausedTime = sq_get_time(device->SqueezeHandle);
 				sq_set_time(device->SqueezeHandle, PausedTime);
 			}
+			if (device->CurrentURI) {
+				QueueAction(handle, caller, action, cookie, param, false);
+				device->sqState = SQ_PLAY;
+            }
+			break;
 		case SQ_PLAY:
 			if (device->CurrentURI) {
+				AVTSetPlayMode(device->Service[AVT_SRV_IDX].ControlURL, device->seqN++);
 				QueueAction(handle, caller, action, cookie, param, false);
 				device->sqState = SQ_PLAY;
 				if (device->Config.VolumeOnPlay == 1)
@@ -388,6 +395,8 @@ static int	uPNPTerminate(void);
 			s32_t a2, b2, a1 = 0, b1 = 0;
 
 			if (device->Config.VolumeOnPlay == -1) break;
+
+			device->PreviousVolume = device->Volume;
 
 			for (i = 0; i < 32 && Volume > device->VolumeCurve[i].a; i++);
 
@@ -513,6 +522,7 @@ void SyncNotifState(char *State, struct sMR* Device)
 
 	if (!strcmp(State, "PAUSED_PLAYBACK")) {
 		if (Device->State != PAUSED) {
+
 			// detect unsollicited pause, but do not confuse it with a fast pause/play
 			if (Device->sqState != SQ_PAUSE && (!Action || (Action->Action != SQ_PLAY && Action->Action != SQ_UNPAUSE))) {
 				Event = SQ_PAUSE;
@@ -523,6 +533,10 @@ void SyncNotifState(char *State, struct sMR* Device)
 				UnQueueAction(Device, false);
 				NFREE(Action);
 			}
+
+			if ((Device->Config.VolumeOnPlay != -1) && (!Device->Config.PauseVolume))
+				SetVolume(Device->Service[REND_SRV_IDX].ControlURL, Device->PreviousVolume, Device->seqN++);
+
 			Device->State = PAUSED;
 		}
 	}
