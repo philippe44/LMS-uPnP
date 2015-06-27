@@ -1,5 +1,6 @@
-0.2.4.dev.0
+0.2.4.dev.1
  - Some players (moode) open the URL on SETURI, then close and re-open it on PLAY. But re-open might be received before close (threading), causing confusion with a double-open request. So use a mutex with timeout in sq_open
+ - Send SetPlayMode to NORMAL at each play (some players by default are in auto_repeat mode)
  - create a fake pthread_mutex_timedlock for OSX
  - DLNA.ORG_OP set to 00 (limited random availability) 
  - cli_send_cmd must return NULL only if command is not responded, otherwise allow respond with an empty string
