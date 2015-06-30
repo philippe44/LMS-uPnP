@@ -57,7 +57,6 @@ done. This can be built for Linux, OSX or Windows. My main Windows environment
 is C++ builder, so I've not made a proper makefile. The Linux/OSX makefile is
 very hardcoded.
 
-
 DEPENDENCIES
  - pthread (pthread_win32 on Windows) and dynamically linked
  - libupnp, statically linked
@@ -87,7 +86,7 @@ existing corresponding lines)
 	#define GENA_NOTIFICATION_ANSWERING_TIMEOUT 5
 
 ===========================================================================
-Main application for Windows Vista + 
+Main application for Windows XP and above
  - For compilation, use following defines
         WIN32
         UPNP_STATIC_LIB
@@ -97,7 +96,6 @@ Main application for Windows Vista +
  - For runtime
         On C++ builder, requires cc32160mt.dll
         pthread.dll for all compilers
-NB: the build rules for WinXP need to be added
 
 ===========================================================================
 Main application for Linux and OSX
