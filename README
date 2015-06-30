@@ -24,7 +24,7 @@ If you do not want to RTFM, at least do the following:
 	<accept_nexturi>   : if playback is stuck in playlist
 	<seek_after_pause> : if resume after pause does not restart
 
-Really, have a look at "New User Guide (with plugin).pdf" in /stable
+Really, have a look at "New User Guide (with plugin).pdf" in /doc
 
 ===========================================================================
 WHAT VERSION TO CHOOSE
