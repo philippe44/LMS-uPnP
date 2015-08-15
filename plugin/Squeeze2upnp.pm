@@ -29,7 +29,7 @@ sub binaries {
 			return qw(squeeze2upnp-x86 squeeze2upnp-x86-static);
 		}
 		if ($os->{'binArch'} =~ /arm/) {
-			return qw(squeeze2upnp-armv6hf squeeze2upnp-armv6hf-static);
+			return qw(squeeze2upnp-armv6hf squeeze2upnp-armv6hf-static squeeze2upnp-armv5 squeeze2upnp-armv5-static);
 		}
 
 		# fallback to offering all linux options for case when architecture detection does not work

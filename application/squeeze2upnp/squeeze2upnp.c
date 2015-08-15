@@ -1210,6 +1210,8 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	Device->ErrorCount = 0;
 	Device->Running = true;
 	Device->InUse = true;
+	Device->sqState = SQ_STOP;
+	Device->State = STOPPED;
 	strcpy(Device->UDN, UDN);
 	strcpy(Device->DescDocURL, location);
 	strcpy(Device->FriendlyName, friendlyName);

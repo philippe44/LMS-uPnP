@@ -169,16 +169,17 @@ sub handler {
 						my $profile = loadprofiles()->{ $params->{'selprofile'} };
 						mergeprofile($device, $profile);
 					}	
-				}
-			
-				# get enabled status for all device, except the selected one
-				foreach my $device (@{$xmlconfig->{'device'}}) {
-					if ($device->{'udn'} ne $params->{'seldevice'}) {
-						my $enabled = $params->{ 'enabled.'.$device->{ 'udn' } };
-						$device->{'enabled'} = defined $enabled ? $enabled : 0;
-					}	
-				}
+				}			
 			}	
+			
+			$log->error("get all"});
+			# get enabled status for all device, except the selected one (if any)
+			foreach my $device (@{$xmlconfig->{'device'}}) {
+				if ($device->{'udn'} ne $params->{'seldevice'}) {
+					my $enabled = $params->{ 'enabled.'.$device->{ 'udn' } };
+					$device->{'enabled'} = defined $enabled ? $enabled : 0;
+				}	
+			}
 			
 			$log->info("writing XML config");
 			$log->debug(Dumper($xmlconfig));
