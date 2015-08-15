@@ -172,7 +172,6 @@ sub handler {
 				}			
 			}	
 			
-			$log->error("get all"});
 			# get enabled status for all device, except the selected one (if any)
 			foreach my $device (@{$xmlconfig->{'device'}}) {
 				if ($device->{'udn'} ne $params->{'seldevice'}) {
