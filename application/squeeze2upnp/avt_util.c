@@ -367,6 +367,10 @@ int AVTBasic(char *ControlURL, char *Action, void *Cookie)
 	XMLAddNode(doc, node, "upnp:class", "object.item.audioItem.musicTrack", NULL);
 
 	node = XMLAddNode(doc, node, "res", URI);
+
+	if (MetaData->duration)
+		XMLAddAttribute(doc, node, "duration", "%1d:%02d:%02d.000", MetaData->duration/3600, MetaData->duration/60, MetaData->duration % 60);
+
 	if (ProtInfo[strlen(ProtInfo) - 1] == ':')
 		XMLAddAttribute(doc, node, "protocolInfo", "%s%s", ProtInfo, DLNA_OPT + 1);
 	else

@@ -1,29 +1,25 @@
 <squeeze2upnp>
-	<profile name=''>
-	</profile>
+	<stream_length>-3</stream_length>
+	<flac_header>1</flac_header>
+	<accept_nexturi>1</accept_nexturi>
+	<seek_after_pause>0</seek_after_pause>
+	<codecs>pcm,flc,mp3</codecs>
+	<sample_rate>48000</sample_rate>
+	<send_metadata>1</send_metadata>
+	<raw_audio_format>raw</raw_audio_format>
+	<L24_format>2</L24_format>
+	<volume_curve>0:0, 400:10, 700:20, 1200:30, 2050:40, 3800:50, 6600:60, 12000:70, 21000:80, 37000:90, 65536:100</volume_curve>
+	<max_volume>100</max_volume>
+	<profile name=''></profile>
+	<profile name='foobar 2000'></profile>
 	<profile name='Sonos'>
 		<stream_length>1000000000</stream_length>
-		<flac_header>1</flac_header>
-		<accept_nexturi>1</accept_nexturi>
-		<seek_after_pause>0</seek_after_pause>
-		<codecs>pcm,flc,mp3</codecs>
-		<sample_rate>48000</sample_rate>
-		<send_metadata>1</send_metadata>
-		<volume_curve>0:0, 400:10, 700:20, 1200:30, 2050:40, 3800:50, 6600:60, 12000:70, 21000:80, 37000:90, 65536:100</volume_curve>
-		<max_volume>100</max_volume>
 		<raw_audio_format>wav,aiff</raw_audio_format>
 	</profile>
 	<profile name='Marantz'>
-		<stream_length>-3</stream_length>
-		<flac_header>1</flac_header>
-		<accept_nexturi>1</accept_nexturi>
-		<seek_after_pause>0</seek_after_pause>
-		<codecs>pcm,flc,mp3</codecs>
 		<sample_rate>96000</sample_rate>
-		<send_metadata>1</send_metadata>
-		<volume_curve>0:0, 400:10, 700:20, 1200:30, 2050:40, 3800:50, 6600:60, 12000:70, 21000:80, 37000:90, 65536:100</volume_curve>
-		<max_volume>100</max_volume>
 		<profile name=''></profile>	
+		<L24_format>1</L24_format>
 		<profile name='NR1603'>
 			<raw_audio_format>raw,wav</raw_audio_format>
 		</profile>	
@@ -32,110 +28,46 @@
 		</profile>	
 	</profile>
 	<profile name='JRiver'>
-		<stream_length>-3</stream_length>
-		<flac_header>1</flac_header>
-		<accept_nexturi>1</accept_nexturi>
-		<seek_after_pause>0</seek_after_pause>
 		<codecs>pcm,mp3</codecs>
 		<sample_rate>192000</sample_rate>
-		<send_metadata>1</send_metadata>
-		<volume_curve>0:0, 400:10, 700:20, 1200:30, 2050:40, 3800:50, 6600:60, 12000:70, 21000:80, 37000:90, 65536:100</volume_curve>
-		<max_volume>100</max_volume>
 		<raw_audio_format>raw,aiff,wav</raw_audio_format>
-		<profile name=''></profile>	
-		</profile>
-	<profile name='M1Clic'>
-		<stream_length>-3</stream_length>
-		<flac_header>1</flac_header>
-		<accept_nexturi>1</accept_nexturi>
-		<seek_after_pause>0</seek_after_pause>
-		<codecs>pcm,flc,mp3</codecs>
-		<sample_rate>192000</sample_rate>
-		<send_metadata>1</send_metadata>
-		<volume_curve>0:0, 400:10, 700:20, 1200:30, 2050:40, 3800:50, 6600:60, 12000:70, 21000:80, 37000:90, 65536:100</volume_curve>
-		<max_volume>100</max_volume>
 	</profile>
-		<profile name='ROCKI'>
+	<profile name='M1Clic'>
+		<sample_rate>192000</sample_rate>
+		<L24_format>1</L24_format>
+	</profile>
+	<profile name='ROCKI'>
 		<stream_length>-1</stream_length>
-		<flac_header>1</flac_header>
 		<accept_nexturi>0</accept_nexturi>
-		<seek_after_pause>0</seek_after_pause>
-		<codecs>pcm,flc,mp3</codecs>
-		<sample_rate>48000</sample_rate>
 		<send_metadata>0</send_metadata>
-		<volume_curve>0:0, 400:10, 700:20, 1200:30, 2050:40, 3800:50, 6600:60, 12000:70, 21000:80, 37000:90, 65536:100</volume_curve>
-		<max_volume>100</max_volume>
 	</profile>
 	<profile name='Revo'>
 		<stream_length>1000000000</stream_length>
-		<flac_header>1</flac_header>
 		<accept_nexturi>0</accept_nexturi>
-		<seek_after_pause>0</seek_after_pause>
-		<codecs>pcm,flc,mp3</codecs>
 		<sample_rate>96000</sample_rate>
-		<send_metadata>1</send_metadata>
-		<volume_curve>0:0, 400:10, 700:20, 1200:30, 2050:40, 3800:50, 6600:60, 12000:70, 21000:80, 37000:90, 65536:100</volume_curve>
-		<max_volume>100</max_volume>
 		<profile name=''></profile>	
-		<profile name='unlimited stream'>
+		<profile name='chunked'>
 			<stream_length>-3</stream_length>
 		</profile>	
 	</profile>
-	<profile name='foobar 2000'>
-		<stream_length>-3</stream_length>
-		<flac_header>1</flac_header>
-		<accept_nexturi>1</accept_nexturi>
-		<seek_after_pause>0</seek_after_pause>
-		<codecs>pcm,flc,mp3</codecs>
-		<sample_rate>48000</sample_rate>
-		<send_metadata>1</send_metadata>
-		<volume_curve>0:0, 400:10, 700:20, 1200:30, 2050:40, 3800:50, 6600:60, 12000:70, 21000:80, 37000:90, 65536:100</volume_curve>
-		<max_volume>100</max_volume>
-	</profile>
 	<profile name='Naim Uniti2'>
-		<stream_length>-3</stream_length>
-		<flac_header>1</flac_header>
-		<accept_nexturi>1</accept_nexturi>
 		<seek_after_pause>1</seek_after_pause>
 		<codecs>aac,pcm,flc,mp3</codecs>
 		<sample_rate>192000</sample_rate>
-		<send_metadata>1</send_metadata>
-		<volume_curve>0:0, 400:10, 700:20, 1200:30, 2050:40, 3800:50, 6600:60, 12000:70, 21000:80, 37000:90, 65536:100</volume_curve>
-		<max_volume>100</max_volume>
 		<max_read_wait>300</max_read_wait>
 	</profile>
 	<profile name='XBox'>
 		<stream_length>-2</stream_length>
-		<flac_header>1</flac_header>
-		<accept_nexturi>1</accept_nexturi>
-		<seek_after_pause>0</seek_after_pause>
 		<codecs>pcm,mp3</codecs>
 		<sample_rate>48000</sample_rate>
-		<send_metadata>1</send_metadata>
-		<volume_curve>0:0, 400:10, 700:20, 1200:30, 2050:40, 3800:50, 6600:60, 12000:70, 21000:80, 37000:90, 65536:100</volume_curve>
-		<max_volume>100</max_volume>
 	</profile>
 	<profile name='Raumfeld'>
-		<stream_length>-3</stream_length>
-		<flac_header>1</flac_header>
 		<accept_nexturi>0</accept_nexturi>
-		<seek_after_pause>0</seek_after_pause>
 		<codecs>pcm,flc,mp3</codecs>
-		<sample_rate>48000</sample_rate>
-		<send_metadata>1</send_metadata>
-		<volume_curve>0:0, 400:10, 700:20, 1200:30, 2050:40, 3800:50, 6600:60, 12000:70, 21000:80, 37000:90, 65536:100</volume_curve>
-		<max_volume>100</max_volume>
-	</profile>	<profile name='Roku'>		<stream_length>-1</stream_length>		<flac_header>1</flac_header>		<accept_nexturi>1</accept_nexturi>		<seek_after_pause>0</seek_after_pause>		<codecs>pcm,mp3</codecs>		<sample_rate>48000</sample_rate>		<send_metadata>1</send_metadata>		<volume_curve>0:0, 400:10, 700:20, 1200:30, 2050:40, 3800:50, 6600:60, 12000:70, 21000:80, 37000:90, 65536:100</volume_curve>		<max_volume>100</max_volume>		<raw_audio_format>raw,wav,aiff</raw_audio_format>		<profile name='SoundBridge'></profile>		</profile>
+	</profile>	<profile name='Roku SoundBridge'>		<stream_length>-1</stream_length>		<codecs>pcm,mp3</codecs>		<raw_audio_format>raw,wav,aiff</raw_audio_format>	</profile>
 	<profile name='Pionner'>
-		<stream_length>-3</stream_length>
-		<flac_header>1</flac_header>
-		<accept_nexturi>1</accept_nexturi>
-		<seek_after_pause>0</seek_after_pause>
 		<codecs>aif,pcm,flc,mp3</codecs>
 		<sample_rate>192000</sample_rate>
-		<send_metadata>1</send_metadata>
-		<volume_curve>0:0, 400:10, 700:20, 1200:30, 2050:40, 3800:50, 6600:60, 12000:70, 21000:80, 37000:90, 65536:100</volume_curve>
-		<max_volume>100</max_volume>
 		<raw_audio_format>raw,wav,aiff</raw_audio_format>
 		<profile name='N30'></profile>	
 		<profile name='XW-SMA'>
@@ -143,4 +75,19 @@
 			<sample_rate>48000</sample_rate>
 		</profile>
 	</profile>
+	<profile name='PlugPlayer'>
+		<codecs>flc,mp3</codecs>
+		<sample_rate>44100</sample_rate>
+		<L24_format>0</L24_format>
+	</profile>		
+	<profile name='Onkyo'>
+		<codecs>flc,mp3</codecs>
+		<sample_rate>96000</sample_rate>
+		<stream_length>-2</stream_length>
+		<L24_format>1</L24_format>
+		<profile name='CR-N755'>
+			<accept_nexturi>0</accept_nexturi>
+		</profile>
+	</profile>
 </squeeze2upnp>
+

@@ -121,11 +121,12 @@ char *XMLGetFirstElementItem(IXML_Element *element, const char *item)
 }
 
 /*----------------------------------------------------------------------------*/
-static IXML_NodeList *XMLGetNthServiceList(IXML_Document *doc, unsigned int n)
+static IXML_NodeList *XMLGetNthServiceList(IXML_Document *doc, unsigned int n, bool *contd)
 {
 	IXML_NodeList *ServiceList = NULL;
 	IXML_NodeList *servlistnodelist = NULL;
 	IXML_Node *servlistnode = NULL;
+	*contd = false;
 
 	/*  ixmlDocument_getElementsByTagName()
 	 *  Returns a NodeList of all Elements that match the given
@@ -149,6 +150,7 @@ static IXML_NodeList *XMLGetNthServiceList(IXML_Document *doc, unsigned int n)
 			/* create as list of DOM nodes */
 			ServiceList = ixmlElement_getElementsByTagName(
 				(IXML_Element *)servlistnode, "service");
+			*contd = true;
 		} else
 			LOG_WARN("ixmlNodeList_item(nodeList, n) returned NULL", NULL);
 	}
@@ -174,17 +176,19 @@ int XMLFindAndParseService(IXML_Document *DescDoc, const char *location,
 	char *releventURL = NULL;
 	IXML_NodeList *serviceList = NULL;
 	IXML_Element *service = NULL;
+	bool contd = true;
 
 	baseURL = XMLGetFirstDocumentItem(DescDoc, "URLBase");
 	if (baseURL) base = baseURL;
 	else base = location;
 
-	for (sindex = 0; (serviceList = XMLGetNthServiceList(DescDoc , sindex)) != NULL; sindex++) {
+	for (sindex = 0; contd; sindex++) {
 		tempServiceType = NULL;
 		relcontrolURL = NULL;
 		releventURL = NULL;
 		service = NULL;
 
+		if ((serviceList = XMLGetNthServiceList(DescDoc , sindex, &contd)) == NULL) continue;
 		length = ixmlNodeList_length(serviceList);
 		for (i = 0; i < length; i++) {
 			service = (IXML_Element *)ixmlNodeList_item(serviceList, i);

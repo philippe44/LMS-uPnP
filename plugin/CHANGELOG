@@ -1,3 +1,9 @@
+0.2.4.1
+ - in XMLFindAndParseService search ends if a service list is empty. It should end only when no service list remains
+ - Set HasDigitalOut=0 in capabilities to prevent volume from being set to max and sent to player
+ - in capabilities, ModelName is "squeeze2upnp"
+ - (P) correct profile nested structure overloading logic
+
 0.2.4.0
  - add ARMv5 binary
  - When creating a UPnP renderer, set state(s) to STOP

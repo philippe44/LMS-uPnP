@@ -146,7 +146,7 @@ sub handler {
 			
 				if ($params->{'deldevice'}) {
 					#delete current device	
-					$log->error(@{$xmlconfig->{'device'}});
+					$log->info(@{$xmlconfig->{'device'}});
 					@{$xmlconfig->{'device'}} = grep $_->{'udn'} ne $params->{'seldevice'}, @{$xmlconfig->{'device'}};
 					$params->{'seldevice'} = '.common.';
 					
@@ -327,42 +327,41 @@ sub loadprofiles {
 		return undef;
 	}	
 	
-	my $xmlprofiles = XMLin($file, KeyAttr => 'name', ForceArray => ['profile'], KeepRoot => 0, NoAttr => 0)->{'profile'};
+	my $xmldata = XMLin($file, KeyAttr => 'name', ForceArray => ['profile'], KeepRoot => 0, NoAttr => 0);
+	my $profiles = $xmldata->{'profile'};
 	my $profileslist;
-					
-	foreach my $name (keys %$xmlprofiles) {
-		my $node;
-		undef $node;
-		setprofilenode(\$profileslist, \$node, $xmlprofiles->{ $name }, $name);
+	my $root;
+				
+	$root = $xmldata;
+	delete $root->{'profile'};
+	
+	foreach my $name (keys %$profiles) {
+		my $father = $root;
+		delete $father->{'profile'};
+		setprofilenode(\$profileslist, $father, $profiles->{ $name }, $name);
 	}	
 	
-	$log->debug("dumping profiles:\n", Dumper($profileslist));
+	print(Dumper($profileslist));
 	return $profileslist;
 }
 
-
 sub setprofilenode {
-	my ($main, $root, $node, $name) = @_;
-	my $child;
+	my ($main, $father, $self, $name) = @_;
+	my $merge = {%$father, %$self};
+	my $childs = $self->{'profile'};
+	delete $merge->{'profile'};
 	
-	if (${$root}) {
-		${$root} = {%${$root}, %$node};
-	} else {
-		${$root} = $node;
-	}
-	
-	$child = $node->{'profile'};
-	if (!$child) {
-		${$main}->{ $name } = ${$root};
-		delete ${$main}->{ $name }->{'profile'};
-	} else {
-		foreach my $childname (keys %$child) {
-			my $concat = $childname ? (" - " . $childname) : "";
-			setprofilenode($main, $root, $child->{ $childname }, $name . $concat);
+	if ($childs) {
+		foreach my $childname (keys %$childs) {
+			my $father = $merge;
+			my $_name = $name . ($childname ? (" - " . $childname) : "");
+			setprofilenode($main, $father, $childs->{$childname}, $_name);
 		}	
+	} else {
+		delete $merge->{'profile'};
+		${$main}->{$name} = $merge;
 	}
 }
-
 
 sub findUDN {
 	my $udn = shift(@_);
