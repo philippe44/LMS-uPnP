@@ -79,6 +79,7 @@ typedef struct
 	u8_t	endianness;
 	char	ext[5];
 	u8_t	src_format;
+	u32_t	duration;
 	char	content_type[SQ_STR_LENGTH];
 	char	proto_info[SQ_STR_LENGTH];
 	off_t	file_size;

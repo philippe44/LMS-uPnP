@@ -483,6 +483,8 @@ typedef struct out_ctx_s {
 	FILE 				*read_file, *write_file;
 	char 				buf_name[SQ_STR_LENGTH];
 	s32_t				file_size;
+	u32_t				duration;
+	u32_t				raw_size;
 	struct thread_ctx_s *owner;
 	unsigned 			idx;
 	char				ext[5];

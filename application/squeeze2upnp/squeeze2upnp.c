@@ -306,6 +306,7 @@ static int	uPNPTerminate(void);
 
 			strcpy(device->NextProtInfo, p->proto_info);
 			p->src_format = ext2format(device->NextMetaData.path);
+			p->duration = device->NextMetaData.duration;
 
 			if (device->Config.AcceptNextURI){
 				AVTSetNextURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info,
@@ -345,6 +346,7 @@ static int	uPNPTerminate(void);
 				p->file_size = device->Config.StreamLength;
 			}
 			p->src_format = ext2format(MetaData.path);
+			p->duration = MetaData.duration;
 
 			AVTSetURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info, &MetaData, device->seqN++);
 			sq_free_metadata(&MetaData);
@@ -453,33 +455,41 @@ void SyncNotifState(char *State, struct sMR* Device)
 	if (!strcmp(State, "STOPPED")) {
 		if (Device->State != STOPPED) {
 			LOG_INFO("%s: uPNP stop", Device->FriendlyName);
-			if (Device->NextURI && !Device->Config.AcceptNextURI) {
-				u8_t *WaitFor = Device->seqN++;
+			if (Device->NextURI) {
+				if (!Device->Config.AcceptNextURI) {
+					u8_t *WaitFor = Device->seqN++;
 
-				// fake a "SETURI" and a "PLAY" request
-				NFREE(Device->CurrentURI);
-				Device->CurrentURI = malloc(strlen(Device->NextURI) + 1);
-				strcpy(Device->CurrentURI, Device->NextURI);
-				NFREE(Device->NextURI);
+					// fake a "SETURI" and a "PLAY" request
+					NFREE(Device->CurrentURI);
+					Device->CurrentURI = malloc(strlen(Device->NextURI) + 1);
+					strcpy(Device->CurrentURI, Device->NextURI);
+					NFREE(Device->NextURI);
 
-				AVTSetURI(Device->Service[AVT_SRV_IDX].ControlURL, Device->CurrentURI,
-						  Device->NextProtInfo, &Device->NextMetaData, WaitFor);
-				sq_free_metadata(&Device->NextMetaData);
+					AVTSetURI(Device->Service[AVT_SRV_IDX].ControlURL, Device->CurrentURI,
+							  Device->NextProtInfo, &Device->NextMetaData, WaitFor);
+					sq_free_metadata(&Device->NextMetaData);
 
-				/*
-				Need to queue to wait for the SetURI to be accepted, otherwise
-				the current URI will be played, creating a "blurb" effect
-				*/
-				QueueAction(Device->SqueezeHandle, Device, SQ_PLAY, WaitFor, NULL, true);
+					/*
+					Need to queue to wait for the SetURI to be accepted, otherwise
+					the current URI will be played, creating a "blurb" effect
+					*/
+					QueueAction(Device->SqueezeHandle, Device, SQ_PLAY, WaitFor, NULL, true);
 
-				Event = SQ_TRACK_CHANGE;
-				LOG_INFO("[%p]: no gapless %s", Device, Device->CurrentURI);
+					Event = SQ_TRACK_CHANGE;
+					LOG_INFO("[%p]: no gapless %s", Device, Device->CurrentURI);
+				}
+				else  {
+					/*
+					This can happen if the SetNextURI has been sent too late and
+					the device did not have time to buffer next track data. In
+					this case, give it a nudge
+					*/
+					AVTBasic(Device->Service[AVT_SRV_IDX].ControlURL, "Next", Device->seqN++);
+					LOG_INFO("[%p]: nudge next track required %s", Device, Device->NextURI);
+				}
 			}
 			else {
-				/*
-				If the stop is abnormal (due to a timing issue), the squeezelite
-				part will detect that and inform LMS that will send next track
-				*/
+				// Can be a user stop, an error or a normal stop
 				Event = SQ_STOP;
 			}
 			Device->State = STOPPED;

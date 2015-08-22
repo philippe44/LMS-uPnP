@@ -369,7 +369,18 @@ int AVTBasic(char *ControlURL, char *Action, void *Cookie)
 	node = XMLAddNode(doc, node, "res", URI);
 
 	if (MetaData->duration)
-		XMLAddAttribute(doc, node, "duration", "%1d:%02d:%02d.000", MetaData->duration/3600, MetaData->duration/60, MetaData->duration % 60);
+		XMLAddAttribute(doc, node, "duration", "%1d:%02d:%02d.000",
+							MetaData->duration/3600,
+							(MetaData->duration % 3600) / 60,
+							MetaData->duration % 60);
+
+/*
+	XMLAddAttribute(doc, node, "bitrate", "176400");
+	XMLAddAttribute(doc, node, "size", "44");
+	XMLAddAttribute(doc, node, "bitsPerSample", "16");
+	XMLAddAttribute(doc, node, "sampleFrequency", "44100");
+	XMLAddAttribute(doc, node, "nbAudioChannels", "2");
+*/
 
 	if (ProtInfo[strlen(ProtInfo) - 1] == ':')
 		XMLAddAttribute(doc, node, "protocolInfo", "%s%s", ProtInfo, DLNA_OPT + 1);

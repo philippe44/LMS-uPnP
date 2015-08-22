@@ -65,7 +65,7 @@
 		<accept_nexturi>0</accept_nexturi>
 		<codecs>pcm,flc,mp3</codecs>
 	</profile>	<profile name='Roku SoundBridge'>		<stream_length>-1</stream_length>		<codecs>pcm,mp3</codecs>		<raw_audio_format>raw,wav,aiff</raw_audio_format>	</profile>
-	<profile name='Pionner'>
+	<profile name='Pioneer'>
 		<codecs>aif,pcm,flc,mp3</codecs>
 		<sample_rate>192000</sample_rate>
 		<raw_audio_format>raw,wav,aiff</raw_audio_format>

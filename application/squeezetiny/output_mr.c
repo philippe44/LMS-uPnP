@@ -171,14 +171,6 @@ static struct aiff_header_s {
 	u8_t	sample_rate_num[8];
 	u8_t    data_id[4];
 	u8_t	data_size[4];
-#ifdef AIFF_MARKER
-	u8_t	marker_chunk[4];
-	u8_t	marker_size[4];
-	u8_t	nb_marker[2];
-	u8_t	marker_id[2];
-	u8_t	marker_pos[4];
-	u8_t	marke_name[4];
-#endif
 	u32_t	offset;
 	u32_t	blocksize;
 #define AIFF_PAD_SIZE	2				// C compiler adds a padding to that structure, need to discount it
@@ -200,14 +192,6 @@ static struct aiff_header_s {
 		{ 0x00, 0x00 },
 		{ 'S', 'S', 'N', 'D' },
 		{ 0x3B, 0x9A, 0xCA, 0x08 },		// one chunk of 10^9 bytes + 8
-#ifdef AIFF_MARKER
-		{ 'M', 'A', 'R', 'K' },
-		{ 0x00, 0x00, 0x00, 0x0C },
-		{ 0x00, 0x01 },
-		{ 0x00, 0x01 },
-		{ 0x00, 0x00, 0x00, 0x00 },
-		{ 0x03, 'b', 'e', 'g' },
-#endif
 		0,
 		0
 	};
@@ -228,6 +212,15 @@ extern u8_t *silencebuf;
 #if DSD
 extern u8_t *silencebuf_dop;
 #endif
+
+/*---------------------------------------------------------------------------*/
+static void set32(u8_t *dst, u32_t src)
+{
+	*dst++ = (u8_t) (src);
+	*dst++ = (u8_t) (src >> 8);
+	*dst++ = (u8_t) (src >> 16);
+	*dst = (u8_t) (src >> 24);
+}
 
 /*---------------------------------------------------------------------------*/
 static u16_t flac_block_size(u8_t block_size)
@@ -632,15 +625,19 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 			if (!strcmp(out->ext, "wav")) {
 
 				if (!out->write_count) {
+					u32_t duration = out->duration ? out->duration : 3600*2;
 					u8_t sample_size = (out->sample_size == 24 && ctx->config.L24_format == L24_TRUNC_16) ? 16 : out->sample_size;
 					wave_header.channels = out->channels;
 					wave_header.bits_per_sample = sample_size;
 					wave_header.sample_rate = out->sample_rate;
 					wave_header.byte_rate = out->sample_rate * out->channels * (sample_size / 8);
 					wave_header.block_align = out->channels * (sample_size / 8);
+					wave_header.subchunk2_size = duration * (u32_t) out->sample_rate * (u32_t) sample_size/8 * (u32_t) out->channels;
+					wave_header.chunk_size = 36 + wave_header.subchunk2_size;
+					out->raw_size = wave_header.chunk_size + 8;
 					out->write_count = fwrite(&wave_header, 1, sizeof(struct wave_header_s), out->write_file);
 					out->write_count_t = out->write_count;
-					LOG_INFO("[%p]: wave header", ctx);
+					LOG_INFO("[%p]: wave header (%d)", ctx, out->raw_size);
 
 					/*
 					!!! only if LMS < 7.9.x !!!
@@ -673,14 +670,22 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 			*/
 			if (!strcmp(out->ext, "aif")) {
 				if (!out->write_count) {
+					u32_t duration = out->duration ? out->duration : 3600*2;
+					u32_t data_size;
 					u8_t sample_size = (out->sample_size == 24 && ctx->config.L24_format == L24_TRUNC_16) ? 16 : out->sample_size;
 					aiff_header.channels[1] = (u8_t) out->channels;
 					aiff_header.sample_size[1] = sample_size;
 					aiff_header.sample_rate_num[0] = (u8_t) (out->sample_rate >> 8);
 					aiff_header.sample_rate_num[1] = (u8_t) out->sample_rate;
+					data_size = duration * (u32_t) out->sample_rate * (u32_t) sample_size/8 * (u32_t) out->channels;
+					out->raw_size = (data_size+8+8) + (18+8) + 4 + 8;
+					set32(aiff_header.data_size, data_size + 8);
+					set32(aiff_header.chunk_size, (data_size+8+8) + (18+8) + 4);
+					set32(aiff_header.frames, duration * out->sample_rate);
+
 					out->write_count = fwrite(&aiff_header, 1, sizeof(struct aiff_header_s) - AIFF_PAD_SIZE, out->write_file);
 					out->write_count_t = out->write_count;
-					LOG_INFO("[%p]: aiff header", ctx);
+					LOG_INFO("[%p]: aiff header (%d)", ctx, out->raw_size);
 
 					/*
 					!!! only if LMS < 7.9.x !!!
@@ -719,7 +724,10 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 		} else sleep_time = 100000;
 
 		// all done, time to close the file
-		if (out->write_file && ctx->stream.state <= DISCONNECT && (!_buf_used(ctx->streambuf) || (out->sample_size == 24 && _buf_used(ctx->streambuf) < 6*out->channels))) {
+		if (out->write_file && ctx->stream.state <= DISCONNECT &&
+			(!_buf_used(ctx->streambuf) ||
+				(out->sample_size == 24 && _buf_used(ctx->streambuf) < 6*out->channels) ||
+				out->raw_size && (out->write_count_t >= out->raw_size))) {
 			LOG_INFO("[%p] wrote total %Ld", ctx, out->write_count_t);
 			fclose(out->write_file);
 			out->write_file = NULL;

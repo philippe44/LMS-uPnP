@@ -401,8 +401,9 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 						}
 						LOG_INFO("[%p] URI proxied by SQ2MR : %s", ctx, uri.urn);
 						ctx->out_ctx[idx].file_size = uri.file_size;
+						ctx->out_ctx[idx].raw_size = 0;
 						ctx->out_ctx[idx].src_format = uri.src_format;
-
+						ctx->out_ctx[idx].duration = uri.duration;
 					}
 					else ctx->decode.state = DECODE_ERROR;
 
@@ -721,7 +722,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			if (!ctx->sentSTMu && ctx->status.stream_state <= DISCONNECT && ctx->track_ended) {
 				_sendSTMu = true;
 				ctx->sentSTMu = true;
-				// not normal end
+				// not normal end can be error or user, can't know that
 				if (!ctx->sentSTMd) {
 					_sendSTMn = true;
 					LOG_WARN("[%p]: unwanted stop, reporting error", ctx);
