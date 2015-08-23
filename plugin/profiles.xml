@@ -10,6 +10,7 @@
 	<L24_format>2</L24_format>
 	<volume_curve>0:0, 400:10, 700:20, 1200:30, 2050:40, 3800:50, 6600:60, 12000:70, 21000:80, 37000:90, 65536:100</volume_curve>
 	<max_volume>100</max_volume>
+	<match_endianness>0</match_endianness>
 	<profile name=''></profile>
 	<profile name='foobar 2000'></profile>
 	<profile name='Sonos'>
@@ -28,7 +29,7 @@
 		</profile>	
 	</profile>
 	<profile name='JRiver'>
-		<codecs>pcm,mp3</codecs>
+		<codecs>aif,pcm,mp3</codecs>
 		<sample_rate>192000</sample_rate>
 		<raw_audio_format>raw,aiff,wav</raw_audio_format>
 	</profile>
@@ -39,7 +40,6 @@
 	<profile name='ROCKI'>
 		<stream_length>-1</stream_length>
 		<accept_nexturi>0</accept_nexturi>
-		<send_metadata>0</send_metadata>
 	</profile>
 	<profile name='Revo'>
 		<stream_length>1000000000</stream_length>

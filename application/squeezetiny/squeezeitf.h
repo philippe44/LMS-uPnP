@@ -7,7 +7,7 @@
 #define SQ_STR_LENGTH	256
 
 typedef enum {SQ_NONE, SQ_SETFORMAT, SQ_SETURI, SQ_SETNEXTURI, SQ_PLAY, SQ_PAUSE, SQ_UNPAUSE, SQ_STOP, SQ_SEEK,
-			  SQ_VOLUME, SQ_TIME, SQ_TRACK_CHANGE, SQ_ONOFF} sq_action_t;
+			  SQ_VOLUME, SQ_TIME, SQ_TRACK_CHANGE, SQ_ONOFF, SQ_NEXT} sq_action_t;
 typedef enum {SQ_LMSUPNP = 0, SQ_STREAM = 2, SQ_FULL = 3} sq_mode_t;
 typedef	sq_action_t sq_event_t;
 
@@ -111,6 +111,7 @@ void*				sq_urn2MR(const char *urn);
 void*				sq_get_info(const char *urn, s32_t *filesize, char **content_type);	// string must be released by caller
 void*				sq_open(const char *urn);
 void*				sq_isopen(const char *urn);
+void				sq_set_sizes(void *desc);
 bool				sq_close(void *desc);
 int					sq_read(void *desc, void *dst, unsigned bytes);
 int					sq_seek(void *desc, off_t bytes, int from);

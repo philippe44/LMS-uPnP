@@ -401,9 +401,9 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 						}
 						LOG_INFO("[%p] URI proxied by SQ2MR : %s", ctx, uri.urn);
 						ctx->out_ctx[idx].file_size = uri.file_size;
-						ctx->out_ctx[idx].raw_size = 0;
 						ctx->out_ctx[idx].src_format = uri.src_format;
 						ctx->out_ctx[idx].duration = uri.duration;
+						sq_set_sizes(ctx->out_ctx + idx);
 					}
 					else ctx->decode.state = DECODE_ERROR;
 

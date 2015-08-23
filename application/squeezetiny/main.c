@@ -223,7 +223,7 @@ static char *cli_decode(char *str) {
 
 	strcpy(buf, tag);
 	strcat(buf, "%3a");
-	if ((p = stristr(str, buf))) {
+	if ((p = stristr(str, buf)) != NULL) {
 		int i = 0;
 		p += strlen(buf);
 		while (*(p+i) != ' ' && *(p+i) != '\n' && *(p+i)) i++;
@@ -409,11 +409,11 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 		metadata->artist = cli_find_tag(rsp, "artist");
 		metadata->album = cli_find_tag(rsp, "album");
 		metadata->genre = cli_find_tag(rsp, "genre");
-		if ((p = cli_find_tag(rsp, "duration"))) {
+		if ((p = cli_find_tag(rsp, "duration")) != NULL) {
 			metadata->duration = atol(p);
 			free(p);
 		}
-		if ((p = cli_find_tag(rsp, "filesize"))) {
+		if ((p = cli_find_tag(rsp, "filesize")) != NULL) {
 			metadata->file_size = atol(p);
 			/*
 			at this point, LMS sends the original filesize, not the transcoded
@@ -422,11 +422,11 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 			metadata->file_size = 0;
 			free(p);
 		}
-		if ((p = cli_find_tag(rsp, "tracknum"))) {
+		if ((p = cli_find_tag(rsp, "tracknum")) != NULL) {
 			metadata->track = atol(p);
 			free(p);
 		}
-		if ((p = cli_find_tag(rsp, "coverid"))) {
+		if ((p = cli_find_tag(rsp, "coverid")) != NULL) {
 			// some changes to do on the coverid for form an URL
 			metadata->artwork = p;
 		}
@@ -561,6 +561,37 @@ void *sq_isopen(const char *urn)
 
 
 /*---------------------------------------------------------------------------*/
+void sq_set_sizes(void *desc)
+{
+	out_ctx_t *p = (out_ctx_t*) desc;
+	u8_t sample_size;
+
+	p->raw_size = p->file_size;
+
+	// if not a raw format, then duration and raw size cannot be altered
+	if (strcmp(p->ext, "wav") && strcmp(p->ext, "aif") && strcmp(p->ext, "pcm")) return;
+
+	sample_size = (p->sample_size == 24 && p->owner->config.L24_format == L24_TRUNC_16) ? 16 : p->sample_size;
+
+	// duration is missing from metadata but using a HTTP no size format, need to take a guess
+	if (!p->duration) {
+		p->duration =  (p->file_size < 0) ?
+						(1 << 31) / ((u32_t) p->sample_rate * (u32_t) (sample_size/8) * (u32_t) p->channels) :
+						(p->file_size) / ((u32_t) p->sample_rate * (u32_t) (sample_size/8) * (u32_t) p->channels);
+	}
+
+	p->raw_size = p->duration * (u32_t) p->sample_rate * (u32_t) (sample_size/8) * (u32_t) p->channels;
+
+	// HTTP streaming using no size, nothing else to change
+	if (p->file_size < 0) return;
+
+	if (!strcmp(p->ext, "wav")) p->file_size = p->raw_size + 36 + 8;
+	if (!strcmp(p->ext, "aif")) p->file_size = p->raw_size + (8+8) + (18+8) + 4 + 8;
+	if (!strcmp(p->ext, "pcm")) p->file_size = p->raw_size;
+}
+
+
+/*---------------------------------------------------------------------------*/
 bool sq_close(void *desc)
 {
 	out_ctx_t *p = (out_ctx_t*) desc;
@@ -671,18 +702,22 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 		return 0;
 	}
 
+	LOG_INFO("[%p]: read %d (r:%d w:%d)", ctx, bytes, read_b, wait);
+
 	LOCK_S;LOCK_O;
 
 	p->read_count += read_b;
 	p->read_count_t += read_b;
 
 	/*
-	stream disconnected and not full data request served ==> end of stream
+	Stream disconnected and not full data request served ==> end of stream
 	but ... only inform the controller when a last read with 0 has been
 	made, otherwise the upnp device will make another read attempt, read in
 	the nextURI buffer and miss the end of the current track
+	Starting 2.5.x with real size, take also into account when player closes
+	the connection
 	*/
-	if (wait && !read_b && !p->write_file) {
+	if ((!read_b || ((p->file_size > 0 ) && (p->read_count_t >= p->file_size))) && wait && !p->write_file) {
 #ifndef __EARLY_STMd__
 		ctx->read_ended = true;
 		wake_controller(ctx);
@@ -696,8 +731,6 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 		LOG_ERROR("[%p]: underrun read:%d (r:%d)", ctx, read_b, bytes);
 	}
 	UNLOCK_S;UNLOCK_O;
-
-	LOG_INFO("[%p]: read %d (r:%d w:%d)", ctx, bytes, read_b, wait);
 
 	return read_b;
 }

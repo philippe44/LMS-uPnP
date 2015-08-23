@@ -2,9 +2,15 @@
 - See if, for non stream format, it could be possible to buffer the whole file and then to send real filze size to the player. That would delay playback a bit, but would love a lot of issues. Need to find the right logic to apply when playing a stream - maybe "duration" indicated by LMS would be telling good enough. That whole thing might help dramatically with non streamable formats like WAV and AIFF
 - On Pi B+, FLAC and WAV fail to play on Sonos - seems to be a CPU/network speed issue (works on Pi 2) but not as clear as PCM and FLAC works fine on other some other players. Need to investigate why Sonos seems to be starved by audio data
 - Add icy-metadata. Probably best place is to insert them in sq_read. The stream_thread should create a queue of metadata set, each set containing data, position, position of next (interval). In sq_read, that queue should be used and only the number of bytes before desired position should be read from buffer file. Then the metadata should be inserted with the adjusted interval in the returned buffer (no need to read more data from the buffer file, just wait next sq_read call)
+- Large refactor
+	- strenghten state machines on both sides
+	- Add a queue management for UPnP commands: send command if none pending and state != transitionning (or authorized). Otherwise, queue and unqueue on ACTION_RESPONSE and regular state check to make sure that system wont go deadlock
+	- remove decoder thread and associated states. Write directly streamed data in buffer file, remove interim buffer that adds a lot of complexity and CPU usage due to polling
 
 UNLIKELY
 - enhance metadata management: add albumart and filesize (LMS won't give it)
-- use filesize to specify content-length in HTTP transfer to accomodate more players (see above)
 - add matching pattern in config file to allow configuration by group
 - add option to call an external program when upnp player is locked 
+
+DONE
+- use filesize to specify content-length in HTTP transfer to accomodate more players (for uncompressed formats)

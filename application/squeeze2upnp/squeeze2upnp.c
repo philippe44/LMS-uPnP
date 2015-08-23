@@ -388,6 +388,9 @@ static int	uPNPTerminate(void);
 			QueueAction(handle, caller, action, cookie, param, false);
 			device->sqState = action;
 			break;
+		case SQ_NEXT:
+			AVTBasic(device->Service[AVT_SRV_IDX].ControlURL, "Next", device->seqN++);
+			break;
 		case SQ_SEEK:
 //			AVTSeek(device->Service[AVT_SRV_IDX].ControlURL, *(u16_t*) p);
 			break;
@@ -484,7 +487,8 @@ void SyncNotifState(char *State, struct sMR* Device)
 					the device did not have time to buffer next track data. In
 					this case, give it a nudge
 					*/
-					AVTBasic(Device->Service[AVT_SRV_IDX].ControlURL, "Next", Device->seqN++);
+					QueueAction(Device->SqueezeHandle, Device, SQ_NEXT, NULL, NULL, false);
+//					AVTBasic(Device->Service[AVT_SRV_IDX].ControlURL, "Next", Device->seqN++);
 					LOG_INFO("[%p]: nudge next track required %s", Device, Device->NextURI);
 				}
 			}
@@ -559,6 +563,9 @@ void SyncNotifState(char *State, struct sMR* Device)
 		}
 
 		switch (Action->Action) {
+		case SQ_NEXT:
+			AVTBasic(Action->Caller->Service[AVT_SRV_IDX].ControlURL, "Next", Device->seqN++);
+			break;
 		case SQ_UNPAUSE:
 		case SQ_PLAY:
 			AVTPlay(Action->Caller->Service[AVT_SRV_IDX].ControlURL, Device->seqN++);
@@ -988,6 +995,7 @@ static void *MRThread(void *args)
 		elapsed = gettime_ms() - last;
 		ithread_mutex_lock(&p->Mutex);
 
+		// make sure that both domains are in sync that nothing shall be done
 		if (!p->on || (p->sqState == SQ_STOP && p->State == STOPPED) ||
 			 p->ErrorCount > MAX_ACTION_ERRORS) {
 			ithread_mutex_unlock(&p->Mutex);
