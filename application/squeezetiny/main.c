@@ -380,6 +380,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 
 	if (!rsp || (rsp && !*rsp)) {
 		LOG_ERROR("[%p]: missing index", ctx);
+		NFREE(rsp);
 		sq_default_metadata(metadata, true);
 		return false;
 	}
@@ -410,7 +411,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 		metadata->album = cli_find_tag(rsp, "album");
 		metadata->genre = cli_find_tag(rsp, "genre");
 		if ((p = cli_find_tag(rsp, "duration")) != NULL) {
-			metadata->duration = atol(p);
+			metadata->duration = 1000 * atof(p);
 			free(p);
 		}
 		if ((p = cli_find_tag(rsp, "filesize")) != NULL) {
@@ -448,14 +449,22 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 
 		sprintf(cmd, "%s playlist duration %d", ctx->cli_id, idx);
 		rsp = cli_send_cmd(cmd, true, true, ctx);
-		if (rsp) metadata->duration = atol(rsp);
+		if (rsp) metadata->duration = 1000 * atof(rsp);
 	}
-	NFREE(rsp);
+    NFREE(rsp);
+
+	if (!next) {
+		sprintf(cmd, "%s time", ctx->cli_id);
+		rsp = cli_send_cmd(cmd, true, true, ctx);
+		if (rsp && *rsp) metadata->duration -= (u32_t) (atof(rsp) * 1000);
+		NFREE(rsp);
+    }
+
 	sq_default_metadata(metadata, false);
 
-	LOG_INFO("[%p]: idx %d\n\tartist:%s\n\talbum:%s\n\ttitle:%s\n\tgenre:%s\n\tduration:%d\n\tsize:%d", ctx, idx,
+	LOG_INFO("[%p]: idx %d\n\tartist:%s\n\talbum:%s\n\ttitle:%s\n\tgenre:%s\n\tduration:%d.%03d\n\tsize:%d", ctx, idx,
 				metadata->artist, metadata->album, metadata->title,
-				metadata->genre, metadata->duration, metadata->file_size);
+				metadata->genre, div(metadata->duration, 1000).quot, div(metadata->duration,1000).rem, metadata->file_size);
 
 	return true;
 }
@@ -565,9 +574,10 @@ void sq_set_sizes(void *desc)
 {
 	out_ctx_t *p = (out_ctx_t*) desc;
 	u8_t sample_size;
+	div_t duration;
 
-	p->raw_size = p->file_size;
-
+	p->raw_size = p->file_size;
+
 	// if not a raw format, then duration and raw size cannot be altered
 	if (strcmp(p->ext, "wav") && strcmp(p->ext, "aif") && strcmp(p->ext, "pcm")) return;
 
@@ -578,9 +588,12 @@ void sq_set_sizes(void *desc)
 		p->duration =  (p->file_size < 0) ?
 						(1 << 31) / ((u32_t) p->sample_rate * (u32_t) (sample_size/8) * (u32_t) p->channels) :
 						(p->file_size) / ((u32_t) p->sample_rate * (u32_t) (sample_size/8) * (u32_t) p->channels);
+		p->duration *= 1000;
 	}
 
-	p->raw_size = p->duration * (u32_t) p->sample_rate * (u32_t) (sample_size/8) * (u32_t) p->channels;
+	duration = div(p->duration, 1000);
+	p->raw_size = duration.quot * (u32_t) p->sample_rate * (u32_t) (sample_size/8) * (u32_t) p->channels;
+	p->raw_size += (duration.rem * (u32_t) p->sample_rate * (u32_t) (sample_size/8) * (u32_t) p->channels) / 1000;
 
 	// HTTP streaming using no size, nothing else to change
 	if (p->file_size < 0) return;

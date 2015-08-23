@@ -880,10 +880,10 @@ color:black'>&nbsp;</span></p>
 <p class=MsoNormal style='margin-bottom:0cm;margin-bottom:.0001pt'><b><u><span
 lang=EN-GB style='color:black'>It is strongly suggested that before you start
 to play on a device you check the volume for the device in LMS is not near the
-maximum, so as to avoid damaging your speakers.  When using sq2u and LMS to
-control a renderer you should avoid using any controls on the renderer itself
-(or its remote), except the volume control in some cases (there is an option to
-allow this), since LMS will not recognise such changes and may override them.  </span></u></b><b><u><span
+maximum, so as to avoid damaging your speakers.  When using sq2u and LMS to control
+a renderer you should avoid using any controls on the renderer itself (or its
+remote), except the volume control in some cases (there is an option to allow
+this), since LMS will not recognise such changes and may override them.  </span></u></b><b><u><span
 lang=EN-GB style='color:black'>If you find that when you start up your renderer
 always plays the last song it played, possibly at high volume, either make sure
 you clear the LMS playlist before you stop, or better still set the LMS
@@ -1187,20 +1187,28 @@ lang=EN-GB>&nbsp;</span></p>
 lang=EN-GB style='color:black'>The main variations are in the codecs (audio
 formats) supported, sample size, sample rates and gapless play.  It may be
 possible to find out more about your renderer from your user manual.  If not,
-you may be able to use a software tool to find out more.  </span></p>
+you may set the maximum debug mode for sq2u by adding on the command line ‘-d
+all=debug’ (or choose debug in the plugin settings for LMS) and look for a line
+containing ‘ProtocolInfo’. </span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;margin-bottom:.0001pt'><span
-lang=EN-GB>&nbsp;</span></p>
+lang=EN-GB style='color:black'>&nbsp;</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;margin-bottom:.0001pt'><span
-lang=EN-GB style='color:black'>Device Spy (Windows) and UPnP Inspector (Linux)
-are two such tools.  The main thing you are interested in is in the 'Connection
-Manager', 'GetProtocolInfo', which supplies 'ProtocolInfo' for the renderer. 
-This should list the codecs, sample size (16, 24 or 32 bits) and sample rates
-(44100, 48000, 88200, 96000 Hz, etc.).  For the codecs and sample rates, set
-the options for the specific renderer in the &lt;device&gt; section of the
-configuration file.  LMS should then transcode any other codecs or higher
-sample rates to those your system supports.</span></p>
+lang=EN-GB style='color:black'>You can also use a software tool to find out
+more. Device Spy (Windows) and UPnP Inspector (Linux) are two such tools.  The
+main thing you are interested in is in the 'Connection Manager',
+'GetProtocolInfo', which supplies 'ProtocolInfo' for the renderer.  </span></p>
+
+<p class=MsoNormal style='margin-bottom:0cm;margin-bottom:.0001pt'><span
+lang=EN-GB style='color:black'>&nbsp;</span></p>
+
+<p class=MsoNormal style='margin-bottom:0cm;margin-bottom:.0001pt'><span
+lang=EN-GB style='color:black'>This should list the codecs, sample size (16, 24
+or 32 bits) and sample rates (44100, 48000, 88200, 96000 Hz, etc.).  For the
+codecs and sample rates, set the options for the specific renderer in the
+&lt;device&gt; section of the configuration file.  LMS should then transcode
+any other codecs or higher sample rates to those your system supports.</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB style='color:black'>&nbsp;</span></p>
@@ -1224,11 +1232,13 @@ lang=EN-GB style='color:black'>&nbsp;</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB style='color:black'>The sample size is a little more difficult.  If
-you have 24 or 32 bit sources and your system only supports 16 bits, you should
-use a codec such as flc (flac) so that LMS can resample the audio data.  If you
-have 24 bit sources and use the pcm codec when your system only support 16 bit
-pcm it will not work.  Renderers that support 24 bit pcm packed type 1 need to
-have &lt;L24_format&gt; set to 1. </span></p>
+you have 32 bit sources and your system does not support this, it will not
+work. If you have 24 bits flac files and your system does not support them, you
+have to convert flac to pcm, either in LMS settings or by removing ‘flc’ from
+sq2u list of supported codecs. If you have 24 bit sources and use the pcm codec
+when your system only support 16 bit pcm, then sq2u can convert on the fly to
+16 bits  by setting  &lt;L24_format&gt;. Renderers that support 24 bit pcm
+packed type 1 need to have &lt;L24_format&gt; set to 1. </span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB>&nbsp;</span></p>
@@ -1279,12 +1289,24 @@ lang=EN-GB>If tracks continue while they are supposed to be paused, set
 LMS will look paused, but it will be clear if the track has moved on when you
 un-pause). </span></p>
 
+<p class=MsoNormal style='margin-bottom:0cm;margin-bottom:.0001pt'><span
+lang=EN-GB>&nbsp;</span></p>
+
+<p class=MsoNormal style='margin-bottom:0cm;margin-bottom:.0001pt'><span
+lang=EN-GB>The duration of a track is queried from LMS, forwarded to the UPnP
+player and is also used to calculate some related parameters (see below
+uncompressed format chapter). This will not work if you have set a LMS access password
+or disabled metadata query in squeeze2upnp. Note that when you reposition in a
+track, due to the technique LMS uses to send a repositioned track to its
+player, the displayed duration will be the remaining track length and the UPnP
+player will re-start counting from 0.</span></p>
+
 <h2 style='margin-left:28.8pt;text-indent:-28.8pt'><a
 name="__RefHeading__2026_773093279"></a><span lang=EN-GB>4.3<span
 style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp; </span></span><span
 lang=EN-GB>LMS Options</span></h2>
 
-<p class=MsoNormal><span lang=EN-GB style='color:black'> LMS has many options. 
+<p class=MsoNormal><span lang=EN-GB style='color:black'>LMS has many options. 
 The main ones that may affect sq2u are the LMS File Types (see Settings,
 Advanced, in the Drop Down).  This is discussed in Section </span><span lang=EN-GB>2.2</span><span lang=EN-GB style='color:black'> above.  </span></p>
 
@@ -1293,8 +1315,8 @@ support re-positioning of flac well.  If you have this problem you need to
 create a custom transcoding rule.  You first need to find the convert.conf file
 on your system (on linux this is in /etc/squeezeboxserver).  This file contains
 the rules LMS uses to transcode from one format to another.  To add a new rule,
-create a new file called 'custom-convert.conf' in the same directory and restart
-LMS.  This file should contain:</span></p>
+create a new file called 'custom-convert.conf' in the same directory and
+restart LMS.  This file should contain:</span></p>
 
 <p class=MsoNormal><i><span lang=EN-GB style='font-size:10.0pt;color:black'>(if
 you copy-paste below,be careful with the indentation)</span></i></p>
@@ -1318,8 +1340,9 @@ re-positioned.  The LMS File Type for flac should now show flac transcoded to
 
 <p class=MsoNormal><span lang=EN-GB style='color:black'>If you do not have LAME
 installed you may have problems with other codecs being transcoded to mp3s.  If
-you cannot install LAME, make sure all your other required source codecs translate
-to flac or pcm in the LMS File Types (mp3s should still play natively).</span></p>
+you cannot install LAME, make sure all your other required source codecs
+translate to flac or pcm in the LMS File Types (mp3s should still play
+natively).</span></p>
 
 <p class=MsoListParagraphCxSpFirst style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB style='color:black'>Note that sq2u uses the LMS Command Line
@@ -1351,8 +1374,8 @@ then forwarded by LMS to real squeezebox players.</span></p>
 
 <p class=MsoNormal><span lang=EN-GB>In the case of a UPnP renderer “proxied”
 (registered) by sq2u, you may want to use the </span><span lang=EN-GB
-style='color:black'>renderer</span><span lang=EN-GB>’s dedicated remote, use
-commands directly on the </span><span lang=EN-GB style='color:black'>renderer</span><span
+style='color:black'>renderer</span><span lang=EN-GB>’s dedicated remote, use commands
+directly on the </span><span lang=EN-GB style='color:black'>renderer</span><span
 lang=EN-GB>, use other UPnP control software or simply use the </span><span
 lang=EN-GB style='color:black'>renderer</span><span lang=EN-GB> independently
 from LMS without stopping sq2u.</span></p>
@@ -1439,8 +1462,8 @@ lang=EN-GB style='color:red'>&nbsp;</span></p>
 lang=EN-GB>Unlike most UPnP controllers LMS does not send track size
 information to its players and this creates a major difficulty for sq2u because
 many UPnP renderers expect it. The track transfer between sq2u and UPnP
-renderers uses HTTP, and the parameter &lt;stream-length&gt; allows using variations
-of that protocol to work around potential problems.</span></p>
+renderers uses HTTP, and the parameter &lt;stream-length&gt; allows using
+variations of that protocol to work around potential problems.</span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB>&nbsp;</span></p>
@@ -1579,9 +1602,10 @@ lang=EN-GB>Troubleshooting uncompressed audio formats</span></h2>
 
 <p class=MsoListParagraphCxSpFirst style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB>When a source file is in WAV or AIFF format or when the selected
-codec for streaming to a player is uncompressed, LMS will send audio
-uncompressed samples in 16, 24 or 32 bits formats while stripping out any
-header describing the content. </span></p>
+codec for streaming to a player is uncompressed, LMS will send audio uncompressed
+samples in 16, 24 or 32 bits formats while stripping out any header describing
+the content (in other words, LMS always rends ‘raw’ data when reading wav or
+aiff files)</span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB>&nbsp;</span></p>
@@ -1590,7 +1614,8 @@ lang=EN-GB>&nbsp;</span></p>
 lang=EN-GB>Each source file format uses a different ‘endianness’ (order of
 bytes of a multi-byte sample) for storing their samples. WAV puts the least
 significant byte first and AIFF puts the most significant first. This ordering
-will be preserved when LMS sends the audio data.</span></p>
+will be preserved when LMS sends the audio data (again, only the header is
+stripped out).</span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB>&nbsp;</span></p>
@@ -1611,43 +1636,42 @@ significant byte first</span></p>
 .0001pt;text-indent:-18.0pt'><span lang=EN-GB style='font-family:Symbol'>·<span
 style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 </span></span><span lang=EN-GB>WAV audio files with least significant byte
-first</span></p>
+first (needs a header)</span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin-bottom:0cm;margin-bottom:
 .0001pt;text-indent:-18.0pt'><span lang=EN-GB style='font-family:Symbol'>·<span
 style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 </span></span><span lang=EN-GB>AIFF audio files with most significant byte
-first</span></p>
+first (needs a header)</span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin-bottom:0cm;margin-bottom:
 .0001pt'><span lang=EN-GB>&nbsp;</span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
-lang=EN-GB>The process of byte re-ordering can be handled by sq2u but this is
-CPU-consuming for little benefits and should be avoided when possible. </span></p>
+lang=EN-GB>The parameter &lt;raw_audio_format&gt; let you control what format
+sq2u is allowed to send to the UPnP Player.This is an ordered list, combining
+‘raw’, ‘wav’, ‘aiff’ (items are tried by order). For format requiring a header
+sq2u adds it on-the-fly. For example, to avoid use of WAV and AIFF, simply set
+that parameter to ‘raw’</span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB>&nbsp;</span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
-lang=EN-GB>With the parameter &lt;match_endianness&gt;, sq2u will choose
-amongst all the formats supported by the UPnP player and try to find the best
-match to avoid byte-reordering. Sending a WAV or an AIFF file to a player
-requires the addition of a header and sq2u does that on-the-fly but these
-format are not made for streaming and require the total file size to be set in
-the header. </span></p>
+lang=EN-GB>By default, sq2u choses the format by a ‘first-fit’ method which
+means that byte re-ordering will be done if needed. This process is
+CPU-consuming for little benefits. The parameter &lt;match_endianness&gt;
+allows sq2u to use a ‘best fit’ selection logic and chose amongst all the
+formats supported by the UPnP player to select one that avoids byte-reordering.</span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
-lang=EN-GB>&nbsp;</span></p>
-
-<p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
-lang=EN-GB>Although such information is never available from LMS,  sq2u tries
-to guess it based on the track duration, sample rate and sample size (there is
-a potential rounding error of up to 1s that will cause trakcs to terminate
-before the full end). The player normally closes the connection once it has
-received the whole file according to the header size. Note also that when &lt;stream_length&gt;
-is set to a positive value, sq2u will adjust this value to match the real size
-of the transmission, based on the above calculation. </span></p>
+lang=EN-GB>When header insertion is required, sq2u needs to set the file size.
+It guesses it based on track duration, sample rate and sample size (rounding
+error is below 1ms). Note that when &lt;stream_length&gt; is set to a positive
+value, sq2u will also adjust this value to match the real size of the file to
+be transmitted, based on the above calculation. This causes the UPnP player to
+close the connection once it has received the whole file (as set in header and/or
+stream_length). </span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB>&nbsp;</span></p>
@@ -1657,38 +1681,12 @@ lang=EN-GB>If track duration is unavailable (LMS metadata is inaccessible for
 any reason – you might have disable it), then sq2u uses 2^31 as a target file
 size and convert that into a rounded duration. When the whole file has been
 sent, sq2u terminates the connection and the player, although it has not
-received the full ‘indicated’ size, simply moves to the next track. </span></p>
-
-<p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
-lang=EN-GB>&nbsp;</span></p>
-
-<p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
-lang=EN-GB>Unfortunately, some player will fail in different ways, often ending
-in LMS not realizing that the player has moved to a new track. </span></p>
-
-<p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
-lang=EN-GB>&nbsp;</span></p>
-
-<p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
-lang=EN-GB>The solution to that is to restrict the use of uncompressed format
-to what works with your player and at worst only use RAW (header-less) format.
-This can be set using the parameter &lt;raw_audio_format&gt;. This is an
-ordered list of authorized uncompressed format for sq2u to use, chosen amongst:
-‘raw’, ‘wav’, ‘aiff’ (items are tried by order). For example, to avoid use of
-WAV and AIFF, simply set that parameter to ‘raw’.</span></p>
-
-<p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
-lang=EN-GB>&nbsp;</span></p>
-
-<p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
-lang=EN-GB>Using the options in that list, sq2u will try to find the best match
-to avoid byte re-ordering. Say that you have set &lt;raw_audio_format&gt; to
-‘raw, wav’ and you send a WAV file, then sq2u will add a WAV header and
-indicate to the UPnP player that this is WAV data. This might not be the
-desired result as your player might not work perfectly with WAV, so to avoid
-that and force sq2u to strictly respect the order of preference you’ve set,
-disable the &lt;match_endianness&gt;. In that case, sq2u will choose the first
-format that is accepted by your player and do byte-reordering if needed.</span></p>
+received the full ‘indicated’ size (in header and/or &lt;stream_length&gt;),
+simply moves to the next track. Unfortunately, some players fail in different
+ways, often ending in LMS not realizing that the player has moved to a new
+track, or playing the same track ever and ever. The solution to that is to
+restrict the use of uncompressed format to what works with your player and usually
+raw (header-less) works the best.</span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB>&nbsp;</span></p>
@@ -1857,7 +1855,8 @@ color:black'>&lt;web_log&gt;[error | warn | info | debug |
 sdebug]&lt;/web_log&gt;</span></b></p>
 
 <p class=MsoNormalCxSpMiddle><b><span lang=EN-GB style='font-size:11.0pt;
-color:black'>&lt;upnp_log&gt;[error | warn | info | debug | sdebug]&lt;/upnp_log&gt;</span></b></p>
+color:black'>&lt;upnp_log&gt;[error | warn | info | debug |
+sdebug]&lt;/upnp_log&gt;</span></b></p>
 
 <p class=MsoNormalCxSpMiddle><b><span lang=EN-GB style='font-size:11.0pt;
 color:black'>&lt;main_log&gt;[error | warn | info | debug |
@@ -2111,12 +2110,12 @@ and unwanted effect when such renderer is not actively controlled by LMS
 (although it is registered). One way to avoid this is to set the renderer “off”
 in LMS.  However, you may want to use the renderer for other purposes without
 having to switch it “off” in LMS. With this parameter set to 1 sq2u will not
-obey any volume command from LMS until it is requested to “play” a track (volume
-command are still memorized, though). If you want to ignore all volume commands
-sent by LMS and only use the renderer’s own volume control, set this to -1.
-Note also that when “off” or when stopped, sq2u will ignore all UPnP events to
-avoid unsolicited reaction from LMS when a UPnP renderer is being controlled by
-some other mean than LMS.</span></i></p>
+obey any volume command from LMS until it is requested to “play” a track
+(volume command are still memorized, though). If you want to ignore all volume
+commands sent by LMS and only use the renderer’s own volume control, set this
+to -1. Note also that when “off” or when stopped, sq2u will ignore all UPnP
+events to avoid unsolicited reaction from LMS when a UPnP renderer is being
+controlled by some other mean than LMS.</span></i></p>
 
 <p class=MsoNormalCxSpMiddle><span lang=EN-GB style='font-size:11.0pt;
 color:black'>&nbsp;</span></p>
@@ -2155,8 +2154,8 @@ name="__DdeLink__513_1956274692"><b><span style='font-size:11.0pt'>&lt;max_volum
 normal UPnP volume goes from 0 to 100 but some players have a maximum below or
 above this. This parameter scales then volume calculated using
 &lt;volume_curve&gt; by a ratio of &lt;max_volume&gt;/100. It also applies as
-the absolute limit of the volume sent to the player, even if the
-&lt;volume_curve&gt; parameter is faulty.</span></i></p>
+the absolute limit of the volume sent to the player, even if the &lt;volume_curve&gt;
+parameter is faulty.</span></i></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;margin-bottom:.0001pt'><b><span
 style='font-size:11.0pt'>&lt;pause_volume&gt;[ 0 | 1] &lt;/pause_volume&gt;</span></b>
@@ -2192,16 +2191,16 @@ codec2, …]&lt;/codecs&gt;</span></b><span style='font-size:11.0pt;color:black'
 
 <p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
 color:black'>The comma separated list of codecs, supported by the UPnP
-renderer, that will be reported to LMS. If a track is encoded in a non-supported
-format, LMS will apply its transcoding rules.  The codecs are treated in
-priority preference order, so if, say, pcm is first, it will be the chosen
-codec if the source can be made available in that codec.  pcm, flc and mp3 are
-supported by sq2u (and aac may also work on some systems).  When LMS pauses it
-locally generates a new “truncated” file and sends a new command to play/stream
-that file. Unfortunately, it does not seem to insert a header on the truncated
-file. Some UPnP renderers do not like that, so a header is “guessed” and
-re-inserted by sq2u. This is only done for flac. Note that sq2u itself does no
-transcoding from one format to another.  See also Section </span></i><span lang=EN-GB>4.2</span><i><span lang=EN-GB style='font-size:11.0pt;color:black'>.</span></i></p>
+renderer, that will be reported to LMS. If a track is encoded in a
+non-supported format, LMS will apply its transcoding rules.  The codecs are
+treated in priority preference order, so if, say, pcm is first, it will be the
+chosen codec if the source can be made available in that codec.  pcm, flc and
+mp3 are supported by sq2u (and aac may also work on some systems).  When LMS
+pauses it locally generates a new “truncated” file and sends a new command to
+play/stream that file. Unfortunately, it does not seem to insert a header on
+the truncated file. Some UPnP renderers do not like that, so a header is
+“guessed” and re-inserted by sq2u. This is only done for flac. Note that sq2u
+itself does no transcoding from one format to another.  See also Section </span></i><span lang=EN-GB>4.2</span><i><span lang=EN-GB style='font-size:11.0pt;color:black'>.</span></i></p>
 
 <p class=MsoNormalCxSpMiddle><span lang=EN-GB style='font-size:11.0pt'>&nbsp;</span></p>
 
@@ -2597,18 +2596,19 @@ PLAY:3&lt;/name&gt;</span></p>
 <p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span lang=EN-GB
 style='font-size:10.0pt;color:black'>&lt;enabled&gt;1&lt;/enabled&gt;</span></p>
 
-<p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span lang=EN-US
-style='font-size:10.0pt;color:black'>&lt;codecs&gt;flc,mp3&lt;/codecs&gt;</span></p>
+<p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span style='font-size:
+10.0pt;color:black'>&lt;codecs&gt;flc,mp3&lt;/codecs&gt;</span></p>
 
 <p class=MsoNormalCxSpMiddle><span class=block><span style='font-size:10.0pt;
 color:black'>&lt;/device&gt;</span></span></p>
 
 <p class=MsoNormalCxSpMiddle><span style='font-size:10.0pt;color:black'>&nbsp;</span></p>
 
-<p class=MsoNormalCxSpMiddle><span style='font-size:10.0pt;color:black'>&lt;device&gt;</span></p>
+<p class=MsoNormalCxSpMiddle><span lang=EN-US style='font-size:10.0pt;
+color:black'>&lt;device&gt;</span></p>
 
-<p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span style='font-size:
-10.0pt;color:black'>&lt;udn&gt;uuid:RINCON_000E58C3F67C01400&lt;/udn&gt;</span></p>
+<p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span lang=EN-US
+style='font-size:10.0pt;color:black'>&lt;udn&gt;uuid:RINCON_000E58C3F67C01400&lt;/udn&gt;</span></p>
 
 <p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span lang=EN-GB
 style='font-size:10.0pt;color:black'>&lt;name&gt;192.168.2.22 - Sonos
@@ -2617,8 +2617,8 @@ PLAY:1&lt;/name&gt;</span></p>
 <p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span lang=EN-GB
 style='font-size:10.0pt;color:black'>&lt;enabled&gt;1&lt;/enabled&gt;</span></p>
 
-<p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span style='font-size:
-10.0pt;color:black'>&lt;codecs&gt;flc,mp3&lt;/codecs&gt;</span></p>
+<p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span lang=EN-US
+style='font-size:10.0pt;color:black'>&lt;codecs&gt;flc,mp3&lt;/codecs&gt;</span></p>
 
 <p class=MsoNormalCxSpMiddle><span class=block><span style='font-size:10.0pt;
 color:black'>&lt;/device&gt;</span></span></p>

@@ -675,6 +675,7 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 				if (!out->write_count) {
 					u8_t sample_size = (out->sample_size == 24 && ctx->config.L24_format == L24_TRUNC_16) ? 16 : out->sample_size;
 					struct aiff_header_s *header = malloc(sizeof(struct aiff_header_s));
+					div_t duration = div(out->duration, 1000);
 
 					memcpy(header, &aiff_header, sizeof(struct aiff_header_s));
 					header->channels[1] = (u8_t) out->channels;
@@ -683,7 +684,7 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 					header->sample_rate_num[1] = (u8_t) out->sample_rate;
 					set32(header->data_size, out->raw_size + 8);
 					set32(header->chunk_size, (out->raw_size+8+8) + (18+8) + 4);
-					set32(header->frames, out->duration * out->sample_rate);
+					set32(header->frames, duration.quot * out->sample_rate + (duration.rem * out->sample_rate) / 1000);
 
 					out->write_count = fwrite(header, 1, sizeof(struct aiff_header_s) - AIFF_PAD_SIZE, out->write_file);
 					out->write_count_t = out->write_count;

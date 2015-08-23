@@ -368,11 +368,13 @@ int AVTBasic(char *ControlURL, char *Action, void *Cookie)
 
 	node = XMLAddNode(doc, node, "res", URI);
 
-	if (MetaData->duration)
-		XMLAddAttribute(doc, node, "duration", "%1d:%02d:%02d.000",
-							MetaData->duration/3600,
-							(MetaData->duration % 3600) / 60,
-							MetaData->duration % 60);
+	if (MetaData->duration) {
+		div_t duration = div(MetaData->duration, 1000);
+
+		XMLAddAttribute(doc, node, "duration", "%1d:%02d:%02d.%03d",
+						duration.quot/3600, (duration.quot % 3600) / 60,
+						duration.quot % 60, duration.rem);
+	}
 
 /*
 	XMLAddAttribute(doc, node, "bitrate", "176400");
