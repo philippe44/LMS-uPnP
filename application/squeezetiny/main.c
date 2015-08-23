@@ -357,12 +357,14 @@ void sq_default_metadata(sq_metadata_t *metadata, bool init)
 	if (!metadata->album) metadata->album = strdup("[no album]");
 	if (!metadata->artist) metadata->artist = strdup("[no artist]");
 	if (!metadata->genre) metadata->genre = strdup("[no genre]");
+	/*
 	if (!metadata->path) metadata->path = strdup("[no path]");
 	if (!metadata->artwork) metadata->artwork = strdup("[no artwork]");
+	*/
 }
 
 /*--------------------------------------------------------------------------*/
-bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
+bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, char *lms_urn, bool next)
 {
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
 	char cmd[1024];
@@ -410,6 +412,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 		metadata->artist = cli_find_tag(rsp, "artist");
 		metadata->album = cli_find_tag(rsp, "album");
 		metadata->genre = cli_find_tag(rsp, "genre");
+
 		if ((p = cli_find_tag(rsp, "duration")) != NULL) {
 			metadata->duration = 1000 * atof(p);
 			free(p);
@@ -429,7 +432,9 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 		}
 		if ((p = cli_find_tag(rsp, "coverid")) != NULL) {
 			// some changes to do on the coverid for form an URL
-			metadata->artwork = p;
+			metadata->artwork = malloc(strlen(lms_urn) + strlen(p) + 20 + 1);
+			sprintf(metadata->artwork, "%s/music/%s/cover.jpg", lms_urn, p);
+			free(p);
 		}
 	}
 	else {
@@ -462,9 +467,11 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 
 	sq_default_metadata(metadata, false);
 
-	LOG_INFO("[%p]: idx %d\n\tartist:%s\n\talbum:%s\n\ttitle:%s\n\tgenre:%s\n\tduration:%d.%03d\n\tsize:%d", ctx, idx,
+	LOG_INFO("[%p]: idx %d\n\tartist:%s\n\talbum:%s\n\ttitle:%s\n\tgenre:%s\n\tduration:%d.%03d\n\tsize:%d\n\t%s", ctx, idx,
 				metadata->artist, metadata->album, metadata->title,
-				metadata->genre, div(metadata->duration, 1000).quot, div(metadata->duration,1000).rem, metadata->file_size);
+				metadata->genre, div(metadata->duration, 1000).quot,
+				div(metadata->duration,1000).rem, metadata->file_size,
+				metadata->artwork);
 
 	return true;
 }

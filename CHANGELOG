@@ -2,12 +2,14 @@
  - in XMLFindAndParseService search ends if a service list is empty. It should end only when no service list remains
  - Set HasDigitalOut=0 in capabilities to prevent volume from being set to max and sent to player
  - in capabilities, ModelName is "squeeze2upnp"
+ - Add coverart to UPnP metadata
  - Add duration to UPnP metadata
  - For wav and aiff, file size in header is now real and based on duration in all cases (including during repositioning)
  - When sending uncompressed using 'large file size", the HTTP size contains a real size base on duration if available
  - Remove a race condition where player did not have the time to buffer data when SetNextURI arrived late. Now give a queued 'nudge next'
  - Remove thread unsafe use of globals for on-the-fly wav and aiff header reconstruction
  - (P) correct profile nested structure overloading logic
+ - (P) add option to disable coverart
  - (C) it is not possible to differentiate a user stop from a end of track stop, so by default sq2u moves to the next track if any
 
 0.2.4.0

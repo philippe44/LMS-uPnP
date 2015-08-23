@@ -73,6 +73,7 @@ typedef struct
 	char	urn[SQ_STR_LENGTH];
 	char	ip[16];
 	unsigned port;
+	char	lms_urn[SQ_STR_LENGTH];
 	u8_t	channels;
 	u8_t	sample_size;
 	u32_t	sample_rate;
@@ -103,7 +104,7 @@ void				sq_release_device(sq_dev_handle_t);
 bool				sq_call(sq_dev_handle_t handle, sq_action_t action, void *param);
 void				sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *cookie, void *param);
 u32_t 				sq_get_time(sq_dev_handle_t handle);
-bool				sq_get_metadata(sq_dev_handle_t handle, struct sq_metadata_s *metadata, bool next);
+bool				sq_get_metadata(sq_dev_handle_t handle, struct sq_metadata_s *metadata, char *lms_urn, bool next);
 void				sq_default_metadata(struct sq_metadata_s *metadata, bool init);
 void 				sq_free_metadata(struct sq_metadata_s *metadata);
 bool 				sq_set_time(sq_dev_handle_t handle, u32_t time);

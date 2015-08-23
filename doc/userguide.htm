@@ -880,10 +880,10 @@ color:black'>&nbsp;</span></p>
 <p class=MsoNormal style='margin-bottom:0cm;margin-bottom:.0001pt'><b><u><span
 lang=EN-GB style='color:black'>It is strongly suggested that before you start
 to play on a device you check the volume for the device in LMS is not near the
-maximum, so as to avoid damaging your speakers.  When using sq2u and LMS to control
-a renderer you should avoid using any controls on the renderer itself (or its
-remote), except the volume control in some cases (there is an option to allow
-this), since LMS will not recognise such changes and may override them.  </span></u></b><b><u><span
+maximum, so as to avoid damaging your speakers.  When using sq2u and LMS to
+control a renderer you should avoid using any controls on the renderer itself
+(or its remote), except the volume control in some cases (there is an option to
+allow this), since LMS will not recognise such changes and may override them.  </span></u></b><b><u><span
 lang=EN-GB style='color:black'>If you find that when you start up your renderer
 always plays the last song it played, possibly at high volume, either make sure
 you clear the LMS playlist before you stop, or better still set the LMS
@@ -1087,8 +1087,8 @@ margin-left:72.0pt;margin-bottom:.0001pt'><span lang=EN-GB style='font-size:
 10.0pt'>-x/home/user/Programs/squeeze2upnp/sq2upnpconfig.xml </span></p>
 
 <p class=MsoNormal style='margin-top:0cm;margin-right:0cm;margin-bottom:8.5pt;
-margin-left:72.0pt'><span lang=EN-GB style='font-size:10.0pt'>-f
-/home/user/Downloads/squeeze2upnp.log -d all=info</span></p>
+margin-left:72.0pt'><span lang=EN-GB style='font-size:10.0pt'>-f /home/user/Downloads/squeeze2upnp.log
+-d all=info</span></p>
 
 <p class=MsoNormal><span lang=EN-GB>In the Server Power Control custom command
 then enter a name for the command, and the full path to the command file.  </span></p>
@@ -1101,8 +1101,8 @@ also start up about 30 seconds later.</span></p>
 'stop' command file as well.</span></p>
 
 <p class=MsoNormal><span lang=EN-GB>'Apply' the changes (bottom right).  The
-command should now appear on the LMS GUI Extras list on the Home page under
-'Server Power Control'.</span></p>
+command should now appear on the LMS GUI Extras list on the Home page under 'Server
+Power Control'.</span></p>
 
 <p class=MsoNormal><span lang=EN-GB>Finally take another look at the Server
 Power Control settings and make sure you disable anything you don't want (e.g.
@@ -1340,9 +1340,8 @@ re-positioned.  The LMS File Type for flac should now show flac transcoded to
 
 <p class=MsoNormal><span lang=EN-GB style='color:black'>If you do not have LAME
 installed you may have problems with other codecs being transcoded to mp3s.  If
-you cannot install LAME, make sure all your other required source codecs
-translate to flac or pcm in the LMS File Types (mp3s should still play
-natively).</span></p>
+you cannot install LAME, make sure all your other required source codecs translate
+to flac or pcm in the LMS File Types (mp3s should still play natively).</span></p>
 
 <p class=MsoListParagraphCxSpFirst style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB style='color:black'>Note that sq2u uses the LMS Command Line
@@ -1374,8 +1373,8 @@ then forwarded by LMS to real squeezebox players.</span></p>
 
 <p class=MsoNormal><span lang=EN-GB>In the case of a UPnP renderer “proxied”
 (registered) by sq2u, you may want to use the </span><span lang=EN-GB
-style='color:black'>renderer</span><span lang=EN-GB>’s dedicated remote, use commands
-directly on the </span><span lang=EN-GB style='color:black'>renderer</span><span
+style='color:black'>renderer</span><span lang=EN-GB>’s dedicated remote, use
+commands directly on the </span><span lang=EN-GB style='color:black'>renderer</span><span
 lang=EN-GB>, use other UPnP control software or simply use the </span><span
 lang=EN-GB style='color:black'>renderer</span><span lang=EN-GB> independently
 from LMS without stopping sq2u.</span></p>
@@ -1399,8 +1398,8 @@ LMS, but want to use some of the renderer’s own controls at the same time?
 Doing this is not recommended, but starting with version 0.1.4.0, pause and
 play commands requested using the renderer's own controls are forwarded to LMS
 so that it synchronizes accordingly. This takes up to 1 second to be taken into
-account, so a frenetic series of play/pause commands will create problems. 
-This facility may not work well with all renderers.</span></p>
+account, so a frenetic series of play/pause commands will create problems.  This
+facility may not work well with all renderers.</span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB style='color:black'>&nbsp;</span></p>
@@ -1408,10 +1407,9 @@ lang=EN-GB style='color:black'>&nbsp;</span></p>
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB style='color:black'>Volume commands are not currently synchronized,
 so any change directly on the renderer will be overridden by LMS at next track
-or at the first pause/play sequence. If you want to only control volume from
-the renderer itself and ignore any LMS volume commands, set
-&lt;volume_on_play&gt; to -1 and LMS will have no influence on the renderer’s
-volume.</span></p>
+or at the first pause/play sequence. If you want to only control volume from the
+renderer itself and ignore any LMS volume commands, set &lt;volume_on_play&gt;
+to -1 and LMS will have no influence on the renderer’s volume.</span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB style='color:black'>&nbsp;</span></p>
@@ -1482,10 +1480,10 @@ lang=EN-GB>&nbsp;</span></p>
 lang=EN-GB>Once the renderer plays properly, test that “pause” and “un-pause”
 work. First try with &lt;seek_after_pause&gt; set to 0. If you observe that the
 renderer has not stopped (only muted, but the track continued) during a “pause”
-or if the renderer restarts from the beginning of the current track, then,
-change the &lt;stream_length&gt; according to the test sequence above. If no
-value allows pause to work, then restore your initial &lt;stream_length&gt;
-value and set &lt;seek_after_pause&gt; to 1. </span></p>
+or if the renderer restarts from the beginning of the current track, then, change
+the &lt;stream_length&gt; according to the test sequence above. If no value
+allows pause to work, then restore your initial &lt;stream_length&gt; value and
+set &lt;seek_after_pause&gt; to 1. </span></p>
 
 <p class=MsoListParagraphCxSpLast style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB>&nbsp;</span></p>
@@ -1503,8 +1501,8 @@ lang=EN-GB>&nbsp;</span></p>
 lang=EN-GB>HTTP allows clients to request a specific range of bytes from the
 server, rather than the complete file, and that range can be “open-ended” (i.e.
 start from byte N, but no end of range is given). Some complications arise when
-the server does not know the size of the file to be sent AND the client asks
-for an open-ended range. Typically some clients always send a request for 1<sup>st</sup>
+the server does not know the size of the file to be sent AND the client asks for
+an open-ended range. Typically some clients always send a request for 1<sup>st</sup>
 byte to “no-end”, which requires a HTTP PARTIAL REPONSE, instead of a sending a
 simple request with no range (whole file) that would have required a HTTP OK
 response.</span></p>
@@ -1601,11 +1599,19 @@ style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp; </span></span><span
 lang=EN-GB>Troubleshooting uncompressed audio formats</span></h2>
 
 <p class=MsoListParagraphCxSpFirst style='margin:0cm;margin-bottom:.0001pt'><span
+lang=EN-GB style='background:yellow'>Note: disabling usage of metadata (&lt;send_metadata&gt;
+parameter) or having a password to access LMS reduces a lot the possibility of
+sq2u to properly handle uncompressed audio format.</span></p>
+
+<p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
+lang=EN-GB> </span></p>
+
+<p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB>When a source file is in WAV or AIFF format or when the selected
-codec for streaming to a player is uncompressed, LMS will send audio uncompressed
-samples in 16, 24 or 32 bits formats while stripping out any header describing
-the content (in other words, LMS always rends ‘raw’ data when reading wav or
-aiff files)</span></p>
+codec for streaming to a player is uncompressed, LMS will send audio
+uncompressed samples in 16, 24 or 32 bits formats while stripping out any
+header describing the content (in other words, LMS always rends ‘raw’ data when
+reading wav or aiff files)</span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB>&nbsp;</span></p>
@@ -1614,8 +1620,8 @@ lang=EN-GB>&nbsp;</span></p>
 lang=EN-GB>Each source file format uses a different ‘endianness’ (order of
 bytes of a multi-byte sample) for storing their samples. WAV puts the least
 significant byte first and AIFF puts the most significant first. This ordering
-will be preserved when LMS sends the audio data (again, only the header is
-stripped out).</span></p>
+will be preserved when LMS sends the audio data (again, only the header is stripped
+out).</span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB>&nbsp;</span></p>
@@ -1670,8 +1676,8 @@ It guesses it based on track duration, sample rate and sample size (rounding
 error is below 1ms). Note that when &lt;stream_length&gt; is set to a positive
 value, sq2u will also adjust this value to match the real size of the file to
 be transmitted, based on the above calculation. This causes the UPnP player to
-close the connection once it has received the whole file (as set in header and/or
-stream_length). </span></p>
+close the connection once it has received the whole file (as set in header
+and/or stream_length). </span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB>&nbsp;</span></p>
@@ -1726,9 +1732,9 @@ for future use only, and commented N/A (Not Applicable). </span></p>
 <p class=MsoNormal><span lang=EN-GB style='color:black'>There are 3 parts in a
 configuration file: system parameters, &lt;common&gt; parameters that apply by
 default to all UPnP renderers and, for each UPnP renderer discovered, a
-&lt;device&gt; section. When a parameter is set in a UPnP renderer
-&lt;device&gt; section, it takes precedence (but only for that renderer) over
-the same parameter in the &lt;common&gt; section. </span></p>
+&lt;device&gt; section. When a parameter is set in a UPnP renderer &lt;device&gt;
+section, it takes precedence (but only for that renderer) over the same
+parameter in the &lt;common&gt; section. </span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;margin-bottom:.0001pt'><b><span
 lang=EN-GB style='font-size:11.0pt;color:black'>&lt;?xml
@@ -1743,9 +1749,9 @@ color:black'>&nbsp;</span></p>
 <p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
 color:black'>Global options</span></i></p>
 
-<p class=MsoNormalCxSpMiddle><b><span style='font-size:11.0pt;color:black'>&lt;server&gt;[ip[:port]
-| ?]&lt;/server&gt; </span></b><i><span style='font-size:11.0pt;color:black'>default
-= ?</span></i></p>
+<p class=MsoNormalCxSpMiddle><b><span lang=EN-US style='font-size:11.0pt;
+color:black'>&lt;server&gt;[ip[:port] | ?]&lt;/server&gt; </span></b><i><span
+lang=EN-US style='font-size:11.0pt;color:black'>default = ?</span></i></p>
 
 <p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
 color:black'>ip = IP address or network name, port = port number (usually 3483)
@@ -1958,15 +1964,15 @@ this limit is it shrunk by half. As a consequence, sq2upnp “loses” memory of
 data received before the shrinkage happens and cannot seek back to any of
 “lost” portion. In some cases, this might prevent  “pause” from working
 properly after the buffer has been shrunk once, especially for renderers that
-cannot support &lt;stream_length&gt; of -3 (e.g. Sonos). Note that if a
-renderer is “paused” on a live stream for an undefined amount of time, the
-buffering of the stream will be left to LMS and as a result audio loss might
-happen. Set this to around 32MB for normal running.  If this causes any
-problems (such as sound cut-outs) with very high quality audio and you have a
-load of spare space then set this very high indeed to avoid the buffer ever
-being shrunk on local files (e.g. 2GB, not more than 2^32-1).  Alternatively
-set this parameter to -1 to let the buffer grow without a limit.  The files
-will be replaced when playing stops or sq2u is restarted from cold..</span></i></p>
+cannot support &lt;stream_length&gt; of -3 (e.g. Sonos). Note that if a renderer
+is “paused” on a live stream for an undefined amount of time, the buffering of
+the stream will be left to LMS and as a result audio loss might happen. Set
+this to around 32MB for normal running.  If this causes any problems (such as
+sound cut-outs) with very high quality audio and you have a load of spare space
+then set this very high indeed to avoid the buffer ever being shrunk on local
+files (e.g. 2GB, not more than 2^32-1).  Alternatively set this parameter to -1
+to let the buffer grow without a limit.  The files will be replaced when
+playing stops or sq2u is restarted from cold..</span></i></p>
 
 <p class=MsoNormalCxSpMiddle><span lang=EN-GB style='font-size:11.0pt;
 color:black'>&nbsp;</span></p>
@@ -2154,8 +2160,8 @@ name="__DdeLink__513_1956274692"><b><span style='font-size:11.0pt'>&lt;max_volum
 normal UPnP volume goes from 0 to 100 but some players have a maximum below or
 above this. This parameter scales then volume calculated using
 &lt;volume_curve&gt; by a ratio of &lt;max_volume&gt;/100. It also applies as
-the absolute limit of the volume sent to the player, even if the &lt;volume_curve&gt;
-parameter is faulty.</span></i></p>
+the absolute limit of the volume sent to the player, even if the
+&lt;volume_curve&gt; parameter is faulty.</span></i></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;margin-bottom:.0001pt'><b><span
 style='font-size:11.0pt'>&lt;pause_volume&gt;[ 0 | 1] &lt;/pause_volume&gt;</span></b>
@@ -2280,13 +2286,13 @@ color:black'>&lt;flac_header&gt;[0 | 1 | 2]&lt;/flac_header&gt;</span></b><span
 lang=EN-GB style='font-size:11.0pt;color:black'> <i>default = 1</i></span></p>
 
 <p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
-color:black'>When repositioning flac streams, LMS re-generates a file starting
-from the new position but does not insert a proper header . Such header is
-required by some players and it contains information like total number of
-samples in the file and a checksum of the decoded audio data. Sq2u cannot know
-these values but the flac standard specifies that they should then be set to 0.
-In a few cases, some players consider such audio data as being a live stream
-and will consequently refuse to pause. The symptoms varies, but mainly after a
+color:black'>When repositioning flac streams, LMS re-generates a file starting from
+the new position but does not insert a proper header . Such header is required
+by some players and it contains information like total number of samples in the
+file and a checksum of the decoded audio data. Sq2u cannot know these values
+but the flac standard specifies that they should then be set to 0. In a few
+cases, some players consider such audio data as being a live stream and will
+consequently refuse to pause. The symptoms varies, but mainly after a
 re-positioning, pause/un-pause will fail or, if &lt;seek_after_pause&gt; is set
 to 1, the first pause/un-pause will work, but not any subsequent
 pause/un-pause. A workaround is to set these header value to a fixed but large
@@ -2313,7 +2319,20 @@ lang=EN-GB style='font-size:11.0pt;color:black'> <i>default = 1</i></span></p>
 <p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
 color:black'>If you do not want to see metadata (Artist, Album name etc.) on
 your renderer, or if you have a login and password for the LMS CLI interface,
-set this to 0.  Version 0.1.4.0 on.</span></i></p>
+set this to 0.  Version 0.1.4.0 on. <u><span style='background:yellow'>Disabling
+this impacts badly the handling of uncompressed audio format</span> </u></span></i></p>
+
+<p class=MsoNormalCxSpMiddle><b><span lang=EN-GB style='font-size:11.0pt;
+color:black'>&nbsp;</span></b></p>
+
+<p class=MsoNormalCxSpMiddle><b><span lang=EN-GB style='font-size:11.0pt;
+color:black'>&lt;send_coverart&gt;[0 | 1]&lt;/send_coverart&gt;</span></b><span
+lang=EN-GB style='font-size:11.0pt;color:black'> <i>default = 1</i></span></p>
+
+<p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
+color:black'>If you do not want to see coverert on your renderer, or if you
+have a login and password for the LMS CLI interface, set this to 0.  Version
+0.1.4.0 on.</span></i></p>
 
 <p class=MsoNormalCxSpMiddle><span lang=EN-GB style='font-size:11.0pt;
 color:black'>&nbsp;</span></p>
@@ -2545,6 +2564,9 @@ style='font-size:10.0pt;color:black'>&lt;accept_nexturi&gt;1&lt;/accept_nexturi&
 
 <p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span lang=EN-GB
 style='font-size:10.0pt;color:black'>&lt;send_metadata&gt;1&lt;/send_metadata&gt;</span></p>
+
+<p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span lang=EN-GB
+style='font-size:10.0pt;color:black'>&lt;send_coverart&gt;1&lt;/send_coverart&gt;</span></p>
 
 <p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span lang=EN-GB
 style='font-size:10.0pt;color:black'>&lt;upnp_remove_count&gt;1&lt;/upnp_remove_count&gt;</span></p>

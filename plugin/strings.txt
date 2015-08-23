@@ -246,6 +246,9 @@ PLUGIN_UPNPBRIDGE_UPNPREMOVECOUNT_2
 	
 PLUGIN_UPNPBRIDGE_SENDMETADATA
 	EN	Send LMS metadata to player
+	
+PLUGIN_UPNPBRIDGE_SEND_COVERART
+	EN	Include cover art
 
 PLUGIN_UPNPBRIDGE_SENDMETADATA_DESC
 	EN	When a UPnP player has a display, LMS can send metadata (title, artist, album) to it. This <b>DOES NOT</b> work if you have set

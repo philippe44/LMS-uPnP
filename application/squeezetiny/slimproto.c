@@ -331,6 +331,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 				stream_file(header, header_len, strm->threshold * 1024, ctx);
 				ctx->autostart -= 2;
 			} else {
+				struct sockaddr_in addr;
 				sq_seturi_t	uri;
 
 				uri.sample_size = (strm->pcm_sample_size != '?') ? pcm_sample_size[strm->pcm_sample_size - '0'] : 0xff;
@@ -339,6 +340,10 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 				uri.endianness = (strm->pcm_endianness != '?') ? strm->pcm_endianness - '0' : 0;
 				// real content_type and format will be set by the SETURI, according to player cap
 				uri.content_type[0] = strm->format;
+
+				addr.sin_addr.s_addr = ip;
+				addr.sin_port = port;
+				sprintf(uri.lms_urn, "http://%s:%d", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
 
 				if (ctx->config.mode == SQ_STREAM)
 				{

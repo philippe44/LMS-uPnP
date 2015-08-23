@@ -72,6 +72,7 @@ typedef struct sMRConfig
 	int 		VolumeOnPlay;		// change only volume when playing has started or disable volume commands
 	bool		AcceptNextURI;
 	bool		SendMetaData;
+	bool		SendCoverArt;
 	char 		VolumeCurve[SQ_STR_LENGTH];
 	int			MaxVolume;
 	bool		PauseVolume;

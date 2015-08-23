@@ -362,6 +362,8 @@ int AVTBasic(char *ControlURL, char *Action, void *Cookie)
 	XMLAddNode(doc, node, "dc:creator", MetaData->artist);
 	XMLAddNode(doc, node, "upnp:artist", MetaData->artist);
 	XMLAddNode(doc, node, "upnp:album", MetaData->album);
+	if (MetaData->artwork)
+		XMLAddNode(doc, node, "upnp:albumArtURI", "%s", MetaData->artwork);
 	XMLAddNode(doc, node, "upnp:genre", MetaData->genre);
 	XMLAddNode(doc, node, "upnp:originalTrackNumber", "%d", MetaData->track);
 	XMLAddNode(doc, node, "upnp:class", "object.item.audioItem.musicTrack", NULL);
@@ -375,6 +377,7 @@ int AVTBasic(char *ControlURL, char *Action, void *Cookie)
 						duration.quot/3600, (duration.quot % 3600) / 60,
 						duration.quot % 60, duration.rem);
 	}
+
 
 /*
 	XMLAddAttribute(doc, node, "bitrate", "176400");

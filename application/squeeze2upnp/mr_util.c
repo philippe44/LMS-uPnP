@@ -474,6 +474,7 @@ void SaveConfig(char *name, void *ref, bool full)
 		XMLAddNode(doc, common, "force_volume", "%d", (int) glMRConfig.ForceVolume);
 		XMLAddNode(doc, common, "volume_on_play", "%d", (int) glMRConfig.VolumeOnPlay);
 		XMLAddNode(doc, common, "send_metadata", "%d", (int) glMRConfig.SendMetaData);
+		XMLAddNode(doc, common, "send_coverart", "%d", (int) glMRConfig.SendCoverArt);
 		XMLAddNode(doc, common, "volume_curve", glMRConfig.VolumeCurve);
 		XMLAddNode(doc, common, "max_volume", "%d", glMRConfig.MaxVolume);
 		XMLAddNode(doc, common, "accept_nexturi", "%d", (int) glMRConfig.AcceptNextURI);
@@ -563,6 +564,7 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "pause_volume")) Conf->PauseVolume = atol(val);
 	if (!strcmp(name, "accept_nexturi")) Conf->AcceptNextURI = atol(val);
 	if (!strcmp(name, "send_metadata")) Conf->SendMetaData = atol(val);
+	if (!strcmp(name, "send_coverart")) Conf->SendCoverArt = atol(val);
 	if (!strcmp(name, "name")) strcpy(Conf->Name, val);
 	if (!strcmp(name, "mac"))  sscanf(val,"%2hhx:%2hhx:%2hhx:%2hhx:%2hhx:%2hhx",
 								   &sq_conf->mac[0],&sq_conf->mac[1],&sq_conf->mac[2],

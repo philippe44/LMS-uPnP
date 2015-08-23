@@ -74,6 +74,7 @@ tMRConfig			glMRConfig = {
 							true,
 							true,
 							true,
+							true,
 							"0:0, 400:10, 700:20, 1200:30, 2050:40, 3800:50, 6600:60, 12000:70, 21000:80, 37000:90, 65536:100",
 							100,
 							true,
@@ -295,7 +296,7 @@ static int	uPNPTerminate(void);
 			NFREE(device->NextURI);
 
 			if (device->Config.SendMetaData) {
-				sq_get_metadata(device->SqueezeHandle, &device->NextMetaData, true);
+				sq_get_metadata(device->SqueezeHandle, &device->NextMetaData, p->lms_urn, true);
 				p->file_size = device->NextMetaData.file_size ?
 							   device->NextMetaData.file_size : device->Config.StreamLength;
 			}
@@ -307,6 +308,7 @@ static int	uPNPTerminate(void);
 			strcpy(device->NextProtInfo, p->proto_info);
 			p->src_format = ext2format(device->NextMetaData.path);
 			p->duration = device->NextMetaData.duration;
+			if (!device->Config.SendCoverArt) NFREE(device->NextMetaData.artwork);
 
 			if (device->Config.AcceptNextURI){
 				AVTSetNextURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info,
@@ -338,7 +340,7 @@ static int	uPNPTerminate(void);
 			// end check
 
 			if (device->Config.SendMetaData) {
-				sq_get_metadata(device->SqueezeHandle, &MetaData, false);
+				sq_get_metadata(device->SqueezeHandle, &MetaData, p->lms_urn, false);
 				p->file_size = MetaData.file_size ? MetaData.file_size : device->Config.StreamLength;
 			}
 			else {
@@ -347,6 +349,7 @@ static int	uPNPTerminate(void);
 			}
 			p->src_format = ext2format(MetaData.path);
 			p->duration = MetaData.duration;
+			if (!device->Config.SendCoverArt) NFREE(MetaData.artwork);
 
 			AVTSetURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info, &MetaData, device->seqN++);
 			sq_free_metadata(&MetaData);
