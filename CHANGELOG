@@ -2,7 +2,7 @@
  - in XMLFindAndParseService search ends if a service list is empty. It should end only when no service list remains
  - Set HasDigitalOut=0 in capabilities to prevent volume from being set to max and sent to player
  - in capabilities, ModelName is "squeeze2upnp"
- - Add coverart to UPnP metadata
+ - Add coverart to UPnP metadata and <send_coverart> parameter to disable it 
  - Add duration to UPnP metadata
  - For wav and aiff, file size in header is now real and based on duration in all cases (including during repositioning)
  - When sending uncompressed using 'large file size", the HTTP size contains a real size base on duration if available
