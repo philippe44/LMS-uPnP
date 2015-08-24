@@ -3,7 +3,7 @@
 	<flac_header>1</flac_header>
 	<accept_nexturi>1</accept_nexturi>
 	<seek_after_pause>0</seek_after_pause>
-	<codecs>pcm,flc,mp3</codecs>
+	<codecs>aif,pcm,flc,mp3</codecs>
 	<sample_rate>48000</sample_rate>
 	<send_metadata>1</send_metadata>
 	<raw_audio_format>raw</raw_audio_format>
@@ -25,7 +25,9 @@
 			<raw_audio_format>raw,wav</raw_audio_format>
 		</profile>	
 		<profile name='CR603'>
+			<codecs>aac,pcm,flc,mp3</codecs>
 			<accept_nexturi>0</accept_nexturi>
+			<raw_audio_format>wav</raw_audio_format>
 		</profile>	
 	</profile>
 	<profile name='JRiver'>
@@ -34,8 +36,10 @@
 		<raw_audio_format>raw,aiff,wav</raw_audio_format>
 	</profile>
 	<profile name='M1Clic'>
+		<codecs>pcm,flc,mp3</codecs>
 		<sample_rate>192000</sample_rate>
 		<L24_format>1</L24_format>
+		<sample_rate>192000</sample_rate>
 	</profile>
 	<profile name='ROCKI'>
 		<stream_length>-1</stream_length>
@@ -66,7 +70,6 @@
 		<codecs>pcm,flc,mp3</codecs>
 	</profile>	<profile name='Roku SoundBridge'>		<stream_length>-1</stream_length>		<codecs>pcm,mp3</codecs>		<raw_audio_format>raw,wav,aiff</raw_audio_format>	</profile>
 	<profile name='Pioneer'>
-		<codecs>aif,pcm,flc,mp3</codecs>
 		<sample_rate>192000</sample_rate>
 		<raw_audio_format>raw,wav,aiff</raw_audio_format>
 		<profile name='N30'></profile>	
