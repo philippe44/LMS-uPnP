@@ -275,8 +275,9 @@ static int	uPNPTerminate(void);
 		case SQ_SETFORMAT: {
 			sq_seturi_t *p = (sq_seturi_t*) param;
 
-			LOG_INFO("[%p]: codec:%c, ch:%d, s:%d, r:%d", device, p->content_type[0],
-										p->channels, p->sample_size, p->sample_rate);
+			LOG_INFO("[%p]: codec:%c, ch:%d, s:%d, r:%d (s:%c)", device, p->codec,
+										p->channels, p->sample_size, p->sample_rate,
+										p->src_format);
 			if (!SetContentType(device, param)) {
 				LOG_ERROR("[%p]: no matching codec in player (%s)", caller, p->proto_info);
 				rc = false;
@@ -296,7 +297,7 @@ static int	uPNPTerminate(void);
 			NFREE(device->NextURI);
 
 			if (device->Config.SendMetaData) {
-				sq_get_metadata(device->SqueezeHandle, &device->NextMetaData, p->lms_urn, true);
+				sq_get_metadata(device->SqueezeHandle, &device->NextMetaData, true);
 				p->file_size = device->NextMetaData.file_size ?
 							   device->NextMetaData.file_size : device->Config.StreamLength;
 			}
@@ -306,8 +307,8 @@ static int	uPNPTerminate(void);
 			}
 
 			strcpy(device->NextProtInfo, p->proto_info);
-			p->src_format = ext2format(device->NextMetaData.path);
 			p->duration = device->NextMetaData.duration;
+			p->src_format = ext2format(device->NextMetaData.path);
 			if (!device->Config.SendCoverArt) NFREE(device->NextMetaData.artwork);
 
 			if (device->Config.AcceptNextURI){
@@ -340,15 +341,15 @@ static int	uPNPTerminate(void);
 			// end check
 
 			if (device->Config.SendMetaData) {
-				sq_get_metadata(device->SqueezeHandle, &MetaData, p->lms_urn, false);
+				sq_get_metadata(device->SqueezeHandle, &MetaData, false);
 				p->file_size = MetaData.file_size ? MetaData.file_size : device->Config.StreamLength;
 			}
 			else {
 				sq_default_metadata(&MetaData, true);
 				p->file_size = device->Config.StreamLength;
 			}
-			p->src_format = ext2format(MetaData.path);
 			p->duration = MetaData.duration;
+			p->src_format = ext2format(MetaData.path);
 			if (!device->Config.SendCoverArt) NFREE(MetaData.artwork);
 
 			AVTSetURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info, &MetaData, device->seqN++);

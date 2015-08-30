@@ -159,7 +159,27 @@ sub start {
 				$log->debug("$bin NOT running");
 			}
 		});
+		
+		Slim::Utils::Timers::setTimer($class, Time::HiRes::time() + 30, \&beat, $path, @params);
 	}
+}
+
+sub beat {
+	my ($class, $path, @args) = @_;
+	
+	if ($prefs->get('autorun') && !($squeeze2upnp && $squeeze2upnp->alive)) {
+		$log->error('crashed ... restarting');
+		
+		if ($prefs->get('logging')) {
+			open(my $fh, ">>", $class->logFile);
+			print $fh "\nRetarting Squeeze2upnp after crash: $path @args\n";
+			close $fh;
+		}
+		
+		eval { $squeeze2upnp = Proc::Background->new({ 'die_upon_destroy' => 1 }, $path, @args); };
+	}	
+	
+	Slim::Utils::Timers::setTimer($class, Time::HiRes::time() + 30, \&beat, $path, @args);
 }
 
 sub stop {

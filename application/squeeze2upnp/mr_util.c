@@ -56,20 +56,21 @@ static char *format2ext(u8_t format)
 {
 	if (!ext) return ' ';
 
-	if (strstr(ext, "wav")) return 'p';
+	if (strstr(ext, "wav")) return 'w';
 	if (strstr(ext, "flac") || strstr(ext, "flc")) return 'f';
 	if (strstr(ext, "mp3")) return 'm';
-	if (strstr(ext, "wma")) return 'w';
+	if (strstr(ext, "wma")) return 'a';
 	if (strstr(ext, "ogg")) return 'o';
-	if (strstr(ext, "m4a")) return 'a';
-	if (strstr(ext, "mp4")) return 'l';
+	if (strstr(ext, "m4a")) return '4';
+	if (strstr(ext, "mp4")) return '4';
 	if (strstr(ext, "aif")) return 'i';
 
 	return ' ';
 }
 
-/*----------------------------------------------------------------------------*/
-bool _SetContentType(char *Cap[], sq_seturi_t *uri, int n, ...)
+
+/*----------------------------------------------------------------------------*/
+bool _SetContentType(char *Cap[], sq_seturi_t *uri, int n, ...)
 {
 	int i;
 	char *fmt, **p = NULL;
@@ -92,8 +93,10 @@ bool _SetContentType(char *Cap[], sq_seturi_t *uri, int n, ...)
 			if (!strstr(*p, fmt)) continue;
 			// if not PCM, just copy the found format
 			if (!strstr(*p, "audio/L")) {
-				strcpy(uri->content_type, fmt);
 				strcpy(uri->proto_info, *p);
+				// force audio/aac for m4a - alac is still unknown ...
+				if (uri->codec == 'a') strcpy(uri->content_type, "audio/aac");
+				else strcpy(uri->content_type, fmt);
 				// special case of wave and aiff, need to change file extension
 				if (strstr(*p, "wav")) strcpy(uri->ext, "wav");
 				if (strstr(*p, "aiff")) strcpy(uri->ext, "aif");
@@ -167,9 +170,9 @@ static bool SetContentTypeRawAudio(struct sMR *Device, sq_seturi_t *uri, bool Ma
 /*----------------------------------------------------------------------------*/
 bool SetContentType(struct sMR *Device, sq_seturi_t *uri)
 {
-	strcpy(uri->ext, format2ext(uri->content_type[0]));
+	strcpy(uri->ext, format2ext(uri->codec));
 
-	switch (uri->content_type[0]) {
+	switch (uri->codec) {
 	case 'm': return _SetContentType(Device->ProtocolCap, uri, 3, "audio/mp3", "audio/mpeg", "audio/mpeg3");
 	case 'f': return _SetContentType(Device->ProtocolCap, uri, 2, "audio/x-flac", "audio/flac");
 	case 'w': return _SetContentType(Device->ProtocolCap, uri, 2, "audio/x-wma", "audio/wma");

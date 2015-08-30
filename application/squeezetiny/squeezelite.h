@@ -488,7 +488,8 @@ typedef struct out_ctx_s {
 	struct thread_ctx_s *owner;
 	unsigned 			idx;
 	char				ext[5];
-	char				src_format;
+	u8_t				src_format;
+	u8_t				codec;
 	u8_t				sample_size;
 	u32_t				sample_rate;
 	bool				endianness;
@@ -531,6 +532,8 @@ struct thread_ctx_s {
 	unsigned 	slimproto_port;
 	char		server[SERVER_NAME_LEN + 1];
 	char		server_version[SERVER_VERSION_LEN + 1];
+	char		server_port[5+1];
+	char		server_ip[4*(3+1)+1];
 	sockfd 		sock, fd, cli_sock;
 	u8_t 		mac[6];
 	char		cli_id[18];		// (6*2)+(5*':')+NULL

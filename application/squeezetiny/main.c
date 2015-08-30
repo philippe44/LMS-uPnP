@@ -240,7 +240,8 @@ static char *cli_decode(char *str) {
 /*---------------------------------------------------------------------------*/
 char *cli_send_cmd(char *cmd, bool req, bool decode, struct thread_ctx_s *ctx)
 {
-	char packet[1024];
+#define CLI_LEN 2048
+	char packet[CLI_LEN];
 	int wait;
 	size_t len;
 	char *rsp = NULL;
@@ -258,7 +259,7 @@ static char *cli_decode(char *str) {
 	while (wait--)	{
 		int k;
 		usleep(10000);
-		k = recv(ctx->cli_sock, packet + len, 1024-1 - len, 0);
+		k = recv(ctx->cli_sock, packet + len, CLI_LEN-1 - len, 0);
 		if (k < 0) continue;
 		len += k;
 		packet[len] = '\0';
@@ -364,7 +365,7 @@ void sq_default_metadata(sq_metadata_t *metadata, bool init)
 }
 
 /*--------------------------------------------------------------------------*/
-bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, char *lms_urn, bool next)
+bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 {
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
 	char cmd[1024];
@@ -431,9 +432,8 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, char *lms_
 			free(p);
 		}
 		if ((p = cli_find_tag(rsp, "coverid")) != NULL) {
-			// some changes to do on the coverid for form an URL
-			metadata->artwork = malloc(strlen(lms_urn) + strlen(p) + 20 + 1);
-			sprintf(metadata->artwork, "%s/music/%s/cover.jpg", lms_urn, p);
+			metadata->artwork = malloc(SQ_STR_LENGTH);
+			snprintf(metadata->artwork, SQ_STR_LENGTH, "http://%s:%s/music/%s/cover.jpg", ctx->server_ip, ctx->server_port, p);
 			free(p);
 		}
 	}
@@ -452,6 +452,11 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, char *lms_
 		sprintf(cmd, "%s playlist genre %d", ctx->cli_id, idx);
 		metadata->genre = cli_send_cmd(cmd, true, true, ctx);
 
+		NFREE(rsp)
+		sprintf(cmd, "%s status %d 1 tags:K", ctx->cli_id, idx);
+		rsp = cli_send_cmd(cmd, false, false, ctx);
+		if (rsp && *rsp) metadata->artwork = cli_find_tag(rsp, "artwork_url");
+
 		sprintf(cmd, "%s playlist duration %d", ctx->cli_id, idx);
 		rsp = cli_send_cmd(cmd, true, true, ctx);
 		if (rsp) metadata->duration = 1000 * atof(rsp);
@@ -467,7 +472,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, char *lms_
 
 	sq_default_metadata(metadata, false);
 
-	LOG_INFO("[%p]: idx %d\n\tartist:%s\n\talbum:%s\n\ttitle:%s\n\tgenre:%s\n\tduration:%d.%03d\n\tsize:%d\n\t%s", ctx, idx,
+	LOG_INFO("[%p]: idx %d\n\tartist:%s\n\talbum:%s\n\ttitle:%s\n\tgenre:%s\n\tduration:%d.%03d\n\tsize:%d\n\tcover:%s", ctx, idx,
 				metadata->artist, metadata->album, metadata->title,
 				metadata->genre, div(metadata->duration, 1000).quot,
 				div(metadata->duration,1000).rem, metadata->file_size,

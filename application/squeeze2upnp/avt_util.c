@@ -378,7 +378,6 @@ int AVTBasic(char *ControlURL, char *Action, void *Cookie)
 						duration.quot % 60, duration.rem);
 	}
 
-
 /*
 	XMLAddAttribute(doc, node, "bitrate", "176400");
 	XMLAddAttribute(doc, node, "size", "44");

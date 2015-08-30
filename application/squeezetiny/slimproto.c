@@ -331,19 +331,13 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 				stream_file(header, header_len, strm->threshold * 1024, ctx);
 				ctx->autostart -= 2;
 			} else {
-				struct sockaddr_in addr;
 				sq_seturi_t	uri;
 
 				uri.sample_size = (strm->pcm_sample_size != '?') ? pcm_sample_size[strm->pcm_sample_size - '0'] : 0xff;
 				uri.sample_rate = (strm->pcm_sample_rate != '?') ? pcm_sample_rate[strm->pcm_sample_rate - '0'] : 0xff;
 				uri.channels = (strm->pcm_channels != '?') ? pcm_channels[strm->pcm_channels - '1'] : 0xff;
 				uri.endianness = (strm->pcm_endianness != '?') ? strm->pcm_endianness - '0' : 0;
-				// real content_type and format will be set by the SETURI, according to player cap
-				uri.content_type[0] = strm->format;
-
-				addr.sin_addr.s_addr = ip;
-				addr.sin_port = port;
-				sprintf(uri.lms_urn, "http://%s:%d", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
+				uri.codec = strm->format;
 
 				if (ctx->config.mode == SQ_STREAM)
 				{
@@ -378,6 +372,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 					ctx->out_ctx[idx].sample_rate = uri.sample_rate;
 					ctx->out_ctx[idx].endianness = uri.endianness;
 					ctx->out_ctx[idx].channels = uri.channels;
+					ctx->out_ctx[idx].codec = uri.codec;
 
 					/*
 					this set the content_type and the proto_info. it is made in
@@ -406,8 +401,8 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 						}
 						LOG_INFO("[%p] URI proxied by SQ2MR : %s", ctx, uri.urn);
 						ctx->out_ctx[idx].file_size = uri.file_size;
-						ctx->out_ctx[idx].src_format = uri.src_format;
 						ctx->out_ctx[idx].duration = uri.duration;
+						ctx->out_ctx[idx].src_format = uri.src_format;
 						sq_set_sizes(ctx->out_ctx + idx);
 					}
 					else ctx->decode.state = DECODE_ERROR;
@@ -814,15 +809,17 @@ void wake_controller(struct thread_ctx_s *ctx) {
 in_addr_t discover_server(struct thread_ctx_s *ctx) {
 	struct sockaddr_in d;
 	struct sockaddr_in s;
-	char buf[32], vers[] = "VERS";
+	char buf[32], vers[] = "VERS", port[] = "JSON";
 	struct pollfd pollinfo;
+	u8_t len;
 
 	int disc_sock = socket(AF_INET, SOCK_DGRAM, 0);
 
 	socklen_t enable = 1;
 	setsockopt(disc_sock, SOL_SOCKET, SO_BROADCAST, (const void *)&enable, sizeof(enable));
 
-	sprintf(buf,"e%s", vers);
+	len = sprintf(buf,"e%s\xff%s", vers, port) + 1;
+	*strchr(buf, 0xff) = '\0';
 
 	memset(&d, 0, sizeof(d));
 	d.sin_family = AF_INET;
@@ -836,7 +833,7 @@ in_addr_t discover_server(struct thread_ctx_s *ctx) {
 		LOG_DEBUG("[%p] sending discovery", ctx);
 		memset(&s, 0, sizeof(s));
 
-		if (sendto(disc_sock, buf, strlen(buf) + 1, 0, (struct sockaddr *)&d, sizeof(d)) < 0) {
+		if (sendto(disc_sock, buf, len, 0, (struct sockaddr *)&d, sizeof(d)) < 0) {
 			LOG_WARN("[%p] error sending discovery", ctx);
 		}
 
@@ -846,12 +843,22 @@ in_addr_t discover_server(struct thread_ctx_s *ctx) {
 			socklen_t slen = sizeof(s);
 			memset(readbuf, 0, 32);
 			recvfrom(disc_sock, readbuf, 32 - 1, 0, (struct sockaddr *)&s, &slen);
+
 			if ((p = strstr(readbuf, vers)) != NULL) {
 				p += strlen(vers);
-				*(p + (*p+1)) = '\0';
-				strncpy(ctx->server_version, p + 1, SERVER_VERSION_LEN);
-				ctx->server_version[SERVER_VERSION_LEN] = '\0';
+				len = *p;
+				strncpy(ctx->server_version, p + 1, min(SERVER_VERSION_LEN, *p));
+				ctx->server_version[min(SERVER_VERSION_LEN, *p)] = '\0';
 			}
+
+			 if ((p = strstr(readbuf, port)) != NULL) {
+				p += strlen(port);
+				len = *p;
+				strncpy(ctx->server_port, p + 1, min(5, *p));
+				ctx->server_port[min(6, *p)] = '\0';
+			}
+
+			strcpy(ctx->server_ip, inet_ntoa(s.sin_addr));
 			LOG_DEBUG("[%p] got response from: %s:%d", ctx, inet_ntoa(s.sin_addr), ntohs(s.sin_port));
 		}
 	} while (s.sin_addr.s_addr == 0 && ctx->running);
