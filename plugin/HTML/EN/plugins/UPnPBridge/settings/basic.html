@@ -177,7 +177,7 @@
 		[% END %]
 		</select></td>
 		<th>[% "PLUGIN_UPNPBRIDGE_L24FORMAT" | string %]</th><td><select class="stdedit" name="L24_format" id="L24_format">
-		[% FOREACH entry IN [ ['',''], ['plain 24 bits','0'], ['packed type 1','1'] ['16 bits convert','2'] ] %]
+		[% FOREACH entry IN [ ['',''], ['plain 24 bits','0'], ['packed type 1','1'] ['16 bits always','2'] ['16 bits raw only', '3'] ] %]
 			<option [% IF entry.1 == L24_format %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
 		[% END %]
 		</select></td></tr>

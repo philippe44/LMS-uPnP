@@ -23,14 +23,14 @@
 @font-face
 	{font-family:"Liberation Sans";}
 @font-face
-	{font-family:Verdana;
-	panose-1:2 11 6 4 3 5 4 4 2 4;}
-@font-face
 	{font-family:"Droid Sans Fallback";
 	panose-1:0 0 0 0 0 0 0 0 0 0;}
 @font-face
 	{font-family:FreeSans;
 	panose-1:0 0 0 0 0 0 0 0 0 0;}
+@font-face
+	{font-family:Verdana;
+	panose-1:2 11 6 4 3 5 4 4 2 4;}
 @font-face
 	{font-family:"Consolas\;Liberation Mono\;Menlo\;";
 	panose-1:0 0 0 0 0 0 0 0 0 0;}
@@ -823,9 +823,9 @@ options.</span></p>
 
 <p class=MsoNormal style='margin-left:14.15pt'><span lang=EN-GB>When ‘autosave’
 is ticked, the configuration will be saved with an updated list of players at
-each network scan (see UPnP scanning option to change period). It is also possible
-to manually update your configuration file at any time by ticking ‘Generate’
-(whether ‘Start the Bridge’ is ticked or not).</span></p>
+each network scan (see UPnP scanning option to change period). It is also
+possible to manually update your configuration file at any time by ticking
+‘Generate’ (whether ‘Start the Bridge’ is ticked or not).</span></p>
 
 <h2 style='margin-left:28.8pt;text-indent:-28.8pt'><a
 name="__RefHeading__1149_395429088"></a><span lang=EN-GB>2.2<span
@@ -944,7 +944,7 @@ href="https://github.com/philippe44/LMS-to-uPnP/tree/master/stable"><span
 style='color:#00000A;text-decoration:none'> </span></a><span
 class=InternetLink><span style='color:#00000A'>https://github.com/philippe44/LMS-to-uPnP/tree/master/stable</span></span></span><b><i><span
 lang=EN-GB> </span></i></b><span lang=EN-GB>where the stable version of the
-source of the program is located.  The source can be downloaded and built in
+source of the program is located.  The source can be downloaded and built in
 the normal way.  The README contains compilation instructions.</span></p>
 
 <p class=MsoNormal><span lang=EN-GB>Note that you need to apply patches to
@@ -1024,8 +1024,8 @@ directories that sq2u can write to.</span></p>
 <p class=MsoNormal style='margin-bottom:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB style='color:black'>On startup, sq2u tries to open a file named
 “config.xml” in the current directory (or uses the filename provided using the
-–x option). If no file is found, all parameters will be set to default. To
-generate such a configuration file, type “save &lt;filename&gt;” when sq2u is running
+–x option). If no file is found, all parameters will be set to default. To generate
+such a configuration file, type “save &lt;filename&gt;” when sq2u is running
 and a file with all existing configuration parameters and discovered devices
 will be created. Alternatively, you can launch sq2u with the “-i &lt;config
 file&gt;” option.</span></p>
@@ -1058,7 +1058,7 @@ way of doing this, fine.  If not, you can, if you wish, use a method from
 within the LMS GUI.  </span></p>
 
 <p class=MsoNormal><span lang=EN-GB style='color:black'>There is an LMS plugin
-called Server Power Control.  Go to the Settings, Plugins page.  In Additional
+called Server Power Control.  Go to the Settings, Plugins page.  In Additional
 Repositories at the bottom, add:</span></p>
 
 <p class=MsoNormal><span lang=EN-GB style='color:black'>            http://srvrpowerctrl.googlecode.com/svn/beta.xml</span></p>
@@ -1067,8 +1067,8 @@ Repositories at the bottom, add:</span></p>
 the Server Power Control (Beta) plugin (under Gordon Harris's plugins), 'Apply'
 the change and restart LMS.</span></p>
 
-<p class=MsoNormal><span lang=EN-GB>Then go to Settings, Advanced and in the drop-down
-find Server Power Control.</span></p>
+<p class=MsoNormal><span lang=EN-GB>Then go to Settings, Advanced and in the
+drop-down find Server Power Control.</span></p>
 
 <p class=MsoNormal><span lang=EN-GB>Add a Custom Command to start your sq2u
 program with whatever parameters you need.  It may be easier to create a batch
@@ -1246,20 +1246,40 @@ lang=EN-GB style='color:black'>The sample size is a little more difficult.  If
 you have 32 bit sources and your system does not support this, it will not
 work. If you have 24 bits flac files and your system does not support them, you
 have to convert flac to pcm, either in LMS settings or by removing ‘flc’ from
-sq2u list of supported codecs. If you have 24 bit sources and use the pcm codec
-when your system only supports 16 bit pcm, then sq2u can convert on the fly to
-16 bits  by setting  &lt;L24_format&gt; to 2. Renderers that support 24 bit pcm
-packed type 1 need to have &lt;L24_format&gt; set to 1. </span></p>
+sq2u list of supported codecs.</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;margin-bottom:.0001pt'><span
-lang=EN-GB>&nbsp;</span></p>
+lang=EN-GB style='color:black'>&nbsp;</span></p>
+
+<p class=MsoNormal style='margin-bottom:0cm;margin-bottom:.0001pt'><span
+lang=EN-GB style='color:black'>For renderers that support 24 bits raw samples,
+set &lt;L24_format&gt; to 0 for plain 24 bits or to 1 if your renderer requires
+‘packed type 1’. </span></p>
+
+<p class=MsoNormal style='margin-bottom:0cm;margin-bottom:.0001pt'><span
+lang=EN-GB style='color:black'>&nbsp;</span></p>
+
+<p class=MsoNormal style='margin-bottom:0cm;margin-bottom:.0001pt'><span
+lang=EN-GB style='color:black'>If your renderer only supports 16 bit pcm, then
+sq2u can convert on the fly 24 bits samples to 16 bits. Set &lt;L24_format&gt; to
+2 to force truncation to 16 bits <u>all the time</u>. Some renders still accept
+24 bits but only if packaged in wav/aiff files, not raw samples. If you want
+sq2u to truncate to 16 bits <u>only</u> when raw sample are used, set
+&lt;L24_format&gt; to 3 (see details 4.6 for more details on how to control
+usage of raw samples, wav and aiff).</span></p>
+
+<p class=MsoNormal style='margin-bottom:0cm;margin-bottom:.0001pt'><span
+lang=EN-GB style='color:black'>&nbsp;</span></p>
+
+<p class=MsoNormal style='margin-bottom:0cm;margin-bottom:.0001pt'><span
+lang=EN-GB style='color:black'>&nbsp;</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB style='color:black'>All file formats, except pcm, include a header
 or information inside the stream itself so that the decoder knows the essential
 information (sample size, rate and channels). However, pcm is 'raw' and so the
-renderer needs this information to be sent in the HTTP response header
-otherwise it has no idea of what it will receive. This is the MIME-TYPE, like
+renderer needs this information to be sent in the HTTP response header otherwise
+it has no idea of what it will receive. This is the MIME-TYPE, like
 &quot;audio/L16;channels=2;rate=44100&quot; for pcm 16 bits, 2 channels
 44100Hz. For wav, MIME-TYPE would be audio/wav and for flac audio/flac (nothing
 else is needed).  Normally, in the ProtocolInfo section of the player it states
@@ -1306,11 +1326,11 @@ lang=EN-GB>&nbsp;</span></p>
 <p class=MsoNormal style='margin-bottom:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB>The duration of a track is queried from LMS, forwarded to the UPnP
 player and is also used to calculate some related parameters (see below
-uncompressed format chapter). This will not work if you have set a LMS access password
-or disabled metadata query in squeeze2upnp. Note that when you reposition in a
-track, due to the technique LMS uses to send a repositioned track to its
-player, the displayed duration will be the remaining track length and the UPnP
-player will re-start counting from 0.</span></p>
+uncompressed format chapter). This will not work if you have set a LMS access
+password or disabled metadata query in squeeze2upnp. Note that when you
+reposition in a track, due to the technique LMS uses to send a repositioned
+track to its player, the displayed duration will be the remaining track length
+and the UPnP player will re-start counting from 0.</span></p>
 
 <h2 style='margin-left:28.8pt;text-indent:-28.8pt'><a
 name="__RefHeading__2026_773093279"></a><span lang=EN-GB>4.3<span
@@ -1552,8 +1572,8 @@ This disables chunked-encoding and sq2u will send data until it has no more,
 then it will close the connection. Some UPnP renderers might see that as an
 error as not all the “promised” data have been received. Some others might want
 to seek from the end of the file and that causes grief to sq2u. One of the
-benefits of “faking” a file size is that all range-requests will be properly
-responded to.</span></p>
+benefits of “faking” a file size is that all range-requests will be properly responded
+to.</span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB>&nbsp;</span></p>
@@ -1570,10 +1590,9 @@ size (if N is the number of bytes, then content-length: N and content-range:
 lang=EN-GB>&nbsp;</span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
-lang=EN-GB>&lt;stream-length&gt; of -1 is similar to -4, but open-ended
-requests are responded with an HTTP OK response (no content-length) and the
-full file is sent. According to the HTTP standard, it is accepted but not
-recommended.</span></p>
+lang=EN-GB>&lt;stream-length&gt; of -1 is similar to -4, but open-ended requests
+are responded with an HTTP OK response (no content-length) and the full file is
+sent. According to the HTTP standard, it is accepted but not recommended.</span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB>&nbsp;</span></p>
@@ -1613,8 +1632,8 @@ lang=EN-GB>Troubleshooting uncompressed audio formats</span></h2>
 
 <p class=MsoListParagraphCxSpFirst style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB style='background:yellow'>Note: If you disable the usage of metadata
-(using the &lt;send_metadata&gt; parameter) or have a password to access LMS, sq2u
-will be unable to properly handle uncompressed audio formats.</span></p>
+(using the &lt;send_metadata&gt; parameter) or have a password to access LMS,
+sq2u will be unable to properly handle uncompressed audio formats.</span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB> </span></p>
@@ -1719,15 +1738,12 @@ any reason – you might have disabled it), then sq2u uses 2^31 as a target file
 size and convert that into a rounded duration. When the whole file has been
 sent, sq2u terminates the connection and the player, although it has not
 received the full ‘indicated’ size (in header and/or &lt;stream_length&gt;),
-simply moves to the next track. Unfortunately, </span></p>
+simply moves to the next track. </span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
-lang=EN-GB>&nbsp;</span></p>
-
-<p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
-lang=EN-GB>some players fail in different ways, often ending in LMS not
-realizing that the player has moved to a new track, or playing the same track
-ever and ever. </span></p>
+lang=EN-GB>Unfortunately, players fail in different ways, often ending in LMS
+not realizing that the player has moved to a new track, or playing the same
+track ever and ever. </span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB>&nbsp;</span></p>
@@ -1747,11 +1763,21 @@ lang=EN-GB>&nbsp;</span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB>Most players do not support 24 bits uncompressed format. By setting
-parameter &lt;L24_format&gt; to 2, sq2u will truncate </span><span lang=EN-GB
-style='color:black'>samples to 16 bits (keeping the most significant 2 bytes).
-Note that this will not make your player work with 24 bits flac, unless you
-setup a rule in LMS to transcode them to WAV or AIFF, or you remove ‘flc’ from
-the &lt;codec&gt; list.</span></p>
+parameter &lt;L24_format&gt; to 2, sq2u will <u>always</u> truncate </span><span
+lang=EN-GB style='color:black'>samples to 16 bits (keeping the most significant
+2 bytes). Some players accept 24 bits files but only when packaged into wav or
+aiff, so to do this truncation only when raw samples are sent, set &lt;L24_format&gt;
+to 1. </span></p>
+
+<p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
+lang=EN-GB style='color:black'>&nbsp;</span></p>
+
+<p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
+lang=EN-GB style='color:black'>Note that this will not make your player work
+with 24 bits flac, unless you setup a rule in LMS to transcode them to WAV or
+AIFF, or you remove ‘flc’ from the &lt;codec&gt; list (eg Sonos devices are in
+this case, they fail silently when receiving 24 bits flac files but accept 24
+bits wav)</span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin-top:0cm;margin-right:0cm;
 margin-bottom:0cm;margin-left:21.6pt;margin-bottom:.0001pt'><span lang=EN-GB
@@ -1797,9 +1823,8 @@ color:black'>&nbsp;</span></p>
 <p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
 color:black'>Global options</span></i></p>
 
-<p class=MsoNormalCxSpMiddle><b><span lang=EN-US style='font-size:11.0pt'>&lt;server&gt;[ip[:port]
-| ?]&lt;/server&gt; </span></b><i><span lang=EN-US style='font-size:11.0pt'>default
-= ?</span></i></p>
+<p class=MsoNormalCxSpMiddle><b><span style='font-size:11.0pt'>&lt;server&gt;[ip[:port]
+| ?]&lt;/server&gt; </span></b><i><span style='font-size:11.0pt'>default = ?</span></i></p>
 
 <p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
 color:black'>ip = IP address or network name, port = port number (usually 3483)
@@ -1992,12 +2017,12 @@ color:black'>&lt;<b>buffer_dir&gt;[? | . | path with /]&lt;/buffer_dir&gt;</b> <
 <p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
 color:black'>The Directory where the stream data are buffered. Use '.' for the
 current directory. Use ‘?’ to use system’s default temporary directory. Two
-files are created for each renderer : xx-xx-xx-xx-xx-xx-idx-0 and
-xx-xx-xx-xx-xx-xx-idx-1 where xx-xx-xx-xx-xx-xx is the MAC address of the
-renderer. These files can be as big as the largest file played by LMS (but see
-also &lt;buffer_limit&gt; below). In case of live streams, these file grow
-constantly, so be careful. Either press “next” on the live stream from time to
-time to create a new file, or set the &lt;buffer_limit&gt; below.</span></i></p>
+files are created for each renderer : xx-xx-xx-xx-xx-xx-idx-0 and xx-xx-xx-xx-xx-xx-idx-1
+where xx-xx-xx-xx-xx-xx is the MAC address of the renderer. These files can be
+as big as the largest file played by LMS (but see also &lt;buffer_limit&gt;
+below). In case of live streams, these file grow constantly, so be careful.
+Either press “next” on the live stream from time to time to create a new file,
+or set the &lt;buffer_limit&gt; below.</span></i></p>
 
 <p class=MsoNormalCxSpMiddle><span lang=EN-GB style='font-size:11.0pt;
 color:black'>&nbsp;</span></p>
@@ -2096,8 +2121,8 @@ color:black'> <i>default = -1</i></span></p>
 
 <p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
 color:black'>Limit the size of a chunk of stream data sent by sq2u to a
-renderer. This helps slowing down internal sq2u buffer consumption and
-preventing overrun, especially with slow networks.</span></i></p>
+renderer. This helps slowing down internal sq2u buffer consumption and preventing
+overrun, especially with slow networks.</span></i></p>
 
 <p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
 color:black'>0 = value “recommended” by LMS</span></i></p>
@@ -2128,14 +2153,14 @@ lang=EN-GB style='font-size:11.0pt;color:black'> <i>default = 0</i></span></p>
 <p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
 color:black'>Sq2u allows renderers to leave open and “stall” the TCP connection
 as long as they want for pausing. However, some renderers will chose to close
-the connection and to re-open-it at un-pause. Normally, renderers will then either
-request sq2u to seek to the last received position or will re-start from 1<sup>st</sup>
-byte but consume all the intervening data. Other renderers either refuse to
-pause and will let the track move on, or will not un-pause from the correct
-position. In such cases, set this parameter to 1 and sq2u will issue a
-“reposition” request to LMS. This uses the CLI interface to instruct LMS to cue
-to the paused position, so if you have a login/password set, it will fail as
-there is no option today to have sq2u to use a login/password.</span></i></p>
+the connection and to re-open-it at un-pause. Normally, renderers will then
+either request sq2u to seek to the last received position or will re-start from
+1<sup>st</sup> byte but consume all the intervening data. Other renderers
+either refuse to pause and will let the track move on, or will not un-pause
+from the correct position. In such cases, set this parameter to 1 and sq2u will
+issue a “reposition” request to LMS. This uses the CLI interface to instruct
+LMS to cue to the paused position, so if you have a login/password set, it will
+fail as there is no option today to have sq2u to use a login/password.</span></i></p>
 
 <p class=MsoNormalCxSpMiddle><span lang=EN-GB style='font-size:11.0pt;
 color:black'>&nbsp;</span></p>
@@ -2208,8 +2233,8 @@ name="__DdeLink__513_1956274692"><b><span style='font-size:11.0pt'>&lt;max_volum
 normal UPnP volume goes from 0 to 100 but some players have a maximum below or
 above this. This parameter scales then volume calculated using
 &lt;volume_curve&gt; by a ratio of &lt;max_volume&gt;/100. It also applies as
-the absolute limit of the volume sent to the player, even if the &lt;volume_curve&gt;
-parameter is faulty.</span></i></p>
+the absolute limit of the volume sent to the player, even if the
+&lt;volume_curve&gt; parameter is faulty.</span></i></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;margin-bottom:.0001pt'><b><span
 style='font-size:11.0pt'>&lt;pause_volume&gt;[ 0 | 1] &lt;/pause_volume&gt;</span></b>
@@ -2320,9 +2345,9 @@ possible to choose raw pcm, or to add a wav or an aiff header (see
 &lt;raw_audio_format&gt;).  However, wav requires a different byte ordering
 than pcm and aiff. Although this is CPU intensive, sq2u does the re-ordering if
 needed, but it can also try to avoid doing that by trying to find a format in
-the player that does not require re-oredering.  If this is set to 0 sq2u will respect
-the order set by &lt;raw_audio_format&gt; and will not try a format not listed
-there. See dedicated section </span></i><span
+the player that does not require re-oredering.  If this is set to 0 sq2u will
+respect the order set by &lt;raw_audio_format&gt; and will not try a format not
+listed there. See dedicated section </span></i><span
 lang=EN-GB>4.6</span><i><span lang=EN-GB style='font-size:11.0pt;color:black'>
 above</span></i></p>
 
@@ -2336,11 +2361,11 @@ lang=EN-GB style='font-size:11.0pt;color:black'> <i>default = 1</i></span></p>
 <p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
 color:black'>When repositioning flac streams, LMS re-generates a file starting
 from the new position but does not insert a proper header . Such header is
-required by some players and it contains information like total number of samples
-in the file and a checksum of the decoded audio data. Sq2u cannot know these
-values but the flac standard specifies that they should then be set to 0. In a
-few cases, some players consider such audio data as being a live stream and
-will consequently refuse to pause. The symptoms varies, but mainly after a
+required by some players and it contains information like total number of
+samples in the file and a checksum of the decoded audio data. Sq2u cannot know
+these values but the flac standard specifies that they should then be set to 0.
+In a few cases, some players consider such audio data as being a live stream
+and will consequently refuse to pause. The symptoms varies, but mainly after a
 re-positioning, pause/un-pause will fail or, if &lt;seek_after_pause&gt; is set
 to 1, the first pause/un-pause will work, but not any subsequent
 pause/un-pause. A workaround is to set these header value to a fixed but large
@@ -2379,8 +2404,8 @@ lang=EN-GB style='font-size:11.0pt;color:black'> <i>default = 1</i></span></p>
 
 <p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
 color:black'>If you do not want to see coverert on your renderer, or if you
-have a login and password for the LMS CLI interface, set this to 0.  Version 0.2.5.0
-on.</span></i></p>
+have a login and password for the LMS CLI interface, set this to 0.  Version
+0.2.5.0 on.</span></i></p>
 
 <p class=MsoNormalCxSpMiddle><span lang=EN-GB style='font-size:11.0pt;
 color:black'>&nbsp;</span></p>
@@ -2453,8 +2478,8 @@ style='font-size:11.0pt;color:black'> <i>default = 1</i></span></p>
 color:black'>Set to 1 to allow the UPnP renderer to be managed be sq2u. An LMS
 device will be created for each renderer whose mode is above 0. Set to 0 to
 ignore the renderer.  It may be better to keep a list of all known renderers in
-the configuration and disable those you don't want to use, so that you have a
-list of the uuids should you ever need them.</span></i></p>
+the configuration and disable those you don't want to use, so that you have a list
+of the uuids should you ever need them.</span></i></p>
 
 <p class=MsoNormalCxSpMiddle><span lang=EN-GB style='font-size:11.0pt;
 color:black'>&nbsp;</span></p>

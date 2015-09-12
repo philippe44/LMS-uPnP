@@ -558,7 +558,8 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 				p = _buf_readp(ctx->streambuf);
 
 				// 3 bytes but truncate that to 2 bytes
-				if (out->sample_size == 24 && ctx->config.L24_format == L24_TRUNC_16) {
+				if (out->sample_size == 24 && (ctx->config.L24_format == L24_TRUNC_16 ||
+											   ctx->config.L24_format == L24_TRUNC_16_PCM)) {
 					nb_write = truncate16(p, &space, out->endianness, 0);
 				}
 				// 2 or 4 bytes or 3 bytes with no packing, but change endianness

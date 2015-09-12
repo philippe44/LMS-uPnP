@@ -141,9 +141,7 @@ static bool SetContentTypeRawAudio(struct sMR *Device, sq_seturi_t *uri, bool Ma
 {
 	bool ret = false;
 	char *p, *buf;
-	char fmt[SQ_STR_LENGTH];
 
-	sprintf(fmt, "audio/L%d", (Device->sq_config.L24_format != L24_TRUNC_16) ? uri->sample_size : 16);
 	p = buf = strdup(Device->Config.RawAudioFormat);
 
 	while (!ret && p && *p) {
@@ -152,7 +150,16 @@ static bool SetContentTypeRawAudio(struct sMR *Device, sq_seturi_t *uri, bool Ma
 
 		if (q) *q = '\0';
 
-		if (strstr(p, "pcm") || strstr(p,"raw")) { ret = _SetContentType(Device->ProtocolCap, uri, 1, fmt); order = 0;}
+		if (strstr(p, "pcm") || strstr(p,"raw")) {
+			char fmt[SQ_STR_LENGTH];
+
+			sprintf(fmt, "audio/L%d", (Device->sq_config.L24_format == L24_TRUNC_16 && uri->sample_size == 24) ? 16 : uri->sample_size);
+			ret = _SetContentType(Device->ProtocolCap, uri, 1, fmt);
+			if (!ret && Device->sq_config.L24_format == L24_TRUNC_16_PCM && uri->sample_size == 24) {
+				ret = _SetContentType(Device->ProtocolCap, uri, 1, "audio/L16");
+			}
+			order = 0;
+		}
 		if (strstr(p, "wav")) { ret = _SetContentType(Device->ProtocolCap, uri, 3, "audio/wav", "audio/x-wav", "audio/wave"); order = 1;}
 		if (strstr(p, "aif")) { ret = _SetContentType(Device->ProtocolCap, uri, 2, "audio/aiff", "audio/x-aiff"); order = 0;}
 

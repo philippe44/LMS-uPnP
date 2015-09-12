@@ -11,6 +11,7 @@
  - When using aac, content-type shall always be "audio/aac" even if ProtocolInfo has m4a (works with foobar, not yet with Sonos)
  - Change detection of endianness and aiff header bug (version < 7.8, only for *native* aif file)
  - Still a bug on aiff header detection when moving player live from a < 7.8 to a 7.9
+ - L24_format can be set to 3 to force truncation only when using raw sample and audio/L24 is not found in protocolinfo
  - (P) correct profile nested structure overloading logic
  - (P) add option to disable coverart
  - (P) add a 30s surveillance timer to check that squeeze2upnp is still running
