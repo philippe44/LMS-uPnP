@@ -593,6 +593,13 @@ void SyncNotifState(char *State, struct sMR* Device)
 		sq_notify(Device->SqueezeHandle, Device, Event, NULL, &Param);
 }
 
+/*----------------------------------------------------------------------------*/
+void ProcessVolume(char *Volume, struct sMR* Device)
+{
+	LOG_SDEBUG("[%p]: Volume %s", Device, Volume);
+}
+
+
 #ifdef SUBSCRIBE_EVENT
 /*----------------------------------------------------------------------------*/
 void HandleStateEvent(struct Upnp_Event *Event, void *Cookie)
@@ -715,6 +722,11 @@ int CallbackActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 				}
 				else ithread_mutex_unlock(&p->Mutex);
 			}
+			NFREE(r);
+
+			// GetVolume response
+			r = XMLGetFirstDocumentItem(Action->ActionResult, "CurrentVolume");
+			if (r) ProcessVolume(r, p);
 			NFREE(r);
 
 			LOG_SDEBUG("Action complete : %i (cookie %p)", EventType, Cookie);
@@ -985,8 +997,9 @@ static void *MainThread(void *args)
 }
 
 /*----------------------------------------------------------------------------*/
-#define TRACK_POLL (1000)
-#define STATE_POLL (500)
+#define TRACK_POLL  (1000)
+#define STATE_POLL  (500)
+#define VOLUME_POLL (10000)
 #define MAX_ACTION_ERRORS (5)
 static void *MRThread(void *args)
 {
@@ -999,10 +1012,20 @@ static void *MRThread(void *args)
 		elapsed = gettime_ms() - last;
 		ithread_mutex_lock(&p->Mutex);
 
+		// use volume as a 'keep alive' function
+		if (p->on) {
+			p->VolumePoll += elapsed;
+			if (p->VolumePoll > VOLUME_POLL) {
+				p->VolumePoll = 0;
+				GetVolume(p->Service[REND_SRV_IDX].ControlURL, p->seqN++);
+			}
+		}
+
 		// make sure that both domains are in sync that nothing shall be done
 		if (!p->on || (p->sqState == SQ_STOP && p->State == STOPPED) ||
 			 p->ErrorCount > MAX_ACTION_ERRORS) {
 			ithread_mutex_unlock(&p->Mutex);
+			last = gettime_ms();
 			continue;
 		}
 
@@ -1025,6 +1048,7 @@ static void *MRThread(void *args)
 			AVTCallAction(p->Service[AVT_SRV_IDX].ControlURL, "GetTransportInfo", p->seqN++);
 		}
 
+				// do polling as event is broken in many uPNP devices
 		ithread_mutex_unlock(&p->Mutex);
 		last = gettime_ms();
 	}

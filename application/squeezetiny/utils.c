@@ -404,7 +404,7 @@ void touch_memory(u8_t *buf, size_t size) {
 }
 #endif
 
-#if LINUX || FREEBDSD
+#if LINUX || FREEBSD
 int SendARP(in_addr_t src, in_addr_t dst, u8_t mac[], u32_t *size) {
 	int                 s;
 	struct arpreq       areq;
@@ -485,7 +485,7 @@ int SendARP(in_addr_t src, in_addr_t dst, u8_t mac[], u32_t *size)
 }
 #endif
 
-#if LINUX || FREEBDSD || OSX
+#if LINUX || FREEBSD || OSX
 char *GetTempPath(u16_t size, char *path)
 {
 	strncpy(path, P_tmpdir, size);

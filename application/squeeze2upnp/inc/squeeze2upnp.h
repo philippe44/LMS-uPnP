@@ -101,7 +101,7 @@ struct sMR {
 	sq_action_t		sqState;
 	u32_t			Elapsed;
 	u8_t			*seqN;
-	unsigned	TrackPoll, StatePoll;
+	unsigned	TrackPoll, StatePoll, VolumePoll;
 	bool		uPNPTimeOut;
 	int	 SqueezeHandle;
 	struct sService Service[NB_SRV];

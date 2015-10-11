@@ -1,4 +1,7 @@
-0.2.5.x
+0.2.6.0 (not released yet)
+ - Revert reported modelname to 'squeezelite' for compatibility
+
+0.2.5.0
  - in XMLFindAndParseService search ends if a service list is empty. It should end only when no service list remains
  - Set HasDigitalOut=0 in capabilities to prevent volume from being set to max and sent to player
  - in capabilities, ModelName is "squeeze2upnp"

@@ -33,6 +33,7 @@ int AVTCallAction(char *ControlURL, char *Var, void *Cookie);
 int AVTPlay(char *ControlURL, void *Cookie);
 int AVTSetPlayMode(char *ControlURL, void *Cookie);
 int SetVolume(char *ControlURL, u8_t Volume, void *Cookie);
+int GetVolume(char *ControlURL, void *Cookie);
 int AVTSeek(char *ControlURL, unsigned Interval, void *Cookie);
 int AVTBasic(char *ControlURL, char *Action, void *Cookie);
 int GetProtocolInfo(char *ControlURL, void *Cookie);

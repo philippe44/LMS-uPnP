@@ -1,3 +1,7 @@
+- Create a player 'ping' and do not remove them if they respong to ping even if they have not responsded to discovery
+- Put squeezelite back as a model
+
+
 - Need to refactor the code of SQ_SETFORMAT and SQ_SETXXXURI to put the metadata gathering in SQ_SETFORMAT and so in Device context. Be cautious with potential reace conditons with device that don't handle nexturi
 - See if, for non stream format, it could be possible to buffer the whole file and then to send real filze size to the player. That would delay playback a bit, but would love a lot of issues. Need to find the right logic to apply when playing a stream - maybe "duration" indicated by LMS would be telling good enough. That whole thing might help dramatically with non streamable formats like WAV and AIFF
 - On Pi B+, FLAC and WAV fail to play on Sonos - seems to be a CPU/network speed issue (works on Pi 2) but not as clear as PCM and FLAC works fine on other some other players. Need to investigate why Sonos seems to be starved by audio data

@@ -270,6 +270,31 @@ int SetVolume(char *ControlURL, u8_t Volume, void *Cookie)
 
 
 /*----------------------------------------------------------------------------*/
+int GetVolume(char *ControlURL, void *Cookie)
+{
+	IXML_Document *ActionNode = NULL;
+	int rc;
+
+	LOG_SDEBUG("uPNP get volume for %s (cookie %p)", ControlURL, Cookie);
+	ActionNode =  UpnpMakeAction("GetVolume", RENDERING_CTRL, 0, NULL);
+	UpnpAddToAction(&ActionNode, "GetVolume", RENDERING_CTRL, "InstanceID", "0");
+	UpnpAddToAction(&ActionNode, "GetVolume", RENDERING_CTRL, "Channel", "Master");
+
+	rc = UpnpSendActionAsync(glControlPointHandle, ControlURL, RENDERING_CTRL, NULL,
+							 ActionNode, CallbackActionHandler, Cookie);
+
+	if (rc != UPNP_E_SUCCESS) {
+		LOG_ERROR("Error in UpnpSendActionAsync -- %d", rc);
+	}
+
+	if (ActionNode) ixmlDocument_free(ActionNode);
+
+	return rc;
+}
+
+
+
+/*----------------------------------------------------------------------------*/
 int AVTSeek(char *ControlURL, unsigned Interval, void *Cookie)
 {
 	IXML_Document *ActionNode = NULL;
