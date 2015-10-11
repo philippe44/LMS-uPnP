@@ -55,7 +55,7 @@ struct sService {
 	char EventURL	[RESOURCE_LENGTH];
 	char ControlURL	[RESOURCE_LENGTH];
 	Upnp_SID		SID;
-	int				TO;
+	s32_t			TimeOut;
 };
 
 typedef struct sMRConfig
@@ -76,7 +76,7 @@ typedef struct sMRConfig
 	char 		VolumeCurve[SQ_STR_LENGTH];
 	int			MaxVolume;
 	bool		PauseVolume;
-	int			uPNPRemoveCount;
+	int			UPnPRemoveCount;
 	char		RawAudioFormat[SQ_STR_LENGTH];
 	bool		MatchEndianness;
 } tMRConfig;
@@ -102,7 +102,7 @@ struct sMR {
 	u32_t			Elapsed;
 	u8_t			*seqN;
 	unsigned	TrackPoll, StatePoll, VolumePoll;
-	bool		uPNPTimeOut;
+	bool		UPnPTimeOut;
 	int	 SqueezeHandle;
 	struct sService Service[NB_SRV];
 	struct sAction	*Actions;
@@ -118,7 +118,7 @@ struct sMR {
 	char	*ProtocolCap[MAX_PROTO + 1];
 	bool	ProtocolCapReady;
 	u16_t	ErrorCount;
-	int	uPNPMissingCount;
+	int	UPnPMissingCount;
 	bool	Running;
 	struct sMR	*NextSQ;
 	struct sMR	*Next;

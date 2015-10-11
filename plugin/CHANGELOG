@@ -1,5 +1,6 @@
 0.2.6.0 (not released yet)
- - Revert reported modelname to 'squeezelite' for compatibility
+ - Revert reported modelname to 'SqueezeLite' for compatibility
+ - Volume changes detected at forward back to LMS
 
 0.2.5.0
  - in XMLFindAndParseService search ends if a service list is empty. It should end only when no service list remains

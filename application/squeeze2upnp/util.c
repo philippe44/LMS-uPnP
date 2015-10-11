@@ -34,6 +34,7 @@
 /* locals */
 /*----------------------------------------------------------------------------*/
 static log_level loglevel = lWARN;
+static IXML_Node *_getAttributeNode(IXML_Node *node, char *SearchAttr);
 
 /*----------------------------------------------------------------------------*/
 void ExtractIP(const char *URL, in_addr_t *IP)
@@ -235,13 +236,15 @@ int XMLFindAndParseService(IXML_Document *DescDoc, const char *location,
 }
 
 
-
+#if 0
 /*----------------------------------------------------------------------------*/
-char *XMLGetChangeItem(IXML_Document *doc, char *Item)
+char *__XMLGetChangeItem(IXML_Document *doc, char *Item)
 {
-	IXML_NodeList *changenodelist;
-	IXML_Node *changenode, *textnode;
-	char *buf, *p;
+	IXML_NodeList *changenodelist, *node_list;
+	IXML_Node *changenode, *textnode, *node;
+	IXML_Document *ItemDoc;
+	char *buf, *p, *ret;
+	int i;
 
 	changenodelist = ixmlDocument_getElementsByTagName(doc, "LastChange");
 	if (!changenodelist) {
@@ -264,6 +267,26 @@ char *XMLGetChangeItem(IXML_Document *doc, char *Item)
 	}
 
 	buf = strdup(ixmlNode_getNodeValue(textnode));
+	ItemDoc = ixmlParseBuffer(buf);
+
+	node_list = ixmlDocument_getElementsByTagName(ItemDoc, Item);
+	for (i = 0; i < ixmlNodeList_length(node_list); i++) {
+		char *v;
+		IXML_Node *node;
+		IXML_Attr *attr;
+		node = ixmlNodeList_item(node_list, i);
+		attr = ixmlElement_getAttributeNode(node, Attribute);
+#if 0
+		v = (char*) ixmlNode_getNodeValue(node);
+		if (v && !strcmp(v, Attribute)) {
+			ret = ixmlNode_getParentNode(node);
+			break;
+		}
+#endif
+	}
+	if (node_list) ixmlNodeList_free(node_list);
+
+
 	p = strstr(buf, Item);
 	if (p) {
 		p = strtok(p, "\"");
@@ -278,6 +301,79 @@ char *XMLGetChangeItem(IXML_Document *doc, char *Item)
 	ixmlNodeList_free(changenodelist);
 
 	return buf;
+}
+#endif
+
+/*----------------------------------------------------------------------------*/
+char *XMLGetChangeItem(IXML_Document *doc, char *Tag, char *SearchAttr, char *SearchVal, char *RetAttr)
+{
+	IXML_Node *node;
+	IXML_Document *ItemDoc;
+	IXML_Element *LastChange;
+	IXML_NodeList *List;
+	char *buf, *ret = NULL;
+	u32_t i;
+
+	LastChange = ixmlDocument_getElementById(doc, "LastChange");
+	if (!LastChange) return NULL;
+
+	node = ixmlNode_getFirstChild((IXML_Node*) LastChange);
+	if (!node) return NULL;
+
+	buf = (char*) ixmlNode_getNodeValue(node);
+	if (!buf) return NULL;
+
+	ItemDoc = ixmlParseBuffer(buf);
+	if (!ItemDoc) return NULL;
+
+	List = ixmlDocument_getElementsByTagName(ItemDoc, Tag);
+	if (!List) {
+		ixmlDocument_free(ItemDoc);
+		return NULL;
+	}
+
+	for (i = 0; i < ixmlNodeList_length(List); i++) {
+		IXML_Node *node = ixmlNodeList_item(List, i);
+		IXML_Node *attr = _getAttributeNode(node, SearchAttr);
+
+		if (!attr) continue;
+
+		if (!strcasecmp(ixmlNode_getNodeValue(attr), SearchVal)) {
+			node = ixmlNode_getNextSibling(attr);
+			if (!strcasecmp(ixmlNode_getNodeName(node), "val")) {
+				ret = strdup(ixmlNode_getNodeValue(node));
+				break;
+			}
+		}
+	}
+
+	ixmlNodeList_free(List);
+	ixmlDocument_free(ItemDoc);
+
+	return ret;
+}
+
+/*----------------------------------------------------------------------------*/
+IXML_Node *_getAttributeNode(IXML_Node *node, char *SearchAttr)
+{
+	IXML_Node *ret;
+	IXML_NamedNodeMap *map = ixmlNode_getAttributes(node);
+	int i;
+
+	/*
+	supposed to act like but case insensitive
+	ixmlElement_getAttributeNode((IXML_Element*) node, SearchAttr);
+	*/
+
+	for (i = 0; i < ixmlNamedNodeMap_getLength(map); i++) {
+		ret = ixmlNamedNodeMap_item(map, i);
+		if (strcasecmp(ixmlNode_getNodeName(ret), SearchAttr)) ret = NULL;
+		else break;
+	}
+
+	ixmlNamedNodeMap_free(map);
+
+	return ret;
 }
 
 

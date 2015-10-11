@@ -131,9 +131,10 @@ static const struct cSearchedSRV_s
 {
  char 	name[RESOURCE_LENGTH];
  int	idx;
-} cSearchedSRV[NB_SRV] = {	{AV_TRANSPORT, AVT_SRV_IDX},
-						{RENDERING_CTRL, REND_SRV_IDX},
-						{CONNECTION_MGR, CNX_MGR_IDX}
+ u32_t  TimeOut;
+} cSearchedSRV[NB_SRV] = {	{AV_TRANSPORT, AVT_SRV_IDX, 0},
+						{RENDERING_CTRL, REND_SRV_IDX, 300},
+						{CONNECTION_MGR, CNX_MGR_IDX, 0}
 				   };
 
 /*----------------------------------------------------------------------------*/
@@ -403,7 +404,7 @@ static int	uPNPTerminate(void);
 			int i = 0;
 			s32_t a2, b2, a1 = 0, b1 = 0;
 
-			if (device->Config.VolumeOnPlay == -1) break;
+			//if (device->Config.VolumeOnPlay == -1) break;
 
 			device->PreviousVolume = device->Volume;
 
@@ -420,7 +421,9 @@ static int	uPNPTerminate(void);
 			if (device->Config.MaxVolume) {
 				device->Volume = ((s32_t)device->Volume * device->Config.MaxVolume) / (s32_t) 100;
 				device->Volume = min(device->Volume, 100);
-     		}
+			}
+
+			if (device->Config.VolumeOnPlay == -1) break;
 
 			if (!device->Config.VolumeOnPlay || device->sqState == SQ_PLAY)
 				SetVolume(device->Service[REND_SRV_IDX].ControlURL, device->Volume, device->seqN++);
@@ -593,24 +596,30 @@ void SyncNotifState(char *State, struct sMR* Device)
 		sq_notify(Device->SqueezeHandle, Device, Event, NULL, &Param);
 }
 
+
 /*----------------------------------------------------------------------------*/
 void ProcessVolume(char *Volume, struct sMR* Device)
 {
 	LOG_SDEBUG("[%p]: Volume %s", Device, Volume);
+	if (atoi(Volume) != Device->Volume) {
+		u16_t Vol = (atoi(Volume) * 100) / Device->Config.MaxVolume;
+
+		LOG_INFO("[%p]: Volume change detected %d", Device, Vol);
+		sq_notify(Device->SqueezeHandle, Device, SQ_VOLUME, NULL, &Vol);
+	}
 }
 
 
-#ifdef SUBSCRIBE_EVENT
 /*----------------------------------------------------------------------------*/
 void HandleStateEvent(struct Upnp_Event *Event, void *Cookie)
 {
 	struct sMR *Device;
-	IXML_Document *StateDoc, *VarDoc = Event->ChangedVariables;
-	char  *State = NULL;
+	IXML_Document *VarDoc = Event->ChangedVariables;
+	char  *r = NULL;
 	char  *LastChange = NULL;
-	char  *CurrentURI;
 
-	Device = Sid2Device(Event->Sid);
+	Device = SID2Device(Event->Sid);
+
 	if (!Device) {
 		LOG_SDEBUG("no Squeeze device (yet) for %s", Event->Sid);
 		return;
@@ -622,16 +631,26 @@ void HandleStateEvent(struct Upnp_Event *Event, void *Cookie)
 	}
 
 	if (!Device->on) {
-		LOG_INFO("[%p]: device off, ignored ", Device);
+		LOG_DEBUG("[%p]: device off, ignored ", Device);
 		return;
 	}
 
+
 	LastChange = XMLGetFirstDocumentItem(VarDoc, "LastChange");
 	LOG_SDEBUG("Data event %s %u %s", Event->Sid, Event->EventKey, LastChange);
-	if (LastChange) free(LastChange);
+	if (!LastChange) return;
+	NFREE(LastChange);
 
-	State = XMLGetChangeItem(VarDoc, "TransportState");
-	if (State){
+	r = XMLGetChangeItem(VarDoc, "Volume", "channel", "Master", "val");
+	if (r) {
+		LOG_INFO("[%p]: Volume Event %s", Device, r);
+		ProcessVolume(r, Device);
+	}
+	NFREE(r);
+
+#if 0
+	State = XMLGetChangeItem(VarDoc, "TransportState");
+	if (State){
 		SyncNotifState(State, Device);
 		free(State);
 	}
@@ -642,9 +661,9 @@ void HandleStateEvent(struct Upnp_Event *Event, void *Cookie)
 		free(CurrentURI);
 	 }
 
-	UnQueueAction(Device, false);
-}
 #endif
+}
+
 
 /*----------------------------------------------------------------------------*/
 int CallbackActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
@@ -724,10 +743,11 @@ int CallbackActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 			}
 			NFREE(r);
 
+#ifdef VOLUME_POLLING
 			// GetVolume response
 			r = XMLGetFirstDocumentItem(Action->ActionResult, "CurrentVolume");
-			if (r) ProcessVolume(r, p);
 			NFREE(r);
+#endif
 
 			LOG_SDEBUG("Action complete : %i (cookie %p)", EventType, Cookie);
 
@@ -787,6 +807,9 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 			pthread_attr_destroy(&attr);
 			break;
 		}
+		case UPNP_EVENT_RECEIVED:
+			HandleStateEvent(Event, Cookie);
+			break;
 		case UPNP_CONTROL_GET_VAR_COMPLETE:
 			LOG_ERROR("Unexpected GetVarComplete", NULL);
 			break;
@@ -806,7 +829,6 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 			NFREE(r);
 			break;
 		}
-		case UPNP_EVENT_RECEIVED:
 		case UPNP_DISCOVERY_ADVERTISEMENT_BYEBYE:
 		case UPNP_CONTROL_ACTION_REQUEST:
 		case UPNP_EVENT_SUBSCRIBE_COMPLETE:
@@ -830,8 +852,8 @@ static bool RefreshTO(char *UDN)
 
 	for (i = 0; i < MAX_RENDERERS; i++) {
 		if (glMRDevices[i].InUse && !strcmp(glMRDevices[i].UDN, UDN)) {
-			glMRDevices[i].uPNPTimeOut = false;
-			glMRDevices[i].uPNPMissingCount = glMRDevices[i].Config.uPNPRemoveCount;
+			glMRDevices[i].UPnPTimeOut = false;
+			glMRDevices[i].UPnPMissingCount = glMRDevices[i].Config.UPnPRemoveCount;
 			glMRDevices[i].ErrorCount = 0;
 			return true;
 		}
@@ -923,8 +945,8 @@ static void *UpdateMRThread(void *args)
 	// then walk through the list of devices to remove missing ones
 	for (i = 0; i < MAX_RENDERERS; i++) {
 		Device = &glMRDevices[i];
-		if (!Device->InUse || !Device->uPNPTimeOut ||
-			!Device->uPNPMissingCount || --Device->uPNPMissingCount) continue;
+		if (!Device->InUse || !Device->UPnPTimeOut ||
+			!Device->UPnPMissingCount || --Device->UPnPMissingCount) continue;
 
 		LOG_INFO("[%p]: removing renderer (%s)", Device, Device->FriendlyName);
 		if (Device->SqueezeHandle) sq_delete_device(Device->SqueezeHandle);
@@ -957,7 +979,7 @@ static void *MainThread(void *args)
 			ScanPoll = 0;
 
 			for (i = 0; i < MAX_RENDERERS; i++) {
-				glMRDevices[i].uPNPTimeOut = true;
+				glMRDevices[i].UPnPTimeOut = true;
 				glDiscovery = false;
 			}
 
@@ -1003,7 +1025,7 @@ static void *MainThread(void *args)
 #define MAX_ACTION_ERRORS (5)
 static void *MRThread(void *args)
 {
-	int elapsed;
+	int elapsed, i;
 	unsigned last;
 	struct sMR *p = (struct sMR*) args;
 
@@ -1012,12 +1034,25 @@ static void *MRThread(void *args)
 		elapsed = gettime_ms() - last;
 		ithread_mutex_lock(&p->Mutex);
 
+#if VOLUME_POLLING
 		// use volume as a 'keep alive' function
 		if (p->on) {
 			p->VolumePoll += elapsed;
 			if (p->VolumePoll > VOLUME_POLL) {
 				p->VolumePoll = 0;
 				GetVolume(p->Service[REND_SRV_IDX].ControlURL, p->seqN++);
+			}
+		}
+#endif
+
+		// renew rerevice subscribtion if needed
+		for (i = 0; i < NB_SRV; i++) {
+			struct sService *s = &p->Service[cSearchedSRV[i].idx];
+			s->TimeOut -= elapsed;
+			if (s->TimeOut <= 0) {
+				s->TimeOut = cSearchedSRV[i].TimeOut;
+				UpnpSubscribe(glControlPointHandle, s->EventURL, &s->TimeOut, s->SID);
+				s->TimeOut *= 1000;
 			}
 		}
 
@@ -1249,8 +1284,8 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	ithread_mutex_init(&Device->Mutex, 0);
 	InitActionList(Device);
 	Device->Magic = MAGIC;
-	Device->uPNPTimeOut = false;
-	Device->uPNPMissingCount = Device->Config.uPNPRemoveCount;
+	Device->UPnPTimeOut = false;
+	Device->UPnPMissingCount = Device->Config.UPnPRemoveCount;
 	Device->on = false;
 	Device->SqueezeHandle = 0;
 	Device->ErrorCount = 0;
@@ -1283,7 +1318,9 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 			strncpy(s->ControlURL, ControlURL, RESOURCE_LENGTH-1);
 			strncpy(s->EventURL, EventURL, RESOURCE_LENGTH - 1);
 			strcpy(s->Type, cSearchedSRV[i].name);
-			s->TO = 60;
+			s->TimeOut = cSearchedSRV[i].TimeOut;
+			UpnpSubscribe(glControlPointHandle, s->EventURL, &s->TimeOut, s->SID);
+			s->TimeOut *= 1000;
 		}
 		NFREE(ServiceId);
 		NFREE(EventURL);

@@ -816,7 +816,14 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 			wake_controller(ctx);
 			break;
 		case SQ_SEEK: break;
-		case SQ_VOLUME: break;
+		case SQ_VOLUME: {
+			char cmd[128], *rsp;
+
+			sprintf(cmd, "%s mixer volume %d", ctx->cli_id, *((u16_t*) param));
+			rsp = cli_send_cmd(cmd, false, true, ctx);
+			NFREE(rsp);
+			break;
+		}
 		case SQ_TIME: {
 			int time = *((unsigned*) param);
 

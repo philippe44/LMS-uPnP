@@ -3,7 +3,7 @@
 
 //#define __EARLY_STMd__
 
-#define VERSION "v0.2.6.0-dev-1"
+#define VERSION "v0.2.6.0-dev-2"
 
 #if defined(linux)
 #define LINUX     1
@@ -122,6 +122,7 @@ typedef BOOL bool;
 #define read _read
 #define snprintf _snprintf
 #define fresize(f, s) chsize(fileno(f), s)
+#define strcasecmp stricmp
 
 #define in_addr_t u32_t
 #define socklen_t int

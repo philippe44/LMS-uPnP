@@ -333,6 +333,24 @@ struct sMR* CURL2Device(char *CtrlURL)
 	return NULL;
 }
 
+
+/*----------------------------------------------------------------------------*/
+struct sMR* SID2Device(char *SID)
+{
+	int i, j;
+
+	for (i = 0; i < MAX_RENDERERS; i++) {
+		if (!glMRDevices[i].InUse) continue;
+		for (j = 0; j < NB_SRV; j++) {
+			if (!strcmp(glMRDevices[i].Service[j].SID, SID)) {
+				return &glMRDevices[i];
+			}
+		}
+	}
+
+	return NULL;
+}
+
 /*----------------------------------------------------------------------------*/
 void ParseProtocolInfo(struct sMR *Device, char *Info)
 {
@@ -488,7 +506,7 @@ void SaveConfig(char *name, void *ref, bool full)
 		XMLAddNode(doc, common, "volume_curve", glMRConfig.VolumeCurve);
 		XMLAddNode(doc, common, "max_volume", "%d", glMRConfig.MaxVolume);
 		XMLAddNode(doc, common, "accept_nexturi", "%d", (int) glMRConfig.AcceptNextURI);
-		XMLAddNode(doc, common, "upnp_remove_count", "%d", (u32_t) glMRConfig.uPNPRemoveCount);
+		XMLAddNode(doc, common, "upnp_remove_count", "%d", (u32_t) glMRConfig.UPnPRemoveCount);
 		XMLAddNode(doc, common, "raw_audio_format", glMRConfig.RawAudioFormat);
 		XMLAddNode(doc, common, "match_endianness", "%d", (int) glMRConfig.MatchEndianness);
 		XMLAddNode(doc, common, "pause_volume", "%d", (int) glMRConfig.PauseVolume);
@@ -560,7 +578,7 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "L24_format"))sq_conf->L24_format = atol(val);
 	if (!strcmp(name, "flac_header"))sq_conf->flac_header = atol(val);
 	if (!strcmp(name, "keep_buffer_file"))sq_conf->keep_buffer_file = atol(val);
-	if (!strcmp(name, "upnp_remove_count"))Conf->uPNPRemoveCount = atol(val);
+	if (!strcmp(name, "upnp_remove_count"))Conf->UPnPRemoveCount = atol(val);
 	if (!strcmp(name, "raw_audio_format")) strcpy(Conf->RawAudioFormat, val);
 	if (!strcmp(name, "match_endianness")) Conf->MatchEndianness = atol(val);
 	if (!strcmp(name, "seek_after_pause")) {
