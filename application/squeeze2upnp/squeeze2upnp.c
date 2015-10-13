@@ -75,13 +75,25 @@ tMRConfig			glMRConfig = {
 							true,
 							true,
 							true,
-							"0:0, 400:10, 700:20, 1200:30, 2050:40, 3800:50, 6600:60, 12000:70, 21000:80, 37000:90, 65536:100",
 							100,
 							true,
 							1,
 							"raw",
 							1
 					};
+
+static u8_t LMSVolumeMap[101] = {
+				0, 1, 1, 1, 2, 2, 2, 3,  3,  4,
+				5, 5, 6, 6, 7, 8, 9, 9, 10, 11,
+				12, 13, 14, 15, 16, 16, 17, 18, 19, 20,
+				22, 23, 24, 25, 26, 27, 28, 29, 30, 32,
+				33, 34, 35, 37, 38, 39, 40, 42, 43, 44,
+				46, 47, 48, 50, 51, 53, 54, 56, 57, 59,
+				60, 61, 63, 65, 66, 68, 69, 71, 72, 74,
+				75, 77, 79, 80, 82, 84, 85, 87, 89, 90,
+				92, 94, 96, 97, 99, 101, 103, 104, 106, 108, 110,
+				112, 113, 115, 117, 119, 121, 123, 125, 127, 128
+			};
 
 sq_dev_param_t glDeviceParam = {
 					 // both are multiple of 3*4(2) for buffer alignement on sample
@@ -400,33 +412,22 @@ static int	uPNPTerminate(void);
 //			AVTSeek(device->Service[AVT_SRV_IDX].ControlURL, *(u16_t*) p);
 			break;
 		case SQ_VOLUME: {
-			u32_t Volume = *(u32_t*)p;
-			int i = 0;
-			s32_t a2, b2, a1 = 0, b1 = 0;
+			u32_t Volume = *(u16_t*)p;
+			int i;
 
-			//if (device->Config.VolumeOnPlay == -1) break;
+			for (i = 100; Volume < LMSVolumeMap[i] && i; i--);
 
+			device->Volume = (i * device->Config.MaxVolume) / 100;
 			device->PreviousVolume = device->Volume;
 
-			for (i = 0; i < 32 && Volume > device->VolumeCurve[i].a; i++);
-
-			a1 = (i) ? device->VolumeCurve[i-1].a : 0;
-			b1 = (i) ? device->VolumeCurve[i-1].b : 0;
-			a2 = device->VolumeCurve[i].a;
-			b2 = device->VolumeCurve[i].b;
-			// volume and a are 16 bits, b are 8, so 7 bits precision can be added
-			if (a2) device->Volume = (((s32_t)Volume*(b1-b2)*128)/(a1-a2) + b1*128 - (a1*(b1-b2)*128)/(a1-a2)) / 128;
-			else device->Volume = 0;
-
-			if (device->Config.MaxVolume) {
-				device->Volume = ((s32_t)device->Volume * device->Config.MaxVolume) / (s32_t) 100;
-				device->Volume = min(device->Volume, 100);
-			}
-
+            // calculate but do not transmit so that we can compare
 			if (device->Config.VolumeOnPlay == -1) break;
 
-			if (!device->Config.VolumeOnPlay || device->sqState == SQ_PLAY)
-				SetVolume(device->Service[REND_SRV_IDX].ControlURL, device->Volume, device->seqN++);
+			// only transmit while playing
+			if (!device->Config.VolumeOnPlay || device->sqState == SQ_PLAY) {
+					SetVolume(device->Service[REND_SRV_IDX].ControlURL, device->Volume, device->seqN++);
+			}
+
 			break;
 		}
 		default:
@@ -600,12 +601,13 @@ void SyncNotifState(char *State, struct sMR* Device)
 /*----------------------------------------------------------------------------*/
 void ProcessVolume(char *Volume, struct sMR* Device)
 {
-	LOG_SDEBUG("[%p]: Volume %s", Device, Volume);
-	if (atoi(Volume) != Device->Volume) {
-		u16_t Vol = (atoi(Volume) * 100) / Device->Config.MaxVolume;
+	u16_t UPnPVolume = (atoi(Volume) * 100) / Device->Config.MaxVolume;
 
-		LOG_INFO("[%p]: Volume change detected %d", Device, Vol);
-		sq_notify(Device->SqueezeHandle, Device, SQ_VOLUME, NULL, &Vol);
+	LOG_SDEBUG("[%p]: Volume %s", Device, Volume);
+
+	if (UPnPVolume != Device->Volume) {
+		LOG_INFO("[%p]: UPnP Volume local change %d", Device, UPnPVolume);
+		sq_notify(Device->SqueezeHandle, Device, SQ_VOLUME, NULL, &UPnPVolume);
 	}
 }
 
@@ -642,10 +644,7 @@ void HandleStateEvent(struct Upnp_Event *Event, void *Cookie)
 	NFREE(LastChange);
 
 	r = XMLGetChangeItem(VarDoc, "Volume", "channel", "Master", "val");
-	if (r) {
-		LOG_INFO("[%p]: Volume Event %s", Device, r);
-		ProcessVolume(r, Device);
-	}
+	if (r) ProcessVolume(r, Device);
 	NFREE(r);
 
 #if 0
@@ -829,14 +828,35 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 			NFREE(r);
 			break;
 		}
+		case UPNP_EVENT_AUTORENEWAL_FAILED:
+		case UPNP_EVENT_SUBSCRIPTION_EXPIRED: {
+			struct Upnp_Action_Complete *Action = (struct Upnp_Action_Complete *)Event;
+			struct sMR *p;
+			int i;
+
+			p = CURL2Device(Action->CtrlUrl);
+			if (!p) break;
+
+			// renew rerevice subscribtion if needed
+			for (i = 0; i < NB_SRV; i++) {
+				struct sService *s = &p->Service[cSearchedSRV[i].idx];
+				if ((s->TimeOut = cSearchedSRV[i].TimeOut) != 0)
+					UpnpSubscribe(glControlPointHandle, s->EventURL, &s->TimeOut, s->SID);
+			}
+
+			LOG_WARN("[%p]: Auto-renewal failed", p);
+			break;
+		}
+
+		case UPNP_EVENT_RENEWAL_COMPLETE:
+		case UPNP_EVENT_SUBSCRIBE_COMPLETE: {
+			LOG_INFO("event: %i [%s] [%p]", EventType, uPNPEvent2String(EventType), Cookie);
+			break;
+		}
+		case UPNP_EVENT_SUBSCRIPTION_REQUEST:
 		case UPNP_DISCOVERY_ADVERTISEMENT_BYEBYE:
 		case UPNP_CONTROL_ACTION_REQUEST:
-		case UPNP_EVENT_SUBSCRIBE_COMPLETE:
 		case UPNP_EVENT_UNSUBSCRIBE_COMPLETE:
-		case UPNP_EVENT_RENEWAL_COMPLETE:
-		case UPNP_EVENT_AUTORENEWAL_FAILED:
-		case UPNP_EVENT_SUBSCRIPTION_EXPIRED:
-		case UPNP_EVENT_SUBSCRIPTION_REQUEST:
 		case UPNP_CONTROL_GET_VAR_REQUEST:
 		break;
 	}
@@ -1025,7 +1045,7 @@ static void *MainThread(void *args)
 #define MAX_ACTION_ERRORS (5)
 static void *MRThread(void *args)
 {
-	int elapsed, i;
+	int elapsed;
 	unsigned last;
 	struct sMR *p = (struct sMR*) args;
 
@@ -1044,17 +1064,6 @@ static void *MRThread(void *args)
 			}
 		}
 #endif
-
-		// renew rerevice subscribtion if needed
-		for (i = 0; i < NB_SRV; i++) {
-			struct sService *s = &p->Service[cSearchedSRV[i].idx];
-			s->TimeOut -= elapsed;
-			if (s->TimeOut <= 0) {
-				s->TimeOut = cSearchedSRV[i].TimeOut;
-				UpnpSubscribe(glControlPointHandle, s->EventURL, &s->TimeOut, s->SID);
-				s->TimeOut *= 1000;
-			}
-		}
 
 		// make sure that both domains are in sync that nothing shall be done
 		if (!p->on || (p->sqState == SQ_STOP && p->State == STOPPED) ||
@@ -1214,32 +1223,6 @@ int uPNPSearchMediaRenderer(void)
 	return true;
 }
 
-/*----------------------------------------------------------------------------*/
-void SetVolumeCurve(struct sMR *Device)
-{
-	char buf[SQ_STR_LENGTH];
-	char *p;
-	int size, i = 0;
-	int n = 0;
-
-	strcpy(buf, Device->Config.VolumeCurve);
-	size = strlen(buf);
-	p = buf;
-	do {
-		char *q;
-
-		p = strtok(p, ",");
-		n += strlen(p) + 1;
-		q = strtok(p, ":");
-		Device->VolumeCurve[i].a = atol(q);
-		Device->VolumeCurve[i].b = atol(q + strlen(q) + 1);
-		p = buf + n;
-		i++;
-	} while (n < size);
-
-	Device->VolumeCurve[i].a = 0x7fffffff;
-	Device->VolumeCurve[i].b = 0x7f;
-}
 
 /*----------------------------------------------------------------------------*/
 static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, const char *location)
@@ -1297,7 +1280,6 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	strcpy(Device->DescDocURL, location);
 	strcpy(Device->FriendlyName, friendlyName);
 	strcpy(Device->Manufacturer, manufacturer);
-	SetVolumeCurve(Device);
 
 	ExtractIP(location, &Device->ip);
 	if (!memcmp(Device->sq_config.mac, "\0\0\0\0\0\0", mac_size) &&
@@ -1318,9 +1300,8 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 			strncpy(s->ControlURL, ControlURL, RESOURCE_LENGTH-1);
 			strncpy(s->EventURL, EventURL, RESOURCE_LENGTH - 1);
 			strcpy(s->Type, cSearchedSRV[i].name);
-			s->TimeOut = cSearchedSRV[i].TimeOut;
-			UpnpSubscribe(glControlPointHandle, s->EventURL, &s->TimeOut, s->SID);
-			s->TimeOut *= 1000;
+			if ((s->TimeOut = cSearchedSRV[i].TimeOut) != 0)
+				UpnpSubscribe(glControlPointHandle, s->EventURL, &s->TimeOut, s->SID);
 		}
 		NFREE(ServiceId);
 		NFREE(EventURL);

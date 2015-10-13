@@ -481,19 +481,14 @@ static void process_aude(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 /*---------------------------------------------------------------------------*/
 static void process_audg(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 	struct audg_packet *audg = (struct audg_packet *)pkt;
-	u32_t  gain;
+	u16_t  gain;
 
-	audg->gainL = unpackN(&audg->gainL);
-	audg->gainR = unpackN(&audg->gainR);
+	audg->old_gainL = unpackN(&audg->old_gainL);
+	audg->old_gainR = unpackN(&audg->old_gainR);
 
-	LOG_DEBUG("[%p] audg gainL: %u gainR: %u adjust: %u", ctx, audg->gainL, audg->gainR, audg->adjust);
+	LOG_DEBUG("[%p] (old) audg gainL: %u gainR: %u", ctx, audg->old_gainL, audg->old_gainR);
 
-	LOCK_O;
-	ctx->output.gainL = audg->adjust ? audg->gainL : FIXED_ONE;
-	ctx->output.gainR = audg->adjust ? audg->gainR : FIXED_ONE;
-	UNLOCK_O;
-
-	gain = (audg->gainL + audg->gainL) / 2;
+	gain = (audg->old_gainL + audg->old_gainL) / 2;
 	ctx_callback(ctx, SQ_VOLUME, NULL, (void*) &gain);
 }
 

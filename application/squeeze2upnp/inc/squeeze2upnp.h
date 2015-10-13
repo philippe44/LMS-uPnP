@@ -73,7 +73,6 @@ typedef struct sMRConfig
 	bool		AcceptNextURI;
 	bool		SendMetaData;
 	bool		SendCoverArt;
-	char 		VolumeCurve[SQ_STR_LENGTH];
 	int			MaxVolume;
 	bool		PauseVolume;
 	int			UPnPRemoveCount;
@@ -92,7 +91,7 @@ struct sMR {
 	char FriendlyName	[RESOURCE_LENGTH];
 	char PresURL		[RESOURCE_LENGTH];
 	char Manufacturer	[RESOURCE_LENGTH];
-	in_addr_t ip;
+	in_addr_t 		ip;
 	enum eMRstate 	State;
 	char			*CurrentURI;
 	char			*NextURI;
@@ -101,27 +100,24 @@ struct sMR {
 	sq_action_t		sqState;
 	u32_t			Elapsed;
 	u8_t			*seqN;
-	unsigned	TrackPoll, StatePoll, VolumePoll;
-	bool		UPnPTimeOut;
-	int	 SqueezeHandle;
+	unsigned		TrackPoll, StatePoll, VolumePoll;
+	bool			UPnPTimeOut;
+	int	 			SqueezeHandle;
 	struct sService Service[NB_SRV];
 	struct sAction	*Actions;
 	u8_t			*LastAckAction;
-	ithread_mutex_t  ActionsMutex;
-	ithread_mutex_t  Mutex;
-	ithread_t 		 Thread;
-	u8_t		Volume, PreviousVolume;
-	struct {
-		u32_t	a;
-		u8_t	b;
-	} VolumeCurve[32];
-	char	*ProtocolCap[MAX_PROTO + 1];
-	bool	ProtocolCapReady;
-	u16_t	ErrorCount;
-	int	UPnPMissingCount;
-	bool	Running;
-	struct sMR	*NextSQ;
-	struct sMR	*Next;
+	ithread_mutex_t ActionsMutex;
+	ithread_mutex_t Mutex;
+	ithread_t 		Thread;
+	u8_t			Volume, PreviousVolume;
+	u8_t			UPnPVolume;
+	char			*ProtocolCap[MAX_PROTO + 1];
+	bool			ProtocolCapReady;
+	u16_t			ErrorCount;
+	int				UPnPMissingCount;
+	bool			Running;
+	struct sMR		*NextSQ;
+	struct sMR		*Next;
 };
 
 struct sAction	{
