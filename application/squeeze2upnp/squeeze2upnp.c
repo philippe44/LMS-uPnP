@@ -1042,6 +1042,7 @@ static void *MainThread(void *args)
 #define TRACK_POLL  (1000)
 #define STATE_POLL  (500)
 #define VOLUME_POLL (10000)
+#define METADATA_POLL (10000)
 #define MAX_ACTION_ERRORS (5)
 static void *MRThread(void *args)
 {
@@ -1072,6 +1073,19 @@ static void *MRThread(void *args)
 			last = gettime_ms();
 			continue;
 		}
+
+		// use volume as a 'keep alive' function
+		/*
+		p->MetaDataPoll += elapsed;
+		if (p->State == PLAYING && p->MetaDataPoll > METADATA_POLL) {
+			sq_MetaData IcyMetaData;
+			p->MetaDataPoll = 0;
+			sq_get_metadata(p->SqueezeHandle, &IcyMetaData, false);
+			if (MetaDataCompare(IcyMetaData, p->IcyMetaData) {
+				p->IcyUpdate = true;
+			}
+		 }
+		 */
 
 		// get track position & CurrentURI
 		p->TrackPoll += elapsed;

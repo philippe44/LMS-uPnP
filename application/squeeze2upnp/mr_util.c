@@ -503,7 +503,6 @@ void SaveConfig(char *name, void *ref, bool full)
 		XMLAddNode(doc, common, "volume_on_play", "%d", (int) glMRConfig.VolumeOnPlay);
 		XMLAddNode(doc, common, "send_metadata", "%d", (int) glMRConfig.SendMetaData);
 		XMLAddNode(doc, common, "send_coverart", "%d", (int) glMRConfig.SendCoverArt);
-		XMLAddNode(doc, common, "volume_curve", glMRConfig.VolumeCurve);
 		XMLAddNode(doc, common, "max_volume", "%d", glMRConfig.MaxVolume);
 		XMLAddNode(doc, common, "accept_nexturi", "%d", (int) glMRConfig.AcceptNextURI);
 		XMLAddNode(doc, common, "upnp_remove_count", "%d", (u32_t) glMRConfig.UPnPRemoveCount);
@@ -587,7 +586,6 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	}
 	if (!strcmp(name, "force_volume")) Conf->ForceVolume = atol(val);
 	if (!strcmp(name, "volume_on_play")) Conf->VolumeOnPlay = atol(val);
-	if (!strcmp(name, "volume_curve")) strcpy(Conf->VolumeCurve, val);
 	if (!strcmp(name, "max_volume")) Conf->MaxVolume = atol(val);
 	if (!strcmp(name, "pause_volume")) Conf->PauseVolume = atol(val);
 	if (!strcmp(name, "accept_nexturi")) Conf->AcceptNextURI = atol(val);

@@ -552,11 +552,10 @@ struct thread_ctx_s {
 	struct sockaddr_in serv_addr;
 	#define MAXBUF 4096
 	event_event	wake_e;
-	struct 						// scratch memory for slimprot_run (was static)
-	{
-	 u8_t 	buffer[MAXBUF];
-	 u32_t	last;
-	 char	header[MAX_HEADER];
+	struct 	{				// scratch memory for slimprot_run (was static)
+		 u8_t 	buffer[MAXBUF];
+		 u32_t	last;
+		 char	header[MAX_HEADER];
 	} slim_run;
 	sq_callback_t	callback;
 	void			*MR;
@@ -570,6 +569,16 @@ struct thread_ctx_s {
 	u32_t	track_start_time;
 	bool	read_to;
 	bool	read_ended;
+	struct {
+		bool 	update;
+		bool	remote;
+		u16_t	interval;
+		u16_t	remain;
+		char 	*artist;
+		char 	*title;
+		char 	*artwork;
+		u32_t 	last;
+	} icy;
 };
 
 extern struct thread_ctx_s thread_ctx[MAX_PLAYER];

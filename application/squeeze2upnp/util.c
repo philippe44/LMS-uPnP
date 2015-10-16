@@ -236,74 +236,6 @@ int XMLFindAndParseService(IXML_Document *DescDoc, const char *location,
 }
 
 
-#if 0
-/*----------------------------------------------------------------------------*/
-char *__XMLGetChangeItem(IXML_Document *doc, char *Item)
-{
-	IXML_NodeList *changenodelist, *node_list;
-	IXML_Node *changenode, *textnode, *node;
-	IXML_Document *ItemDoc;
-	char *buf, *p, *ret;
-	int i;
-
-	changenodelist = ixmlDocument_getElementsByTagName(doc, "LastChange");
-	if (!changenodelist) {
-		LOG_ERROR("LastChange missing", NULL);
-		return NULL;
-	}
-
-	changenode = ixmlNodeList_item(changenodelist, 0);
-	if (!changenode) {
-		ixmlNodeList_free(changenodelist);
-		LOG_ERROR("LastChange missing", NULL);
-		return NULL;
-	}
-
-	textnode = ixmlNode_getFirstChild(changenode);
-	if (!textnode) {
-		ixmlNodeList_free(changenodelist);
-		LOG_ERROR("Child missing in LastChange", NULL);
-		return NULL;
-	}
-
-	buf = strdup(ixmlNode_getNodeValue(textnode));
-	ItemDoc = ixmlParseBuffer(buf);
-
-	node_list = ixmlDocument_getElementsByTagName(ItemDoc, Item);
-	for (i = 0; i < ixmlNodeList_length(node_list); i++) {
-		char *v;
-		IXML_Node *node;
-		IXML_Attr *attr;
-		node = ixmlNodeList_item(node_list, i);
-		attr = ixmlElement_getAttributeNode(node, Attribute);
-#if 0
-		v = (char*) ixmlNode_getNodeValue(node);
-		if (v && !strcmp(v, Attribute)) {
-			ret = ixmlNode_getParentNode(node);
-			break;
-		}
-#endif
-	}
-	if (node_list) ixmlNodeList_free(node_list);
-
-
-	p = strstr(buf, Item);
-	if (p) {
-		p = strtok(p, "\"");
-		p = strtok(NULL, "\"");
-		strcpy(buf, p);
-	}
-	else {
-		free(buf);
-		buf = NULL;
-	}
-
-	ixmlNodeList_free(changenodelist);
-
-	return buf;
-}
-#endif
-
 /*----------------------------------------------------------------------------*/
 char *XMLGetChangeItem(IXML_Document *doc, char *Tag, char *SearchAttr, char *SearchVal, char *RetAttr)
 {
@@ -352,6 +284,7 @@ char *XMLGetChangeItem(IXML_Document *doc, char *Tag, char *SearchAttr, char *Se
 
 	return ret;
 }
+
 
 /*----------------------------------------------------------------------------*/
 IXML_Node *_getAttributeNode(IXML_Node *node, char *SearchAttr)

@@ -190,8 +190,8 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 				}
 
 				// receive icy meta data
-				if (ctx->stream.meta_interval && ctx->stream.meta_next == 0) {
 
+				if (ctx->stream.meta_interval && ctx->stream.meta_next == 0) {
 					if (ctx->stream.meta_left == 0) {
 						// read meta length
 						u8_t c;

@@ -109,13 +109,14 @@ void				sq_default_metadata(struct sq_metadata_s *metadata, bool init);
 void 				sq_free_metadata(struct sq_metadata_s *metadata);
 bool 				sq_set_time(sq_dev_handle_t handle, u32_t time);
 void*				sq_urn2MR(const char *urn);
-void*				sq_get_info(const char *urn, s32_t *filesize, char **content_type);	// string must be released by caller
+void*				sq_get_info(const char *urn, s32_t *filesize, char **content_type, u16_t interval);	// string must be released by caller
 void*				sq_open(const char *urn);
 void*				sq_isopen(const char *urn);
 void				sq_set_sizes(void *desc);
 bool				sq_close(void *desc);
 int					sq_read(void *desc, void *dst, unsigned bytes);
 int					sq_seek(void *desc, off_t bytes, int from);
+bool 				sq_is_remote(const char *urn);
 
 void stream_loglevel(log_level level);
 void slimproto_loglevel(log_level level);

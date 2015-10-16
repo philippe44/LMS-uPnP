@@ -110,7 +110,6 @@ struct sMR {
 	ithread_mutex_t Mutex;
 	ithread_t 		Thread;
 	u8_t			Volume, PreviousVolume;
-	u8_t			UPnPVolume;
 	char			*ProtocolCap[MAX_PROTO + 1];
 	bool			ProtocolCapReady;
 	u16_t			ErrorCount;

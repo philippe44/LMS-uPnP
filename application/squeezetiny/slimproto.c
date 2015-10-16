@@ -385,9 +385,6 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 						strcpy(uri.urn, ctx->out_ctx[idx].buf_name);
 						strcat(uri.urn, ".");
 						strcat(uri.urn, ctx->out_ctx[idx].ext);
-#ifdef TEST_IDX_BUF
-						strcpy(uri.urn, "__song__.mp3");
-#endif
 						if (ctx->play_running || ctx->track_status != TRACK_STOPPED) {
 							ctx_callback(ctx, SQ_SETNEXTURI, NULL, &uri);
 						}

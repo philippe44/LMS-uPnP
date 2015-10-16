@@ -364,6 +364,62 @@ void sq_default_metadata(sq_metadata_t *metadata, bool init)
 	*/
 }
 
+
+/*--------------------------------------------------------------------------*/
+void sq_update_icy(struct thread_ctx_s *ctx)
+{
+	char cmd[1024];
+	char *rsp, *artist, *title, *artwork;
+	u16_t idx;
+	u32_t now = gettime_ms();
+
+	if ((now - ctx->icy.last < 5000) || !ctx->icy.interval) return;
+	ctx->icy.last = now;
+
+	sprintf(cmd, "%s playlist index", ctx->cli_id);
+	rsp = cli_send_cmd(cmd, true, true, ctx);
+
+	if (!rsp || (rsp && !*rsp)) {
+		LOG_ERROR("[%p]: missing index", ctx);
+		NFREE(rsp);
+		return;
+	}
+
+	idx = atol(rsp);
+
+	sprintf(cmd, "%s playlist artist %d", ctx->cli_id, idx);
+	artist = cli_send_cmd(cmd, true, true, ctx);
+	if (artist && (!ctx->icy.artist || strcmp(ctx->icy.artist, artist))) {
+		NFREE(ctx->icy.artist);
+		ctx->icy.artist = strdup(artist);
+		ctx->icy.update = true;
+	}
+	NFREE(artist);
+
+	sprintf(cmd, "%s playlist title %d", ctx->cli_id, idx);
+	title = cli_send_cmd(cmd, true, true, ctx);
+	if (title && (!ctx->icy.title || strcmp(ctx->icy.title, title))) {
+		NFREE(ctx->icy.title);
+		ctx->icy.title = strdup(title);
+		ctx->icy.update = true;
+	}
+	NFREE(title);
+
+	sprintf(cmd, "%s status %d 1 tags:K", ctx->cli_id, idx);
+	rsp = cli_send_cmd(cmd, false, false, ctx);
+	if (rsp && *rsp) artwork = cli_find_tag(rsp, "artwork_url");
+	else artwork = NULL;
+	NFREE(rsp);
+
+	if (artwork && (!ctx->icy.artwork || strcmp(ctx->icy.artwork, artwork)))  {
+		NFREE(ctx->icy.artwork);
+		ctx->icy.artwork = strdup(artwork);
+		ctx->icy.update = true;
+	}
+	NFREE(artwork);
+}
+
+
 /*--------------------------------------------------------------------------*/
 bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 {
@@ -405,6 +461,12 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 	sprintf(cmd, "%s playlist path %d", ctx->cli_id, idx);
 	metadata->path = cli_send_cmd(cmd, true, true, ctx);
 
+	sprintf(cmd, "%s playlist remote %d", ctx->cli_id, idx);
+	rsp  = cli_send_cmd(cmd, true, true, ctx);
+	if (rsp && *rsp == '1') ctx->icy.remote = true;
+	else ctx->icy.remote = false;
+	NFREE(rsp)
+
 	sprintf(cmd, "songinfo 0 10 url:%s tags:cfldatgr", metadata->path);
 	rsp = cli_send_cmd(cmd, false, false, ctx);
 
@@ -423,7 +485,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 			/*
 			at this point, LMS sends the original filesize, not the transcoded
 			so it simply does not work
-        	*/
+			*/
 			metadata->file_size = 0;
 			free(p);
 		}
@@ -461,14 +523,14 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 		rsp = cli_send_cmd(cmd, true, true, ctx);
 		if (rsp) metadata->duration = 1000 * atof(rsp);
 	}
-    NFREE(rsp);
+	NFREE(rsp);
 
 	if (!next) {
 		sprintf(cmd, "%s time", ctx->cli_id);
 		rsp = cli_send_cmd(cmd, true, true, ctx);
 		if (rsp && *rsp) metadata->duration -= (u32_t) (atof(rsp) * 1000);
 		NFREE(rsp);
-    }
+	}
 
 	sq_default_metadata(metadata, false);
 
@@ -492,12 +554,14 @@ void sq_free_metadata(sq_metadata_t *metadata)
 	NFREE(metadata->artwork);
 }
 
+
 /*---------------------------------------------------------------------------*/
-void *sq_get_info(const char *urn, s32_t *size, char **content_type)
+void *sq_get_info(const char *urn, s32_t *size, char **content_type, u16_t interval)
 {
 	int i = 0;
 	out_ctx_t *out = NULL;
 	char *p;
+
 
 	for (i = 0; i < MAX_PLAYER && !out; i++) {
 		if (!thread_ctx[i].in_use) continue;
@@ -506,16 +570,36 @@ void *sq_get_info(const char *urn, s32_t *size, char **content_type)
 	}
 
 	if (out) {
+		i--;
 		p = malloc(strlen(out->content_type) + 1);
 		strcpy(p, out->content_type);
 		*size = out->file_size;
 		*content_type = p;
+
+		if (thread_ctx[i].icy.remote) thread_ctx[i].icy.interval = interval;
+		else thread_ctx[i].icy.interval = 0;
+
 		return &thread_ctx[i];
 	}
 	else {
 		*content_type = strdup("audio/unknown");
 		return NULL;
 	}
+}
+
+
+/*---------------------------------------------------------------------------*/
+bool sq_is_remote(const char *urn)
+{
+	int i = 0;
+
+	for (i = 0; i < MAX_PLAYER; i++) {
+		if (!thread_ctx[i].in_use) continue;
+		if (strstr(urn, thread_ctx[i].out_ctx[0].buf_name)) return thread_ctx[i].icy.remote;
+		if (strstr(urn, thread_ctx[i].out_ctx[1].buf_name)) return thread_ctx[i].icy.remote;
+	}
+
+	return true;
 }
 
 
@@ -546,6 +630,13 @@ void *sq_open(const char *urn)
 			LOG_WARN("[%p]: cannot open file twice %s", out->owner, urn);
 			return NULL;
 		}
+
+		ctx->icy.last = gettime_ms();
+		ctx->icy.remain = ctx->icy.interval;
+		ctx->icy.update = false;
+		NFREE(ctx->icy.title);
+		NFREE(ctx->icy.artist);
+		NFREE(ctx->icy.artwork);
 
 		LOCK_S;LOCK_O;
 		if (!out->read_file) {
@@ -636,6 +727,8 @@ bool sq_close(void *desc)
 		p->read_count_t -= p->read_count;
 		p->read_count = 0;
 		mutex_unlock(p->mutex);
+		NFREE(ctx->icy.title);
+		NFREE(ctx->icy.artwork);
 		UNLOCK_S;UNLOCK_O;
 	}
 
@@ -689,6 +782,8 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 		return -1;
 	}
 
+	sq_update_icy(ctx);
+
 	switch (ctx->config.max_get_bytes) {
 		case 0:
 			bytes = ctx->stream.threshold ? min(ctx->stream.threshold, bytes) : bytes;
@@ -699,6 +794,8 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 			bytes= min((unsigned) ctx->config.max_get_bytes, bytes);
 			break;
 	}
+
+	if (ctx->icy.interval) bytes = min(bytes, ctx->icy.remain);
 
 	wait = ctx->config.max_read_wait;
 	if (ctx->config.mode == SQ_STREAM) {
@@ -733,6 +830,29 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 
 	p->read_count += read_b;
 	p->read_count_t += read_b;
+
+	if (ctx->icy.interval) {
+		ctx->icy.remain -= read_b;
+		if (!ctx->icy.remain) {
+			u16_t len_16 = 0;
+			char *p = (char *) dst;
+
+			if (ctx->icy.update) {
+				len_16 = sprintf(p + read_b + 1, "StreamTitle='%s - %s';StreamUrl='%s';",
+							(ctx->icy.artist) ? ctx->icy.artist : "",
+							(ctx->icy.title) ? ctx->icy.title : "",
+							(ctx->icy.artwork) ? ctx->icy.artwork : "");
+
+				LOG_INFO("[%p]: ICY update\n\t%s\n\t%s\n\t%s", ctx, ctx->icy.artist, ctx->icy.title, ctx->icy.artwork);
+				len_16 = (len_16 + 15) / 16;
+			}
+
+			p[read_b] = len_16;
+			read_b += (len_16 * 16) + 1;
+			ctx->icy.remain = ctx->icy.interval;
+			ctx->icy.update = false;
+		}
+	}
 
 	/*
 	Stream disconnected and not full data request served ==> end of stream
@@ -952,6 +1072,9 @@ bool sq_run_device(sq_dev_handle_t handle, char *name, sq_dev_param_t *param)
 		LOG_ERROR("[%p]: incorrect buffer limit %d", ctx, ctx->config.buffer_limit);
 		ctx->config.buffer_limit = max(ctx->config.stream_buf_size, ctx->config.output_buf_size) * 4;
 	}
+
+	ctx->icy.title = NULL;
+	ctx->icy.artwork = NULL;
 
 	sprintf(ctx->cli_id, "%02x:%02x:%02x:%02x:%02x:%02x",
 										  ctx->config.mac[0], ctx->config.mac[1], ctx->config.mac[2],
