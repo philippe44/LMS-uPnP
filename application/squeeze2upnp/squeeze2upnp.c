@@ -601,12 +601,13 @@ void SyncNotifState(char *State, struct sMR* Device)
 /*----------------------------------------------------------------------------*/
 void ProcessVolume(char *Volume, struct sMR* Device)
 {
-	u16_t UPnPVolume = (atoi(Volume) * 100) / Device->Config.MaxVolume;
+	u16_t UPnPVolume = atoi(Volume);
 
 	LOG_SDEBUG("[%p]: Volume %s", Device, Volume);
 
 	if (UPnPVolume != Device->Volume) {
 		LOG_INFO("[%p]: UPnP Volume local change %d", Device, UPnPVolume);
+		UPnPVolume =  (UPnPVolume * 100) / Device->Config.MaxVolume;
 		sq_notify(Device->SqueezeHandle, Device, SQ_VOLUME, NULL, &UPnPVolume);
 	}
 }

@@ -271,7 +271,8 @@ char *XMLGetChangeItem(IXML_Document *doc, char *Tag, char *SearchAttr, char *Se
 		if (!attr) continue;
 
 		if (!strcasecmp(ixmlNode_getNodeValue(attr), SearchVal)) {
-			node = ixmlNode_getNextSibling(attr);
+			if ((node = ixmlNode_getNextSibling(attr)) == NULL)
+				if ((node = ixmlNode_getPreviousSibling(attr)) == NULL) continue;
 			if (!strcasecmp(ixmlNode_getNodeName(node), "val")) {
 				ret = strdup(ixmlNode_getNodeValue(node));
 				break;
