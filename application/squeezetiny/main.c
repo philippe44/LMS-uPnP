@@ -386,6 +386,7 @@ void sq_update_icy(struct thread_ctx_s *ctx)
 	}
 
 	idx = atol(rsp);
+	NFREE(rsp);
 
 	sprintf(cmd, "%s playlist artist %d", ctx->cli_id, idx);
 	artist = cli_send_cmd(cmd, true, true, ctx);
@@ -501,6 +502,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 	}
 	else {
 		LOG_INFO("[%p]: no metadata using songinfo", ctx, idx);
+		NFREE(rsp);
 
 		sprintf(cmd, "%s playlist title %d", ctx->cli_id, idx);
 		metadata->title = cli_send_cmd(cmd, true, true, ctx);
@@ -514,10 +516,10 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 		sprintf(cmd, "%s playlist genre %d", ctx->cli_id, idx);
 		metadata->genre = cli_send_cmd(cmd, true, true, ctx);
 
-		NFREE(rsp)
 		sprintf(cmd, "%s status %d 1 tags:K", ctx->cli_id, idx);
 		rsp = cli_send_cmd(cmd, false, false, ctx);
 		if (rsp && *rsp) metadata->artwork = cli_find_tag(rsp, "artwork_url");
+		NFREE(rsp);
 
 		sprintf(cmd, "%s playlist duration %d", ctx->cli_id, idx);
 		rsp = cli_send_cmd(cmd, true, true, ctx);
@@ -729,6 +731,7 @@ bool sq_close(void *desc)
 		mutex_unlock(p->mutex);
 		NFREE(ctx->icy.title);
 		NFREE(ctx->icy.artwork);
+		NFREE(ctx->icy.artist);
 		UNLOCK_S;UNLOCK_O;
 	}
 

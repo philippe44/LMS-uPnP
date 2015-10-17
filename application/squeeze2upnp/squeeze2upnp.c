@@ -288,11 +288,10 @@ static int	uPNPTerminate(void);
 		case SQ_SETFORMAT: {
 			sq_seturi_t *p = (sq_seturi_t*) param;
 
-			LOG_INFO("[%p]: codec:%c, ch:%d, s:%d, r:%d (s:%c)", device, p->codec,
-										p->channels, p->sample_size, p->sample_rate,
-										p->src_format);
+			LOG_INFO("[%p]: codec:%c, ch:%d, s:%d, r:%d", device, p->codec,
+										p->channels, p->sample_size, p->sample_rate);
 			if (!SetContentType(device, param)) {
-				LOG_ERROR("[%p]: no matching codec in player (%s)", caller, p->proto_info);
+				LOG_ERROR("[%p]: no matching codec in player", caller);
 				rc = false;
 			}
 			break;
