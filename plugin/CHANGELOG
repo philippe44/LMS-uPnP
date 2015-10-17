@@ -3,6 +3,7 @@
  - Use 'old gain' for volume to avoid using 'volume curve'
  - Enable icy metadata (streaming radio title changes) for players that supports it
  - Few small memory leaks fixed
+ - Use remote artwork when available instead of coverid
 
 0.2.5.0
  - in XMLFindAndParseService search ends if a service list is empty. It should end only when no service list remains

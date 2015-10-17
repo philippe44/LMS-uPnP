@@ -468,7 +468,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 	else ctx->icy.remote = false;
 	NFREE(rsp)
 
-	sprintf(cmd, "songinfo 0 10 url:%s tags:cfldatgr", metadata->path);
+	sprintf(cmd, "songinfo 0 10 url:%s tags:cfldatgrK", metadata->path);
 	rsp = cli_send_cmd(cmd, false, false, ctx);
 
 	if (rsp && *rsp) {
@@ -481,6 +481,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 			metadata->duration = 1000 * atof(p);
 			free(p);
 		}
+
 		if ((p = cli_find_tag(rsp, "filesize")) != NULL) {
 			metadata->file_size = atol(p);
 			/*
@@ -490,14 +491,18 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 			metadata->file_size = 0;
 			free(p);
 		}
+
 		if ((p = cli_find_tag(rsp, "tracknum")) != NULL) {
 			metadata->track = atol(p);
 			free(p);
 		}
-		if ((p = cli_find_tag(rsp, "coverid")) != NULL) {
-			metadata->artwork = malloc(SQ_STR_LENGTH);
-			snprintf(metadata->artwork, SQ_STR_LENGTH, "http://%s:%s/music/%s/cover.jpg", ctx->server_ip, ctx->server_port, p);
-			free(p);
+
+		if ((metadata->artwork = cli_find_tag(rsp, "artwork_url")) == NULL) {
+			if ((p = cli_find_tag(rsp, "coverid")) != NULL) {
+				metadata->artwork = malloc(SQ_STR_LENGTH);
+				snprintf(metadata->artwork, SQ_STR_LENGTH, "http://%s:%s/music/%s/cover.jpg", ctx->server_ip, ctx->server_port, p);
+				free(p);
+			}
 		}
 	}
 	else {
