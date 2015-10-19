@@ -862,6 +862,7 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 							(ctx->icy.artist) ? ctx->icy.artist : "",
 							(ctx->icy.title) ? ctx->icy.title : "",
 							(ctx->icy.artwork) ? ctx->icy.artwork : "");
+
 				LOG_INFO("[%p]: ICY update\n\t%s\n\t%s\n\t%s", ctx, ctx->icy.artist, ctx->icy.title, ctx->icy.artwork);
 				len_16 = (len_16 + 15) / 16;
 			}
