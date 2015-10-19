@@ -772,11 +772,11 @@ lang=EN-GB>vi.<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp
 devices</span><span lang=EN-GB>. </span></p>
 
 <p class=MsoNormal style='margin-left:14.15pt'><span lang=EN-GB>Tick the ’Start
-the Bridge’ tickbox, choose the executable for your platform if more than one is
-available and tick ‘Apply’ at the right-bottom of the page. As the ‘autosave’
-option is ticked by default, a configuration will be generated automatically
-after ~30s, just wait and refresh the page to see it. You can optionally force
-configuration file generation by ticking ‘Generate’.</span></p>
+the Bridge’ tickbox, choose the executable for your platform if more than one
+is available and tick ‘Apply’ at the right-bottom of the page. As the
+‘autosave’ option is ticked by default, a configuration will be generated
+automatically after ~30s, just wait and refresh the page to see it. You can
+optionally force configuration file generation by ticking ‘Generate’.</span></p>
 
 <p class=MsoNormal style='margin-left:14.15pt'><span lang=EN-GB>From that
 point, you might be lucky and have sq2u and your players working with all
@@ -1172,8 +1172,8 @@ first search will last 15 seconds before LMS devices are created.</span></p>
 .0001pt'><span lang=EN-GB>&nbsp;</span></p>
 
 <p class=MsoListParagraphCxSpLast style='margin:0cm;margin-bottom:.0001pt'><span
-lang=EN-GB>If a renderer disappears from the LAN, it will be automatically
-removed after the next search.</span></p>
+lang=EN-GB>If a renderer disappears from the LAN, it will be automatically removed
+after the next search.</span></p>
 
 <h2 style='margin-left:28.8pt;text-indent:-28.8pt'><a
 name="__DdeLink__595_1289253441"></a><a name="__RefHeading__1028_962334235"></a><span
@@ -1243,10 +1243,10 @@ lang=EN-GB style='color:black'>&nbsp;</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB style='color:black'>The sample size is a little more difficult.  If
-you have 32 bit sources and your system does not support this, it will not
-work. If you have 24 bits flac files and your system does not support them, you
-have to convert flac to pcm, either in LMS settings or by removing ‘flc’ from
-sq2u list of supported codecs.</span></p>
+you have 32 bit sources and your system does not support this, it will not work.
+If you have 24 bits flac files and your system does not support them, you have
+to convert flac to pcm, either in LMS settings or by removing ‘flc’ from sq2u
+list of supported codecs.</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB style='color:black'>&nbsp;</span></p>
@@ -1346,8 +1346,8 @@ support re-positioning of flac well.  If you have this problem you need to
 create a custom transcoding rule.  You first need to find the convert.conf file
 on your system (on linux this is in /etc/squeezeboxserver).  This file contains
 the rules LMS uses to transcode from one format to another.  To add a new rule,
-create a new file called 'custom-convert.conf' in the same directory and
-restart LMS.  This file should contain:</span></p>
+create a new file called 'custom-convert.conf' in the same directory and restart
+LMS.  This file should contain:</span></p>
 
 <p class=MsoNormal><i><span lang=EN-GB style='font-size:10.0pt;color:black'>(if
 you copy-paste below,be careful with the indentation)</span></i></p>
@@ -1371,9 +1371,8 @@ re-positioned.  The LMS File Type for flac should now show flac transcoded to
 
 <p class=MsoNormal><span lang=EN-GB style='color:black'>If you do not have LAME
 installed you may have problems with other codecs being transcoded to mp3s.  If
-you cannot install LAME, make sure all your other required source codecs
-translate to flac or pcm in the LMS File Types (mp3s should still play
-natively).</span></p>
+you cannot install LAME, make sure all your other required source codecs translate
+to flac or pcm in the LMS File Types (mp3s should still play natively).</span></p>
 
 <p class=MsoListParagraphCxSpFirst style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB style='color:black'>Note that sq2u uses the LMS Command Line
@@ -1398,10 +1397,10 @@ when LMS starts up.</span></p>
 style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp; </span></span><span
 lang=EN-GB>Interoperability with UPnP renderer dedicated remote</span></h2>
 
-<p class=MsoNormal><span lang=EN-GB style='color:black'>LMS takes full control
-of the <a name="__DdeLink__4172_2137675401">renderer</a>. In the squeezebox system,
-Infra Red or other remote control software send LMS commands that are then
-forwarded by LMS to real squeezebox players.</span></p>
+<p class=MsoNormal><span lang=EN-GB style='color:black'>LMS takes full control of
+the <a name="__DdeLink__4172_2137675401">renderer</a>. In the squeezebox
+system, Infra Red or other remote control software send LMS commands that are
+then forwarded by LMS to real squeezebox players.</span></p>
 
 <p class=MsoNormal><span lang=EN-GB>In the case of a UPnP renderer “proxied”
 (registered) by sq2u, you may want to use the </span><span lang=EN-GB
@@ -1437,7 +1436,7 @@ This facility may not work well with all renderers.</span></p>
 lang=EN-GB style='color:black'>&nbsp;</span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
-lang=EN-GB style='color:black'>Volume commands are  synchronized, so control
+lang=EN-GB style='color:black'>Volume commands are  synchronized, so control
 can be done from LMS or the player. If you want to control volume only from the
 renderer and ignore all LMS volume commands, set &lt;volume_on_play&gt; to -1
 and LMS will have no influence on the renderer’s volume. Note that level <u>display</u>
@@ -1448,11 +1447,11 @@ lang=EN-GB style='color:black'>&nbsp;</span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB style='color:black'>When pausing a renderer, LMS will set its volume
-to 0 and will reset it to its normal value when resuming. The renderer’s feedback
-to LMS that volume is set to 0 will be ignored, so they would appear to be ‘de-synchronized’
-while paused. Still, if the volume is changed on the rendered while it is paused,
-then the changes will be sent to LMS and resume will start with the updated
-volume.</span></p>
+to 0 and will reset it to its normal value when resuming. The renderer’s
+feedback to LMS that volume is set to 0 will be ignored, so they would appear
+to be ‘de-synchronized’ while paused. Still, if the volume is changed on the
+rendered while it is paused, then the changes will be sent to LMS and resume
+will start with the updated volume.</span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB style='color:black'>&nbsp;</span></p>
@@ -1467,8 +1466,8 @@ lang=EN-GB style='color:black'>&nbsp;</span></p>
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB style='color:black'>Using “next” or “previous on the renderer
 directly does not work, and never will as renderers do not request control
-point move them to next or previous track, they just do it and “what’s next” points
-to something different for LMS and for a renderer</span></p>
+point move them to next or previous track, they just do it and “what’s next”
+points to something different for LMS and for a renderer</span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB style='color:black'>&nbsp;</span></p>
@@ -1757,8 +1756,8 @@ lang=EN-GB>If track duration is unavailable (LMS metadata is inaccessible for
 any reason – you might have disabled it), then sq2u uses 2^31 as a target file
 size and convert that into a rounded duration. When the whole file has been
 sent, sq2u terminates the connection and the player, although it has not
-received the full ‘indicated’ size (in header and/or &lt;stream_length&gt;),
-simply moves to the next track. </span></p>
+received the full ‘indicated’ size (in header and/or &lt;stream_length&gt;), simply
+moves to the next track. </span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB>Unfortunately, players fail in different ways, often ending in LMS
@@ -1794,10 +1793,10 @@ lang=EN-GB style='color:black'>&nbsp;</span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB style='color:black'>Note that this will not make your player work
-with 24 bits flac, unless you setup a rule in LMS to transcode them to WAV or AIFF,
-or you remove ‘flc’ from the &lt;codec&gt; list (eg Sonos devices are in this
-case, they fail silently when receiving 24 bits flac files but accept 24 bits
-wav)</span></p>
+with 24 bits flac, unless you setup a rule in LMS to transcode them to WAV or
+AIFF, or you remove ‘flc’ from the &lt;codec&gt; list (eg Sonos devices are in
+this case, they fail silently when receiving 24 bits flac files but accept 24
+bits wav)</span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin-top:0cm;margin-right:0cm;
 margin-bottom:0cm;margin-left:21.6pt;margin-bottom:.0001pt'><span lang=EN-GB
@@ -1831,7 +1830,8 @@ default to all UPnP renderers and, for each UPnP renderer discovered, a
 the same parameter in the &lt;common&gt; section. </span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;margin-bottom:.0001pt'><b><span
-lang=EN-GB style='font-size:11.0pt;color:black'>&lt;?xml version=&quot;1.0&quot;?&gt;</span></b></p>
+lang=EN-GB style='font-size:11.0pt;color:black'>&lt;?xml
+version=&quot;1.0&quot;?&gt;</span></b></p>
 
 <p class=MsoNormalCxSpMiddle><b><span lang=EN-GB style='font-size:11.0pt;
 color:black'>&lt;squeeze2upnp&gt;</span></b></p>
@@ -2054,17 +2054,17 @@ lang=EN-GB style='font-size:11.0pt;color:black'> <i>default = -1</i></span></p>
 color:black'>The maximum size of each stream data buffer. When a buffer reaches
 this limit is it shrunk by half. As a consequence, sq2upnp “loses” memory of
 data received before the shrinkage happens and cannot seek back to any of
-“lost” portion. In some cases, this might prevent  “pause” from working properly
-after the buffer has been shrunk once, especially for renderers that cannot
-support &lt;stream_length&gt; of -3 (e.g. Sonos). Note that if a renderer is
-“paused” on a live stream for an undefined amount of time, the buffering of the
-stream will be left to LMS and as a result audio loss might happen. Set this to
-around 32MB for normal running.  If this causes any problems (such as sound
-cut-outs) with very high quality audio and you have a load of spare space then
-set this very high indeed to avoid the buffer ever being shrunk on local files
-(e.g. 2GB, not more than 2^32-1).  Alternatively set this parameter to -1 to
-let the buffer grow without a limit.  The files will be replaced when playing
-stops or sq2u is restarted from cold..</span></i></p>
+“lost” portion. In some cases, this might prevent  “pause” from working
+properly after the buffer has been shrunk once, especially for renderers that
+cannot support &lt;stream_length&gt; of -3 (e.g. Sonos). Note that if a
+renderer is “paused” on a live stream for an undefined amount of time, the
+buffering of the stream will be left to LMS and as a result audio loss might
+happen. Set this to around 32MB for normal running.  If this causes any
+problems (such as sound cut-outs) with very high quality audio and you have a
+load of spare space then set this very high indeed to avoid the buffer ever
+being shrunk on local files (e.g. 2GB, not more than 2^32-1).  Alternatively
+set this parameter to -1 to let the buffer grow without a limit.  The files
+will be replaced when playing stops or sq2u is restarted from cold..</span></i></p>
 
 <p class=MsoNormalCxSpMiddle><span lang=EN-GB style='font-size:11.0pt;
 color:black'>&nbsp;</span></p>
@@ -2083,8 +2083,9 @@ This can be useful for debug or recording purpose.</span></i></p>
 color:black'>&nbsp;</span></p>
 
 <p class=MsoNormalCxSpMiddle><b><span lang=EN-GB style='font-size:11.0pt;
-color:black'>&lt;stream_length&gt;[-1 | -2 | -3 | -4 | value &gt; 100000000]&lt;/stream_length&gt;</span></b><span
-lang=EN-GB style='font-size:11.0pt;color:black'> <i>default = -3</i></span></p>
+color:black'>&lt;stream_length&gt;[-1 | -2 | -3 | -4 | value &gt;
+100000000]&lt;/stream_length&gt;</span></b><span lang=EN-GB style='font-size:
+11.0pt;color:black'> <i>default = -3</i></span></p>
 
 <p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
 color:black'>-1 : infinite transfer, using HTTP200 for open-ended range request</span></i></p>
@@ -2248,12 +2249,12 @@ color:black'> <i>default = 1</i></span></p>
 color:black'>Gapless play is by setting a “current track/URI” and a “next
 track/URI” in UPnP renderers. When they reach the end of “current track/URI”,
 renderers move to the next one automatically. Some renderers do not support
-this feature and will stop when the “current track/URI” ends. This options
-forces the next track to be played on faulty renderers, but there will be a
-gap.  Some renderers buffer the “next track/URI” while playing the “currentURI”
-to do real gapless. Other renderers, although they support “next track/URI”,
-wait for the end of the current track before buffering the next one, and that
-will create a gap.</span></i></p>
+this feature and will stop when the “current track/URI” ends. This options forces
+the next track to be played on faulty renderers, but there will be a gap.  Some
+renderers buffer the “next track/URI” while playing the “currentURI” to do real
+gapless. Other renderers, although they support “next track/URI”, wait for the
+end of the current track before buffering the next one, and that will create a
+gap.</span></i></p>
 
 <p class=MsoNormalCxSpMiddle><span lang=EN-GB style='font-size:11.0pt;
 color:black'>&nbsp;</span></p>
@@ -2264,16 +2265,16 @@ codec2, …]&lt;/codecs&gt;</span></b><span style='font-size:11.0pt;color:black'
 
 <p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
 color:black'>The comma separated list of codecs, supported by the UPnP
-renderer, that will be reported to LMS. If a track is encoded in a
-non-supported format, LMS will apply its transcoding rules.  The codecs are
-treated in priority preference order, so if, say, pcm is first, it will be the
-chosen codec if the source can be made available in that codec.  pcm, flc and
-mp3 are supported by sq2u (and aac may also work on some systems).  When LMS
-pauses it locally generates a new “truncated” file and sends a new command to
-play/stream that file. Unfortunately, it does not seem to insert a header on
-the truncated file. Some UPnP renderers do not like that, so a header is
-“guessed” and re-inserted by sq2u. This is only done for flac. Note that sq2u itself
-does no transcoding from one format to another.  See also Section </span></i><span lang=EN-GB>4.2</span><i><span lang=EN-GB style='font-size:11.0pt;color:black'>.</span></i></p>
+renderer, that will be reported to LMS. If a track is encoded in a non-supported
+format, LMS will apply its transcoding rules.  The codecs are treated in
+priority preference order, so if, say, pcm is first, it will be the chosen
+codec if the source can be made available in that codec.  pcm, flc and mp3 are
+supported by sq2u (and aac may also work on some systems).  When LMS pauses it
+locally generates a new “truncated” file and sends a new command to play/stream
+that file. Unfortunately, it does not seem to insert a header on the truncated
+file. Some UPnP renderers do not like that, so a header is “guessed” and
+re-inserted by sq2u. This is only done for flac. Note that sq2u itself does no
+transcoding from one format to another.  See also Section </span></i><span lang=EN-GB>4.2</span><i><span lang=EN-GB style='font-size:11.0pt;color:black'>.</span></i></p>
 
 <p class=MsoNormalCxSpMiddle><span lang=EN-GB style='font-size:11.0pt'>&nbsp;</span></p>
 
@@ -2312,8 +2313,9 @@ bytes</span></i></p>
 color:black'>&nbsp;</span></i></p>
 
 <p class=MsoNormalCxSpMiddle><b><span lang=EN-US style='font-size:11.0pt;
-color:black'>&lt;raw_audio_format&gt;[format1, format2, …]&lt;/raw_audio_format&gt;</span></b><span
-lang=EN-US style='font-size:11.0pt;color:black'> <i>default = wave,aiff,raw</i></span></p>
+color:black'>&lt;raw_audio_format&gt;[format1, format2,
+…]&lt;/raw_audio_format&gt;</span></b><span lang=EN-US style='font-size:11.0pt;
+color:black'> <i>default = wave,aiff,raw</i></span></p>
 
 <p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
 color:black'>When LMS sends raw audio, it can be forwarded to the player using
@@ -2333,8 +2335,8 @@ lang=EN-US style='font-size:11.0pt;color:black'> <i>default = 1</i></span></p>
 
 <p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
 color:black'>LMS sends raw audio with either endianness (byte order) encoding,
-depending on the source file. When forwarding these data to a player, it is possible
-to choose raw pcm, or to add a wav or an aiff header (see
+depending on the source file. When forwarding these data to a player, it is
+possible to choose raw pcm, or to add a wav or an aiff header (see
 &lt;raw_audio_format&gt;).  However, wav requires a different byte ordering
 than pcm and aiff. Although this is CPU intensive, sq2u does the re-ordering if
 needed, but it can also try to avoid doing that by trying to find a format in
@@ -2352,13 +2354,13 @@ color:black'>&lt;flac_header&gt;[0 | 1 | 2]&lt;/flac_header&gt;</span></b><span
 lang=EN-GB style='font-size:11.0pt;color:black'> <i>default = 1</i></span></p>
 
 <p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
-color:black'>When repositioning flac streams, LMS re-generates a file starting
-from the new position but does not insert a proper header . Such header is
-required by some players and it contains information like total number of
-samples in the file and a checksum of the decoded audio data. Sq2u cannot know
-these values but the flac standard specifies that they should then be set to 0.
-In a few cases, some players consider such audio data as being a live stream
-and will consequently refuse to pause. The symptoms varies, but mainly after a
+color:black'>When repositioning flac streams, LMS re-generates a file starting from
+the new position but does not insert a proper header . Such header is required
+by some players and it contains information like total number of samples in the
+file and a checksum of the decoded audio data. Sq2u cannot know these values
+but the flac standard specifies that they should then be set to 0. In a few
+cases, some players consider such audio data as being a live stream and will
+consequently refuse to pause. The symptoms varies, but mainly after a
 re-positioning, pause/un-pause will fail or, if &lt;seek_after_pause&gt; is set
 to 1, the first pause/un-pause will work, but not any subsequent
 pause/un-pause. A workaround is to set these header value to a fixed but large
@@ -2399,6 +2401,18 @@ lang=EN-GB style='font-size:11.0pt;color:black'> <i>default = 1</i></span></p>
 color:black'>If you do not want to see coverert on your renderer, or if you
 have a login and password for the LMS CLI interface, set this to 0.  Version
 0.2.5.0 on.</span></i></p>
+
+<p class=MsoNormalCxSpMiddle><span lang=EN-GB style='font-size:11.0pt;
+color:black'>&nbsp;</span></p>
+
+<p class=MsoNormalCxSpMiddle><b><span lang=EN-GB style='font-size:11.0pt;
+color:black'>&lt;auto_play&gt;[0 | 1]&lt;/auto_play&gt;</span></b><span
+lang=EN-GB style='font-size:11.0pt;color:black'> <i>default = 0</i></span></p>
+
+<p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
+color:black'>Set to 1 if you want the player to auto start playing on power on.
+Seems that this feature is broken in LMS, so this is a workaround. Version
+0.2.6.0 on.</span></i></p>
 
 <p class=MsoNormalCxSpMiddle><span lang=EN-GB style='font-size:11.0pt;
 color:black'>&nbsp;</span></p>
@@ -2638,6 +2652,9 @@ style='font-size:10.0pt;color:black'>&lt;raw_audio_format&gt;raw&lt;/raw_audio_f
 
 <p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span lang=EN-GB
 style='font-size:10.0pt;color:black'>&lt;match_endianness&gt;1&lt;/match_endianness&gt;</span></p>
+
+<p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span lang=EN-GB
+style='font-size:10.0pt;color:black'>&lt;auto_play&gt;0&lt;/auto_play&gt;</span></p>
 
 <p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span class=block><span
 lang=EN-GB style='font-size:10.0pt;color:black'>&lt;/common&gt;</span></span></p>

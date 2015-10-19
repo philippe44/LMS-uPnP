@@ -1,9 +1,12 @@
 0.2.6.0 (not released yet)
  - Volume changes detected and forwarded back to LMS
  - Use 'old gain' for volume to avoid using 'volume curve'
- - Enable icy metadata (streaming radio title changes) for players that supports it
+ - Enable icy metadata (streaming radio title changes) for players that support it
  - Few small memory leaks fixed
  - Use remote artwork when available instead of coverid
+ - Artwork was not set when LMS server address was not discovered (set in XML config file)
+ - Always discover server even if ip:port is set in XML config file
+ - Add autoplay to start playing automatically on power on
 
 0.2.5.0
  - in XMLFindAndParseService search ends if a service list is empty. It should end only when no service list remains

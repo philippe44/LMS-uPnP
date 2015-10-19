@@ -8,7 +8,7 @@
 
 typedef enum {SQ_NONE, SQ_SETFORMAT, SQ_SETURI, SQ_SETNEXTURI, SQ_PLAY, SQ_PAUSE, SQ_UNPAUSE, SQ_STOP, SQ_SEEK,
 			  SQ_VOLUME, SQ_TIME, SQ_TRACK_CHANGE, SQ_ONOFF, SQ_NEXT} sq_action_t;
-typedef enum {SQ_LMSUPNP = 0, SQ_STREAM = 2, SQ_FULL = 3} sq_mode_t;
+typedef enum {SQ_STREAM = 2, SQ_FULL = 3} sq_mode_t;
 typedef	sq_action_t sq_event_t;
 
 #define MAX_SUPPORTED_SAMPLERATES 16

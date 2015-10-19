@@ -28,8 +28,6 @@
 #define PORT 3483
 #define MAXBUF 4096
 
-unsigned gl_slimproto_stream_port = 9000;
-
 #if SL_LITTLE_ENDIAN
 #define LOCAL_PLAYER_IP   0x0100007f // 127.0.0.1
 #define LOCAL_PLAYER_PORT 0x9b0d     // 3483
@@ -798,7 +796,7 @@ void wake_controller(struct thread_ctx_s *ctx) {
 	wake_signal(ctx->wake_e);
 }
 
-in_addr_t discover_server(struct thread_ctx_s *ctx) {
+void discover_server(struct thread_ctx_s *ctx) {
 	struct sockaddr_in d;
 	struct sockaddr_in s;
 	char buf[32], vers[] = "VERS", port[] = "JSON";
@@ -816,7 +814,8 @@ in_addr_t discover_server(struct thread_ctx_s *ctx) {
 	memset(&d, 0, sizeof(d));
 	d.sin_family = AF_INET;
 	d.sin_port = htons(PORT);
-	d.sin_addr.s_addr = htonl(INADDR_BROADCAST);
+	if (!ctx->slimproto_ip) d.sin_addr.s_addr = htonl(INADDR_BROADCAST);
+	else d.sin_addr.s_addr = ctx->slimproto_ip;
 
 	pollinfo.fd = disc_sock;
 	pollinfo.events = POLLIN;
@@ -856,7 +855,8 @@ in_addr_t discover_server(struct thread_ctx_s *ctx) {
 	} while (s.sin_addr.s_addr == 0 && ctx->running);
 
 	closesocket(disc_sock);
-	return s.sin_addr.s_addr;
+
+	ctx->slimproto_ip = ctx->serv_addr.sin_addr.s_addr = s.sin_addr.s_addr;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -871,7 +871,7 @@ static void slimproto(struct thread_ctx_s *ctx) {
 	while (ctx->running) {
 
 		if (ctx->new_server) {
-			ctx->slimproto_ip = ctx->serv_addr.sin_addr.s_addr = ctx->new_server;
+			ctx->slimproto_ip = ctx->new_server;
 			LOG_INFO("[%p] switching server to %s:%d", ctx, inet_ntoa(ctx->serv_addr.sin_addr), ntohs(ctx->serv_addr.sin_port));
 			ctx->new_server = 0;
 			reconnect = false;
@@ -888,31 +888,14 @@ static void slimproto(struct thread_ctx_s *ctx) {
 			sleep(5);
 
 			// rediscover server if it was not set at startup
-			if (!ctx->server && ++failed_connect > 5) {
-				ctx->slimproto_ip = ctx->serv_addr.sin_addr.s_addr = discover_server(ctx);
-			}
+			if (!ctx->server && ++failed_connect > 5) discover_server(ctx);
 
 		} else {
-
-			struct sockaddr_in our_addr;
-			socklen_t len;
 
 			LOG_INFO("[%p] connected", ctx);
 
 			ctx->var_cap[0] = '\0';
 			failed_connect = 0;
-
-			// check if this is a local player now we are connected & signal to server via 'loc' format
-			// this requires LocalPlayer server plugin to enable direct file access
-			len = sizeof(our_addr);
-			getsockname(ctx->sock, (struct sockaddr *) &our_addr, &len);
-
-			if (our_addr.sin_addr.s_addr == ctx->serv_addr.sin_addr.s_addr) {
-#if 0
-				LOG_INFO("[%p] local player", ctx);
-				strcat(ctx->var_cap, ",loc");
-#endif
-			}
 
 			// add on any capablity to be sent to the new server
 			if (ctx->new_server_cap) {
@@ -964,55 +947,6 @@ static void slimproto(struct thread_ctx_s *ctx) {
 }
 
 
- /*---------------------------------------------------------------------------*/
-static void slimproto_short(struct thread_ctx_s *ctx) {
-	in_addr_t 	ip;
-	unsigned port = 0;
-	sq_seturi_t	uri;
-
-	if (ctx->slimproto_ip) {
-		bool onoff = true;
-
-		strcpy(uri.ip, inet_ntoa(ctx->serv_addr.sin_addr));
-		uri.port = gl_slimproto_stream_port;
-		strcpy(uri.urn, "stream.mp3");
-		ctx_callback(ctx, SQ_ONOFF, NULL, &onoff);
-		ctx_callback(ctx, SQ_SETURI, NULL, &uri);
-		ctx_callback(ctx, SQ_PLAY, NULL, NULL);
-		onoff = false;
-	}
-
-	while (ctx->running) {
-
-		if (ctx->server) {
-			server_addr(ctx->server, &ip, &port);
-			if (!ip) {
-				ip = discover_server(ctx);
-				port = PORT;
-			}
-		}
-		else {
-			ip = discover_server(ctx);
-			port = PORT;
-		 }
-
-		if (ip && (ip != ctx->slimproto_ip)) {
-			bool onoff = true;
-			ctx->slimproto_ip = ctx->serv_addr.sin_addr.s_addr = ip;
-			ctx->slimproto_port = port;
-			LOG_INFO("[%p] switching server to %s:%d", ctx, inet_ntoa(ctx->serv_addr.sin_addr), ntohs(ctx->serv_addr.sin_port));
-			strcpy(uri.ip, inet_ntoa(ctx->serv_addr.sin_addr));
-			uri.port = gl_slimproto_stream_port;
-			strcpy(uri.urn, "stream.mp3");
-			ctx_callback(ctx, SQ_ONOFF, NULL, &onoff);
-			ctx_callback(ctx, SQ_SETURI, NULL, &uri);
-			ctx_callback(ctx, SQ_PLAY, NULL, NULL);
-			onoff = false;
-		}
-		usleep(5000000L);
-	}
-}
-
 /*---------------------------------------------------------------------------*/
 void slimproto_close(struct thread_ctx_s *ctx) {
 	LOG_INFO("[%p] slimproto stop for %s", ctx, ctx->player_name);
@@ -1043,9 +977,7 @@ void slimproto_thread_init(char *server, u8_t mac[6], const char *name, const ch
 		strncpy(ctx->server, server, SERVER_NAME_LEN);
 	}
 
-	if (!ctx->slimproto_ip) {
-		ctx->slimproto_ip = discover_server(ctx);
-	}
+	discover_server(ctx);
 
 	if (!ctx->slimproto_port) {
 		ctx->slimproto_port = PORT;
@@ -1097,17 +1029,11 @@ void slimproto_thread_init(char *server, u8_t mac[6], const char *name, const ch
 	pthread_attr_t attr;
 	pthread_attr_init(&attr);
 	pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN + SLIMPROTO_THREAD_STACK_SIZE);
-if (ctx->config.mode == SQ_LMSUPNP)
-	pthread_create(&ctx->thread, &attr, (void *(*)(void*)) slimproto_short, ctx);
-else
 	pthread_create(&ctx->thread, &attr, (void *(*)(void*)) slimproto, ctx);
 	pthread_attr_destroy(&attr);
 #endif
 #if WIN
-	if (ctx->config.mode == SQ_LMSUPNP)
-		ctx->thread = CreateThread(NULL, SLIMPROTO_THREAD_STACK_SIZE, (LPTHREAD_START_ROUTINE)&slimproto_short, ctx, 0, NULL);
-	else
-		ctx->thread = CreateThread(NULL, SLIMPROTO_THREAD_STACK_SIZE, (LPTHREAD_START_ROUTINE)&slimproto, ctx, 0, NULL);
+	ctx->thread = CreateThread(NULL, SLIMPROTO_THREAD_STACK_SIZE, (LPTHREAD_START_ROUTINE)&slimproto, ctx, 0, NULL);
 #endif
 }
 

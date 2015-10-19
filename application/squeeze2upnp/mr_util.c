@@ -468,7 +468,6 @@ void SaveConfig(char *name, void *ref, bool full)
 
 		XMLAddNode(doc, root, "server", glSQServer);
 		XMLAddNode(doc, root, "upnp_socket", gluPNPSocket);
-		XMLAddNode(doc, root, "slimproto_stream_port", "%d", gl_slimproto_stream_port);
 		XMLAddNode(doc, root, "base_mac", "%02x:%02x:%02x:%02x:%02x:%02x", glMac[0],
 					glMac[1], glMac[2], glMac[3], glMac[4], glMac[5]);
 		XMLAddNode(doc, root, "slimproto_log", level2debug(glLog.slimproto));
@@ -509,6 +508,7 @@ void SaveConfig(char *name, void *ref, bool full)
 		XMLAddNode(doc, common, "raw_audio_format", glMRConfig.RawAudioFormat);
 		XMLAddNode(doc, common, "match_endianness", "%d", (int) glMRConfig.MatchEndianness);
 		XMLAddNode(doc, common, "pause_volume", "%d", (int) glMRConfig.PauseVolume);
+		XMLAddNode(doc, common, "auto_play", "%d", (int) glMRConfig.AutoPlay);
 	}
 
 	for (i = 0; i < MAX_RENDERERS; i++) {
@@ -588,6 +588,7 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "volume_on_play")) Conf->VolumeOnPlay = atol(val);
 	if (!strcmp(name, "max_volume")) Conf->MaxVolume = atol(val);
 	if (!strcmp(name, "pause_volume")) Conf->PauseVolume = atol(val);
+	if (!strcmp(name, "auto_play")) Conf->AutoPlay = atol(val);
 	if (!strcmp(name, "accept_nexturi")) Conf->AcceptNextURI = atol(val);
 	if (!strcmp(name, "send_metadata")) Conf->SendMetaData = atol(val);
 	if (!strcmp(name, "send_coverart")) Conf->SendCoverArt = atol(val);
@@ -604,7 +605,6 @@ static void LoadGlobalItem(char *name, char *val)
 
 	if (!strcmp(name, "server")) strcpy(glSQServer, val);
 	if (!strcmp(name, "upnp_socket")) strcpy(gluPNPSocket, val);
-	if (!strcmp(name, "slimproto_stream_port")) gl_slimproto_stream_port = atol(val);
 	if (!strcmp(name, "slimproto_log")) glLog.slimproto = debug2level(val);
 	if (!strcmp(name, "stream_log")) glLog.stream = debug2level(val);
 	if (!strcmp(name, "output_log")) glLog.output = debug2level(val);

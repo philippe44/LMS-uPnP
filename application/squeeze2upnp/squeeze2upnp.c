@@ -79,7 +79,8 @@ tMRConfig			glMRConfig = {
 							true,
 							1,
 							"raw",
-							1
+							1,
+							false,
 					};
 
 static u8_t LMSVolumeMap[101] = {
@@ -272,6 +273,10 @@ static int	uPNPTerminate(void);
 
 	if (action == SQ_ONOFF) {
 		device->on = *((bool*) param);
+
+		if (device->on && device->Config.AutoPlay)
+			sq_notify(device->SqueezeHandle, device, SQ_PLAY, NULL, &device->on);
+
 		LOG_DEBUG("[%p]: device set on/off %d", caller, device->on);
 	}
 
@@ -528,7 +533,7 @@ void SyncNotifState(char *State, struct sMR* Device)
 				break;
 			}
 
-			if (Device->Config.VolumeOnPlay != -1 && Device->Config.ForceVolume == 1 && Device->Config.ProcessMode != SQ_LMSUPNP)
+			if (Device->Config.VolumeOnPlay != -1 && Device->Config.ForceVolume == 1)
 					SetVolume(Device->Service[REND_SRV_IDX].ControlURL, Device->Volume, Device->seqN++);
 
 			Device->State = PLAYING;
@@ -1080,12 +1085,8 @@ static void *MRThread(void *args)
 		if (p->State == PLAYING && p->MetaDataPoll > METADATA_POLL) {
 			sq_MetaData IcyMetaData;
 			p->MetaDataPoll = 0;
-			sq_get_metadata(p->SqueezeHandle, &IcyMetaData, false);
-			if (MetaDataCompare(IcyMetaData, p->IcyMetaData) {
-				p->IcyUpdate = true;
-			}
 		 }
-		 */
+	   */
 
 		// get track position & CurrentURI
 		p->TrackPoll += elapsed;

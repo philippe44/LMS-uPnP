@@ -78,6 +78,7 @@ typedef struct sMRConfig
 	int			UPnPRemoveCount;
 	char		RawAudioFormat[SQ_STR_LENGTH];
 	bool		MatchEndianness;
+	bool		AutoPlay;
 } tMRConfig;
 
 struct sMR {
@@ -100,7 +101,7 @@ struct sMR {
 	sq_action_t		sqState;
 	u32_t			Elapsed;
 	u8_t			*seqN;
-	unsigned		TrackPoll, StatePoll, VolumePoll;
+	unsigned		TrackPoll, StatePoll, VolumePoll, MetaDataPoll;
 	bool			UPnPTimeOut;
 	int	 			SqueezeHandle;
 	struct sService Service[NB_SRV];

@@ -274,7 +274,6 @@ static char *cli_decode(char *str) {
 		if (decode) rsp = cli_decode(rsp);
 		else rsp = strdup(rsp);
 		*(strrchr(rsp, '\n')) = '\0';
-//		if (*rsp == '\0') NFREE(rsp);
 	}
 
 	NFREE(cmd);
@@ -497,7 +496,9 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 			free(p);
 		}
 
-		if ((metadata->artwork = cli_find_tag(rsp, "artwork_url")) == NULL) {
+		metadata->artwork = cli_find_tag(rsp, "artwork_url");
+		if (!metadata->artwork || !strlen(metadata->artwork)) {
+			NFREE(metadata->artwork);
 			if ((p = cli_find_tag(rsp, "coverid")) != NULL) {
 				metadata->artwork = malloc(SQ_STR_LENGTH);
 				snprintf(metadata->artwork, SQ_STR_LENGTH, "http://%s:%s/music/%s/cover.jpg", ctx->server_ip, ctx->server_port, p);
@@ -602,11 +603,28 @@ bool sq_is_remote(const char *urn)
 
 	for (i = 0; i < MAX_PLAYER; i++) {
 		if (!thread_ctx[i].in_use) continue;
-		if (strstr(urn, thread_ctx[i].out_ctx[0].buf_name)) return thread_ctx[i].icy.remote;
-		if (strstr(urn, thread_ctx[i].out_ctx[1].buf_name)) return thread_ctx[i].icy.remote;
+		if (strstr(urn, thread_ctx[i].out_ctx[0].buf_name))
+			return thread_ctx[i].icy.remote && !thread_ctx[i].out_ctx[0].duration;
+		if (strstr(urn, thread_ctx[i].out_ctx[1].buf_name))
+			return thread_ctx[i].icy.remote && !thread_ctx[i].out_ctx[1].duration;
 	}
 
 	return true;
+}
+
+
+/*---------------------------------------------------------------------------*/
+void sq_reset_icy(struct thread_ctx_s *ctx, bool init)
+{
+	if (init) {
+		ctx->icy.last = gettime_ms();
+		ctx->icy.remain = ctx->icy.interval;
+		ctx->icy.update = false;
+	}
+
+	NFREE(ctx->icy.title);
+	NFREE(ctx->icy.artist);
+	NFREE(ctx->icy.artwork);
 }
 
 
@@ -638,12 +656,7 @@ void *sq_open(const char *urn)
 			return NULL;
 		}
 
-		ctx->icy.last = gettime_ms();
-		ctx->icy.remain = ctx->icy.interval;
-		ctx->icy.update = false;
-		NFREE(ctx->icy.title);
-		NFREE(ctx->icy.artist);
-		NFREE(ctx->icy.artwork);
+		sq_reset_icy(ctx, true);
 
 		LOCK_S;LOCK_O;
 		if (!out->read_file) {
@@ -660,6 +673,7 @@ void *sq_open(const char *urn)
 
 	return out;
 }
+
 
 /*---------------------------------------------------------------------------*/
 void *sq_isopen(const char *urn)
@@ -734,9 +748,7 @@ bool sq_close(void *desc)
 		p->read_count_t -= p->read_count;
 		p->read_count = 0;
 		mutex_unlock(p->mutex);
-		NFREE(ctx->icy.title);
-		NFREE(ctx->icy.artwork);
-		NFREE(ctx->icy.artist);
+		sq_reset_icy(ctx, false);
 		UNLOCK_S;UNLOCK_O;
 	}
 
@@ -781,7 +793,7 @@ int sq_seek(void *desc, off_t bytes, int from)
 /*---------------------------------------------------------------------------*/
 int sq_read(void *desc, void *dst, unsigned bytes)
 {
-	unsigned wait, read_b = 0;
+	unsigned wait, read_b = 0, req_bytes = bytes;
 	out_ctx_t *p = (out_ctx_t*) desc;
 	struct thread_ctx_s *ctx = p->owner;
 
@@ -832,7 +844,7 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 		return 0;
 	}
 
-	LOG_INFO("[%p]: read %d (r:%d w:%d)", ctx, bytes, read_b, wait);
+	LOG_INFO("[%p]: read %d (a:%d r:%d w:%d)", ctx, bytes, req_bytes, read_b, wait);
 
 	LOCK_S;LOCK_O;
 
@@ -850,7 +862,6 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 							(ctx->icy.artist) ? ctx->icy.artist : "",
 							(ctx->icy.title) ? ctx->icy.title : "",
 							(ctx->icy.artwork) ? ctx->icy.artwork : "");
-
 				LOG_INFO("[%p]: ICY update\n\t%s\n\t%s\n\t%s", ctx, ctx->icy.artist, ctx->icy.title, ctx->icy.artwork);
 				len_16 = (len_16 + 15) / 16;
 			}
@@ -1027,6 +1038,7 @@ sq_dev_handle_t sq_reserve_device(void *MR, sq_callback_t callback)
 
 	if (ctx_i < MAX_PLAYER)
 	{
+		// this sets a LOT of data to proper defaults (NULL, false ...)
 		memset(&thread_ctx[ctx_i], 0, sizeof(struct thread_ctx_s));
 		thread_ctx[ctx_i].in_use = true;
 	}
@@ -1080,9 +1092,6 @@ bool sq_run_device(sq_dev_handle_t handle, char *name, sq_dev_param_t *param)
 		LOG_ERROR("[%p]: incorrect buffer limit %d", ctx, ctx->config.buffer_limit);
 		ctx->config.buffer_limit = max(ctx->config.stream_buf_size, ctx->config.output_buf_size) * 4;
 	}
-
-	ctx->icy.title = NULL;
-	ctx->icy.artwork = NULL;
 
 	sprintf(ctx->cli_id, "%02x:%02x:%02x:%02x:%02x:%02x",
 										  ctx->config.mac[0], ctx->config.mac[1], ctx->config.mac[2],
