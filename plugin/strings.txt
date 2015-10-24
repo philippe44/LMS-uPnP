@@ -158,12 +158,19 @@ PLUGIN_UPNPBRIDGE_ACCEPTNEXTURI
 PLUGIN_UPNPBRIDGE_ACCEPTNEXTURI_DESC
 	EN	Some UPnP players get stuck on the current track on playlist. <b>UNCHECK</b> to solve this (will create an audio gap between tracks)
 
-PLUGIN_UPNPBRIDGE_SEEKAFTERPAUSE
-	EN	LMS seeks on resume
-
-PLUGIN_UPNPBRIDGE_SEEKAFTERPAUSE_DESC
-	EN	Some UPnP players do not resume properly after pause. CHECK to have LMS handle the resume on behalf of the player 
-	EN	(this will create a small change in position). This <b>CANNOT</b> work if you have set a password for LMS command access
+PLUGIN_UPNPBRIDGE_PAUSEMGMT
+	EN	Pause/Resume management
+	
+PLUGIN_UPNPBRIDGE_BYTESEEK
+	EN	Enable byte seek
+	
+PLUGIN_UPNPBRIDGE_TIMESEEK
+	EN	Enable time seek
+	
+PLUGIN_UPNPBRIDGE_PAUSEMGMT_DESC
+	EN	UPnP players can use different methods to resume from pause and restore position. Best if to not have ANY of these checked
+	EN	but if your player does not pause or resume, try these - see User Guide for more details. 
+	EN	This <b>CANNOT</b> work if you have set a password for LMS command access
 	
 PLUGIN_UPNPBRIDGE_BUFFERS
 	EN	Audio file buffers
@@ -250,9 +257,12 @@ PLUGIN_UPNPBRIDGE_SENDMETADATA
 PLUGIN_UPNPBRIDGE_SEND_COVERART
 	EN	Include cover art
 
+PLUGIN_UPNPBRIDGE_SENDICY
+	EN	Send ICY metadata
+
 PLUGIN_UPNPBRIDGE_SENDMETADATA_DESC
-	EN	When a UPnP player has a display, LMS can send metadata (title, artist, album) to it. This <b>DOES NOT</b> work if you have set
-	EN	a password for LMS command access
+	EN	When a UPnP player has a display, LMS can send metadata (title, artist, album) to it. ICY metadata is an option to send live
+	EN	title when playing webradio. This <b>DOES NOT</b> work if you have set a password for LMS command access
 	
 PLUGIN_UPNPBRIDGE_VOLUMEMGMT
 	EN	Player volume management

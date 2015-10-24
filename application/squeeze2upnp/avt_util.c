@@ -35,7 +35,6 @@ TODO
  - build the DIDLE string with a proper XML constructor rather than string tinkering
 */
 
-#if 0
  /* DLNA.ORG_CI: conversion indicator parameter (integer)
  *     0 not transcoded
  *     1 transcoded
@@ -91,25 +90,22 @@ typedef enum {
   DLNA_ORG_FLAG_DLNA_V15                   = (1 << 20),
 } dlna_org_flags_t;
 
+
 #define DLNA_ORG_OP (DLNA_ORG_OPERATION_RANGE)
-
-#define DLNA_ORG_FLAG (	DLNA_ORG_FLAG_BYTE_BASED_SEEK | 			\
-						DLNA_ORG_FLAG_STREAMING_TRANSFERT_MODE |	\
-						DLNA_ORG_FLAG_BACKGROUND_TRANSFERT_MODE | 	\
-						DLNA_ORG_FLAG_CONNECTION_STALL |			\
-						DLNA_ORG_FLAG_DLNA_V15 )
-
-#endif
+// GNU pre-processor seems to be confused if this is multine ...
+#define DLNA_ORG_FLAG ( DLNA_ORG_FLAG_STREAMING_TRANSFERT_MODE | DLNA_ORG_FLAG_BACKGROUND_TRANSFERT_MODE | DLNA_ORG_FLAG_CONNECTION_STALL |	DLNA_ORG_FLAG_DLNA_V15 )
 
 /*
 DLNA options, that *might* be the only ones or might be added to other options
 so the ; might have to be removed
 */
 
-char DLNA_OPT[] = ";DLNA.ORG_OP=00;DLNA.ORG_FLAGS=21700000000000000000000000000000";
+/*
+static char DLNA_OPT[] = ";DLNA.ORG_OP=01;DLNA.ORG_FLAGS=01700000000000000000000000000000";
+*/
 
 static log_level loglevel;
-static char *CreateDIDL(char *URI, char *ProtInfo, struct sq_metadata_s *MetaData);
+static char *CreateDIDL(char *URI, char *ProtInfo, struct sq_metadata_s *MetaData, struct sSeekCap SeekCap);
 
 /*----------------------------------------------------------------------------*/
 void AVTInit(log_level level)
@@ -118,13 +114,13 @@ void AVTInit(log_level level)
 }
 
 /*----------------------------------------------------------------------------*/
-int AVTSetURI(char *ControlURL, char *URI, char *ProtInfo, struct sq_metadata_s *MetaData, void *Cookie)
+int AVTSetURI(char *ControlURL, char *URI, char *ProtInfo, struct sq_metadata_s *MetaData, struct sSeekCap SeekCap, void *Cookie)
 {
 	IXML_Document *ActionNode = NULL;
 	int rc;
 	char *DIDLData;
 
-	DIDLData = CreateDIDL(URI, ProtInfo, MetaData);
+	DIDLData = CreateDIDL(URI, ProtInfo, MetaData, SeekCap);
 	LOG_DEBUG("DIDL header: %s", DIDLData);
 
 	LOG_INFO("uPNP setURI %s for %s (cookie %p)", URI, ControlURL, Cookie);
@@ -147,13 +143,13 @@ int AVTSetURI(char *ControlURL, char *URI, char *ProtInfo, struct sq_metadata_s 
 }
 
 /*----------------------------------------------------------------------------*/
-int AVTSetNextURI(char *ControlURL, char *URI, char *ProtInfo, struct sq_metadata_s *MetaData, void *Cookie)
+int AVTSetNextURI(char *ControlURL, char *URI, char *ProtInfo, struct sq_metadata_s *MetaData, struct sSeekCap SeekCap, void *Cookie)
 {
 	IXML_Document *ActionNode = NULL;
 	int rc;
 	char *DIDLData;
 
-	DIDLData = CreateDIDL(URI, ProtInfo, MetaData);
+	DIDLData = CreateDIDL(URI, ProtInfo, MetaData, SeekCap);
 	LOG_DEBUG("DIDL header: %s", DIDLData);
 
 	LOG_INFO("uPNP setNextURI %s for %s (cookie %p)", URI, ControlURL, Cookie);
@@ -365,9 +361,11 @@ int AVTBasic(char *ControlURL, char *Action, void *Cookie)
 
 
 /*----------------------------------------------------------------------------*/
-char *CreateDIDL(char *URI, char *ProtInfo, struct sq_metadata_s *MetaData)
+char *CreateDIDL(char *URI, char *ProtInfo, struct sq_metadata_s *MetaData, struct sSeekCap SeekCap)
 {
 	char *s;
+	u32_t SInc = 0;
+	char DLNAOpt[128];
 
 	IXML_Document *doc = ixmlDocument_createDocument();
 	IXML_Node	 *node, *root;
@@ -396,25 +394,29 @@ int AVTBasic(char *ControlURL, char *Action, void *Cookie)
 	node = XMLAddNode(doc, node, "res", URI);
 
 	if (MetaData->duration) {
-		div_t duration = div(MetaData->duration, 1000);
+		div_t duration 	= div(MetaData->duration, 1000);
 
 		XMLAddAttribute(doc, node, "duration", "%1d:%02d:%02d.%03d",
 						duration.quot/3600, (duration.quot % 3600) / 60,
 						duration.quot % 60, duration.rem);
 	}
+	else {
+		SInc 		 =   DLNA_ORG_FLAG_SN_INCREASE;
+		SeekCap.Time = 0;
+	}
 
-/*
-	XMLAddAttribute(doc, node, "bitrate", "176400");
-	XMLAddAttribute(doc, node, "size", "44");
-	XMLAddAttribute(doc, node, "bitsPerSample", "16");
-	XMLAddAttribute(doc, node, "sampleFrequency", "44100");
-	XMLAddAttribute(doc, node, "nbAudioChannels", "2");
-*/
+	if (SeekCap.Time || SeekCap.Byte)
+		sprintf(DLNAOpt, ";DLNA.ORG_OP=%02x;DLNA.ORG_FLAGS=%08x000000000000000000000000",
+						  ((SeekCap.Time) ? DLNA_ORG_OPERATION_TIMESEEK : 0) |
+						  ((SeekCap.Byte) ? DLNA_ORG_OPERATION_RANGE : 0),
+						   DLNA_ORG_FLAG | SInc);
+	else
+		sprintf(DLNAOpt, ";DLNA.ORG_FLAGS=%08x000000000000000000000000", DLNA_ORG_FLAG | SInc);
 
 	if (ProtInfo[strlen(ProtInfo) - 1] == ':')
-		XMLAddAttribute(doc, node, "protocolInfo", "%s%s", ProtInfo, DLNA_OPT + 1);
+		XMLAddAttribute(doc, node, "protocolInfo", "%s%s", ProtInfo, DLNAOpt + 1);
 	else
-		XMLAddAttribute(doc, node, "protocolInfo", "%s%s", ProtInfo, DLNA_OPT);
+		XMLAddAttribute(doc, node, "protocolInfo", "%s%s", ProtInfo, DLNAOpt);
 
 	s = ixmlNodetoString((IXML_Node*) doc);
 

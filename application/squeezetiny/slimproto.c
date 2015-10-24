@@ -297,6 +297,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 		break;
 	case 's':
 		{
+			sq_seturi_t	uri;
 			unsigned header_len = len - sizeof(struct strm_packet);
 			char *header = (char *)(pkt + sizeof(struct strm_packet));
 			in_addr_t ip = (in_addr_t)strm->server_ip; // keep in network byte order
@@ -323,100 +324,85 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 				break;
 			}
 
-			if (ip == LOCAL_PLAYER_IP && port == LOCAL_PLAYER_PORT) {
-				// extension to slimproto for LocalPlayer - header is filename not http header, don't expect cont
-				// not use for now
-				stream_file(header, header_len, strm->threshold * 1024, ctx);
-				ctx->autostart -= 2;
-			} else {
-				sq_seturi_t	uri;
+			 uri.sample_size = (strm->pcm_sample_size != '?') ? pcm_sample_size[strm->pcm_sample_size - '0'] : 0xff;
+			 uri.sample_rate = (strm->pcm_sample_rate != '?') ? pcm_sample_rate[strm->pcm_sample_rate - '0'] : 0xff;
+			 uri.channels = (strm->pcm_channels != '?') ? pcm_channels[strm->pcm_channels - '1'] : 0xff;
+			 uri.endianness = (strm->pcm_endianness != '?') ? strm->pcm_endianness - '0' : 0;
+			 uri.codec = strm->format;
 
-				uri.sample_size = (strm->pcm_sample_size != '?') ? pcm_sample_size[strm->pcm_sample_size - '0'] : 0xff;
-				uri.sample_rate = (strm->pcm_sample_rate != '?') ? pcm_sample_rate[strm->pcm_sample_rate - '0'] : 0xff;
-				uri.channels = (strm->pcm_channels != '?') ? pcm_channels[strm->pcm_channels - '1'] : 0xff;
-				uri.endianness = (strm->pcm_endianness != '?') ? strm->pcm_endianness - '0' : 0;
-				uri.codec = strm->format;
+			 if (ctx->config.mode == SQ_STREAM)
+			 {
+				unsigned idx;
+				char buf[SQ_STR_LENGTH];
 
-				if (ctx->config.mode == SQ_STREAM)
-				{
-					unsigned idx;
-					char buf[SQ_STR_LENGTH];
+				// stream is proxied and then forwared to the renderer
+				stream_sock(ip, port, header, header_len, strm->threshold * 1024, ctx->autostart >= 2, ctx);
+				uri.port = 0;
+				strcpy(uri.ip, "");
 
-					// stream is proxied and then forwared to the renderer
-					stream_sock(ip, port, header, header_len, strm->threshold * 1024, ctx->autostart >= 2, ctx);
-					uri.port = 0;
-					strcpy(uri.ip, "");
+				LOCK_S;LOCK_O;
 
-					LOCK_S;LOCK_O;
-					idx = ctx->out_idx = (ctx->out_idx + 1) & 0x01;
-					if (ctx->out_ctx[idx].read_file) {
-						LOG_ERROR("[%p]: read file left open", ctx, ctx->out_ctx[idx].buf_name);
-						fclose(ctx->out_ctx[idx].read_file);
-						ctx->out_ctx[idx].read_file = NULL;
-					}
-					ctx->out_ctx[idx].read_count = ctx->out_ctx[idx].read_count_t =
-												   ctx->out_ctx[idx].close_count = 0;
+				idx = ctx->out_idx = (ctx->out_idx + 1) & 0x01;
 
-					if (ctx->out_ctx[idx].write_file) {
-						LOG_ERROR("[%p]: write file left open", ctx, ctx->out_ctx[idx].buf_name);
-						fclose(ctx->out_ctx[idx].write_file);
-					}
-					// open the write_file here as some players react very fast
-					sprintf(buf, "%s/%s", ctx->config.buffer_dir, ctx->out_ctx[idx].buf_name);
-					ctx->out_ctx[idx].write_file = fopen(buf, "wb");
-					ctx->out_ctx[idx].write_count = ctx->out_ctx[idx].write_count_t = 0;
-
-					ctx->out_ctx[idx].sample_size = uri.sample_size;
-					ctx->out_ctx[idx].sample_rate = uri.sample_rate;
-					ctx->out_ctx[idx].endianness = uri.endianness;
-					ctx->out_ctx[idx].channels = uri.channels;
-					ctx->out_ctx[idx].codec = uri.codec;
-
-					/*
-					this set the content_type and the proto_info. it is made in
-					the "upnp domain" for clarity, although it requires this
-					ackward 2 steps setup
-					*/
-					if (ctx_callback(ctx, SQ_SETFORMAT, NULL, &uri)) {
-						strcpy(ctx->out_ctx[idx].content_type, uri.content_type);
-						strcpy(ctx->out_ctx[idx].ext, uri.ext);
-						strcpy(uri.urn, ctx->out_ctx[idx].buf_name);
-						strcat(uri.urn, ".");
-						strcat(uri.urn, ctx->out_ctx[idx].ext);
-						if (ctx->play_running || ctx->track_status != TRACK_STOPPED) {
-							ctx_callback(ctx, SQ_SETNEXTURI, NULL, &uri);
-						}
-						else {
-							ctx_callback(ctx, SQ_SETURI, NULL, &uri);
-							ctx->track_ended = false;
-							ctx->track_status = TRACK_STOPPED;
-							ctx->track_new = true;
-							ctx->status.ms_played = ctx->ms_played = 0;
-							ctx->read_to = ctx->read_ended = false;
-						}
-						LOG_INFO("[%p] URI proxied by SQ2MR : %s", ctx, uri.urn);
-						ctx->out_ctx[idx].file_size = uri.file_size;
-						ctx->out_ctx[idx].duration = uri.duration;
-						ctx->out_ctx[idx].src_format = uri.src_format;
-						sq_set_sizes(ctx->out_ctx + idx);
-					}
-					else ctx->decode.state = DECODE_ERROR;
-
-					UNLOCK_S;UNLOCK_O;
+				if (ctx->out_ctx[idx].read_file) {
+					LOG_WARN("[%p]: read file left open", ctx, ctx->out_ctx[idx].buf_name);
+					fclose(ctx->out_ctx[idx].read_file);
+					ctx->out_ctx[idx].read_file = NULL;
 				}
+				ctx->out_ctx[idx].read_count = ctx->out_ctx[idx].read_count_t =
+											   ctx->out_ctx[idx].close_count = 0;
+
+				if (ctx->out_ctx[idx].write_file) {
+					LOG_WARN("[%p]: write file left open", ctx, ctx->out_ctx[idx].buf_name);
+					fclose(ctx->out_ctx[idx].write_file);
+				}
+
+				// open the write_file here as some players react very fast
+				sprintf(buf, "%s/%s", ctx->config.buffer_dir, ctx->out_ctx[idx].buf_name);
+				ctx->out_ctx[idx].write_file = fopen(buf, "wb");
+				ctx->out_ctx[idx].write_count = ctx->out_ctx[idx].write_count_t = 0;
+
+				ctx->out_ctx[idx].sample_size = uri.sample_size;
+				ctx->out_ctx[idx].sample_rate = uri.sample_rate;
+				ctx->out_ctx[idx].endianness = uri.endianness;
+				ctx->out_ctx[idx].channels = uri.channels;
+				ctx->out_ctx[idx].codec = uri.codec;
+
+				/*
+				this set the content_type and the proto_info. it is made in
+				the "upnp domain" for clarity, although it requires this
+				ackward 2 steps setup
+				*/
+				if (ctx_callback(ctx, SQ_SETFORMAT, NULL, &uri)) {
+					strcpy(ctx->out_ctx[idx].content_type, uri.content_type);
+					strcpy(ctx->out_ctx[idx].ext, uri.ext);
+					strcpy(uri.urn, ctx->out_ctx[idx].buf_name);
+					strcat(uri.urn, ".");
+					strcat(uri.urn, ctx->out_ctx[idx].ext);
+					if (ctx->play_running || ctx->track_status != TRACK_STOPPED) {
+						ctx_callback(ctx, SQ_SETNEXTURI, NULL, &uri);
+					}
+					else {
+						ctx_callback(ctx, SQ_SETURI, NULL, &uri);
+						ctx->track_ended = false;
+						ctx->track_status = TRACK_STOPPED;
+						ctx->track_new = true;
+						ctx->status.ms_played = ctx->ms_played = 0;
+						ctx->read_to = ctx->read_ended = false;
+					}
+					LOG_INFO("[%p] URI proxied by SQ2MR : %s", ctx, uri.urn);
+					ctx->out_ctx[idx].file_size = uri.file_size;
+					ctx->out_ctx[idx].duration = uri.duration;
+					ctx->out_ctx[idx].src_format = uri.src_format;
+					sq_set_sizes(ctx->out_ctx + idx);
+				}
+				else ctx->decode.state = DECODE_ERROR;
+
+				UNLOCK_S;UNLOCK_O;
 			}
 
 			sendSTAT("STMc", 0, ctx);
 			ctx->sentSTMu = ctx->sentSTMo = ctx->sentSTMl = ctx->sentSTMd = false;
-
-#if 0
-			LOCK_O;
-			ctx->output.next_replay_gain = unpackN(&strm->replay_gain);
-			ctx->output.fade_mode = strm->transition_type - '0';
-			ctx->output.fade_secs = strm->transition_period;
-			LOG_DEBUG("[%p] set fade mode: %u", ctx, ctx->output.fade_mode);
-			UNLOCK_O;
-#endif
 		}
 		break;
 	default:

@@ -65,7 +65,7 @@ tMRConfig			glMRConfig = {
 							-3L,
 							SQ_STREAM,
 							false,
-							0,
+							{ false, false},
 							true,
 							0,
 							true,
@@ -114,8 +114,8 @@ sq_dev_param_t glDeviceParam = {
 					"?",
 					-1L,
 					0,
-					0,
-					{ 0x00,0x00,0x00,0x00,0x00,0x00 }
+					{ 0x00,0x00,0x00,0x00,0x00,0x00 },
+					false,
 				} ;
 
 /*----------------------------------------------------------------------------*/
@@ -330,7 +330,7 @@ static int	uPNPTerminate(void);
 
 			if (device->Config.AcceptNextURI){
 				AVTSetNextURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info,
-							  &device->NextMetaData, device->seqN++);
+							  &device->NextMetaData, device->Config.SeekCap, device->seqN++);
 				sq_free_metadata(&device->NextMetaData);
 			}
 
@@ -369,7 +369,8 @@ static int	uPNPTerminate(void);
 			p->src_format = ext2format(MetaData.path);
 			if (!device->Config.SendCoverArt) NFREE(MetaData.artwork);
 
-			AVTSetURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info, &MetaData, device->seqN++);
+			AVTSetURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info,
+			          &MetaData, device->Config.SeekCap, device->seqN++);
 			sq_free_metadata(&MetaData);
 
 			device->CurrentURI = (char*) malloc(strlen(uri) + 1);
@@ -379,7 +380,7 @@ static int	uPNPTerminate(void);
 			break;
 		}
 		case SQ_UNPAUSE:
-			if (device->Config.SeekAfterPause == 1) {
+			if (device->Config.SeekCap.Time) {
 				u32_t PausedTime = sq_get_time(device->SqueezeHandle);
 				sq_set_time(device->SqueezeHandle, PausedTime);
 			}
@@ -481,7 +482,8 @@ void SyncNotifState(char *State, struct sMR* Device)
 					NFREE(Device->NextURI);
 
 					AVTSetURI(Device->Service[AVT_SRV_IDX].ControlURL, Device->CurrentURI,
-							  Device->NextProtInfo, &Device->NextMetaData, WaitFor);
+							  Device->NextProtInfo, &Device->NextMetaData, Device->Config.SeekCap,
+							  WaitFor);
 					sq_free_metadata(&Device->NextMetaData);
 
 					/*
@@ -609,7 +611,8 @@ void ProcessVolume(char *Volume, struct sMR* Device)
 
 	LOG_SDEBUG("[%p]: Volume %s", Device, Volume);
 
-	if (UPnPVolume != Device->Volume) {
+	// do not report Volume set to 0 on pause
+	if (UPnPVolume != Device->Volume &&	(UPnPVolume != 0 || (Device->sqState != SQ_PAUSE && Device->State != PAUSED))) {
 		LOG_INFO("[%p]: UPnP Volume local change %d", Device, UPnPVolume);
 		UPnPVolume =  (UPnPVolume * 100) / Device->Config.MaxVolume;
 		sq_notify(Device->SqueezeHandle, Device, SQ_VOLUME, NULL, &UPnPVolume);

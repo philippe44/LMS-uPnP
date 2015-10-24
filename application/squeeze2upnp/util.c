@@ -56,6 +56,7 @@ void ExtractIP(const char *URL, in_addr_t *IP)
 	free(p1);
 }
 
+
 /*----------------------------------------------------------------------------*/
 char *XMLGetFirstDocumentItem(IXML_Document *doc, const char *item)
 {

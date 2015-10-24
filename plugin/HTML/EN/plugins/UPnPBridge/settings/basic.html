@@ -143,10 +143,17 @@
 	[% END %]
 	</font>
 		
-	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_SEEKAFTERPAUSE" desc="PLUGIN_UPNPBRIDGE_SEEKAFTERPAUSE_DESC" %]
-		<select class="stdedit" name="seek_after_pause" id="seek_after_pause">
+	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_PAUSEMGMT" desc="PLUGIN_UPNPBRIDGE_PAUSEMGMT_DESC" %]
+		[% "PLUGIN_UPNPBRIDGE_BYTESEEK" | string %]&nbsp
+		<select class="stdedit" name="byte_seek" id="byte_seek">
 		[% FOREACH entry IN YESNOBOX %] 
-			<option [% IF entry.1 == seek_after_pause %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+			<option [% IF entry.1 == byte_seek %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+		[% END %]
+		</select>
+		&nbsp&nbsp[% "PLUGIN_UPNPBRIDGE_TIMESEEK" | string %]&nbsp
+		<select class="stdedit" name="time_seek" id="time_seek">
+		[% FOREACH entry IN YESNOBOX %] 
+			<option [% IF entry.1 == time_seek %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
 		[% END %]
 		</select>
 	[% END %]
@@ -220,6 +227,12 @@
 		<select class="stdedit" name="send_coverart" id="send_coverart">
 		[% FOREACH entry IN YESNOBOX %] 
 			<option [% IF entry.1 == send_coverart %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+		[% END %]
+		</select>
+		&nbsp&nbsp[% "PLUGIN_UPNPBRIDGE_SENDICY" | string %]&nbsp
+		<select class="stdedit" name="send_icy" id="send_icy">
+		[% FOREACH entry IN YESNOBOX %] 
+			<option [% IF entry.1 == send_icy %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
 		[% END %]
 		</select>
 	[% END %]

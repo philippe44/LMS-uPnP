@@ -564,6 +564,21 @@ void sq_free_metadata(sq_metadata_t *metadata)
 
 
 /*---------------------------------------------------------------------------*/
+sq_dev_handle_t sq_urn2handle(const char *urn)
+{
+	int i;
+
+	for (i = 0; i < MAX_PLAYER; i++) {
+		if (!thread_ctx[i].in_use) continue;
+		if (strstr(urn, thread_ctx[i].out_ctx[0].buf_name)) return i+1;
+		if (strstr(urn, thread_ctx[i].out_ctx[1].buf_name)) return i+1;;
+	}
+
+	return 0;
+}
+
+
+/*---------------------------------------------------------------------------*/
 void *sq_get_info(const char *urn, s32_t *size, char **content_type, u16_t interval)
 {
 	int i = 0;
@@ -604,9 +619,9 @@ bool sq_is_remote(const char *urn)
 	for (i = 0; i < MAX_PLAYER; i++) {
 		if (!thread_ctx[i].in_use) continue;
 		if (strstr(urn, thread_ctx[i].out_ctx[0].buf_name))
-			return thread_ctx[i].icy.remote && !thread_ctx[i].out_ctx[0].duration;
+			return thread_ctx[i].config.send_icy && thread_ctx[i].icy.remote && !thread_ctx[i].out_ctx[0].duration;
 		if (strstr(urn, thread_ctx[i].out_ctx[1].buf_name))
-			return thread_ctx[i].icy.remote && !thread_ctx[i].out_ctx[1].duration;
+			return thread_ctx[i].config.send_icy && thread_ctx[i].icy.remote && !thread_ctx[i].out_ctx[1].duration;
 	}
 
 	return true;
@@ -780,7 +795,6 @@ int sq_seek(void *desc, off_t bytes, int from)
 			LOG_WARN("[%p]: seek unreachable b:%d t:%d r:%d", p->owner, bytes, p->write_count_t, p->write_count);
 			bytes = 0;
 		}
-		if (ctx->config.seek_after_pause == 2) bytes += p->close_count;
 		rc = fseek(p->read_file, bytes, SEEK_SET);
 		p->read_count += bytes;
 		p->read_count_t += bytes;

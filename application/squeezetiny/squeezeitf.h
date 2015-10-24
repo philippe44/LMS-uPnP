@@ -51,9 +51,9 @@ typedef	struct sq_dev_param_s {
 	sq_flac_header_t	flac_header;
 	char		buffer_dir[SQ_STR_LENGTH];
 	s32_t		buffer_limit;
-	int			seek_after_pause;
 	int			keep_buffer_file;
 	u8_t		mac[6];
+	bool		send_icy;
 } sq_dev_param_t;
 
 typedef struct sq_log_level_s {		// must be one of lERROR, lINFO, lDEBUG or lSDEBUG
@@ -109,6 +109,7 @@ void				sq_default_metadata(struct sq_metadata_s *metadata, bool init);
 void 				sq_free_metadata(struct sq_metadata_s *metadata);
 bool 				sq_set_time(sq_dev_handle_t handle, u32_t time);
 void*				sq_urn2MR(const char *urn);
+sq_dev_handle_t 	sq_urn2handle(const char *urn);
 void*				sq_get_info(const char *urn, s32_t *filesize, char **content_type, u16_t interval);	// string must be released by caller
 void*				sq_open(const char *urn);
 void*				sq_isopen(const char *urn);

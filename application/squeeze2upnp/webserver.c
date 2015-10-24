@@ -36,14 +36,38 @@ int WebGetInfo(const char *FileName, struct File_Info *Info)
 	struct Extra_Headers *Headers = Info->extra_headers;
 
 	while (Headers->name) {
+		LOG_INFO("Headers: %s: %s", Headers->name, Headers->value);
+
 		if (stristr(Headers->name, "Icy-MetaData") && sq_is_remote(FileName)) {
 			char *p = malloc(128);
 
-			LOG_INFO("[%p]: ICY metadata requested", p);
 			IcyInterval = 32000;
 			sprintf(p, "icy-metaint:%d", IcyInterval);
 			Headers->resp = p;
 		}
+
+		if (stristr(Headers->name, "transferMode.dlna.org")) {
+			char *p = malloc(strlen(Headers->name) + strlen(Headers->value) + 3);
+
+			sprintf(p, "%s: %s", Headers->name, Headers->value);
+			Headers->resp = p;
+		}
+
+		/*
+		if (stristr(Headers->name, "TimeSeekRange.dlna.org")) {
+			u32_t h = 0, m = 0, s = 0, ms = 0;
+			sq_dev_handle_t Handle = sq_urn2handle(FileName);
+
+			if (strchr(Headers->value, ':'))
+				sscanf(Headers->value,"npt=%d:%d:%d.%d", &h, &m, &s, &ms);
+			else
+				sscanf(Headers->value,"npt=%d.%d", &s, &ms);
+
+			 sq_set_time(Handle, (h*3600 + m*60 + s)*1000 + ms);
+			 return -1;
+		}
+		*/
+
 		Headers++;
 	}
 

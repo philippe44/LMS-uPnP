@@ -58,12 +58,17 @@ struct sService {
 	s32_t			TimeOut;
 };
 
+typedef struct sSeekCap {
+		bool		Byte;
+		bool		Time;
+} tSeekCap;
+
 typedef struct sMRConfig
 {
 	int			StreamLength;		// length of the "fake" file
 	sq_mode_t	ProcessMode;   		// DIRECT, STREAM, FULL
 	bool		NoZeroVolume;		// prevent volume to be set at 0 between tracks
-	int			SeekAfterPause;		// ask for a SEEK after unpause ?
+	tSeekCap	SeekCap;
 	bool		CanPause;			// pause does not work becase seek does not
 	u16_t		VolumeCorrector;	// not yet
 	bool		Enabled;			//
