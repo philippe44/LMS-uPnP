@@ -92,7 +92,7 @@ typedef enum {
 
 
 #define DLNA_ORG_OP (DLNA_ORG_OPERATION_RANGE)
-// GNU pre-processor seems to be confused if this is multine ...
+// GNU pre-processor seems to be confused if this is multiline ...
 #define DLNA_ORG_FLAG ( DLNA_ORG_FLAG_STREAMING_TRANSFERT_MODE | DLNA_ORG_FLAG_BACKGROUND_TRANSFERT_MODE | DLNA_ORG_FLAG_CONNECTION_STALL |	DLNA_ORG_FLAG_DLNA_V15 )
 
 /*
@@ -364,7 +364,7 @@ int AVTBasic(char *ControlURL, char *Action, void *Cookie)
 char *CreateDIDL(char *URI, char *ProtInfo, struct sq_metadata_s *MetaData, struct sSeekCap SeekCap)
 {
 	char *s;
-	u32_t SInc = 0;
+	u32_t Sinc = 0;
 	char DLNAOpt[128];
 
 	IXML_Document *doc = ixmlDocument_createDocument();
@@ -401,17 +401,21 @@ int AVTBasic(char *ControlURL, char *Action, void *Cookie)
 						duration.quot % 60, duration.rem);
 	}
 	else {
-		SInc 		 =   DLNA_ORG_FLAG_SN_INCREASE;
+		Sinc 		 =   DLNA_ORG_FLAG_SN_INCREASE;
 		SeekCap.Time = 0;
 	}
 
+	// hmmm ... unless we know actual size, this will always be a problem
+	if (SeekCap.Byte) XMLAddAttribute(doc, node, "size", "%d", 1024L*1024L);
+
 	if (SeekCap.Time || SeekCap.Byte)
-		sprintf(DLNAOpt, ";DLNA.ORG_OP=%02x;DLNA.ORG_FLAGS=%08x000000000000000000000000",
-						  ((SeekCap.Time) ? DLNA_ORG_OPERATION_TIMESEEK : 0) |
-						  ((SeekCap.Byte) ? DLNA_ORG_OPERATION_RANGE : 0),
-						   DLNA_ORG_FLAG | SInc);
+		sprintf(DLNAOpt, ";DLNA.ORG_OP=%02x;DLNA.ORG_CI=1;DLNA.ORG_FLAGS=%08x000000000000000000000000",
+						  ((SeekCap.Byte) ?   DLNA_ORG_OPERATION_RANGE : 0) |
+						  ((SeekCap.Time) ? DLNA_ORG_OPERATION_TIMESEEK : 0),
+						  DLNA_ORG_FLAG | Sinc);
 	else
-		sprintf(DLNAOpt, ";DLNA.ORG_FLAGS=%08x000000000000000000000000", DLNA_ORG_FLAG | SInc);
+		sprintf(DLNAOpt, ";DLNA.ORG_CI=1;DLNA.ORG_FLAGS=%08x000000000000000000000000",
+						  DLNA_ORG_FLAG | Sinc);
 
 	if (ProtInfo[strlen(ProtInfo) - 1] == ':')
 		XMLAddAttribute(doc, node, "protocolInfo", "%s%s", ProtInfo, DLNAOpt + 1);
