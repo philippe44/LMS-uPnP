@@ -1315,10 +1315,10 @@ re-positioning when playing flac files. </span><span lang=EN-US>See Section </sp
 lang=EN-GB>&nbsp;</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;margin-bottom:.0001pt'><span
-lang=EN-GB>If tracks continue while they are supposed to be paused, set
-&lt;seek_after_pause&gt; to 1 (sound will always be muted during a pause and
-LMS will look paused, but it will be clear if the track has moved on when you
-un-pause). </span></p>
+lang=EN-GB>If tracks continue while they are supposed to be paused, set &lt;byte_seek&gt;
+or &lt;time_seek&gt; to 1 (sound will always be muted during a pause and LMS
+will look paused, but it will be clear if the track has moved on when you
+un-pause). See chapter below for more details on this option.</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB>&nbsp;</span></p>
@@ -1328,9 +1328,10 @@ lang=EN-GB>The duration of a track is queried from LMS, forwarded to the UPnP
 player and is also used to calculate some related parameters (see below
 uncompressed format chapter). This will not work if you have set a LMS access
 password or disabled metadata query in squeeze2upnp. Note that when you
-reposition in a track, due to the technique LMS uses to send a repositioned
-track to its player, the displayed duration will be the remaining track length
-and the UPnP player will re-start counting from 0.</span></p>
+reposition in a track, due to the technique LMS uses to send a repositioned track
+to its player, the displayed duration will be the remaining track length and
+the UPnP player will re-start counting from 0, although LMS webUI shows the
+correct position.</span></p>
 
 <h2 style='margin-left:28.8pt;text-indent:-28.8pt'><a
 name="__RefHeading__2026_773093279"></a><span lang=EN-GB>4.3<span
@@ -1346,8 +1347,8 @@ support re-positioning of flac well.  If you have this problem you need to
 create a custom transcoding rule.  You first need to find the convert.conf file
 on your system (on linux this is in /etc/squeezeboxserver).  This file contains
 the rules LMS uses to transcode from one format to another.  To add a new rule,
-create a new file called 'custom-convert.conf' in the same directory and restart
-LMS.  This file should contain:</span></p>
+create a new file called 'custom-convert.conf' in the same directory and
+restart LMS.  This file should contain:</span></p>
 
 <p class=MsoNormal><i><span lang=EN-GB style='font-size:10.0pt;color:black'>(if
 you copy-paste below,be careful with the indentation)</span></i></p>
@@ -1371,18 +1372,17 @@ re-positioned.  The LMS File Type for flac should now show flac transcoded to
 
 <p class=MsoNormal><span lang=EN-GB style='color:black'>If you do not have LAME
 installed you may have problems with other codecs being transcoded to mp3s.  If
-you cannot install LAME, make sure all your other required source codecs translate
-to flac or pcm in the LMS File Types (mp3s should still play natively).</span></p>
+you cannot install LAME, make sure all your other required source codecs
+translate to flac or pcm in the LMS File Types (mp3s should still play
+natively).</span></p>
 
 <p class=MsoListParagraphCxSpFirst style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB style='color:black'>Note that sq2u uses the LMS Command Line
-Interface (CLI) , and assumes port 9090. This is needed for the
-&lt;seek_after_pause&gt; option to work (see Section ​​​​</span><span lang=EN-GB>5.1</span><span lang=EN-GB style='color:black'>) and to send metadata
-like artist, album, and title to your renderer.  CLI  login and password is
-currently not supported, so make sure LMS is configured to work without this. 
-There is a &lt;send_metadata&gt; option<i> in version 0.1.4 </i>that can be
-unset to suppress the metadata, so if this and &lt;seek_after_pause&gt; are
-suppressed, the login is not required.</span></p>
+Interface (CLI) , and assumes port 9090. This is needed for the &lt;byte_seek&gt;
+and &lt;time_seek&gt; options to work and to send metadata like artist, album,
+and title to your renderer. Use of uncompressed audio (pcm) will also be
+largely degraded. CLI  login and password is currently not supported, so make
+sure LMS is configured to work without this</span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB>&nbsp;</span></p>
@@ -1397,8 +1397,8 @@ when LMS starts up.</span></p>
 style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp; </span></span><span
 lang=EN-GB>Interoperability with UPnP renderer dedicated remote</span></h2>
 
-<p class=MsoNormal><span lang=EN-GB style='color:black'>LMS takes full control of
-the <a name="__DdeLink__4172_2137675401">renderer</a>. In the squeezebox
+<p class=MsoNormal><span lang=EN-GB style='color:black'>LMS takes full control
+of the <a name="__DdeLink__4172_2137675401">renderer</a>. In the squeezebox
 system, Infra Red or other remote control software send LMS commands that are
 then forwarded by LMS to real squeezebox players.</span></p>
 
@@ -1436,8 +1436,8 @@ This facility may not work well with all renderers.</span></p>
 lang=EN-GB style='color:black'>&nbsp;</span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
-lang=EN-GB style='color:black'>Volume commands are  synchronized, so control
-can be done from LMS or the player. If you want to control volume only from the
+lang=EN-GB style='color:black'>Volume commands are synchronized, so control can
+be done from LMS or the player. If you want to control volume only from the
 renderer and ignore all LMS volume commands, set &lt;volume_on_play&gt; to -1
 and LMS will have no influence on the renderer’s volume. Note that level <u>display</u>
 on LMS will still be synchronized. </span></p>
@@ -1450,8 +1450,9 @@ lang=EN-GB style='color:black'>When pausing a renderer, LMS will set its volume
 to 0 and will reset it to its normal value when resuming. The renderer’s
 feedback to LMS that volume is set to 0 will be ignored, so they would appear
 to be ‘de-synchronized’ while paused. Still, if the volume is changed on the
-rendered while it is paused, then the changes will be sent to LMS and resume
-will start with the updated volume.</span></p>
+renderer while it is paused, then the changes will be sent to LMS and resume
+will start with the updated volume. The only caveat is that setting a volume to
+0 on the renderer while paused will not be forwarded to LMS.</span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB style='color:black'>&nbsp;</span></p>
@@ -1487,8 +1488,7 @@ live stream as LMS/squeeze2upnp is not recommended. </span></p>
 <h2 style='margin-left:28.8pt;text-indent:-28.8pt'><a
 name="__DdeLink__1712_568257573"></a><a name="__RefHeading__1532_593273442"></a><span
 lang=EN-GB>4.5<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp; </span></span><span
-lang=EN-GB>Troubleshooting</span><span lang=EN-GB> &lt;stream-length&gt; and
-&lt;seek_after_pause&gt;</span></h2>
+lang=EN-GB>Troubleshooting</span><span lang=EN-GB> &lt;stream-length&gt;</span></h2>
 
 <p class=MsoListParagraphCxSpFirst style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB style='color:black'>One common issue is that </span><span
@@ -1518,23 +1518,11 @@ variations of that protocol to work around potential problems.</span></p>
 lang=EN-GB>&nbsp;</span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
-lang=EN-GB>Start with -3,  and if that does not work try -2. If it still does
-not work, try -4 and then -1. If none of these work set it to a large positive
+lang=EN-GB>Start with -3,  and if that does not work try -2. If it still does not
+work, try -4 and then -1. If none of these work set it to a large positive
 value like 100000000. This value is your estimation of the largest file that
 LMS will send (which must be below 2^32 bytes). A detailed explanation of these
 modes can be found below.</span></p>
-
-<p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
-lang=EN-GB>&nbsp;</span></p>
-
-<p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
-lang=EN-GB>Once the renderer plays properly, test that “pause” and “un-pause”
-work. First try with &lt;seek_after_pause&gt; set to 0. If you observe that the
-renderer has not stopped (only muted, but the track continued) during a “pause”
-or if the renderer restarts from the beginning of the current track, then,
-change the &lt;stream_length&gt; according to the test sequence above. If no
-value allows pause to work, then restore your initial &lt;stream_length&gt;
-value and set &lt;seek_after_pause&gt; to 1. </span></p>
 
 <p class=MsoListParagraphCxSpLast style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB>&nbsp;</span></p>
@@ -1610,42 +1598,112 @@ lang=EN-GB>&nbsp;</span></p>
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB>&lt;stream-length&gt; of -1 is similar to -4, but open-ended
 requests are responded with an HTTP OK response (no content-length) and the
-full file is sent. According to the HTTP standard, it is accepted but not
-recommended.</span></p>
-
-<p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
-lang=EN-GB>&nbsp;</span></p>
-
-<p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
-lang=EN-GB>When some UPnP renderers receive files with an unknown size they
-treat them as live streams that cannot be paused, even though sq2u has
-indicated that it can pause and retain a complete stream (only valid for DLNA
-renderers). In that case, try to use a &lt;stream_length&gt; with a real value
-or as a last resort, use &lt;seek_after_pause&gt; at 1.</span></p>
-
-<p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
-lang=EN-GB>&nbsp;</span></p>
-
-<p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
-lang=EN-GB>With &lt;seek_after_pause&gt; set to 1, when LMS asks a player to
-“un-pause”, sq2u will request the current position and then issue a
-“reposition” command to LMS before sending a “play” request to the UPnP
-renderer. A side effect is a 1 to 2 second time difference between the “paused”
-and the “un-paused” positions.</span></p>
+full file is sent. According to the HTTP standard, it is accepted but not recommended.</span></p>
 
 <p class=MsoListParagraphCxSpLast style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB>&nbsp;</span></p>
 
-<span lang=EN-GB style='font-size:12.0pt;line-height:115%;font-family:"Times New Roman","serif";
-color:#00000A'><br clear=all style='page-break-before:always'>
-</span>
+<h2 style='margin-left:28.8pt;text-indent:-28.8pt'><span lang=EN-GB>4.6<span
+style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp; </span></span><span
+lang=EN-GB>Troubleshooting Pause/Resume issues</span></h2>
 
-<p class=MsoNormal style='margin-bottom:0cm;margin-bottom:.0001pt;line-height:
-115%'><span lang=EN-GB style='font-size:14.0pt;line-height:115%;font-family:
-"Liberation Sans","sans-serif"'>&nbsp;</span></p>
+<p class=MsoListParagraphCxSpFirst style='margin:0cm;margin-bottom:.0001pt'><span
+lang=EN-GB>&nbsp;</span></p>
+
+<p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
+lang=EN-GB>UPnP/DLNA renderers have a very different way of pausing a track
+compared to LMS and this makes a simple question a complex problem. To
+pause/resume, DLNA players can use 3 techniques</span></p>
+
+<p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
+lang=EN-GB>&nbsp;</span></p>
+
+<p class=MsoListParagraphCxSpMiddle style='margin-bottom:0cm;margin-bottom:
+.0001pt;text-indent:-18.0pt'><span lang=EN-GB>1.<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</span></span><span lang=EN-GB>Stall the TCP connection during the pause
+period. This is the best solution.</span></p>
+
+<p class=MsoListParagraphCxSpMiddle style='margin-bottom:0cm;margin-bottom:
+.0001pt;text-indent:-18.0pt'><span lang=EN-GB>2.<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</span></span><span lang=EN-GB>Close the connection and on resume, re-open it
+and ask sq2u to skip a given number of bytes.</span></p>
+
+<p class=MsoListParagraphCxSpLast style='margin-bottom:0cm;margin-bottom:.0001pt;
+text-indent:-18.0pt'><span lang=EN-GB>3.<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</span></span><span lang=EN-GB>Close the connection and on resume, re-open it
+and ask sq2u to skip a given number of seconds</span></p>
+
+<p class=MsoNormal style='margin-bottom:0cm;margin-bottom:.0001pt'><span
+lang=EN-GB>&nbsp;</span></p>
+
+<p class=MsoListParagraphCxSpFirst style='margin:0cm;margin-bottom:.0001pt'><span
+lang=EN-GB>Although option 3. seems the easiest, it does not work well with LMS
+for technical reasons beyond the scope of this guide. By default, sq2u only
+allows option 1. which is normally the best for compatibility with LMS.
+Unfortunately, some renderers do not support it and will not pause (they might
+look like they do as the volume is set to 0 by LMS, but upon resume, the track
+has kept progressing).</span></p>
+
+<p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
+lang=EN-GB>&nbsp;</span></p>
+
+<p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
+lang=EN-GB>Using parameter &lt;byte_seek&gt; it is possible to force sq2u to
+allow the renderer to close the connection and then re-open it on resume,
+requesting to ‘seek/skip’ a number of byte up to the last received data. Some
+renderers might only be able to request for a byte position on tracks that are
+‘seekable’. It will depend on the audio format: pcm works best, flac with
+seektable as well, mp3 is problematic.</span></p>
+
+<p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
+lang=EN-GB>&nbsp;</span></p>
+
+<p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
+lang=EN-GB>Another option is to use &lt;time_seek&gt; to allow the renderer to
+still close the connection, re-open on resume and request sq2u to ‘seek’ to a
+given time position. In the background, sq2u has to require LMS to stop the
+current track and re-start it at the required position. This is like playing a full
+new track and requires re-sending of all data. Note also that the renderer time
+counter will restart from 0. This is why it is not a recommended mode and when
+enabled, DLNA players will chose this by default over the recommended ‘TCP
+stalling’ method<span style='background:yellow'>. If you have disabled usage of
+metadata or set a password in LMS, this will not work</span></span></p>
+
+<p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
+lang=EN-GB>&nbsp;</span></p>
+
+<p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
+lang=EN-GB>Note also that &lt;time_seek&gt; will not work with some system like
+Qobuz that do not allow LMS to ‘seek’ inside a track (try from LMS webUI to
+confirm). With sq2u, the track will restart from the beginning on resume.</span></p>
+
+<p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
+lang=EN-GB>&nbsp;</span></p>
+
+<p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
+lang=EN-GB>Starting with version 0.2.6, sq2u is also capable of sending ICY
+metadata when playing a webradio. This allows a renderer to display the track
+title as it changes. The artwork is also sent, but it seems that most players
+don’t support this, so likely they will be stuck on displaying the artwork of
+the first song.</span></p>
+
+<p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
+lang=EN-GB>&nbsp;</span></p>
+
+<p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
+lang=EN-GB>Unfortunately, sending ICY metadata seems to prevent most DLNA
+players to pause properly (they mute but don’t pause). It’s guessed at this
+point that such players (UPnP devices don’t have this problem) assume that when
+ICY metadata is present, they are receiving a live stream that cannot be paused.
+Normally, sq2u allows live (infinite) streams to be paused by buffering the
+audio and hiding this from the player, but ICY metadata seems to break this
+option.</span></p>
+
+<p class=MsoListParagraphCxSpLast style='margin:0cm;margin-bottom:.0001pt'><span
+lang=EN-GB>&nbsp;</span></p>
 
 <h2 style='margin-left:28.8pt;text-indent:-28.8pt'><a
-name="__RefHeading__1860_842035336"></a><span lang=EN-GB>4.6<span
+name="__RefHeading__1860_842035336"></a><span lang=EN-GB>4.7<span
 style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp; </span></span><span
 lang=EN-GB>Troubleshooting uncompressed audio formats</span></h2>
 
@@ -1723,9 +1781,9 @@ CPU-consuming for little benefit</span></p>
 lang=EN-GB>. </span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
-lang=EN-GB>The parameter &lt;match_endianness&gt; allows sq2u to use a ‘best
-fit’ selection logic and to choose amongst all the formats supported by the
-UPnP player to select one that avoids byte-reordering.</span></p>
+lang=EN-GB>The parameter &lt;match_endianness&gt; allows sq2u to use a ‘best fit’
+selection logic and to choose amongst all the formats supported by the UPnP
+player to select one that avoids byte-reordering.</span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB>&nbsp;</span></p>
@@ -1756,8 +1814,8 @@ lang=EN-GB>If track duration is unavailable (LMS metadata is inaccessible for
 any reason – you might have disabled it), then sq2u uses 2^31 as a target file
 size and convert that into a rounded duration. When the whole file has been
 sent, sq2u terminates the connection and the player, although it has not
-received the full ‘indicated’ size (in header and/or &lt;stream_length&gt;), simply
-moves to the next track. </span></p>
+received the full ‘indicated’ size (in header and/or &lt;stream_length&gt;),
+simply moves to the next track. </span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB>Unfortunately, players fail in different ways, often ending in LMS
@@ -1770,12 +1828,6 @@ lang=EN-GB>&nbsp;</span></p>
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB>The solution to that is to restrict the use of uncompressed format
 to what works with your player and usually raw (header-less) works the best.</span></p>
-
-<p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
-lang=EN-GB>&nbsp;</span></p>
-
-<p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
-lang=EN-GB>&nbsp;</span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB>&nbsp;</span></p>
@@ -1842,8 +1894,9 @@ color:black'>&nbsp;</span></p>
 <p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
 color:black'>Global options</span></i></p>
 
-<p class=MsoNormalCxSpMiddle><b><span style='font-size:11.0pt'>&lt;server&gt;[ip[:port]
-| ?]&lt;/server&gt; </span></b><i><span style='font-size:11.0pt'>default = ?</span></i></p>
+<p class=MsoNormalCxSpMiddle><b><span lang=EN-US style='font-size:11.0pt'>&lt;server&gt;[ip[:port]
+| ?]&lt;/server&gt; </span></b><i><span lang=EN-US style='font-size:11.0pt'>default
+= ?</span></i></p>
 
 <p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
 color:black'>ip = IP address or network name, port = port number (usually 3483)
@@ -1945,8 +1998,7 @@ color:black'>&lt;output_log&gt;[error | warn | info | debug |
 sdebug]&lt;/output_log&gt;</span></b></p>
 
 <p class=MsoNormalCxSpMiddle><b><span lang=EN-GB style='font-size:11.0pt;
-color:black'>&lt;decode_log&gt;[error | warn | info | debug |
-sdebug]&lt;/decode_log&gt;</span></b></p>
+color:black'>&lt;decode_log&gt;[error | warn | info | debug | sdebug]&lt;/decode_log&gt;</span></b></p>
 
 <p class=MsoNormalCxSpMiddle><b><span lang=EN-GB style='font-size:11.0pt;
 color:black'>&lt;web_log&gt;[error | warn | info | debug |
@@ -1961,8 +2013,7 @@ color:black'>&lt;main_log&gt;[error | warn | info | debug |
 sdebug]&lt;/main_log&gt;</span></b></p>
 
 <p class=MsoNormalCxSpMiddle><b><span lang=EN-GB style='font-size:11.0pt;
-color:black'>&lt;sq2mr_log&gt;[error | warn | info | debug |
-sdebug]&lt;/sq2mr_log&gt;</span></b></p>
+color:black'>&lt;sq2mr_log&gt;[error | warn | info | debug | sdebug]&lt;/sq2mr_log&gt;</span></b></p>
 
 <p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
 color:black'>Level of debugging for each sub-item of sq2upnp.  Leave these at
@@ -2058,13 +2109,13 @@ data received before the shrinkage happens and cannot seek back to any of
 properly after the buffer has been shrunk once, especially for renderers that
 cannot support &lt;stream_length&gt; of -3 (e.g. Sonos). Note that if a
 renderer is “paused” on a live stream for an undefined amount of time, the
-buffering of the stream will be left to LMS and as a result audio loss might
-happen. Set this to around 32MB for normal running.  If this causes any
-problems (such as sound cut-outs) with very high quality audio and you have a
-load of spare space then set this very high indeed to avoid the buffer ever
-being shrunk on local files (e.g. 2GB, not more than 2^32-1).  Alternatively
-set this parameter to -1 to let the buffer grow without a limit.  The files
-will be replaced when playing stops or sq2u is restarted from cold..</span></i></p>
+buffering of the stream will be left to LMS and as a result audio loss might happen.
+Set this to around 32MB for normal running.  If this causes any problems (such
+as sound cut-outs) with very high quality audio and you have a load of spare
+space then set this very high indeed to avoid the buffer ever being shrunk on
+local files (e.g. 2GB, not more than 2^32-1).  Alternatively set this parameter
+to -1 to let the buffer grow without a limit.  The files will be replaced when
+playing stops or sq2u is restarted from cold..</span></i></p>
 
 <p class=MsoNormalCxSpMiddle><span lang=EN-GB style='font-size:11.0pt;
 color:black'>&nbsp;</span></p>
@@ -2166,20 +2217,32 @@ color:black'>The mode of operation – leave at 2 for this version of sq2u</span
 color:black'>&nbsp;</span></p>
 
 <p class=MsoNormalCxSpMiddle><b><span lang=EN-GB style='font-size:11.0pt;
-color:black'>&lt;seek_after_pause&gt;[0 | 1]&lt;/seek_after_pause&gt;</span></b><span
+color:black'>&lt;byte_seek &gt;[0 | 1]&lt;/byte_seek&gt;</span></b><span
 lang=EN-GB style='font-size:11.0pt;color:black'> <i>default = 0</i></span></p>
 
 <p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
-color:black'>Sq2u allows renderers to leave open and “stall” the TCP connection
-as long as they want for pausing. However, some renderers will chose to close
-the connection and to re-open-it at un-pause. Normally, renderers will then
-either request sq2u to seek to the last received position or will re-start from
-1<sup>st</sup> byte but consume all the intervening data. Other renderers
-either refuse to pause and will let the track move on, or will not un-pause
-from the correct position. In such cases, set this parameter to 1 and sq2u will
-issue a “reposition” request to LMS. This uses the CLI interface to instruct
-LMS to cue to the paused position, so if you have a login/password set, it will
-fail as there is no option today to have sq2u to use a login/password.</span></i></p>
+color:black'>The best option to pause DLNA players is to “stall” the TCP
+connection. However, some renderers do not support this and will not pause or
+resume. This option lets the renderer close the connection, re-open it on
+resume and asks sq2u to ‘seek’ (skip) a required amount of bytes to reach the
+paused position.</span></i></p>
+
+<p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
+color:black'>&nbsp;</span></i></p>
+
+<p class=MsoNormalCxSpMiddle><b><span lang=EN-GB style='font-size:11.0pt;
+color:black'>&lt;time_seek &gt;[0 | 1]&lt;/time_seek&gt;</span></b><span
+lang=EN-GB style='font-size:11.0pt;color:black'> <i>default = 0</i></span></p>
+
+<p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
+color:black'>The best option to pause DLNA players is to “stall” the TCP
+connection. However, some renderers do not support this and will not pause or
+resume. This option lets the renderer close the connection, re-open it on
+resume and asks sq2u to ‘seek’ to a certain time position to reach the paused
+position. In practice, sq2u will issue a “reposition” request to LMS. This uses
+the CLI interface to instruct LMS to cue (approximately) to the  paused
+position, so if you have a login/password set, it will fail as there is no
+option today to have sq2u to use a login/password. </span></i></p>
 
 <p class=MsoNormalCxSpMiddle><span lang=EN-GB style='font-size:11.0pt;
 color:black'>&nbsp;</span></p>
@@ -2215,9 +2278,6 @@ to -1. Note also that when “off” or when stopped, sq2u will ignore all UPnP
 events to avoid unsolicited reaction from LMS when a UPnP renderer is being
 controlled by some other mean than LMS.</span></i></p>
 
-<p class=MsoNormalCxSpMiddle><span lang=EN-GB style='font-size:11.0pt;
-color:black'>&nbsp;</span></p>
-
 <p class=MsoNormal style='margin-bottom:0cm;margin-bottom:.0001pt'><b><span
 lang=EN-US style='font-size:11.0pt'>&nbsp;</span></b></p>
 
@@ -2249,12 +2309,12 @@ color:black'> <i>default = 1</i></span></p>
 color:black'>Gapless play is by setting a “current track/URI” and a “next
 track/URI” in UPnP renderers. When they reach the end of “current track/URI”,
 renderers move to the next one automatically. Some renderers do not support
-this feature and will stop when the “current track/URI” ends. This options forces
-the next track to be played on faulty renderers, but there will be a gap.  Some
-renderers buffer the “next track/URI” while playing the “currentURI” to do real
-gapless. Other renderers, although they support “next track/URI”, wait for the
-end of the current track before buffering the next one, and that will create a
-gap.</span></i></p>
+this feature and will stop when the “current track/URI” ends. This options
+forces the next track to be played on faulty renderers, but there will be a
+gap.  Some renderers buffer the “next track/URI” while playing the “currentURI”
+to do real gapless. Other renderers, although they support “next track/URI”,
+wait for the end of the current track before buffering the next one, and that
+will create a gap.</span></i></p>
 
 <p class=MsoNormalCxSpMiddle><span lang=EN-GB style='font-size:11.0pt;
 color:black'>&nbsp;</span></p>
@@ -2265,16 +2325,16 @@ codec2, …]&lt;/codecs&gt;</span></b><span style='font-size:11.0pt;color:black'
 
 <p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
 color:black'>The comma separated list of codecs, supported by the UPnP
-renderer, that will be reported to LMS. If a track is encoded in a non-supported
-format, LMS will apply its transcoding rules.  The codecs are treated in
-priority preference order, so if, say, pcm is first, it will be the chosen
-codec if the source can be made available in that codec.  pcm, flc and mp3 are
-supported by sq2u (and aac may also work on some systems).  When LMS pauses it
-locally generates a new “truncated” file and sends a new command to play/stream
-that file. Unfortunately, it does not seem to insert a header on the truncated
-file. Some UPnP renderers do not like that, so a header is “guessed” and
-re-inserted by sq2u. This is only done for flac. Note that sq2u itself does no
-transcoding from one format to another.  See also Section </span></i><span lang=EN-GB>4.2</span><i><span lang=EN-GB style='font-size:11.0pt;color:black'>.</span></i></p>
+renderer, that will be reported to LMS. If a track is encoded in a
+non-supported format, LMS will apply its transcoding rules.  The codecs are
+treated in priority preference order, so if, say, pcm is first, it will be the
+chosen codec if the source can be made available in that codec.  pcm, flc and
+mp3 are supported by sq2u (and aac may also work on some systems).  When LMS
+pauses it locally generates a new “truncated” file and sends a new command to
+play/stream that file. Unfortunately, it does not seem to insert a header on
+the truncated file. Some UPnP renderers do not like that, so a header is
+“guessed” and re-inserted by sq2u. This is only done for flac. Note that sq2u
+itself does no transcoding from one format to another.  See also Section </span></i><span lang=EN-GB>4.2</span><i><span lang=EN-GB style='font-size:11.0pt;color:black'>.</span></i></p>
 
 <p class=MsoNormalCxSpMiddle><span lang=EN-GB style='font-size:11.0pt'>&nbsp;</span></p>
 
@@ -2291,9 +2351,9 @@ resampling rules. Note that sq2u itself does no resampling.</span></i></p>
 <p class=MsoNormalCxSpMiddle><span lang=EN-GB style='font-size:11.0pt;
 color:black'>&nbsp;</span></p>
 
-<p class=MsoNormalCxSpMiddle><b><span style='font-size:11.0pt'>&lt;L24_format&gt;[0
-| 1 | 2]&lt;/L24_format&gt;</span></b><span style='font-size:11.0pt'> <i>default
-= 1</i></span></p>
+<p class=MsoNormalCxSpMiddle><b><span lang=EN-US style='font-size:11.0pt'>&lt;L24_format&gt;[0
+| 1 | 2]&lt;/L24_format&gt;</span></b><span lang=EN-US style='font-size:11.0pt'>
+<i>default = 1</i></span></p>
 
 <p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
 color:black'>Defines what kind of 24 bits sample the renderer can handle. </span></i></p>
@@ -2354,17 +2414,11 @@ color:black'>&lt;flac_header&gt;[0 | 1 | 2]&lt;/flac_header&gt;</span></b><span
 lang=EN-GB style='font-size:11.0pt;color:black'> <i>default = 1</i></span></p>
 
 <p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
-color:black'>When repositioning flac streams, LMS re-generates a file starting from
-the new position but does not insert a proper header . Such header is required
-by some players and it contains information like total number of samples in the
-file and a checksum of the decoded audio data. Sq2u cannot know these values
-but the flac standard specifies that they should then be set to 0. In a few
-cases, some players consider such audio data as being a live stream and will
-consequently refuse to pause. The symptoms varies, but mainly after a
-re-positioning, pause/un-pause will fail or, if &lt;seek_after_pause&gt; is set
-to 1, the first pause/un-pause will work, but not any subsequent
-pause/un-pause. A workaround is to set these header value to a fixed but large
-value. For other players, the simple solution is to not add a header.</span></i></p>
+color:black'>When repositioning flac streams, LMS re-generates a file starting
+from the new position but does not insert a proper header . Such header is
+required by some players and it contains information like total number of samples
+in the file and a checksum of the decoded audio data. Sq2u cannot know these
+values but the flac standard specifies that they should then be set to 0.</span></i></p>
 
 <p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
 color:black'>0 : no header re-inserted</span></i></p>
@@ -2697,18 +2751,18 @@ PLAY:3&lt;/name&gt;</span></p>
 <p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span lang=EN-GB
 style='font-size:10.0pt;color:black'>&lt;enabled&gt;1&lt;/enabled&gt;</span></p>
 
-<p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span lang=EN-US
-style='font-size:10.0pt'>&lt;codecs&gt;flc,mp3&lt;/codecs&gt;</span></p>
+<p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span style='font-size:
+10.0pt'>&lt;codecs&gt;flc,mp3&lt;/codecs&gt;</span></p>
 
 <p class=MsoNormalCxSpMiddle><span class=block><span style='font-size:10.0pt;
 color:black'>&lt;/device&gt;</span></span></p>
 
 <p class=MsoNormalCxSpMiddle><span style='font-size:10.0pt;color:black'>&nbsp;</span></p>
 
-<p class=MsoNormalCxSpMiddle><span style='font-size:10.0pt'>&lt;device&gt;</span></p>
+<p class=MsoNormalCxSpMiddle><span lang=EN-US style='font-size:10.0pt'>&lt;device&gt;</span></p>
 
-<p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span style='font-size:
-10.0pt'>&lt;udn&gt;uuid:RINCON_000E58C3F67C01400&lt;/udn&gt;</span></p>
+<p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span lang=EN-US
+style='font-size:10.0pt'>&lt;udn&gt;uuid:RINCON_000E58C3F67C01400&lt;/udn&gt;</span></p>
 
 <p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span lang=EN-GB
 style='font-size:10.0pt;color:black'>&lt;name&gt;192.168.2.22 - Sonos
@@ -2717,8 +2771,8 @@ PLAY:1&lt;/name&gt;</span></p>
 <p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span lang=EN-GB
 style='font-size:10.0pt;color:black'>&lt;enabled&gt;1&lt;/enabled&gt;</span></p>
 
-<p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span style='font-size:
-10.0pt'>&lt;codecs&gt;flc,mp3&lt;/codecs&gt;</span></p>
+<p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span lang=EN-US
+style='font-size:10.0pt'>&lt;codecs&gt;flc,mp3&lt;/codecs&gt;</span></p>
 
 <p class=MsoNormalCxSpMiddle><span class=block><span style='font-size:10.0pt;
 color:black'>&lt;/device&gt;</span></span></p>
