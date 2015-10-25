@@ -227,7 +227,7 @@ sub logHandler {
 	if ($file){
 
 		my @lines;
-		my $count = $params->{lines} || 200;
+		my $count = $params->{lines} || 1000;
 
 		while ( --$count && (my $line = $file->readline()) ) {
 			unshift (@lines, $line);

@@ -12,6 +12,7 @@
  - <seek_after_pause> now forces a proper 'stop' of the UPnP player
  - (P) update some strings
  - (P) add ICY metadata option
+ - (P) set log lines to 1000
    
 0.2.5.0
  - in XMLFindAndParseService search ends if a service list is empty. It should end only when no service list remains
