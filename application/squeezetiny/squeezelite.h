@@ -485,6 +485,17 @@ typedef struct out_ctx_s {
 	s32_t				file_size;
 	u32_t				duration;
 	s32_t				raw_size;
+	bool				remote;
+	u32_t				track_hash;
+	struct {
+		bool 	update;
+		u32_t	interval;
+		u32_t	remain;
+		char 	*artist;
+		char 	*title;
+		char 	*artwork;
+		u32_t 	last;
+	} icy;
 	struct thread_ctx_s *owner;
 	unsigned 			idx;
 	char				ext[5];
@@ -569,16 +580,6 @@ struct thread_ctx_s {
 	u32_t	track_start_time;
 	bool	read_to;
 	bool	read_ended;
-	struct {
-		bool 	update;
-		bool	remote;
-		u16_t	interval;
-		u16_t	remain;
-		char 	*artist;
-		char 	*title;
-		char 	*artwork;
-		u32_t 	last;
-	} icy;
 };
 
 extern struct thread_ctx_s thread_ctx[MAX_PLAYER];

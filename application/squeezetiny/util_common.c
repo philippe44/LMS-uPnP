@@ -157,6 +157,18 @@ char *strlwr(char *str)
 #endif
 
 /*---------------------------------------------------------------------------*/
+u32_t hash32(char *str)
+{
+	u32_t hash = 5381;
+	s32_t c;
+
+	while ((c = *str++) != 0)
+		hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+
+	return hash;
+}
+
+/*---------------------------------------------------------------------------*/
 char *stristr(char *s1, char *s2)
 {
  char *s1_lwr = strlwr(strdup(s1));

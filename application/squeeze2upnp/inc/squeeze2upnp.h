@@ -58,17 +58,12 @@ struct sService {
 	s32_t			TimeOut;
 };
 
-typedef struct sSeekCap {
-		bool		Byte;
-		bool		Time;
-} tSeekCap;
-
-typedef struct sMRConfig
+typedef struct sMRConfig
 {
 	int			StreamLength;		// length of the "fake" file
 	sq_mode_t	ProcessMode;   		// DIRECT, STREAM, FULL
 	bool		NoZeroVolume;		// prevent volume to be set at 0 between tracks
-	tSeekCap	SeekCap;
+	bool		SeekAfterPause;
 	bool		CanPause;			// pause does not work becase seek does not
 	u16_t		VolumeCorrector;	// not yet
 	bool		Enabled;			//
@@ -104,6 +99,7 @@ struct sMR {
 	char			NextProtInfo[SQ_STR_LENGTH];		// a bit patchy ... used for faulty NEXTURI players
 	sq_metadata_t	NextMetaData;
 	sq_action_t		sqState;
+	bool			ReportStop;
 	u32_t			Elapsed;
 	u8_t			*seqN;
 	unsigned		TrackPoll, StatePoll, VolumePoll, MetaDataPoll;

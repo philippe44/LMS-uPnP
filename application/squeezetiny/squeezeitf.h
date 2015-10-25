@@ -36,6 +36,8 @@ typedef struct sq_metadata_s {
 	u32_t track;
 	u32_t duration;
 	u32_t file_size;
+	bool  remote;
+	u32_t track_hash;
 } sq_metadata_t;
 
 typedef	struct sq_dev_param_s {
@@ -84,6 +86,8 @@ typedef struct
 	char	content_type[SQ_STR_LENGTH];
 	char	proto_info[SQ_STR_LENGTH];
 	off_t	file_size;
+	bool	remote;
+	u32_t	track_hash;
 } sq_seturi_t;
 
 extern unsigned gl_slimproto_stream_port;

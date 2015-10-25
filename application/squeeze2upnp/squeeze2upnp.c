@@ -65,7 +65,7 @@ tMRConfig			glMRConfig = {
 							-3L,
 							SQ_STREAM,
 							false,
-							{ false, false},
+							false,
 							true,
 							0,
 							true,
@@ -324,13 +324,15 @@ static int	uPNPTerminate(void);
 			}
 
 			strcpy(device->NextProtInfo, p->proto_info);
-			p->duration = device->NextMetaData.duration;
-			p->src_format = ext2format(device->NextMetaData.path);
+			p->duration 	= device->NextMetaData.duration;
+			p->src_format 	= ext2format(device->NextMetaData.path);
+			p->remote 		= device->NextMetaData.remote;
+			p->track_hash	= device->NextMetaData.track_hash;
 			if (!device->Config.SendCoverArt) NFREE(device->NextMetaData.artwork);
 
 			if (device->Config.AcceptNextURI){
 				AVTSetNextURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info,
-							  &device->NextMetaData, device->Config.SeekCap, device->seqN++);
+							  &device->NextMetaData, device->seqN++);
 				sq_free_metadata(&device->NextMetaData);
 			}
 
@@ -365,12 +367,13 @@ static int	uPNPTerminate(void);
 				sq_default_metadata(&MetaData, true);
 				p->file_size = device->Config.StreamLength;
 			}
-			p->duration = MetaData.duration;
-			p->src_format = ext2format(MetaData.path);
+			p->duration 	= MetaData.duration;
+			p->src_format 	= ext2format(MetaData.path);
+			p->remote 		= MetaData.remote;
+			p->track_hash	= MetaData.track_hash;
 			if (!device->Config.SendCoverArt) NFREE(MetaData.artwork);
 
-			AVTSetURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info,
-			          &MetaData, device->Config.SeekCap, device->seqN++);
+			AVTSetURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info, &MetaData, device->seqN++);
 			sq_free_metadata(&MetaData);
 
 			device->CurrentURI = (char*) malloc(strlen(uri) + 1);
@@ -380,7 +383,7 @@ static int	uPNPTerminate(void);
 			break;
 		}
 		case SQ_UNPAUSE:
-			if (device->Config.SeekCap.Time) {
+			if (device->Config.SeekAfterPause) {
 				u32_t PausedTime = sq_get_time(device->SqueezeHandle);
 				sq_set_time(device->SqueezeHandle, PausedTime);
 			}
@@ -407,7 +410,11 @@ static int	uPNPTerminate(void);
 			device->sqState = action;
 			break;
 		case SQ_PAUSE:
-			QueueAction(handle, caller, action, cookie, param, false);
+			if (device->Config.SeekAfterPause) {
+				device->ReportStop = false;
+				AVTBasic(device->Service[AVT_SRV_IDX].ControlURL, "Stop", device->seqN++);
+			}
+			else QueueAction(handle, caller, action, cookie, param, false);
 			device->sqState = action;
 			break;
 		case SQ_NEXT:
@@ -469,7 +476,7 @@ void SyncNotifState(char *State, struct sMR* Device)
 	Action = UnQueueAction(Device, true);
 
 	if (!strcmp(State, "STOPPED")) {
-		if (Device->State != STOPPED) {
+		if (Device->State != STOPPED && Device->ReportStop) {
 			LOG_INFO("%s: uPNP stop", Device->FriendlyName);
 			if (Device->NextURI) {
 				if (!Device->Config.AcceptNextURI) {
@@ -482,8 +489,7 @@ void SyncNotifState(char *State, struct sMR* Device)
 					NFREE(Device->NextURI);
 
 					AVTSetURI(Device->Service[AVT_SRV_IDX].ControlURL, Device->CurrentURI,
-							  Device->NextProtInfo, &Device->NextMetaData, Device->Config.SeekCap,
-							  WaitFor);
+							  Device->NextProtInfo, &Device->NextMetaData, WaitFor);
 					sq_free_metadata(&Device->NextMetaData);
 
 					/*
@@ -502,7 +508,6 @@ void SyncNotifState(char *State, struct sMR* Device)
 					this case, give it a nudge
 					*/
 					QueueAction(Device->SqueezeHandle, Device, SQ_NEXT, NULL, NULL, false);
-//					AVTBasic(Device->Service[AVT_SRV_IDX].ControlURL, "Next", Device->seqN++);
 					LOG_INFO("[%p]: nudge next track required %s", Device, Device->NextURI);
 				}
 			}
@@ -510,8 +515,10 @@ void SyncNotifState(char *State, struct sMR* Device)
 				// Can be a user stop, an error or a normal stop
 				Event = SQ_STOP;
 			}
-			Device->State = STOPPED;
-		 }
+		}
+
+		Device->State = STOPPED;
+		Device->ReportStop = false;
 	}
 
 	if (!strcmp(State, "PLAYING")) {

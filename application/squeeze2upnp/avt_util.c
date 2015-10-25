@@ -105,7 +105,7 @@ static char DLNA_OPT[] = ";DLNA.ORG_OP=01;DLNA.ORG_FLAGS=01700000000000000000000
 */
 
 static log_level loglevel;
-static char *CreateDIDL(char *URI, char *ProtInfo, struct sq_metadata_s *MetaData, struct sSeekCap SeekCap);
+static char *CreateDIDL(char *URI, char *ProtInfo, struct sq_metadata_s *MetaData);
 
 /*----------------------------------------------------------------------------*/
 void AVTInit(log_level level)
@@ -114,13 +114,13 @@ void AVTInit(log_level level)
 }
 
 /*----------------------------------------------------------------------------*/
-int AVTSetURI(char *ControlURL, char *URI, char *ProtInfo, struct sq_metadata_s *MetaData, struct sSeekCap SeekCap, void *Cookie)
+int AVTSetURI(char *ControlURL, char *URI, char *ProtInfo, struct sq_metadata_s *MetaData, void *Cookie)
 {
 	IXML_Document *ActionNode = NULL;
 	int rc;
 	char *DIDLData;
 
-	DIDLData = CreateDIDL(URI, ProtInfo, MetaData, SeekCap);
+	DIDLData = CreateDIDL(URI, ProtInfo, MetaData);
 	LOG_DEBUG("DIDL header: %s", DIDLData);
 
 	LOG_INFO("uPNP setURI %s for %s (cookie %p)", URI, ControlURL, Cookie);
@@ -143,13 +143,13 @@ int AVTSetURI(char *ControlURL, char *URI, char *ProtInfo, struct sq_metadata_s 
 }
 
 /*----------------------------------------------------------------------------*/
-int AVTSetNextURI(char *ControlURL, char *URI, char *ProtInfo, struct sq_metadata_s *MetaData, struct sSeekCap SeekCap, void *Cookie)
+int AVTSetNextURI(char *ControlURL, char *URI, char *ProtInfo, struct sq_metadata_s *MetaData, void *Cookie)
 {
 	IXML_Document *ActionNode = NULL;
 	int rc;
 	char *DIDLData;
 
-	DIDLData = CreateDIDL(URI, ProtInfo, MetaData, SeekCap);
+	DIDLData = CreateDIDL(URI, ProtInfo, MetaData);
 	LOG_DEBUG("DIDL header: %s", DIDLData);
 
 	LOG_INFO("uPNP setNextURI %s for %s (cookie %p)", URI, ControlURL, Cookie);
@@ -361,7 +361,7 @@ int AVTBasic(char *ControlURL, char *Action, void *Cookie)
 
 
 /*----------------------------------------------------------------------------*/
-char *CreateDIDL(char *URI, char *ProtInfo, struct sq_metadata_s *MetaData, struct sSeekCap SeekCap)
+char *CreateDIDL(char *URI, char *ProtInfo, struct sq_metadata_s *MetaData)
 {
 	char *s;
 	u32_t Sinc = 0;
@@ -400,22 +400,10 @@ int AVTBasic(char *ControlURL, char *Action, void *Cookie)
 						duration.quot/3600, (duration.quot % 3600) / 60,
 						duration.quot % 60, duration.rem);
 	}
-	else {
-		Sinc 		 =   DLNA_ORG_FLAG_SN_INCREASE;
-		SeekCap.Time = 0;
-	}
+	else Sinc = DLNA_ORG_FLAG_SN_INCREASE;
 
-	// hmmm ... unless we know actual size, this will always be a problem
-	if (SeekCap.Byte) XMLAddAttribute(doc, node, "size", "%d", 1024L*1024L);
-
-	if (SeekCap.Time || SeekCap.Byte)
-		sprintf(DLNAOpt, ";DLNA.ORG_OP=%02x;DLNA.ORG_CI=1;DLNA.ORG_FLAGS=%08x000000000000000000000000",
-						  ((SeekCap.Byte) ?   DLNA_ORG_OPERATION_RANGE : 0) |
-						  ((SeekCap.Time) ? DLNA_ORG_OPERATION_TIMESEEK : 0),
-						  DLNA_ORG_FLAG | Sinc);
-	else
-		sprintf(DLNAOpt, ";DLNA.ORG_CI=1;DLNA.ORG_FLAGS=%08x000000000000000000000000",
-						  DLNA_ORG_FLAG | Sinc);
+	sprintf(DLNAOpt, ";DLNA.ORG_CI=0;DLNA.ORG_FLAGS=%08x000000000000000000000000",
+					  DLNA_ORG_FLAG | Sinc);
 
 	if (ProtInfo[strlen(ProtInfo) - 1] == ':')
 		XMLAddAttribute(doc, node, "protocolInfo", "%s%s", ProtInfo, DLNAOpt + 1);

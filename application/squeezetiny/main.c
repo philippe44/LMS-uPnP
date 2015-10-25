@@ -269,6 +269,10 @@ static char *cli_decode(char *str) {
 		}
 	}
 
+	if (!wait) {
+		LOG_WARN("[%p]: Timeout waiting for CLI reponse (%s)", ctx, req);
+	}
+
 	if (rsp) {
 		for (rsp += strlen(cmd); *rsp == ' '; rsp++);
 		if (decode) rsp = cli_decode(rsp);
@@ -335,17 +339,18 @@ bool sq_set_time(sq_dev_handle_t handle, u32_t time)
 /*--------------------------------------------------------------------------*/
 static void sq_init_metadata(sq_metadata_t *metadata)
 {
-	metadata->artist = NULL;
-	metadata->album = NULL;
-	metadata->title = NULL;
-	metadata->genre = NULL;
-	metadata->path = NULL;
-	metadata->artwork =	NULL;
+	metadata->artist 	= NULL;
+	metadata->album 	= NULL;
+	metadata->title 	= NULL;
+	metadata->genre 	= NULL;
+	metadata->path 		= NULL;
+	metadata->artwork 	= NULL;
 
-	metadata->track = 0;
-	metadata->index = 0;
+	metadata->track 	= 0;
+	metadata->index 	= 0;
 	metadata->file_size = 0;
-	metadata->duration = 0;
+	metadata->duration 	= 0;
+	metadata->remote 	= false;
 }
 
 /*--------------------------------------------------------------------------*/
@@ -353,10 +358,10 @@ void sq_default_metadata(sq_metadata_t *metadata, bool init)
 {
 	if (init) sq_init_metadata(metadata);
 
-	if (!metadata->title) metadata->title = strdup("[LMS to uPnP]");
-	if (!metadata->album) metadata->album = strdup("[no album]");
+	if (!metadata->title) metadata->title 	= strdup("[LMS to uPnP]");
+	if (!metadata->album) metadata->album 	= strdup("[no album]");
 	if (!metadata->artist) metadata->artist = strdup("[no artist]");
-	if (!metadata->genre) metadata->genre = strdup("[no genre]");
+	if (!metadata->genre) metadata->genre 	= strdup("[no genre]");
 	/*
 	if (!metadata->path) metadata->path = strdup("[no path]");
 	if (!metadata->artwork) metadata->artwork = strdup("[no artwork]");
@@ -365,15 +370,16 @@ void sq_default_metadata(sq_metadata_t *metadata, bool init)
 
 
 /*--------------------------------------------------------------------------*/
-void sq_update_icy(struct thread_ctx_s *ctx)
+void sq_update_icy(struct out_ctx_s *p)
 {
 	char cmd[1024];
 	char *rsp, *artist, *title, *artwork;
 	u16_t idx;
 	u32_t now = gettime_ms();
+	struct thread_ctx_s *ctx = p->owner;
 
-	if ((now - ctx->icy.last < 5000) || !ctx->icy.interval) return;
-	ctx->icy.last = now;
+	if ((now - p->icy.last < 5000) || !p->icy.interval) return;
+	p->icy.last = now;
 
 	sprintf(cmd, "%s playlist index", ctx->cli_id);
 	rsp = cli_send_cmd(cmd, true, true, ctx);
@@ -387,21 +393,29 @@ void sq_update_icy(struct thread_ctx_s *ctx)
 	idx = atol(rsp);
 	NFREE(rsp);
 
+	sprintf(cmd, "%s playlist path %d", ctx->cli_id, idx);
+	rsp = cli_send_cmd(cmd, true, true, ctx);
+	if (!rsp || hash32(rsp) != p->track_hash) {
+		NFREE(rsp);
+		return;
+	}
+	NFREE(rsp);
+
 	sprintf(cmd, "%s playlist artist %d", ctx->cli_id, idx);
 	artist = cli_send_cmd(cmd, true, true, ctx);
-	if (artist && (!ctx->icy.artist || strcmp(ctx->icy.artist, artist))) {
-		NFREE(ctx->icy.artist);
-		ctx->icy.artist = strdup(artist);
-		ctx->icy.update = true;
+	if (artist && (!p->icy.artist || strcmp(p->icy.artist, artist))) {
+		NFREE(p->icy.artist);
+		p->icy.artist = strdup(artist);
+		p->icy.update = true;
 	}
 	NFREE(artist);
 
 	sprintf(cmd, "%s playlist title %d", ctx->cli_id, idx);
 	title = cli_send_cmd(cmd, true, true, ctx);
-	if (title && (!ctx->icy.title || strcmp(ctx->icy.title, title))) {
-		NFREE(ctx->icy.title);
-		ctx->icy.title = strdup(title);
-		ctx->icy.update = true;
+	if (title && (!p->icy.title || strcmp(p->icy.title, title))) {
+		NFREE(p->icy.title);
+		p->icy.title = strdup(title);
+		p->icy.update = true;
 	}
 	NFREE(title);
 
@@ -411,10 +425,10 @@ void sq_update_icy(struct thread_ctx_s *ctx)
 	else artwork = NULL;
 	NFREE(rsp);
 
-	if (artwork && (!ctx->icy.artwork || strcmp(ctx->icy.artwork, artwork)))  {
-		NFREE(ctx->icy.artwork);
-		ctx->icy.artwork = strdup(artwork);
-		ctx->icy.update = true;
+	if (artwork && (!p->icy.artwork || strcmp(p->icy.artwork, artwork)))  {
+		NFREE(p->icy.artwork);
+		p->icy.artwork = strdup(artwork);
+		p->icy.update = true;
 	}
 	NFREE(artwork);
 }
@@ -460,11 +474,12 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 
 	sprintf(cmd, "%s playlist path %d", ctx->cli_id, idx);
 	metadata->path = cli_send_cmd(cmd, true, true, ctx);
+	metadata->track_hash = hash32(metadata->path);
 
 	sprintf(cmd, "%s playlist remote %d", ctx->cli_id, idx);
 	rsp  = cli_send_cmd(cmd, true, true, ctx);
-	if (rsp && *rsp == '1') ctx->icy.remote = true;
-	else ctx->icy.remote = false;
+	if (rsp && *rsp == '1') metadata->remote = true;
+	else metadata->remote = false;
 	NFREE(rsp)
 
 	sprintf(cmd, "songinfo 0 10 url:%s tags:cfldatgrK", metadata->path);
@@ -599,8 +614,8 @@ void *sq_get_info(const char *urn, s32_t *size, char **content_type, u16_t inter
 		*size = out->file_size;
 		*content_type = p;
 
-		if (thread_ctx[i].icy.remote) thread_ctx[i].icy.interval = interval;
-		else thread_ctx[i].icy.interval = 0;
+		if (out->remote) out->icy.interval = interval;
+		else out->icy.interval = 0;
 
 		return &thread_ctx[i];
 	}
@@ -619,9 +634,9 @@ bool sq_is_remote(const char *urn)
 	for (i = 0; i < MAX_PLAYER; i++) {
 		if (!thread_ctx[i].in_use) continue;
 		if (strstr(urn, thread_ctx[i].out_ctx[0].buf_name))
-			return thread_ctx[i].config.send_icy && thread_ctx[i].icy.remote && !thread_ctx[i].out_ctx[0].duration;
+			return thread_ctx[i].config.send_icy && thread_ctx[i].out_ctx[0].remote && !thread_ctx[i].out_ctx[0].duration;
 		if (strstr(urn, thread_ctx[i].out_ctx[1].buf_name))
-			return thread_ctx[i].config.send_icy && thread_ctx[i].icy.remote && !thread_ctx[i].out_ctx[1].duration;
+			return thread_ctx[i].config.send_icy && thread_ctx[i].out_ctx[1].remote && !thread_ctx[i].out_ctx[1].duration;
 	}
 
 	return true;
@@ -629,17 +644,17 @@ bool sq_is_remote(const char *urn)
 
 
 /*---------------------------------------------------------------------------*/
-void sq_reset_icy(struct thread_ctx_s *ctx, bool init)
+void sq_reset_icy(struct out_ctx_s *p, bool init)
 {
 	if (init) {
-		ctx->icy.last = gettime_ms();
-		ctx->icy.remain = ctx->icy.interval;
-		ctx->icy.update = false;
+		p->icy.last = gettime_ms();
+		p->icy.remain = p->icy.interval;
+		p->icy.update = false;
 	}
 
-	NFREE(ctx->icy.title);
-	NFREE(ctx->icy.artist);
-	NFREE(ctx->icy.artwork);
+	NFREE(p->icy.title);
+	NFREE(p->icy.artist);
+	NFREE(p->icy.artwork);
 }
 
 
@@ -671,7 +686,7 @@ void *sq_open(const char *urn)
 			return NULL;
 		}
 
-		sq_reset_icy(ctx, true);
+		sq_reset_icy(out, true);
 
 		LOCK_S;LOCK_O;
 		if (!out->read_file) {
@@ -716,6 +731,9 @@ void sq_set_sizes(void *desc)
 	div_t duration;
 
 	p->raw_size = p->file_size;
+
+	// if the track is remote and infinite, this is a live stream
+	if (p->remote && !p->duration) return;
 
 	// if not a raw format, then duration and raw size cannot be altered
 	if (strcmp(p->ext, "wav") && strcmp(p->ext, "aif") && strcmp(p->ext, "pcm")) return;
@@ -763,7 +781,7 @@ bool sq_close(void *desc)
 		p->read_count_t -= p->read_count;
 		p->read_count = 0;
 		mutex_unlock(p->mutex);
-		sq_reset_icy(ctx, false);
+		sq_reset_icy(p, false);
 		UNLOCK_S;UNLOCK_O;
 	}
 
@@ -816,7 +834,7 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 		return -1;
 	}
 
-	sq_update_icy(ctx);
+	sq_update_icy(p);
 
 	switch (ctx->config.max_get_bytes) {
 		case 0:
@@ -829,7 +847,7 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 			break;
 	}
 
-	if (ctx->icy.interval) bytes = min(bytes, ctx->icy.remain);
+	if (p->icy.interval) bytes = min(bytes, p->icy.remain);
 
 	wait = ctx->config.max_read_wait;
 	if (ctx->config.mode == SQ_STREAM) {
@@ -865,26 +883,26 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 	p->read_count += read_b;
 	p->read_count_t += read_b;
 
-	if (ctx->icy.interval) {
-		ctx->icy.remain -= read_b;
-		if (!ctx->icy.remain) {
+	if (p->icy.interval) {
+		p->icy.remain -= read_b;
+		if (!p->icy.remain) {
 			u16_t len_16 = 0;
-			char *p = (char *) dst;
+			char *buf = (char *) dst;
 
-			if (ctx->icy.update) {
-				len_16 = sprintf(p + read_b + 1, "StreamTitle='%s - %s';StreamUrl='%s';",
-							(ctx->icy.artist) ? ctx->icy.artist : "",
-							(ctx->icy.title) ? ctx->icy.title : "",
-							(ctx->icy.artwork) ? ctx->icy.artwork : "");
+			if (p->icy.update) {
+				len_16 = sprintf(buf + read_b + 1, "StreamTitle='%s - %s';StreamUrl='%s';",
+							(p->icy.artist) ? p->icy.artist : "",
+							(p->icy.title) ? p->icy.title : "",
+							(p->icy.artwork) ? p->icy.artwork : "");
 
-				LOG_INFO("[%p]: ICY update\n\t%s\n\t%s\n\t%s", ctx, ctx->icy.artist, ctx->icy.title, ctx->icy.artwork);
+				LOG_INFO("[%p]: ICY update\n\t%s\n\t%s\n\t%s", ctx, p->icy.artist, p->icy.title, p->icy.artwork);
 				len_16 = (len_16 + 15) / 16;
 			}
 
-			p[read_b] = len_16;
+			buf[read_b] = len_16;
 			read_b += (len_16 * 16) + 1;
-			ctx->icy.remain = ctx->icy.interval;
-			ctx->icy.update = false;
+			p->icy.remain = p->icy.interval;
+			p->icy.update = false;
 		}
 	}
 
