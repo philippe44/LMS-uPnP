@@ -8,10 +8,11 @@
  - Artwork was not set when LMS server address was not discovered (set in XML config file)
  - Always discover server even if ip:port is set in XML config file
  - Add autoplay to start playing automatically on power on
- - Add DLNA headers to GET response
- - Handle correctly DLNA.ORG_OP header and add Sn bit (growing end) for webradios
- - add <byte_seek> and <time_seek> for DLNA header header (allow player to request seek by bytes and by time on resume)
-  
+ - remove DLNA.ORG_OP field as byte seek and time seek are not supported
+ - <seek_after_pause> now forces a proper 'stop' of the UPnP player
+ - (P) update some strings
+ - (P) add ICY metadata option
+   
 0.2.5.0
  - in XMLFindAndParseService search ends if a service list is empty. It should end only when no service list remains
  - Set HasDigitalOut=0 in capabilities to prevent volume from being set to max and sent to player
