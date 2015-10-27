@@ -64,7 +64,7 @@ struct sService {
 	sq_mode_t	ProcessMode;   		// DIRECT, STREAM, FULL
 	bool		NoZeroVolume;		// prevent volume to be set at 0 between tracks
 	bool		SeekAfterPause;
-	bool		CanPause;			// pause does not work becase seek does not
+	bool		ByteSeek;
 	u16_t		VolumeCorrector;	// not yet
 	bool		Enabled;			//
 	char		Name[SQ_STR_LENGTH];

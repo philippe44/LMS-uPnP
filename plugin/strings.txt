@@ -156,11 +156,24 @@ PLUGIN_UPNPBRIDGE_ACCEPTNEXTURI
 	EN	Player supports gapless 
 
 PLUGIN_UPNPBRIDGE_ACCEPTNEXTURI_DESC
-	EN	Some UPnP players get stuck on the current track on playlist. <b>UNCHECK</b> to solve this (will create an audio gap between tracks)
+	EN	Some players don't support gapless playback and thus don't automatically move to next track in playlist. 
+
+PLUGIN_UPNPBRIDGE_PAUSEMGMT
+	EN	Pause/Resume management
 
 PLUGIN_UPNPBRIDGE_SEEKAFTERPAUSE
-	EN	Stop player on pause
-
+	EN	Force reposition on resume
+	
+PLUGIN_UPNPBRIDGE_BYTESEEK
+	EN	Accept byte seek
+	
+PLUGIN_UPNPBRIDGE_PAUSEMGMT_DESC
+	EN	UPnP players can use different methods to restart from paused position. Best if to have NONE of these checked
+	EN	but if your player does not pause or resume, try in order
+	EN	<br>- 'Force repositon' stops the player and seek to memorized position
+	EN	<br>- 'Byte seek' accepts player's request to re-open track and skip bytes
+	EN	<br>see User Guide for more details (really). 
+		
 PLUGIN_UPNPBRIDGE_SEEKAFTERPAUSE_DESC
 	EN	Some UPnP players do not resume properly after pause. CHECK to have LMS handle the resume on behalf of the player 
 	EN	(this will create a small change in position). This <b>CANNOT</b> work if you have set a password for LMS command access	

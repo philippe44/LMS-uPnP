@@ -640,8 +640,7 @@ p.PreformattedText, li.PreformattedText, div.PreformattedText
 	font-family:"Times New Roman","serif";
 	color:#00000A;}
 .MsoChpDefault
-	{font-size:10.0pt;
-	font-family:"Calibri","sans-serif";}
+	{font-size:10.0pt;}
 .MsoPapDefault
 	{line-height:115%;}
  /* Page Definitions */
@@ -713,14 +712,18 @@ track whilst playing the current one. This is not available on all renderers.</s
 available, nor Smart Transition (fading in and out) or multi-player
 synchronisation.</span></p>
 
-<span lang=EN-GB style='font-size:14.0pt;font-family:"Liberation Sans","sans-serif";
-color:#00000A'><br clear=all style='page-break-before:always'>
-</span>
-
 <h1><u><span lang=EN-GB style='color:black'><span style='text-decoration:none'>&nbsp;</span></span></u></h1>
 
-<h1 style='margin-left:21.6pt;text-indent:-21.6pt'><a
-name="__RefHeading__524_1289253441"></a><span lang=EN-GB>2<span
+<u><span lang=EN-GB style='font-size:12.0pt;line-height:115%;font-family:"Times New Roman","serif";
+color:black'><br clear=all style='page-break-before:always'>
+</span></u>
+
+<p class=MsoNormal style='margin-bottom:0cm;margin-bottom:.0001pt;line-height:
+115%'><a name="__RefHeading__524_1289253441"></a><u><span lang=EN-GB
+style='font-size:14.0pt;line-height:115%;font-family:"Liberation Sans","sans-serif";
+color:black'><span style='text-decoration:none'>&nbsp;</span></span></u></p>
+
+<h1 style='margin-left:21.6pt;text-indent:-21.6pt'><span lang=EN-GB>2<span
 style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span></span><u><span
 lang=EN-GB style='color:black'>UPnP/DLNA bridge Plugin</span></u></h1>
 
@@ -1397,8 +1400,8 @@ when LMS starts up.</span></p>
 style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp; </span></span><span
 lang=EN-GB>Interoperability with UPnP renderer dedicated remote</span></h2>
 
-<p class=MsoNormal><span lang=EN-GB style='color:black'>LMS takes full control of
-the <a name="__DdeLink__4172_2137675401">renderer</a>. In the squeezebox
+<p class=MsoNormal><span lang=EN-GB style='color:black'>LMS takes full control
+of the <a name="__DdeLink__4172_2137675401">renderer</a>. In the squeezebox
 system, Infra Red or other remote control software send LMS commands that are
 then forwarded by LMS to real squeezebox players.</span></p>
 
@@ -1596,10 +1599,9 @@ size (if N is the number of bytes, then content-length: N and content-range:
 lang=EN-GB>&nbsp;</span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
-lang=EN-GB>&lt;stream-length&gt; of -1 is similar to -4, but open-ended
-requests are responded with an HTTP OK response (no content-length) and the
-full file is sent. According to the HTTP standard, it is accepted but not
-recommended.</span></p>
+lang=EN-GB>&lt;stream-length&gt; of -1 is similar to -4, but open-ended requests
+are responded with an HTTP OK response (no content-length) and the full file is
+sent. According to the HTTP standard, it is accepted but not recommended.</span></p>
 
 <p class=MsoListParagraphCxSpLast style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB>&nbsp;</span></p>
@@ -1638,9 +1640,9 @@ and ask sq2u to skip a given number of seconds</span></p>
 lang=EN-GB>&nbsp;</span></p>
 
 <p class=MsoListParagraphCxSpFirst style='margin:0cm;margin-bottom:.0001pt'><span
-lang=EN-GB>Although option 3. seems the easiest, it does not work well with LMS
-for technical reasons beyond the scope of this guide. Currently, sq2u only
-allows option 1. which is normally the best for compatibility with LMS.
+lang=EN-GB>Although option 3 seems the easiest, it does not work well with LMS
+for technical reasons beyond the scope of this guide. Currently, sq2u mainly
+supports option 1 which is normally the best for compatibility with LMS.
 Unfortunately, some renderers do not support it and will not pause (they might
 look like they do as the volume is set to 0 by LMS, but upon resume, the track
 has kept progressing).</span></p>
@@ -1649,21 +1651,51 @@ has kept progressing).</span></p>
 lang=EN-GB>&nbsp;</span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
-lang=EN-GB>With  &lt;seek_after_pause&gt; set, sq2u will stop the player when
-receiving a Pause request from LMS. Upon resume, sq2u will request LMS to
-re-send the track, starting at the memorized paused position. This has the side
-effect that the renderer will not appear to be paused, but will be stopped. Note
-also that the renderer time counter will restart from 0.<span style='background:
-yellow'> If you have disabled usage of metadata or set a password in LMS, this
-will not work</span></span></p>
+lang=EN-GB>As a workaround, use  the &lt;seek_after_pause&gt; option. This will
+cause sq2u to stop the player when receiving a ‘pause’ request from LMS. Upon
+resume, sq2u will request LMS to re-send the track, starting at the memorized
+paused position. This has the side effect that the renderer will not appear to
+be paused, but will be stopped. Note also that the renderer time counter will
+restart from 0.<span style='background:yellow'> If you have disabled usage of
+metadata or set a password in LMS, this will not work</span></span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB>&nbsp;</span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
-lang=EN-GB>Note also that this method will not work with some system like Qobuz
-that do not allow LMS to ‘time seek’ inside a track (try from LMS webUI to
-confirm). With sq2u, the track will restart from the beginning on resume.</span></p>
+lang=EN-GB>Note also that this method will not work with some plugins like
+Qobuz that do not allow LMS to ‘time seek’ inside a track (try from LMS webUI
+to confirm). With sq2u, the track will restart from the beginning on resume.</span></p>
+
+<p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
+lang=EN-GB>&nbsp;</span></p>
+
+<p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
+lang=EN-GB>The option 2 can be used by setting the &lt;byte_seek&gt; option, but
+be aware that it is unlikely to work well for two reasons:</span></p>
+
+<p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
+lang=EN-GB>&nbsp;</span></p>
+
+<p class=MsoListParagraphCxSpMiddle style='margin-bottom:0cm;margin-bottom:
+.0001pt;text-indent:-18.0pt'><span lang=EN-GB style='font-family:Symbol'>·<span
+style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</span></span><span lang=EN-GB>For this option to work properly, the size of
+the whole file should be indicated to the renderer together with metadata. LMS
+does not allow that and the DLNA specifications are a bit unclear to tell if
+size is absolutely mandatory, so different renderers will have a different read
+of the requirement. </span></p>
+
+<p class=MsoListParagraphCxSpMiddle style='margin-bottom:0cm;margin-bottom:
+.0001pt;text-indent:-18.0pt'><span lang=EN-GB style='font-family:Symbol'>·<span
+style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</span></span><span lang=EN-GB>To be able to calculate the number of bytes to
+seek, some renderers require a seekable file to restart playback from a
+‘codec-friendly’ point (flac with seektable, mp3 VBR with seekpoints,  mp3 CBR
+might work), some will simply require to restart from the last received byte –
+it is very <u>renderer and codec</u> dependent, so your mileage will vary a
+lot. Note that &lt;stream_length&gt; value might also change player’s behaviour
+with regard to this option.</span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB>&nbsp;</span></p>
@@ -1685,16 +1717,21 @@ pause). It is guessed at this point that such players (UPnP devices don’t have
 this problem) assume that when ICY metadata is present, they are receiving a
 live stream that cannot be paused. Normally, sq2u allows live (infinite)
 streams to be paused and resumed by buffering the audio and hiding this from
-the player, but using &lt;seek_after_pause&gt; to still benefit from ICY metadata
-and handle pause (other than by muting) will resume at the latest live position
-on resume.</span></p>
+the player, but using &lt;seek_after_pause&gt; to still benefit from ICY
+metadata and handle pause (other than by muting) will resume at the latest live
+position on resume.</span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB>&nbsp;</span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
-lang=EN-GB>It is possible to fully disable ICY metadata usage using the &lt;send_icy&gt;
-parameter</span></p>
+lang=EN-GB>It is possible to fully disable ICY metadata usage using the
+&lt;send_icy&gt; parameter, although the ‘pause’ problem for “TCP stalling
+compliant renderers” will only appear when actual ICY metadata are received.
+Playback of all other files (local or through plugins like Qobuz and YouTube)
+will work normally. ICY metadata are inserted by sq2u only if the track
+duration is 0 (infinite) <u>and</u> LMS indicates the file is remote <u>and</u>
+the renderer has indicated ICY compatibility. </span></p>
 
 <p class=MsoListParagraphCxSpLast style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB>&nbsp;</span></p>
@@ -1726,8 +1763,8 @@ lang=EN-GB>&nbsp;</span></p>
 lang=EN-GB>Each source file format uses a different ‘endianness’ (order of
 bytes of a multi-byte sample) for storing their samples. WAV puts the least
 significant byte first and AIFF puts the most significant first. This ordering
-will be preserved when LMS sends the audio data (again, only the header is stripped
-out).</span></p>
+will be preserved when LMS sends the audio data (again, only the header is
+stripped out).</span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB>&nbsp;</span></p>
@@ -1879,7 +1916,8 @@ default to all UPnP renderers and, for each UPnP renderer discovered, a
 the same parameter in the &lt;common&gt; section. </span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;margin-bottom:.0001pt'><b><span
-lang=EN-GB style='font-size:11.0pt;color:black'>&lt;?xml version=&quot;1.0&quot;?&gt;</span></b></p>
+lang=EN-GB style='font-size:11.0pt;color:black'>&lt;?xml
+version=&quot;1.0&quot;?&gt;</span></b></p>
 
 <p class=MsoNormalCxSpMiddle><b><span lang=EN-GB style='font-size:11.0pt;
 color:black'>&lt;squeeze2upnp&gt;</span></b></p>
@@ -1989,8 +2027,7 @@ color:black'>&lt;stream_log&gt;[error | warn | info | debug |
 sdebug]&lt;/stream_log&gt;</span></b></p>
 
 <p class=MsoNormalCxSpMiddle><b><span lang=EN-GB style='font-size:11.0pt;
-color:black'>&lt;output_log&gt;[error | warn | info | debug |
-sdebug]&lt;/output_log&gt;</span></b></p>
+color:black'>&lt;output_log&gt;[error | warn | info | debug | sdebug]&lt;/output_log&gt;</span></b></p>
 
 <p class=MsoNormalCxSpMiddle><b><span lang=EN-GB style='font-size:11.0pt;
 color:black'>&lt;decode_log&gt;[error | warn | info | debug |
@@ -2037,9 +2074,9 @@ color:black'>&lt;enabled&gt;[0 | 1]&lt;/enabled&gt; </span></b><i><span
 lang=EN-GB style='font-size:11.0pt;color:black'>default = 1</span></i></p>
 
 <p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
-color:black'>‘1’ to automatically add any discovered UPnP renderer to LMS
-players, even if there is no &lt;device&gt; section referring to it. '0' to
-prevent this.</span></i></p>
+color:black'>‘1’ to automatically add any discovered UPnP renderer to LMS players,
+even if there is no &lt;device&gt; section referring to it. '0' to prevent
+this.</span></i></p>
 
 <p class=MsoNormalCxSpMiddle><b><span lang=EN-GB style='font-size:11.0pt;
 color:black'>&nbsp;</span></b></p>
@@ -2083,8 +2120,8 @@ color:black'>&lt;<b>buffer_dir&gt;[? | . | path with /]&lt;/buffer_dir&gt;</b> <
 
 <p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
 color:black'>The Directory where the stream data are buffered. Use '.' for the
-current directory. Use ‘?’ to use system’s default temporary directory. Two files
-are created for each renderer : xx-xx-xx-xx-xx-xx-idx-0 and
+current directory. Use ‘?’ to use system’s default temporary directory. Two
+files are created for each renderer : xx-xx-xx-xx-xx-xx-idx-0 and
 xx-xx-xx-xx-xx-xx-idx-1 where xx-xx-xx-xx-xx-xx is the MAC address of the
 renderer. These files can be as big as the largest file played by LMS (but see
 also &lt;buffer_limit&gt; below). In case of live streams, these file grow
@@ -2143,8 +2180,7 @@ lang=EN-GB style='font-size:11.0pt;color:black'>-2 : chunked transfers, using
 HTTP200 for open-ended range request</span></i></p>
 
 <p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
-color:black'>-3 : chunked transfers (recommended), using HTTP206 for range
-request</span></i></p>
+color:black'>-3 : chunked transfers (recommended), using HTTP206 for range request</span></i></p>
 
 <p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
 color:black'>-4 : transfer up to close, using HTTP206 for open-ended range
@@ -2175,8 +2211,8 @@ lang=EN-GB style='font-size:11.0pt;color:black'> <i>default = 100</i></span></p>
 <p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
 color:black'>When the buffer of data from LMS is empty but more data is
 expected from LMS, this option sets the amount of time in Nx50ms (where value =
-N) that sq2u waits before signalling end of stream to the renderer.  Recommended
-value is 100 (a 5 second wait).</span></i></p>
+N) that sq2u waits before signalling end of stream to the renderer. 
+Recommended value is 100 (a 5 second wait).</span></i></p>
 
 <p class=MsoNormalCxSpMiddle><span lang=EN-GB style='font-size:11.0pt;
 color:black'>&nbsp;</span></p>
@@ -2188,17 +2224,17 @@ color:black'> <i>default = -1</i></span></p>
 
 <p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
 color:black'>Limit the size of a chunk of stream data sent by sq2u to a
-renderer. This helps slowing down internal sq2u buffer consumption and
-preventing overrun, especially with slow networks.</span></i></p>
+renderer. This helps slowing down internal sq2u buffer consumption and preventing
+overrun, especially with slow networks.</span></i></p>
 
 <p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
 color:black'>0 = value “recommended” by LMS</span></i></p>
 
 <p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
-color:black'>-1 = Max sq2u can send (1MB) – recommended</span></i></p>
+color:black'>-1 = Max sq2u can send (1MB)</span></i></p>
 
 <p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
-color:black'>value &gt; 100,000</span></i></p>
+color:black'>value: recommended to be &gt; 100,000</span></i></p>
 
 <p class=MsoNormalCxSpMiddle><span lang=EN-GB style='font-size:11.0pt;
 color:black'>&nbsp;</span></p>
@@ -2221,10 +2257,27 @@ lang=EN-GB style='font-size:11.0pt;color:black'> <i>default = 0</i></span></p>
 color:black'>The best option to pause DLNA players is to “stall” the TCP
 connection. However, some renderers do not support this and will not pause or
 resume. This option transforms the LMS ‘pause’ request into a ‘stop’ command to
-the renderer. Upon ‘resume’, sq2u will issue a ‘reposition’ request to LMS and restart
-the track. This uses the CLI interface to instruct LMS to cue (approximately) to
-the paused position, so if you have a login/password set, it will fail as there
+the renderer. Upon ‘resume’, sq2u will issue a ‘reposition’ request to LMS and
+restart the track. This uses the CLI interface to instruct LMS to cue (approximately)
+to the paused position, so if you have a login/password set, it will fail as there
 is no option today to have sq2u to use a login/password. </span></i></p>
+
+<p class=MsoNormalCxSpMiddle><b><span lang=EN-GB style='font-size:11.0pt;
+color:black'>&nbsp;</span></b></p>
+
+<p class=MsoNormalCxSpMiddle><b><span lang=EN-GB style='font-size:11.0pt;
+color:black'>&lt;byte_seek &gt;[0 | 1]&lt;/byte_seek&gt;</span></b><span
+lang=EN-GB style='font-size:11.0pt;color:black'> <i>default = 0</i></span></p>
+
+<p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
+color:black'>If the “stall TCP connection” method does not work for pausing and
+if the &lt;seek_after_pause&gt; method is not preferred, it is possible to
+indicate to the renderer that sq2u accepts to ‘seek’ over a given number of
+bytes when re-opening a connection. For this to work correctly, most DLNA
+renderers require to know the expected file size and such information is not
+provided by LMS. The actual result will then vary a lot depending on renderer,
+depending on the track format (is it seekable: flac with seektable, mp3 CBR or
+VBR with seekpoints) and depending on &lt;stream_length&gt;setting. </span></i></p>
 
 <p class=MsoNormalCxSpMiddle><span lang=EN-GB style='font-size:11.0pt;
 color:black'>&nbsp;</span></p>
@@ -2333,9 +2386,9 @@ resampling rules. Note that sq2u itself does no resampling.</span></i></p>
 <p class=MsoNormalCxSpMiddle><span lang=EN-GB style='font-size:11.0pt;
 color:black'>&nbsp;</span></p>
 
-<p class=MsoNormalCxSpMiddle><b><span lang=EN-US style='font-size:11.0pt'>&lt;L24_format&gt;[0
-| 1 | 2]&lt;/L24_format&gt;</span></b><span lang=EN-US style='font-size:11.0pt'>
-<i>default = 1</i></span></p>
+<p class=MsoNormalCxSpMiddle><b><span style='font-size:11.0pt'>&lt;L24_format&gt;[0
+| 1 | 2]&lt;/L24_format&gt;</span></b><span style='font-size:11.0pt'> <i>default
+= 1</i></span></p>
 
 <p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
 color:black'>Defines what kind of 24 bits sample the renderer can handle. </span></i></p>
@@ -2399,8 +2452,8 @@ lang=EN-GB style='font-size:11.0pt;color:black'> <i>default = 1</i></span></p>
 color:black'>When repositioning flac streams, LMS re-generates a file starting
 from the new position but does not insert a proper header . Such header is
 required by some players and it contains information like total number of
-samples in the file and a checksum of the decoded audio data. Sq2u cannot know these
-values but the flac standard specifies that they should then be set to 0.</span></i></p>
+samples in the file and a checksum of the decoded audio data. Sq2u cannot know
+these values but the flac standard specifies that they should then be set to 0.</span></i></p>
 
 <p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
 color:black'>0 : no header re-inserted</span></i></p>
@@ -2435,8 +2488,8 @@ lang=EN-GB style='font-size:11.0pt;color:black'> <i>default = 1</i></span></p>
 
 <p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
 color:black'>If you do not want to see coverert on your renderer, or if you
-have a login and password for the LMS CLI interface, set this to 0.  Version 0.2.5.0
-on.</span></i></p>
+have a login and password for the LMS CLI interface, set this to 0.  Version
+0.2.5.0 on.</span></i></p>
 
 <p class=MsoNormalCxSpMiddle><span lang=EN-GB style='font-size:11.0pt;
 color:black'>&nbsp;</span></p>
@@ -2557,8 +2610,7 @@ style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp; </span></span><span
 lang=EN-GB>Example Configuration File</span></h2>
 
 <p class=MsoNormal style='margin-bottom:0cm;margin-bottom:.0001pt'><span
-lang=EN-GB style='font-size:10.0pt;color:black'>&lt;?xml
-version=&quot;1.0&quot;?&gt;</span></p>
+lang=EN-GB style='font-size:10.0pt;color:black'>&lt;?xml version=&quot;1.0&quot;?&gt;</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB style='font-size:10.0pt;color:black'>&lt;squeeze2upnp&gt;</span></p>
@@ -2663,6 +2715,9 @@ style='font-size:10.0pt;color:black'>&lt;flac_header&gt;1&lt;/flac_header&gt;</s
 style='font-size:10.0pt;color:black'>&lt;seek_after_pause&gt;0&lt;/seek_after_pause&gt;</span></p>
 
 <p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span lang=EN-GB
+style='font-size:10.0pt;color:black'>&lt;byte_seek &gt;0&lt;/byte_seek &gt;</span></p>
+
+<p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span lang=EN-GB
 style='font-size:10.0pt;color:black'>&lt;force_volume&gt;1&lt;/force_volume&gt;</span></p>
 
 <p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span lang=EN-GB
@@ -2733,18 +2788,18 @@ PLAY:3&lt;/name&gt;</span></p>
 <p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span lang=EN-GB
 style='font-size:10.0pt;color:black'>&lt;enabled&gt;1&lt;/enabled&gt;</span></p>
 
-<p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span style='font-size:
-10.0pt'>&lt;codecs&gt;flc,mp3&lt;/codecs&gt;</span></p>
+<p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span lang=EN-US
+style='font-size:10.0pt'>&lt;codecs&gt;flc,mp3&lt;/codecs&gt;</span></p>
 
 <p class=MsoNormalCxSpMiddle><span class=block><span style='font-size:10.0pt;
 color:black'>&lt;/device&gt;</span></span></p>
 
 <p class=MsoNormalCxSpMiddle><span style='font-size:10.0pt;color:black'>&nbsp;</span></p>
 
-<p class=MsoNormalCxSpMiddle><span lang=EN-US style='font-size:10.0pt'>&lt;device&gt;</span></p>
+<p class=MsoNormalCxSpMiddle><span style='font-size:10.0pt'>&lt;device&gt;</span></p>
 
-<p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span lang=EN-US
-style='font-size:10.0pt'>&lt;udn&gt;uuid:RINCON_000E58C3F67C01400&lt;/udn&gt;</span></p>
+<p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span style='font-size:
+10.0pt'>&lt;udn&gt;uuid:RINCON_000E58C3F67C01400&lt;/udn&gt;</span></p>
 
 <p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span lang=EN-GB
 style='font-size:10.0pt;color:black'>&lt;name&gt;192.168.2.22 - Sonos
@@ -2753,8 +2808,8 @@ PLAY:1&lt;/name&gt;</span></p>
 <p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span lang=EN-GB
 style='font-size:10.0pt;color:black'>&lt;enabled&gt;1&lt;/enabled&gt;</span></p>
 
-<p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span lang=EN-US
-style='font-size:10.0pt'>&lt;codecs&gt;flc,mp3&lt;/codecs&gt;</span></p>
+<p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span style='font-size:
+10.0pt'>&lt;codecs&gt;flc,mp3&lt;/codecs&gt;</span></p>
 
 <p class=MsoNormalCxSpMiddle><span class=block><span style='font-size:10.0pt;
 color:black'>&lt;/device&gt;</span></span></p>

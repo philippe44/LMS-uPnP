@@ -25,10 +25,11 @@
 #include "util_common.h"
 
 struct sq_metadata_s;
+struct sMRConfig;
 
 void AVTInit(log_level level);
-int AVTSetURI(char *ControlURL, char *URI, char *ProtocolInfo, struct sq_metadata_s *MetaData, void *Cookie);
-int AVTSetNextURI(char *ControlURL, char *URI, char *ProtocolInfo, struct sq_metadata_s *MetaData, void *Cookie);
+int AVTSetURI(char *ControlURL, char *URI, char *ProtocolInfo, struct sq_metadata_s *MetaData, struct sMRConfig *Config, void *Cookie);
+int AVTSetNextURI(char *ControlURL, char *URI, char *ProtocolInfo, struct sq_metadata_s *MetaData, struct sMRConfig *Config, void *Cookie);
 int AVTCallAction(char *ControlURL, char *Var, void *Cookie);
 int AVTPlay(char *ControlURL, void *Cookie);
 int AVTSetPlayMode(char *ControlURL, void *Cookie);

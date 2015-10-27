@@ -105,7 +105,7 @@ static char DLNA_OPT[] = ";DLNA.ORG_OP=01;DLNA.ORG_FLAGS=01700000000000000000000
 */
 
 static log_level loglevel;
-static char *CreateDIDL(char *URI, char *ProtInfo, struct sq_metadata_s *MetaData);
+static char *CreateDIDL(char *URI, char *ProtInfo, struct sq_metadata_s *MetaData, struct sMRConfig *Config);
 
 /*----------------------------------------------------------------------------*/
 void AVTInit(log_level level)
@@ -114,13 +114,13 @@ void AVTInit(log_level level)
 }
 
 /*----------------------------------------------------------------------------*/
-int AVTSetURI(char *ControlURL, char *URI, char *ProtInfo, struct sq_metadata_s *MetaData, void *Cookie)
+int AVTSetURI(char *ControlURL, char *URI, char *ProtInfo, struct sq_metadata_s *MetaData, struct sMRConfig *Config, void *Cookie)
 {
 	IXML_Document *ActionNode = NULL;
 	int rc;
 	char *DIDLData;
 
-	DIDLData = CreateDIDL(URI, ProtInfo, MetaData);
+	DIDLData = CreateDIDL(URI, ProtInfo, MetaData, Config);
 	LOG_DEBUG("DIDL header: %s", DIDLData);
 
 	LOG_INFO("uPNP setURI %s for %s (cookie %p)", URI, ControlURL, Cookie);
@@ -143,13 +143,13 @@ int AVTSetURI(char *ControlURL, char *URI, char *ProtInfo, struct sq_metadata_s 
 }
 
 /*----------------------------------------------------------------------------*/
-int AVTSetNextURI(char *ControlURL, char *URI, char *ProtInfo, struct sq_metadata_s *MetaData, void *Cookie)
+int AVTSetNextURI(char *ControlURL, char *URI, char *ProtInfo, struct sq_metadata_s *MetaData, struct sMRConfig *Config, void *Cookie)
 {
 	IXML_Document *ActionNode = NULL;
 	int rc;
 	char *DIDLData;
 
-	DIDLData = CreateDIDL(URI, ProtInfo, MetaData);
+	DIDLData = CreateDIDL(URI, ProtInfo, MetaData, Config);
 	LOG_DEBUG("DIDL header: %s", DIDLData);
 
 	LOG_INFO("uPNP setNextURI %s for %s (cookie %p)", URI, ControlURL, Cookie);
@@ -361,7 +361,7 @@ int AVTBasic(char *ControlURL, char *Action, void *Cookie)
 
 
 /*----------------------------------------------------------------------------*/
-char *CreateDIDL(char *URI, char *ProtInfo, struct sq_metadata_s *MetaData)
+char *CreateDIDL(char *URI, char *ProtInfo, struct sq_metadata_s *MetaData, struct sMRConfig *Config)
 {
 	char *s;
 	u32_t Sinc = 0;
@@ -402,8 +402,12 @@ int AVTBasic(char *ControlURL, char *Action, void *Cookie)
 	}
 	else Sinc = DLNA_ORG_FLAG_SN_INCREASE;
 
-	sprintf(DLNAOpt, ";DLNA.ORG_CI=0;DLNA.ORG_FLAGS=%08x000000000000000000000000",
-					  DLNA_ORG_FLAG | Sinc);
+	if (Config->ByteSeek)
+		sprintf(DLNAOpt, ";DLNA.ORG_OP=01;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=%08x000000000000000000000000",
+						  DLNA_ORG_FLAG | Sinc);
+	else
+		sprintf(DLNAOpt, ";DLNA.ORG_CI=0;DLNA.ORG_FLAGS=%08x000000000000000000000000",
+						  DLNA_ORG_FLAG | Sinc);
 
 	if (ProtInfo[strlen(ProtInfo) - 1] == ':')
 		XMLAddAttribute(doc, node, "protocolInfo", "%s%s", ProtInfo, DLNAOpt + 1);

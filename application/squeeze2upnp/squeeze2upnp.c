@@ -66,7 +66,7 @@ tMRConfig			glMRConfig = {
 							SQ_STREAM,
 							false,
 							false,
-							true,
+							false,
 							0,
 							true,
 							"",
@@ -332,7 +332,7 @@ static int	uPNPTerminate(void);
 
 			if (device->Config.AcceptNextURI){
 				AVTSetNextURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info,
-							  &device->NextMetaData, device->seqN++);
+							  &device->NextMetaData, &device->Config, device->seqN++);
 				sq_free_metadata(&device->NextMetaData);
 			}
 
@@ -373,7 +373,8 @@ static int	uPNPTerminate(void);
 			p->track_hash	= MetaData.track_hash;
 			if (!device->Config.SendCoverArt) NFREE(MetaData.artwork);
 
-			AVTSetURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info, &MetaData, device->seqN++);
+			AVTSetURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info,
+			          &MetaData, &device->Config, device->seqN++);
 			sq_free_metadata(&MetaData);
 
 			device->CurrentURI = (char*) malloc(strlen(uri) + 1);
@@ -489,7 +490,7 @@ void SyncNotifState(char *State, struct sMR* Device)
 					NFREE(Device->NextURI);
 
 					AVTSetURI(Device->Service[AVT_SRV_IDX].ControlURL, Device->CurrentURI,
-							  Device->NextProtInfo, &Device->NextMetaData, WaitFor);
+							  Device->NextProtInfo, &Device->NextMetaData, &Device->Config, WaitFor);
 					sq_free_metadata(&Device->NextMetaData);
 
 					/*

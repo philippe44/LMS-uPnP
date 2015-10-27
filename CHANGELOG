@@ -10,9 +10,12 @@
  - Add autoplay to start playing automatically on power on
  - remove DLNA.ORG_OP field as byte seek and time seek are not supported
  - <seek_after_pause> now forces a proper 'stop' of the UPnP player
+ - add <byte_seek> option to authorize players to close/re-opne connection on pause and seek in byte
  - (P) update some strings
  - (P) add ICY metadata option
  - (P) set log lines to 1000
+ - (P) add byte_seek option
+ - (P) some comment/help cleaning
    
 0.2.5.0
  - in XMLFindAndParseService search ends if a service list is empty. It should end only when no service list remains

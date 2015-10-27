@@ -498,6 +498,7 @@ void SaveConfig(char *name, void *ref, bool full)
 		XMLAddNode(doc, common, "L24_format", "%d", (int) glDeviceParam.L24_format);
 		XMLAddNode(doc, common, "flac_header", "%d", (int) glDeviceParam.flac_header);
 		XMLAddNode(doc, common, "seek_after_pause", "%d", (int) glMRConfig.SeekAfterPause);
+		XMLAddNode(doc, common, "byte_seek", "%d", (int) glMRConfig.ByteSeek);
 		XMLAddNode(doc, common, "send_icy", "%d", (int) glDeviceParam.send_icy);
 		XMLAddNode(doc, common, "force_volume", "%d", (int) glMRConfig.ForceVolume);
 		XMLAddNode(doc, common, "volume_on_play", "%d", (int) glMRConfig.VolumeOnPlay);
@@ -583,6 +584,7 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "raw_audio_format")) strcpy(Conf->RawAudioFormat, val);
 	if (!strcmp(name, "match_endianness")) Conf->MatchEndianness = atol(val);
 	if (!strcmp(name, "seek_after_pause")) Conf->SeekAfterPause = atol(val);
+	if (!strcmp(name, "byte_seek")) Conf->ByteSeek = atol(val);
 	if (!strcmp(name, "force_volume")) Conf->ForceVolume = atol(val);
 	if (!strcmp(name, "volume_on_play")) Conf->VolumeOnPlay = atol(val);
 	if (!strcmp(name, "max_volume")) Conf->MaxVolume = atol(val);
