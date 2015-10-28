@@ -380,27 +380,32 @@ int AVTBasic(char *ControlURL, char *Action, void *Cookie)
 	XMLAddAttribute(doc, node, "id", "1");
 	XMLAddAttribute(doc, node, "parentID", "0");
 	XMLAddAttribute(doc, node, "restricted", "1");
-
 	XMLAddNode(doc, node, "dc:title", MetaData->title);
 	XMLAddNode(doc, node, "dc:creator", MetaData->artist);
-	XMLAddNode(doc, node, "upnp:artist", MetaData->artist);
-	XMLAddNode(doc, node, "upnp:album", MetaData->album);
+	XMLAddNode(doc, node, "upnp:genre", MetaData->genre);
+
 	if (MetaData->artwork)
 		XMLAddNode(doc, node, "upnp:albumArtURI", "%s", MetaData->artwork);
-	XMLAddNode(doc, node, "upnp:genre", MetaData->genre);
-	XMLAddNode(doc, node, "upnp:originalTrackNumber", "%d", MetaData->track);
-	XMLAddNode(doc, node, "upnp:class", "object.item.audioItem.musicTrack", NULL);
-
-	node = XMLAddNode(doc, node, "res", URI);
 
 	if (MetaData->duration) {
 		div_t duration 	= div(MetaData->duration, 1000);
 
+		XMLAddNode(doc, node, "upnp:artist", MetaData->artist);
+		XMLAddNode(doc, node, "upnp:album", MetaData->album);
+		XMLAddNode(doc, node, "upnp:originalTrackNumber", "%d", MetaData->track);
+		XMLAddNode(doc, node, "upnp:class", "object.item.audioItem.musicTrack");
+		node = XMLAddNode(doc, node, "res", URI);
 		XMLAddAttribute(doc, node, "duration", "%1d:%02d:%02d.%03d",
 						duration.quot/3600, (duration.quot % 3600) / 60,
 						duration.quot % 60, duration.rem);
 	}
-	else Sinc = DLNA_ORG_FLAG_SN_INCREASE;
+	else {
+		Sinc = DLNA_ORG_FLAG_SN_INCREASE;
+		XMLAddNode(doc, node, "upnp:channelName", MetaData->artist);
+		XMLAddNode(doc, node, "upnp:channelNr", "%d", MetaData->track);
+		XMLAddNode(doc, node, "upnp:class", "object.item.audioItem.audioBroadcast");
+		node = XMLAddNode(doc, node, "res", URI);
+	}
 
 	if (Config->ByteSeek)
 		sprintf(DLNAOpt, ";DLNA.ORG_OP=01;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=%08x000000000000000000000000",

@@ -270,7 +270,7 @@ static char *cli_decode(char *str) {
 	}
 
 	if (!wait) {
-		LOG_WARN("[%p]: Timeout waiting for CLI reponse (%s)", ctx, req);
+		LOG_WARN("[%p]: Timeout waiting for CLI reponse (%s)", ctx, cmd);
 	}
 
 	if (rsp) {
