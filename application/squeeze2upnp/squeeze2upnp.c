@@ -387,6 +387,7 @@ static int	uPNPTerminate(void);
 			if (device->Config.SeekAfterPause) {
 				u32_t PausedTime = sq_get_time(device->SqueezeHandle);
 				sq_set_time(device->SqueezeHandle, PausedTime);
+				break;
 			}
 			if (device->CurrentURI) {
 				QueueAction(handle, caller, action, cookie, param, false);
@@ -519,7 +520,7 @@ void SyncNotifState(char *State, struct sMR* Device)
 		}
 
 		Device->State = STOPPED;
-		Device->ReportStop = false;
+		Device->ReportStop = true;
 	}
 
 	if (!strcmp(State, "PLAYING")) {
