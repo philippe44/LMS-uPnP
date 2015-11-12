@@ -999,8 +999,8 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 		case SQ_TIME: {
 			int time = *((unsigned*) param);
 
-			LOG_DEBUG("[%p] time %d %d", ctx, ctx->ms_played, time*1000);
-			ctx->ms_played = time * 1000;
+			LOG_DEBUG("[%p] time %d %d", ctx, ctx->ms_played, time);
+			ctx->ms_played = time;
 			break;
 		}
 		case SQ_TRACK_CHANGE:

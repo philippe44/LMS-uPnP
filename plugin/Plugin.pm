@@ -34,8 +34,8 @@ sub initPlugin {
 	if (!$::noweb) {
 		require Plugins::UPnPBridge::Settings;
 		Plugins::UPnPBridge::Settings->new;
-		Slim::Web::Pages->addPageFunction("^upnpbridge.log", \&Plugins::UPnPBridge::Squeeze2upnp::logHandler);
-		Slim::Web::Pages->addPageFunction("^configuration.xml", \&Plugins::UPnPBridge::Squeeze2upnp::configHandler);
+		Slim::Web::Pages->addPageFunction("^upnpbridge-log.log", \&Plugins::UPnPBridge::Squeeze2upnp::logHandler);
+		Slim::Web::Pages->addPageFunction("^upnpbridge-config.xml", \&Plugins::UPnPBridge::Squeeze2upnp::configHandler);
 		Slim::Web::Pages->addPageFunction("userguide.htm", \&Plugins::UPnPBridge::Squeeze2upnp::guideHandler);
 	}
 	

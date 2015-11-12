@@ -2,7 +2,7 @@ PLUGIN_UPNPBRIDGE
 	EN	UPnP/DLNA bridge
 
 PLUGIN_UPNPBRIDGE_DESC
-	EN	Makes UPnP/DLNA players become LMS devices (using squeezelite)
+	EN	Use UPnP/DLNA players in LMS 
 	
 PLUGIN_UPNPBRIDGE_YES
 	EN	Yes

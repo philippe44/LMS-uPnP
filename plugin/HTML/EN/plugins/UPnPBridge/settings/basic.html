@@ -43,7 +43,7 @@
 	[% END %]
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_LOGGING" desc="PLUGIN_UPNPBRIDGE_LOGGING_DESC" %]
 		<input name="logging" type="checkbox" [% IF logging %] checked [% END %]>&nbsp[% "PLUGIN_UPNPBRIDGE_LOGENABLE" | string %]
-		&nbsp<a href="/upnpbridge.log" target="log">[% "PLUGIN_UPNPBRIDGE_LOGLINK" | string %]</a>
+		&nbsp<a href="/upnpbridge-log.log" target="log">[% "PLUGIN_UPNPBRIDGE_LOGLINK" | string %]</a>
 		&nbsp[% "PLUGIN_UPNPBRIDGE_LOGSIZE" | string %]&nbsp<input type="text" class="stdedit" name="log_limit" id="log_limit" value="[% log_limit %]" size="2"> 
 		&nbsp<input name="eraselog" type="checkbox" [% IF eraselog %] checked [% END %]>&nbsp[% "PLUGIN_UPNPBRIDGE_ERASELOG" | string %]
 		&nbsp<input name="cleanlog" type="submit" value=[% "PLUGIN_UPNPBRIDGE_CLEANLOG" | string %]> 
@@ -51,7 +51,7 @@
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_CONFIG" desc="PLUGIN_UPNPBRIDGE_CONFIG_DESC" %]
 		[% configpath %]
 		<input type="text" class="stdedit" name="configfile" id="configfile" value="[% configfile %]" size="20">
-		<a href="/configuration.xml" target="config">[% "PLUGIN_UPNPBRIDGE_CONFLINK" | string %]</a>
+		<a href="/upnpbridge-config.xml" target="config">[% "PLUGIN_UPNPBRIDGE_CONFLINK" | string %]</a>
 		&nbsp&nbsp<input name="autosave" type="checkbox" [% IF autosave %] checked [% END %]>[% "PLUGIN_UPNPBRIDGE_AUTOSAVECONFIG" | string %]
 		[% IF binary %]
 			&nbsp<input name="genconfig" type="submit" onclick="alert('generating configuration will take ~30 seconds')" value=[% "PLUGIN_UPNPBRIDGE_GENCONFIG" | string %]>

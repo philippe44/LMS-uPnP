@@ -72,14 +72,12 @@ typedef struct sq_log_level_s {		// must be one of lERROR, lINFO, lDEBUG or lSDE
 
 typedef struct
 {
-	char	urn[SQ_STR_LENGTH];
-	char	ip[16];
-	unsigned port;
+	char	name[SQ_STR_LENGTH];
+	char	ext[5];
 	u8_t	channels;
 	u8_t	sample_size;
 	u32_t	sample_rate;
 	u8_t	endianness;
-	char	ext[5];
 	u8_t	src_format;
 	u8_t	codec;
 	u32_t	duration;

@@ -298,6 +298,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 	case 's':
 		{
 			sq_seturi_t	uri;
+			bool rc;
 			unsigned header_len = len - sizeof(struct strm_packet);
 			char *header = (char *)(pkt + sizeof(struct strm_packet));
 			in_addr_t ip = (in_addr_t)strm->server_ip; // keep in network byte order
@@ -337,8 +338,6 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 
 				// stream is proxied and then forwared to the renderer
 				stream_sock(ip, port, header, header_len, strm->threshold * 1024, ctx->autostart >= 2, ctx);
-				uri.port = 0;
-				strcpy(uri.ip, "");
 
 				LOCK_S;LOCK_O;
 
@@ -367,30 +366,23 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 				ctx->out_ctx[idx].endianness = uri.endianness;
 				ctx->out_ctx[idx].channels = uri.channels;
 				ctx->out_ctx[idx].codec = uri.codec;
+				strcpy(uri.name, ctx->out_ctx[idx].buf_name);
 
-				/*
-				this set the content_type and the proto_info. it is made in
-				the "upnp domain" for clarity, although it requires this
-				ackward 2 steps setup
-				*/
-				if (ctx_callback(ctx, SQ_SETFORMAT, NULL, &uri)) {
+				if (ctx->play_running || ctx->track_status != TRACK_STOPPED) {
+					rc = ctx_callback(ctx, SQ_SETNEXTURI, NULL, &uri);
+				}
+				else {
+					rc = ctx_callback(ctx, SQ_SETURI, NULL, &uri);
+					ctx->track_ended = false;
+					ctx->track_status = TRACK_STOPPED;
+					ctx->track_new = true;
+					ctx->status.ms_played = ctx->ms_played = 0;
+					ctx->read_to = ctx->read_ended = false;
+				}
+
+				if (rc) {
 					strcpy(ctx->out_ctx[idx].content_type, uri.content_type);
 					strcpy(ctx->out_ctx[idx].ext, uri.ext);
-					strcpy(uri.urn, ctx->out_ctx[idx].buf_name);
-					strcat(uri.urn, ".");
-					strcat(uri.urn, ctx->out_ctx[idx].ext);
-					if (ctx->play_running || ctx->track_status != TRACK_STOPPED) {
-						ctx_callback(ctx, SQ_SETNEXTURI, NULL, &uri);
-					}
-					else {
-						ctx_callback(ctx, SQ_SETURI, NULL, &uri);
-						ctx->track_ended = false;
-						ctx->track_status = TRACK_STOPPED;
-						ctx->track_new = true;
-						ctx->status.ms_played = ctx->ms_played = 0;
-						ctx->read_to = ctx->read_ended = false;
-					}
-					LOG_INFO("[%p] URI proxied by SQ2MR : %s", ctx, uri.urn);
 					ctx->out_ctx[idx].file_size = uri.file_size;
 					ctx->out_ctx[idx].duration = uri.duration;
 					ctx->out_ctx[idx].src_format = uri.src_format;

@@ -96,8 +96,8 @@ struct sMR {
 	enum eMRstate 	State;
 	char			*CurrentURI;
 	char			*NextURI;
-	char			NextProtInfo[SQ_STR_LENGTH];		// a bit patchy ... used for faulty NEXTURI players
-	sq_metadata_t	NextMetaData;
+	char			ProtInfo[SQ_STR_LENGTH];		// a bit patchy ... used for faulty NEXTURI players
+	sq_metadata_t	MetaData;
 	sq_action_t		sqState;
 	bool			ReportStop;
 	u32_t			Elapsed;

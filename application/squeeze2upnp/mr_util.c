@@ -300,7 +300,10 @@ void DelMRDevice(struct sMR *p)
 
 	ithread_mutex_lock(&p->Mutex);
 	p->Running = false;
+	ithread_mutex_unlock(&p->Mutex);
 	ithread_join(p->Thread, NULL);
+
+	ithread_mutex_lock(&p->Mutex);
 	p->InUse = false;
 
 	FlushActionList(p);

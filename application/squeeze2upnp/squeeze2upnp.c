@@ -290,96 +290,66 @@ static int	uPNPTerminate(void);
 
 	switch (action) {
 
-		case SQ_SETFORMAT: {
+		case SQ_SETURI:
+		case SQ_SETNEXTURI: {
 			sq_seturi_t *p = (sq_seturi_t*) param;
+			char uri[SQ_STR_LENGTH];
 
 			LOG_INFO("[%p]: codec:%c, ch:%d, s:%d, r:%d", device, p->codec,
 										p->channels, p->sample_size, p->sample_rate);
-			if (!SetContentType(device, param)) {
+
+			if (!SetContentType(device, p)) {
 				LOG_ERROR("[%p]: no matching codec in player", caller);
 				rc = false;
+				break;
 			}
-			break;
-		}
-		case SQ_SETNEXTURI: {
-			char uri[RESOURCE_LENGTH];
-			sq_seturi_t *p = (sq_seturi_t*) param;
 
-			// if port and/or ip are 0 or "", means that the CP@ shall be used
-			if (p->port)
-				sprintf(uri, "http://%s:%d/%s", p->ip, p->port, p->urn);
-			else
-				sprintf(uri, "http://%s:%d/%s/%s", glIPaddress, glPort, glBaseVDIR, p->urn);
-
-			NFREE(device->NextURI);
+			sprintf(uri, "http://%s:%d/%s/%s.%s", glIPaddress, glPort, glBaseVDIR, p->name, p->ext);
 
 			if (device->Config.SendMetaData) {
-				sq_get_metadata(device->SqueezeHandle, &device->NextMetaData, true);
-				p->file_size = device->NextMetaData.file_size ?
-							   device->NextMetaData.file_size : device->Config.StreamLength;
+				sq_get_metadata(device->SqueezeHandle, &device->MetaData, true);
+				p->file_size = device->MetaData.file_size ?
+							   device->MetaData.file_size : device->Config.StreamLength;
 			}
 			else {
-				sq_default_metadata(&device->NextMetaData, true);
+				sq_default_metadata(&device->MetaData, true);
 				p->file_size = device->Config.StreamLength;
 			}
 
-			strcpy(device->NextProtInfo, p->proto_info);
-			p->duration 	= device->NextMetaData.duration;
-			p->src_format 	= ext2format(device->NextMetaData.path);
-			p->remote 		= device->NextMetaData.remote;
-			p->track_hash	= device->NextMetaData.track_hash;
-			if (!device->Config.SendCoverArt) NFREE(device->NextMetaData.artwork);
+			p->duration 	= device->MetaData.duration;
+			p->src_format 	= ext2format(device->MetaData.path);
+			p->remote 		= device->MetaData.remote;
+			p->track_hash	= device->MetaData.track_hash;
+			if (!device->Config.SendCoverArt) NFREE(device->MetaData.artwork);
 
-			if (device->Config.AcceptNextURI){
-				AVTSetNextURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info,
-							  &device->NextMetaData, &device->Config, device->seqN++);
-				sq_free_metadata(&device->NextMetaData);
-			}
+			if (action == SQ_SETNEXTURI) {
+				NFREE(device->NextURI);
+				strcpy(device->ProtInfo, p->proto_info);
 
-			// to know what is expected next
-			device->NextURI = (char*) malloc(strlen(uri) + 1);
-			strcpy(device->NextURI, uri);
-			LOG_INFO("[%p]: next URI set %s", device, device->NextURI);
-			break;
-		}
-		case SQ_SETURI:	{
-			char uri[RESOURCE_LENGTH];
-			sq_seturi_t *p = (sq_seturi_t*) param;
-			sq_metadata_t MetaData;
+				if (device->Config.AcceptNextURI){
+					AVTSetNextURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info,
+								  &device->MetaData, &device->Config, device->seqN++);
+					sq_free_metadata(&device->MetaData);
+				}
 
-			// if port and/or ip are 0 or "", means that the CP@ shall be used
-			if (p->port)
-				sprintf(uri, "http://%s:%d/%s", p->ip, p->port, p->urn);
-			else
-				sprintf(uri, "http://%s:%d/%s/%s", glIPaddress, glPort, glBaseVDIR, p->urn);
-
-			// to detect properly transition
-			NFREE(device->CurrentURI);
-			// check side effect of this
-			NFREE(device->NextURI);
-			// end check
-
-			if (device->Config.SendMetaData) {
-				sq_get_metadata(device->SqueezeHandle, &MetaData, false);
-				p->file_size = MetaData.file_size ? MetaData.file_size : device->Config.StreamLength;
+				// to know what is expected next
+				device->NextURI = (char*) malloc(strlen(uri) + 1);
+				strcpy(device->NextURI, uri);
+				LOG_INFO("[%p]: next URI set %s", device, device->NextURI);
 			}
 			else {
-				sq_default_metadata(&MetaData, true);
-				p->file_size = device->Config.StreamLength;
+				// to detect properly transition
+				NFREE(device->CurrentURI);
+				NFREE(device->NextURI);
+
+				AVTSetURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info,
+						  &device->MetaData, &device->Config, device->seqN++);
+				sq_free_metadata(&device->MetaData);
+
+				device->CurrentURI = (char*) malloc(strlen(uri) + 1);
+				strcpy(device->CurrentURI, uri);
+				LOG_INFO("[%p]: current URI set %s", device, device->CurrentURI);
 			}
-			p->duration 	= MetaData.duration;
-			p->src_format 	= ext2format(MetaData.path);
-			p->remote 		= MetaData.remote;
-			p->track_hash	= MetaData.track_hash;
-			if (!device->Config.SendCoverArt) NFREE(MetaData.artwork);
-
-			AVTSetURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info,
-			          &MetaData, &device->Config, device->seqN++);
-			sq_free_metadata(&MetaData);
-
-			device->CurrentURI = (char*) malloc(strlen(uri) + 1);
-			strcpy(device->CurrentURI, uri);
-			LOG_INFO("[%p]: current URI set %s", device, device->CurrentURI);
 
 			break;
 		}
@@ -491,8 +461,8 @@ void SyncNotifState(char *State, struct sMR* Device)
 					NFREE(Device->NextURI);
 
 					AVTSetURI(Device->Service[AVT_SRV_IDX].ControlURL, Device->CurrentURI,
-							  Device->NextProtInfo, &Device->NextMetaData, &Device->Config, WaitFor);
-					sq_free_metadata(&Device->NextMetaData);
+							  Device->ProtInfo, &Device->MetaData, &Device->Config, WaitFor);
+					sq_free_metadata(&Device->MetaData);
 
 					/*
 					Need to queue to wait for the SetURI to be accepted, otherwise
@@ -701,7 +671,7 @@ int CallbackActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 			// time position response
 			r = XMLGetFirstDocumentItem(Action->ActionResult, "RelTime");
 			if (r) {
-				p->Elapsed = Time2Int(r);
+				p->Elapsed = 1000L * Time2Int(r);
 				LOG_SDEBUG("[%p]: position %d (cookie %p)", p, p->Elapsed, Cookie);
 				// discard any time info unless we are confirmed playing
 				if (p->State == PLAYING)
@@ -1090,15 +1060,6 @@ static void *MRThread(void *args)
 			last = gettime_ms();
 			continue;
 		}
-
-		// use volume as a 'keep alive' function
-		/*
-		p->MetaDataPoll += elapsed;
-		if (p->State == PLAYING && p->MetaDataPoll > METADATA_POLL) {
-			sq_MetaData IcyMetaData;
-			p->MetaDataPoll = 0;
-		 }
-	   */
 
 		// get track position & CurrentURI
 		p->TrackPoll += elapsed;
