@@ -298,7 +298,6 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 	case 's':
 		{
 			sq_seturi_t	uri;
-			bool rc;
 			unsigned header_len = len - sizeof(struct strm_packet);
 			char *header = (char *)(pkt + sizeof(struct strm_packet));
 			in_addr_t ip = (in_addr_t)strm->server_ip; // keep in network byte order
@@ -334,6 +333,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 			 if (ctx->config.mode == SQ_STREAM)
 			 {
 				unsigned idx;
+				bool rc;
 				char buf[SQ_STR_LENGTH];
 
 				// stream is proxied and then forwared to the renderer

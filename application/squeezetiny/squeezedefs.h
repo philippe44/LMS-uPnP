@@ -83,6 +83,8 @@ char *GetTempPath(u16_t size, char *path);
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <io.h>
+#include <stdbool.h>
+#include <sys/timeb.h>
 #include "pthread.h"
 
 #define STREAM_THREAD_STACK_SIZE (1024 * 64)
@@ -97,10 +99,6 @@ typedef unsigned __int64 u64_t;
 typedef __int16 s16_t;
 typedef __int32 s32_t;
 typedef __int64 s64_t;
-
-typedef BOOL bool;
-#define true TRUE
-#define false FALSE
 
 #define inline __inline
 
