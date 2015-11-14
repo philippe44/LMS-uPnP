@@ -978,14 +978,24 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 			break;
 		}
 		case SQ_STOP:
-			LOG_INFO("[%p] uPNP notify STOP", ctx);
-			LOCK_S;
-			if (ctx->play_running) {
-				ctx->track_ended = true;
-			 }
-			ctx->play_running = false;
-			UNLOCK_S;
-			wake_controller(ctx);
+			if (* (bool*) param) {
+				char cmd[128], *rsp;
+
+				LOG_INFO("[%p] uPNP forced STOP", ctx);
+				sprintf(cmd, "%s stop", ctx->cli_id);
+				rsp = cli_send_cmd(cmd, false, true, ctx);
+				NFREE(rsp);
+			}
+			else {
+				LOG_INFO("[%p] uPNP notify STOP", ctx);
+				LOCK_S;
+				if (ctx->play_running) {
+					ctx->track_ended = true;
+				 }
+				ctx->play_running = false;
+				UNLOCK_S;
+				wake_controller(ctx);
+			}
 			break;
 		case SQ_SEEK: break;
 		case SQ_VOLUME: {
