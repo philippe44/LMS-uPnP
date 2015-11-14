@@ -307,7 +307,7 @@ static int	uPNPTerminate(void);
 			sprintf(uri, "http://%s:%d/%s/%s.%s", glIPaddress, glPort, glBaseVDIR, p->name, p->ext);
 
 			if (device->Config.SendMetaData) {
-				sq_get_metadata(device->SqueezeHandle, &device->MetaData, true);
+				sq_get_metadata(device->SqueezeHandle, &device->MetaData, (action == SQ_SETURI) ? false : true);
 				p->file_size = device->MetaData.file_size ?
 							   device->MetaData.file_size : device->Config.StreamLength;
 			}
