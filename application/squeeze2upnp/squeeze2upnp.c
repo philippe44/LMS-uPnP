@@ -146,7 +146,7 @@ static const struct cSearchedSRV_s
  int	idx;
  u32_t  TimeOut;
 } cSearchedSRV[NB_SRV] = {	{AV_TRANSPORT, AVT_SRV_IDX, 0},
-						{RENDERING_CTRL, REND_SRV_IDX, 300},
+						{RENDERING_CTRL, REND_SRV_IDX, 30},
 						{CONNECTION_MGR, CNX_MGR_IDX, 0}
 				   };
 
@@ -815,13 +815,23 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 			NFREE(r);
 			break;
 		}
-		case UPNP_EVENT_AUTORENEWAL_FAILED:
+		case UPNP_EVENT_AUTORENEWAL_FAILED: {
+			struct Upnp_Event_Subscribe *d_Event = (struct Upnp_Event_Subscribe *)Event;
+			struct sMR *p;
+
+			p = SID2Device(d_Event->Sid);
+			if (!p) break;
+
+			LOG_WARN("[%p]: Auto-renewal failed", p);
+			p->UPnPConnected = false;
+			break;
+		}
 		case UPNP_EVENT_SUBSCRIPTION_EXPIRED: {
-			struct Upnp_Action_Complete *Action = (struct Upnp_Action_Complete *)Event;
+			struct Upnp_Event_Subscribe *d_Event = (struct Upnp_Event_Subscribe *)Event;
 			struct sMR *p;
 			int i;
 
-			p = CURL2Device(Action->CtrlUrl);
+			p = SID2Device(d_Event->Sid);
 			if (!p) break;
 
 			// renew rerevice subscribtion if needed
@@ -831,10 +841,9 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 					UpnpSubscribe(glControlPointHandle, s->EventURL, &s->TimeOut, s->SID);
 			}
 
-			LOG_WARN("[%p]: Auto-renewal failed", p);
+			LOG_WARN("[%p]: Subscription manual renewal", p);
 			break;
-		}
-
+        }
 		case UPNP_EVENT_RENEWAL_COMPLETE:
 		case UPNP_EVENT_SUBSCRIBE_COMPLETE: {
 			LOG_INFO("event: %i [%s] [%p]", EventType, uPNPEvent2String(EventType), Cookie);
@@ -952,8 +961,9 @@ static void *UpdateMRThread(void *args)
 	// then walk through the list of devices to remove missing ones
 	for (i = 0; i < MAX_RENDERERS; i++) {
 		Device = &glMRDevices[i];
-		if (!Device->InUse || !Device->UPnPTimeOut ||
-			!Device->UPnPMissingCount || --Device->UPnPMissingCount) continue;
+		if (!Device->InUse) continue;
+		if (Device->UPnPTimeOut && Device->UPnPMissingCount) Device->UPnPMissingCount--;
+		if (Device->UPnPConnected || Device->UPnPMissingCount) continue;
 
 		LOG_INFO("[%p]: removing renderer (%s)", Device, Device->FriendlyName);
 		if (Device->SqueezeHandle) sq_delete_device(Device->SqueezeHandle);
@@ -1256,6 +1266,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	InitActionList(Device);
 	Device->Magic = MAGIC;
 	Device->UPnPTimeOut = false;
+	Device->UPnPConnected = true;
 	Device->UPnPMissingCount = Device->Config.UPnPRemoveCount;
 	Device->on = false;
 	Device->SqueezeHandle = 0;
