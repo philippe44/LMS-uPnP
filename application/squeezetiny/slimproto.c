@@ -440,6 +440,8 @@ static void process_aude(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 	LOCK_O;
 	ctx->on = (aude->enable_spdif) ? true : false;
 	LOG_DEBUG("[%p] on/off using aude %d", ctx, ctx->on);
+
+#if 0
 	decode_flush(ctx);
 	output_flush(ctx);
 	ctx->play_running = ctx-> track_ended = false;
@@ -447,9 +449,12 @@ static void process_aude(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 	ctx->status.ms_played = ctx->ms_played = 0;
 	stream_disconnect(ctx);
 	buf_flush(ctx->streambuf);
+#endif
 	UNLOCK_O;
 
+#if 0
 	ctx_callback(ctx, SQ_STOP, NULL, NULL);
+#endif
 	ctx_callback(ctx, SQ_ONOFF, NULL, &ctx->on);
 }
 

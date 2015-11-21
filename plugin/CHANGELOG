@@ -17,6 +17,7 @@
  - on MR deletion, unlock mutex before joining
  - UPnP auto-renewal timeout of 30s instead of 300s
  - Device is not removed as long as subscription is renewed, even if it missed discovery
+ - When receiing on/off, do not force a STOP
  - (P) update some strings
  - (P) add ICY metadata option
  - (P) set log lines to 1000
