@@ -22,7 +22,7 @@
  - (P) set log lines to 1000
  - (P) add byte_seek option
  - (P) some comment/help cleaning
- - (P) link to log and config were potentially system-wide conflicting
+ - (P) link to log, config and guide were potentially system-wide conflicting
    
 0.2.5.0
  - in XMLFindAndParseService search ends if a service list is empty. It should end only when no service list remains
