@@ -36,7 +36,7 @@ sub initPlugin {
 		Plugins::UPnPBridge::Settings->new;
 		Slim::Web::Pages->addPageFunction("^upnpbridge-log.log", \&Plugins::UPnPBridge::Squeeze2upnp::logHandler);
 		Slim::Web::Pages->addPageFunction("^upnpbridge-config.xml", \&Plugins::UPnPBridge::Squeeze2upnp::configHandler);
-		Slim::Web::Pages->addPageFunction("userguide.htm", \&Plugins::UPnPBridge::Squeeze2upnp::guideHandler);
+		Slim::Web::Pages->addPageFunction("upnpbridge-guide.htm", \&Plugins::UPnPBridge::Squeeze2upnp::guideHandler);
 	}
 	
 	$log->warn(Dumper(Slim::Utils::OSDetect::details()));
