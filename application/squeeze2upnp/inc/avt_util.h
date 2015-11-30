@@ -23,21 +23,33 @@
 #define __AVT_UTIL_H
 
 #include "util_common.h"
+#include "util.h"
 
 struct sq_metadata_s;
 struct sMRConfig;
+struct sMR;
 
-void AVTInit(log_level level);
-int AVTSetURI(char *ControlURL, char *URI, char *ProtocolInfo, struct sq_metadata_s *MetaData, struct sMRConfig *Config, void *Cookie);
-int AVTSetNextURI(char *ControlURL, char *URI, char *ProtocolInfo, struct sq_metadata_s *MetaData, struct sMRConfig *Config, void *Cookie);
-int AVTCallAction(char *ControlURL, char *Var, void *Cookie);
-int AVTPlay(char *ControlURL, void *Cookie);
-int AVTSetPlayMode(char *ControlURL, void *Cookie);
-int SetVolume(char *ControlURL, u8_t Volume, void *Cookie);
-int GetVolume(char *ControlURL, void *Cookie);
-int AVTSeek(char *ControlURL, unsigned Interval, void *Cookie);
-int AVTBasic(char *ControlURL, char *Action, void *Cookie);
-int GetProtocolInfo(char *ControlURL, void *Cookie);
+typedef struct sAction {
+	struct sMR *Device;
+	void   *ActionNode;
+	union {
+		u8_t Volume;
+	} Param;
+} tAction;
+
+void 	AVTInit(log_level level);
+bool 	AVTSetURI(struct sMR *Device);
+bool 	AVTSetNextURI(struct sMR *Device);
+int 	AVTCallAction(char *ControlURL, char *Var, void *Cookie);
+bool 	AVTPlay(struct sMR *Device);
+bool 	AVTSetPlayMode(struct sMR *Device);
+bool 	AVTSeek(struct sMR *Device, unsigned Interval);
+bool 	AVTBasic(struct sMR *Device, char *Action);
+bool 	AVTStop(struct sMR *Device);
+void	AVTActionFlush(tQueue *Queue);
+int 	CtrlSetVolume(char *ControlURL, u8_t Volume, void *Cookie);
+int 	CtrlSetMute(char *ControlURL, bool Mute, void *Cookie);
+int 	GetProtocolInfo(char *ControlURL, void *Cookie);
 
 #endif
 

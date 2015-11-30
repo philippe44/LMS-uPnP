@@ -194,88 +194,6 @@ bool SetContentType(struct sMR *Device, sq_seturi_t *uri)
 	}
 }
 
-/*----------------------------------------------------------------------------*/
-void FlushActionList(struct sMR *Device)
-{
-	struct sAction *p;
-
-	ithread_mutex_lock(&Device->ActionsMutex);
-	p = Device->Actions;
-	while (Device->Actions) {
-		p = Device->Actions;
-		Device->Actions = Device->Actions->Next;
-		free(p);
-	}
-	ithread_mutex_unlock(&Device->ActionsMutex);
-}
-
-/*----------------------------------------------------------------------------*/
-void InitActionList(struct sMR *Device)
-{
-	Device->Actions = NULL;
-	ithread_mutex_init(&Device->ActionsMutex, 0);
-}
-
-/*----------------------------------------------------------------------------*/
-void QueueAction(sq_dev_handle_t handle, struct sMR *Device, sq_action_t action, u8_t *cookie, void *param, bool ordered)
-{
-	struct sAction *Action = malloc(sizeof(struct sAction));
-	struct sAction *p;
-
-	LOG_INFO("[%p]: queuing action %d", Device, action);
-
-	Action->Handle  = handle;
-	Action->Caller  = Device;
-	Action->Action  = action;
-	Action->Cookie  = cookie;
-	Action->Next	= NULL;
-	Action->Ordered	= ordered;
-
-	switch(action) {
-	case SQ_VOLUME:
-		Action->Param.Volume = *((u32_t*) param);
-		break;
-	case SQ_SEEK:
-		Action->Param.Time = *((u32_t*) param);
-		break;
-	default:
-		break;
-	}
-
-	ithread_mutex_lock(&Device->ActionsMutex);
-	if (!Device->Actions) Device->Actions = Action;
-	else {
-		p = Device->Actions;
-		while (p->Next) p = p->Next;
-		p->Next = Action;
-	}
-	ithread_mutex_unlock(&Device->ActionsMutex);
-}
-
-/*----------------------------------------------------------------------------*/
-struct sAction *UnQueueAction(struct sMR *Device, bool Keep)
-{
-	struct sAction  *p = NULL;
-
-	if (Keep) return Device->Actions;
-
-	ithread_mutex_lock(&Device->ActionsMutex);
-	if (Device->Actions) {
-		p = Device->Actions;
-		Device->Actions = Device->Actions->Next;
-	}
-	ithread_mutex_unlock(&Device->ActionsMutex);
-
-	if (!p) return NULL;
-
-	LOG_INFO("[%p]: un-queuing action %d", p->Caller, p->Action);
-	if (p->Caller != Device) {
-		LOG_ERROR("[%p]: action in wrong queue %p", Device, p->Caller);
-	}
-
-	return p;
-}
-
 
 /*----------------------------------------------------------------------------*/
 void FlushMRDevices(void)
@@ -286,12 +204,12 @@ void FlushMRDevices(void)
 		struct sMR *p = &glMRDevices[i];
 		if (p->InUse) {
 			// critical to stop the device otherwise libupnp mean wait forever
-			if (p->sqState == SQ_PLAY || p->sqState == SQ_PAUSE)
-				AVTBasic(p->Service[AVT_SRV_IDX].ControlURL, "Stop", p->seqN++);
+			if (p->sqState == SQ_PLAY || p->sqState == SQ_PAUSE) AVTStop(p);
 			DelMRDevice(p);
 		}
 	}
 }
+
 
 /*----------------------------------------------------------------------------*/
 void DelMRDevice(struct sMR *p)
@@ -306,7 +224,8 @@ void DelMRDevice(struct sMR *p)
 	ithread_mutex_lock(&p->Mutex);
 	p->InUse = false;
 
-	FlushActionList(p);
+	AVTActionFlush(&p->ActionQueue);
+	sq_free_metadata(&p->MetaData);
 	NFREE(p->CurrentURI);
 	NFREE(p->NextURI);
 	while (p->ProtocolCap[i] && i < MAX_PROTO) {
@@ -503,8 +422,8 @@ void SaveConfig(char *name, void *ref, bool full)
 		XMLAddNode(doc, common, "seek_after_pause", "%d", (int) glMRConfig.SeekAfterPause);
 		XMLAddNode(doc, common, "byte_seek", "%d", (int) glMRConfig.ByteSeek);
 		XMLAddNode(doc, common, "send_icy", "%d", (int) glDeviceParam.send_icy);
-		XMLAddNode(doc, common, "force_volume", "%d", (int) glMRConfig.ForceVolume);
 		XMLAddNode(doc, common, "volume_on_play", "%d", (int) glMRConfig.VolumeOnPlay);
+		XMLAddNode(doc, common, "volume_feedback", "%d", (int) glMRConfig.VolumeFeedback);
 		XMLAddNode(doc, common, "send_metadata", "%d", (int) glMRConfig.SendMetaData);
 		XMLAddNode(doc, common, "send_coverart", "%d", (int) glMRConfig.SendCoverArt);
 		XMLAddNode(doc, common, "max_volume", "%d", glMRConfig.MaxVolume);
@@ -512,7 +431,6 @@ void SaveConfig(char *name, void *ref, bool full)
 		XMLAddNode(doc, common, "upnp_remove_count", "%d", (u32_t) glMRConfig.UPnPRemoveCount);
 		XMLAddNode(doc, common, "raw_audio_format", glMRConfig.RawAudioFormat);
 		XMLAddNode(doc, common, "match_endianness", "%d", (int) glMRConfig.MatchEndianness);
-		XMLAddNode(doc, common, "pause_volume", "%d", (int) glMRConfig.PauseVolume);
 		XMLAddNode(doc, common, "auto_play", "%d", (int) glMRConfig.AutoPlay);
 	}
 
@@ -588,10 +506,9 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "match_endianness")) Conf->MatchEndianness = atol(val);
 	if (!strcmp(name, "seek_after_pause")) Conf->SeekAfterPause = atol(val);
 	if (!strcmp(name, "byte_seek")) Conf->ByteSeek = atol(val);
-	if (!strcmp(name, "force_volume")) Conf->ForceVolume = atol(val);
 	if (!strcmp(name, "volume_on_play")) Conf->VolumeOnPlay = atol(val);
+	if (!strcmp(name, "volume_feedback")) Conf->VolumeFeedback = atol(val);
 	if (!strcmp(name, "max_volume")) Conf->MaxVolume = atol(val);
-	if (!strcmp(name, "pause_volume")) Conf->PauseVolume = atol(val);
 	if (!strcmp(name, "auto_play")) Conf->AutoPlay = atol(val);
 	if (!strcmp(name, "accept_nexturi")) Conf->AcceptNextURI = atol(val);
 	if (!strcmp(name, "send_metadata")) Conf->SendMetaData = atol(val);

@@ -730,6 +730,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 
 			// few thing need to wait for the running to be confirmed by player
 			if (ctx->play_running) {
+
 				// either 1st track or end of track detected by the player
 				if (ctx->track_new) {
 					_sendSTMs = true;

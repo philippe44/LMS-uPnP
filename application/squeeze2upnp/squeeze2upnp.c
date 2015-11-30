@@ -70,13 +70,12 @@ tMRConfig			glMRConfig = {
 							0,
 							true,
 							"",
-							false,
+							true,
 							true,
 							true,
 							true,
 							true,
 							100,
-							true,
 							1,
 							"raw",
 							1,
@@ -325,29 +324,25 @@ static int	uPNPTerminate(void);
 			if (action == SQ_SETNEXTURI) {
 				NFREE(device->NextURI);
 				strcpy(device->ProtInfo, p->proto_info);
+				device->NextURI = strdup(uri);
 
 				if (device->Config.AcceptNextURI){
-					AVTSetNextURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info,
-								  &device->MetaData, &device->Config, device->seqN++);
+					AVTSetNextURI(device);
 					sq_free_metadata(&device->MetaData);
 				}
 
-				// to know what is expected next
-				device->NextURI = (char*) malloc(strlen(uri) + 1);
-				strcpy(device->NextURI, uri);
 				LOG_INFO("[%p]: next URI set %s", device, device->NextURI);
 			}
 			else {
 				// to detect properly transition
 				NFREE(device->CurrentURI);
 				NFREE(device->NextURI);
+				strcpy(device->ProtInfo, p->proto_info);
+				device->CurrentURI = strdup(uri);
 
-				AVTSetURI(device->Service[AVT_SRV_IDX].ControlURL, uri, p->proto_info,
-						  &device->MetaData, &device->Config, device->seqN++);
+				AVTSetURI(device);
 				sq_free_metadata(&device->MetaData);
 
-				device->CurrentURI = (char*) malloc(strlen(uri) + 1);
-				strcpy(device->CurrentURI, uri);
 				LOG_INFO("[%p]: current URI set %s", device, device->CurrentURI);
 			}
 
@@ -360,56 +355,68 @@ static int	uPNPTerminate(void);
 				break;
 			}
 			if (device->CurrentURI) {
-				QueueAction(handle, caller, action, cookie, param, false);
+				if (device->Muted && device->Config.VolumeOnPlay != -1) {
+					CtrlSetMute(device->Service[REND_SRV_IDX].ControlURL, false, device->seqN++);
+					device->Muted = false;
+				}
+
+				AVTPlay(device);
 				device->sqState = SQ_PLAY;
-            }
+			}
 			break;
 		case SQ_PLAY:
 			if (device->CurrentURI) {
-				AVTSetPlayMode(device->Service[AVT_SRV_IDX].ControlURL, device->seqN++);
-				QueueAction(handle, caller, action, cookie, param, false);
+				AVTSetPlayMode(device);
+				AVTPlay(device);
 				device->sqState = SQ_PLAY;
+
+				if (device->Muted && device->Config.VolumeOnPlay != -1) {
+					CtrlSetMute(device->Service[REND_SRV_IDX].ControlURL, false, device->seqN++);
+					device->Muted = false;
+				}
+
 				if (device->Config.VolumeOnPlay == 1)
-					SetVolume(device->Service[REND_SRV_IDX].ControlURL, device->Volume, device->seqN++);
+					CtrlSetVolume(device->Service[REND_SRV_IDX].ControlURL, device->Volume, device->seqN++);
 			}
 			else rc = false;
 			break;
 		case SQ_STOP:
-			AVTBasic(device->Service[AVT_SRV_IDX].ControlURL, "Stop", device->seqN++);
+			AVTStop(device);
 			NFREE(device->CurrentURI);
 			NFREE(device->NextURI);
-			FlushActionList(device);
+			sq_free_metadata(&device->MetaData);
 			device->sqState = action;
 			break;
 		case SQ_PAUSE:
-			if (device->Config.SeekAfterPause) {
-				device->ReportStop = false;
-				AVTBasic(device->Service[AVT_SRV_IDX].ControlURL, "Stop", device->seqN++);
-			}
-			else QueueAction(handle, caller, action, cookie, param, false);
+			AVTBasic(device, "Pause");
 			device->sqState = action;
 			break;
 		case SQ_NEXT:
-			AVTBasic(device->Service[AVT_SRV_IDX].ControlURL, "Next", device->seqN++);
+			AVTBasic(device, "Next");
 			break;
 		case SQ_SEEK:
-//			AVTSeek(device->Service[AVT_SRV_IDX].ControlURL, *(u16_t*) p);
 			break;
 		case SQ_VOLUME: {
 			u32_t Volume = *(u16_t*)p;
 			int i;
 
+			// calculate volume and check for change
 			for (i = 100; Volume < LMSVolumeMap[i] && i; i--);
+			Volume = (i * device->Config.MaxVolume) / 100;
+			if (device->Volume == Volume) break;
+			device->Volume = Volume;
 
-			device->Volume = (i * device->Config.MaxVolume) / 100;
-			device->PreviousVolume = device->Volume;
-
-            // calculate but do not transmit so that we can compare
+			// memorise but do not transmit so that we can compare
 			if (device->Config.VolumeOnPlay == -1) break;
 
 			// only transmit while playing
 			if (!device->Config.VolumeOnPlay || device->sqState == SQ_PLAY) {
-					SetVolume(device->Service[REND_SRV_IDX].ControlURL, device->Volume, device->seqN++);
+				if (device->Volume) {
+					if (device->Muted) CtrlSetMute(device->Service[REND_SRV_IDX].ControlURL, false, device->seqN++);
+					CtrlSetVolume(device->Service[REND_SRV_IDX].ControlURL, device->Volume, device->seqN++);
+				}
+				else CtrlSetMute(device->Service[REND_SRV_IDX].ControlURL, true, device->seqN++);
+				device->Muted = (device->Volume == 0);
 			}
 
 			break;
@@ -426,7 +433,6 @@ static int	uPNPTerminate(void);
 /*----------------------------------------------------------------------------*/
 void SyncNotifState(char *State, struct sMR* Device)
 {
-	struct sAction *Action = NULL;
 	sq_event_t Event = SQ_NONE;
 	bool Param = false;
 
@@ -445,67 +451,49 @@ void SyncNotifState(char *State, struct sMR* Device)
 		return;
 	}
 
-	Action = UnQueueAction(Device, true);
+	if (!strcmp(State, "STOPPED") && Device->State != STOPPED) {
+		if (Device->NextURI) {
+			if (!Device->Config.AcceptNextURI) {
+				// fake a "SETURI" and a "PLAY" request
+				NFREE(Device->CurrentURI);
+				Device->CurrentURI = malloc(strlen(Device->NextURI) + 1);
+				strcpy(Device->CurrentURI, Device->NextURI);
+				NFREE(Device->NextURI);
 
-	if (!strcmp(State, "STOPPED")) {
-		if (Device->State != STOPPED && Device->ReportStop) {
+				AVTSetURI(Device);
+				sq_free_metadata(&Device->MetaData);
+				AVTPlay(Device);
+
+				Event = SQ_TRACK_CHANGE;
+				LOG_INFO("[%p]: no gapless %s", Device, Device->CurrentURI);
+			}
+			else  {
+				/*
+				This can happen if the SetNextURI has been sent too late and
+				the device did not have time to buffer next track data. In
+				this case, give it a nudge
+				*/
+			AVTBasic(Device, "Next");
+			LOG_WARN("[%p]: nudge next track required %s", Device, Device->NextURI);
+			}
+		}
+		// This is an end of track and nothing else to play or a LMS stop
+		else {
 			LOG_INFO("%s: uPNP stop", Device->FriendlyName);
-			if (Device->NextURI) {
-				if (!Device->Config.AcceptNextURI) {
-					u8_t *WaitFor = Device->seqN++;
-
-					// fake a "SETURI" and a "PLAY" request
-					NFREE(Device->CurrentURI);
-					Device->CurrentURI = malloc(strlen(Device->NextURI) + 1);
-					strcpy(Device->CurrentURI, Device->NextURI);
-					NFREE(Device->NextURI);
-
-					AVTSetURI(Device->Service[AVT_SRV_IDX].ControlURL, Device->CurrentURI,
-							  Device->ProtInfo, &Device->MetaData, &Device->Config, WaitFor);
-					sq_free_metadata(&Device->MetaData);
-
-					/*
-					Need to queue to wait for the SetURI to be accepted, otherwise
-					the current URI will be played, creating a "blurb" effect
-					*/
-					QueueAction(Device->SqueezeHandle, Device, SQ_PLAY, WaitFor, NULL, true);
-
-					Event = SQ_TRACK_CHANGE;
-					LOG_INFO("[%p]: no gapless %s", Device, Device->CurrentURI);
-				}
-				else  {
-					/*
-					This can happen if the SetNextURI has been sent too late and
-					the device did not have time to buffer next track data. In
-					this case, give it a nudge
-					*/
-					QueueAction(Device->SqueezeHandle, Device, SQ_NEXT, NULL, NULL, false);
-					LOG_INFO("[%p]: nudge next track required %s", Device, Device->NextURI);
-				}
-			}
-			else {
-				// Can be a user stop, an error or a normal stop
-				Event = SQ_STOP;
-			}
+			Event = SQ_STOP;
 		}
 
 		Device->State = STOPPED;
-		Device->ReportStop = true;
 	}
 
-	if (!strcmp(State, "PLAYING")) {
-		if (Device->State != PLAYING) {
-
-			LOG_INFO("%s: uPNP playing", Device->FriendlyName);
-			switch (Device->sqState) {
+	if (!strcmp(State, "PLAYING") && (Device->State != PLAYING)) {
+		switch (Device->sqState) {
 			case SQ_PAUSE:
-				if (!Action || (Action->Action != SQ_PAUSE)) {
-					Param = true;
-            	}
+				Param = true;
 			case SQ_PLAY:
 				Event = SQ_PLAY;
 				break;
-			default:
+			default: {
 				/*
 				can be a local playing after stop or a N-1 playing after a quick
 				sequence of "next" when a N stop has been sent ==> ignore it
@@ -513,63 +501,21 @@ void SyncNotifState(char *State, struct sMR* Device)
 				LOG_ERROR("[%s]: unhandled playing", Device->FriendlyName);
 				break;
 			}
-
-			if (Device->Config.VolumeOnPlay != -1 && Device->Config.ForceVolume == 1)
-					SetVolume(Device->Service[REND_SRV_IDX].ControlURL, Device->Volume, Device->seqN++);
-
-			Device->State = PLAYING;
 		}
 
+		LOG_INFO("%s: uPNP playing", Device->FriendlyName);
+		Device->State = PLAYING;
 		// avoid double play (causes a restart) in case of unsollicited play
-		if (Action && (Action->Action == SQ_PLAY || Action->Action == SQ_UNPAUSE)) {
-			UnQueueAction(Device, false);
-			NFREE(Action);
-		}
 	}
 
-	if (!strcmp(State, "PAUSED_PLAYBACK")) {
-		if (Device->State != PAUSED) {
-
-			// detect unsollicited pause, but do not confuse it with a fast pause/play
-			if (Device->sqState != SQ_PAUSE && (!Action || (Action->Action != SQ_PLAY && Action->Action != SQ_UNPAUSE))) {
-				Event = SQ_PAUSE;
-				Param = true;
-			}
-			LOG_INFO("%s: uPNP pause", Device->FriendlyName);
-			if (Action && Action->Action == SQ_PAUSE) {
-				UnQueueAction(Device, false);
-				NFREE(Action);
-			}
-
-			if ((Device->Config.VolumeOnPlay != -1) && (!Device->Config.PauseVolume))
-				SetVolume(Device->Service[REND_SRV_IDX].ControlURL, Device->PreviousVolume, Device->seqN++);
-
-			Device->State = PAUSED;
+	if (!strcmp(State, "PAUSED_PLAYBACK") && Device->State != PAUSED) {
+		// detect unsollicited pause, but do not confuse it with a fast pause/play
+		if (Device->sqState != SQ_PAUSE) {
+			Event = SQ_PAUSE;
+			Param = true;
 		}
-	}
-
-	if (Action && (!Action->Ordered || Action->Cookie <= Device->LastAckAction)) {
-		struct sAction *p = UnQueueAction(Device, false);
-
-		if (p != Action) {
-			LOG_ERROR("[%p]: mutex issue %p, %p", p->Cookie, Action->Cookie);
-		}
-
-		switch (Action->Action) {
-		case SQ_NEXT:
-			AVTBasic(Action->Caller->Service[AVT_SRV_IDX].ControlURL, "Next", Device->seqN++);
-			break;
-		case SQ_UNPAUSE:
-		case SQ_PLAY:
-			AVTPlay(Action->Caller->Service[AVT_SRV_IDX].ControlURL, Device->seqN++);
-			break;
-		case SQ_PAUSE:
-			AVTBasic(Action->Caller->Service[AVT_SRV_IDX].ControlURL, "Pause", Device->seqN++);
-			break;
-		default:
-			break;
-		}
-		NFREE(Action);
+		LOG_INFO("%s: uPNP pause", Device->FriendlyName);
+		Device->State = PAUSED;
 	}
 
 	ithread_mutex_unlock(&Device->Mutex);
@@ -584,14 +530,37 @@ void SyncNotifState(char *State, struct sMR* Device)
 
 
 /*----------------------------------------------------------------------------*/
+bool ProcessQueue(struct sMR *Device) {
+	int rc = 0;
+	tAction *Action;
+
+	Device->WaitCookie = 0;
+	if ((Action = QueueExtract(&Device->ActionQueue)) == NULL) return false;
+
+	Device->WaitCookie = Device->seqN++;
+	rc = UpnpSendActionAsync(glControlPointHandle, Device->Service[AVT_SRV_IDX].ControlURL,
+									 AV_TRANSPORT, NULL, Action->ActionNode, CallbackActionHandler,
+									 Device->WaitCookie);
+
+	if (rc != UPNP_E_SUCCESS) {
+			LOG_ERROR("Error in queued UpnpSendActionAsync -- %d", rc);
+	}
+
+	free(Action);
+	ixmlDocument_free(Action->ActionNode);
+
+	return (rc == 0);
+}
+
+
+/*----------------------------------------------------------------------------*/
 void ProcessVolume(char *Volume, struct sMR* Device)
 {
 	u16_t UPnPVolume = atoi(Volume);
 
 	LOG_SDEBUG("[%p]: Volume %s", Device, Volume);
 
-	// do not report Volume set to 0 on pause
-	if (UPnPVolume != Device->Volume &&	(UPnPVolume != 0 || (Device->sqState != SQ_PAUSE && Device->State != PAUSED))) {
+	if (UPnPVolume != Device->Volume) {
 		LOG_INFO("[%p]: UPnP Volume local change %d", Device, UPnPVolume);
 		UPnPVolume =  (UPnPVolume * 100) / Device->Config.MaxVolume;
 		sq_notify(Device->SqueezeHandle, Device, SQ_VOLUME, NULL, &UPnPVolume);
@@ -624,30 +593,17 @@ void HandleStateEvent(struct Upnp_Event *Event, void *Cookie)
 		return;
 	}
 
-
 	LastChange = XMLGetFirstDocumentItem(VarDoc, "LastChange");
 	LOG_SDEBUG("Data event %s %u %s", Event->Sid, Event->EventKey, LastChange);
 	if (!LastChange) return;
 	NFREE(LastChange);
 
-	r = XMLGetChangeItem(VarDoc, "Volume", "channel", "Master", "val");
-	if (r) ProcessVolume(r, Device);
-	NFREE(r);
-
-#if 0
-	State = XMLGetChangeItem(VarDoc, "TransportState");
-	if (State){
-		SyncNotifState(State, Device);
-		free(State);
-	}
-
-	CurrentURI = XMLGetChangeItem(VarDoc, "CurrentTrackURI");
-	if (CurrentURI) {
-		SyncNotifURI(CurrentURI, Device);
-		free(CurrentURI);
-	 }
-
-#endif
+	// Feedback volume to LMS if authorized
+	if (Device->Config.VolumeFeedback) {
+		r = XMLGetChangeItem(VarDoc, "Volume", "channel", "Master", "val");
+		if (r) ProcessVolume(r, Device);
+		NFREE(r);
+	}
 }
 
 
@@ -665,31 +621,50 @@ int CallbackActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 			p = CURL2Device(Action->CtrlUrl);
 			if (!p) break;
 
-			p->LastAckAction = Cookie;
 			LOG_SDEBUG("[%p]: ac %i %s (cookie %p)", p, EventType, Action->CtrlUrl, Cookie);
 
-			// time position response
-			r = XMLGetFirstDocumentItem(Action->ActionResult, "RelTime");
-			if (r) {
-				p->Elapsed = 1000L * Time2Int(r);
-				LOG_SDEBUG("[%p]: position %d (cookie %p)", p, p->Elapsed, Cookie);
-				// discard any time info unless we are confirmed playing
-				if (p->State == PLAYING)
-					sq_notify(p->SqueezeHandle, p, SQ_TIME, NULL, &p->Elapsed);
+			/*
+			If waited action has been completed, proceed to next one if any and
+			set the state to unknown so that it will be re-acquired in all cases
+			*/
+			if (p->WaitCookie && Cookie == p->WaitCookie) {
+				const char *Resp = XMLGetLocalName(Action->ActionResult, 1);
+
+				LOG_DEBUG("[%p]: Waited action %s", p, Resp ? Resp : "<none>");
+
+				ithread_mutex_lock(&p->Mutex);
+				ProcessQueue(p);
+
+				// these action require the player state to be re-acquired
+				if (Resp && (!strcasecmp(Resp, "StopResponse") ||
+					!strcasecmp(Resp, "PlayResponse") || !strcasecmp(Resp, "PauseResponse"))) {
+					p->State = UNKNOWN;
+				}
+
+				ithread_mutex_unlock(&p->Mutex);
+				break;
 			}
-			NFREE(r);
 
 			// transport state response
 			r = XMLGetFirstDocumentItem(Action->ActionResult, "CurrentTransportState");
 			if (r) SyncNotifState(r, p);
 			NFREE(r);
 
+			// When not playing, position is not reliable
+			if (p->State == PLAYING) {
+				// Get position in current track
+				r = XMLGetFirstDocumentItem(Action->ActionResult, "RelTime");
+				if (r) {
+					p->Elapsed = 1000L * Time2Int(r);
+					LOG_SDEBUG("[%p]: position %d (cookie %p)", p, p->Elapsed, Cookie);
+					// discard any time info unless we are confirmed playing
+					sq_notify(p->SqueezeHandle, p, SQ_TIME, NULL, &p->Elapsed);
+				}
+				NFREE(r);
+			}
+
 			// URI detection response
-#if 1
 			r = XMLGetFirstDocumentItem(Action->ActionResult, "TrackURI");
-#else
-			r = XMLGetFirstDocumentItem(Action->ActionResult, "CurrentURI");
-#endif
 			if (r && (*r == '\0' || !strstr(r, "-idx-"))) {
 				char *s;
 				IXML_Document *doc;
@@ -728,12 +703,6 @@ int CallbackActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 				else ithread_mutex_unlock(&p->Mutex);
 			}
 			NFREE(r);
-
-#ifdef VOLUME_POLLING
-			// GetVolume response
-			r = XMLGetFirstDocumentItem(Action->ActionResult, "CurrentVolume");
-			NFREE(r);
-#endif
 
 			LOG_SDEBUG("Action complete : %i (cookie %p)", EventType, Cookie);
 
@@ -834,14 +803,14 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 			p = SID2Device(d_Event->Sid);
 			if (!p) break;
 
-			// renew rerevice subscribtion if needed
+			// renew service subscribtion if needed
 			for (i = 0; i < NB_SRV; i++) {
 				struct sService *s = &p->Service[cSearchedSRV[i].idx];
 				if ((s->TimeOut = cSearchedSRV[i].TimeOut) != 0)
 					UpnpSubscribe(glControlPointHandle, s->EventURL, &s->TimeOut, s->SID);
 			}
 
-			LOG_WARN("[%p]: Subscription manual renewal", p);
+			LOG_WARN("[%p]: Subscription manually renewal", p);
 			break;
         }
 		case UPNP_EVENT_RENEWAL_COMPLETE:
@@ -1052,17 +1021,6 @@ static void *MRThread(void *args)
 		elapsed = gettime_ms() - last;
 		ithread_mutex_lock(&p->Mutex);
 
-#if VOLUME_POLLING
-		// use volume as a 'keep alive' function
-		if (p->on) {
-			p->VolumePoll += elapsed;
-			if (p->VolumePoll > VOLUME_POLL) {
-				p->VolumePoll = 0;
-				GetVolume(p->Service[REND_SRV_IDX].ControlURL, p->seqN++);
-			}
-		}
-#endif
-
 		// make sure that both domains are in sync that nothing shall be done
 		if (!p->on || (p->sqState == SQ_STOP && p->State == STOPPED) ||
 			 p->ErrorCount > MAX_ACTION_ERRORS) {
@@ -1077,9 +1035,6 @@ static void *MRThread(void *args)
 			p->TrackPoll = 0;
 			if (p->State != STOPPED && p->State != PAUSED) {
 				AVTCallAction(p->Service[AVT_SRV_IDX].ControlURL, "GetPositionInfo", p->seqN++);
-#if 0
-				AVTCallAction(p->Service[AVT_SRV_IDX].ControlURL, "GetMediaInfo", p->seqN++);
-#endif
 			}
 		}
 
@@ -1263,12 +1218,12 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	LOG_INFO("[%p]: adding renderer (%s)", Device, friendlyName);
 
 	ithread_mutex_init(&Device->Mutex, 0);
-	InitActionList(Device);
 	Device->Magic = MAGIC;
 	Device->UPnPTimeOut = false;
 	Device->UPnPConnected = true;
 	Device->UPnPMissingCount = Device->Config.UPnPRemoveCount;
 	Device->on = false;
+	Device->Muted = true;	//assume device is muted
 	Device->SqueezeHandle = 0;
 	Device->ErrorCount = 0;
 	Device->Running = true;
@@ -1279,6 +1234,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	strcpy(Device->DescDocURL, location);
 	strcpy(Device->FriendlyName, friendlyName);
 	strcpy(Device->Manufacturer, manufacturer);
+	QueueInit(&Device->ActionQueue);
 
 	ExtractIP(location, &Device->ip);
 	if (!memcmp(Device->sq_config.mac, "\0\0\0\0\0\0", mac_size) &&
@@ -1377,8 +1333,7 @@ static void sighandler(int signum) {
 	if (!glGracefullShutdown) {
 		for (i = 0; i < MAX_RENDERERS; i++) {
 			struct sMR *p = &glMRDevices[i];
-			if (p->InUse && p->sqState == SQ_PLAY)
-				AVTBasic(p->Service[AVT_SRV_IDX].ControlURL, "Stop", p->seqN++);
+			if (p->InUse && p->sqState == SQ_PLAY) AVTStop(p);
 		}
 		LOG_INFO("forced exit", NULL);
 		exit(EXIT_SUCCESS);

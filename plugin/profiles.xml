@@ -8,7 +8,6 @@
 	<send_metadata>1</send_metadata>
 	<raw_audio_format>raw</raw_audio_format>
 	<L24_format>2</L24_format>
-	<volume_curve>0:0, 400:10, 700:20, 1200:30, 2050:40, 3800:50, 6600:60, 12000:70, 21000:80, 37000:90, 65536:100</volume_curve>
 	<max_volume>100</max_volume>
 	<match_endianness>0</match_endianness>
 	<profile name=''></profile>

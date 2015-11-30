@@ -209,12 +209,12 @@
 			<option [% IF entry.1 == volume_on_play %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
 		[% END %]
 		</select>
-		&nbsp&nbsp[% "PLUGIN_UPNPBRIDGE_PAUSEVOLUME" | string %]&nbsp<select class="stdedit" name="pause_volume" id="pause_volume">
+		&nbsp&nbsp[% "PLUGIN_UPNPBRIDGE_VOLUMEFEEDBACK" | string %]&nbsp
+		<select class="stdedit" name="volume_feedback" id="volume_feedback">
 		[% FOREACH entry IN YESNOBOX %] 
-			<option [% IF entry.1 == pause_volume %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+			<option [% IF entry.1 == volume_feedback %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
 		[% END %]
 		</select>
-		
 	[% END %]
 	
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_SENDMETADATA" desc="PLUGIN_UPNPBRIDGE_SENDMETADATA_DESC" %]

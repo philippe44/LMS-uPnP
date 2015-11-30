@@ -30,13 +30,23 @@
 #include "upnp.h" /* for Upnp_EventType */
 #include "util_common.h"
 
+typedef struct sQueue {
+	struct sQueue *next;
+	void *item;
+} tQueue;
 
-char 		*uPNPEvent2String(Upnp_EventType S);
+void 		QueueInit(tQueue *queue);
+void 		QueueInsert(tQueue *queue, void *item);
+void 		*QueueExtract(tQueue *queue);
+void 		QueueFlush(tQueue *queue);
+
+char 		*uPNPEvent2String(Upnp_EventType S);
 void 		uPNPUtilInit(log_level level);
 void 		ExtractIP(const char *URL, in_addr_t *IP);
-unsigned 	Time2Int(char *Time);
+s64_t	 	Time2Int(char *Time);
 
 char 	   	*XMLGetChangeItem(IXML_Document *doc, char *Tag, char *SearchAttr, char *SearchVal, char *RetAttr);
+const char 	*XMLGetLocalName(IXML_Document *doc, int Depth);
 IXML_Node  	*XMLAddNode(IXML_Document *doc, IXML_Node *parent, char *name, char *fmt, ...);
 int 	   	XMLAddAttribute(IXML_Document *doc, IXML_Node *parent, char *name, char *fmt, ...);
 char 	   	*XMLGetFirstDocumentItem(IXML_Document *doc, const char *item);

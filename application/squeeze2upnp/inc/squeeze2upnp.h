@@ -30,6 +30,7 @@
 #include "ithread.h"
 #include "squeezedefs.h"
 #include "squeezeitf.h"
+#include "util.h"
 
 /*----------------------------------------------------------------------------*/
 /* typedefs */
@@ -46,7 +47,7 @@
 #define SCAN_INTERVAL	30
 
 
-enum 	eMRstate { STOPPED, PLAYING, PAUSED, TRANSITIONING };
+enum 	eMRstate { UNKNOWN, STOPPED, PLAYING, PAUSED, TRANSITIONING };
 enum 	{ AVT_SRV_IDX = 0, REND_SRV_IDX, CNX_MGR_IDX, NB_SRV };
 
 struct sService {
@@ -68,13 +69,12 @@ struct sService {
 	u16_t		VolumeCorrector;	// not yet
 	bool		Enabled;			//
 	char		Name[SQ_STR_LENGTH];
-	bool		ForceVolume;		// force volume after each state detection
 	int 		VolumeOnPlay;		// change only volume when playing has started or disable volume commands
+	bool		VolumeFeedback;
 	bool		AcceptNextURI;
 	bool		SendMetaData;
 	bool		SendCoverArt;
 	int			MaxVolume;
-	bool		PauseVolume;
 	int			UPnPRemoveCount;
 	char		RawAudioFormat[SQ_STR_LENGTH];
 	bool		MatchEndianness;
@@ -99,39 +99,24 @@ struct sMR {
 	char			ProtInfo[SQ_STR_LENGTH];		// a bit patchy ... used for faulty NEXTURI players
 	sq_metadata_t	MetaData;
 	sq_action_t		sqState;
-	bool			ReportStop;
-	u32_t			Elapsed;
+	s64_t			Elapsed, Duration;
 	u8_t			*seqN;
-	unsigned		TrackPoll, StatePoll, VolumePoll, MetaDataPoll;
+	void			*WaitCookie;
+	tQueue			ActionQueue;
+	unsigned		TrackPoll, StatePoll;
 	bool			UPnPTimeOut, UPnPConnected;
 	int	 			SqueezeHandle;
 	struct sService Service[NB_SRV];
 	struct sAction	*Actions;
-	u8_t			*LastAckAction;
-	ithread_mutex_t ActionsMutex;
 	ithread_mutex_t Mutex;
 	ithread_t 		Thread;
-	u8_t			Volume, PreviousVolume;
+	u8_t			Volume;
+	bool			Muted;
 	char			*ProtocolCap[MAX_PROTO + 1];
 	bool			ProtocolCapReady;
 	u16_t			ErrorCount;
 	int				UPnPMissingCount;
 	bool			Running;
-	struct sMR		*NextSQ;
-	struct sMR		*Next;
-};
-
-struct sAction	{
-	sq_dev_handle_t Handle;
-	struct sMR		*Caller;
-	sq_action_t 	Action;
-	u8_t 			*Cookie;
-	union {
-		u32_t	Volume;
-		u32_t	Time;
-	} 				Param;
-	struct sAction	*Next;
-	bool			Ordered;
 };
 
 extern UpnpClient_Handle   	glControlPointHandle;

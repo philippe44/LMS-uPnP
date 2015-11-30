@@ -289,6 +289,20 @@ char *XMLGetChangeItem(IXML_Document *doc, char *Tag, char *SearchAttr, char *Se
 
 
 /*----------------------------------------------------------------------------*/
+const char *XMLGetLocalName(IXML_Document *doc, int Depth)
+{
+	IXML_Node *node = (IXML_Node*) doc;
+
+	while (Depth--) {
+		node = ixmlNode_getFirstChild(node);
+		if (!node) return NULL;
+	}
+
+	return ixmlNode_getLocalName(node);
+}
+
+
+/*----------------------------------------------------------------------------*/
 IXML_Node *_getAttributeNode(IXML_Node *node, char *SearchAttr)
 {
 	IXML_Node *ret;
@@ -356,10 +370,10 @@ int XMLAddAttribute(IXML_Document *doc, IXML_Node *parent, char *name, char *fmt
 
 
 /*----------------------------------------------------------------------------*/
-unsigned Time2Int(char *Time)
+s64_t Time2Int(char *Time)
 {
 	char *p;
-	unsigned ret;
+	s64_t ret;
 
 	p = strrchr(Time, ':');
 
@@ -374,7 +388,8 @@ unsigned Time2Int(char *Time)
 		ret += atol(p + 1)*60;
 	}
 
-	p = strrchr(Time, ':');
+	//p = strrchr(Time, ':');
+	p = Time;
 	if (p) {
 		*p = '\0';
 		ret += atol(p + 1)*3600;
@@ -382,6 +397,56 @@ unsigned Time2Int(char *Time)
 
 	return ret;
 }
+
+
+/*----------------------------------------------------------------------------*/
+void QueueInit(tQueue *queue)
+{
+	queue->item = NULL;
+}
+
+/*----------------------------------------------------------------------------*/
+void QueueInsert(tQueue *queue, void *item)
+{
+	while (queue->item)	queue = queue->next;
+	queue->item = item;
+	queue->next = malloc(sizeof(tQueue));
+	queue->next->item = NULL;
+}
+
+
+/*----------------------------------------------------------------------------*/
+void *QueueExtract(tQueue *queue)
+{
+	void *item = queue->item;
+	tQueue *next = queue->next;
+
+	if (item) {
+		queue->item = next->item;
+		if (next->item) queue->next = next->next;
+		NFREE(next);
+	}
+
+	return item;
+}
+
+
+/*----------------------------------------------------------------------------*/
+void QueueFlush(tQueue *queue)
+{
+	void *item = queue->item;
+	tQueue *next = queue->next;
+
+	queue->item = NULL;
+
+	while (item) {
+		next = queue->next;
+		item = next->item;
+		if (next->item) queue->next = next->next;
+		NFREE(next);
+	}
+}
+
 
 /*----------------------------------------------------------------------------*/
 char *uPNPEvent2String(Upnp_EventType S)

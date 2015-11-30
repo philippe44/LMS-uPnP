@@ -274,21 +274,17 @@ PLUGIN_UPNPBRIDGE_VOLUMEMGMT
 	EN	Player volume management
 	
 PLUGIN_UPNPBRIDGE_VOLUMEMGMT_DESC
-	EN	Defines how LMS volume commands are sent to player. Normal values are 0..100 but some players have a lower maximum that can bet 
-	EN	set here. See also &ltvolume_curve&gt in the XML configuration file for advanced settings.
-	EN	This section also controls how LMS volume commands are sent to player. LMS mute request when pausing can be blocked as well
+	EN	Defines how LMS volume commands are sent to player. Normal values are 0..100 but some players have a lower maximum that can be set 
+	EN	here. This section also controls how LMS volume commands are sent to and feedback from player. 
 
 PLUGIN_UPNPBRIDGE_VOLUMEONPLAY
 	EN	LMS volume changes
 	
-PLUGIN_UPNPBRIDGE_VOLUMECURVE
-	EN	Translation curve
-	
 PLUGIN_UPNPBRIDGE_MAXVOLUME
 	EN	Maximum volume
-
-PLUGIN_UPNPBRIDGE_PAUSEVOLUME
-	EN	Mute on pause
+	
+PLUGIN_UPNPBRIDGE_VOLUMEFEEDBACK
+	EN	Feedback to LMS
 
 PLUGIN_UPNPBRIDGE_USEPROFILE
 	EN	Apply pre-defined player profile

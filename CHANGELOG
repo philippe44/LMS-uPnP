@@ -1,23 +1,30 @@
-0.2.6.0 (not released yet)
+0.2.7.0
+ - UPnP actions are now in a queue and processed after previous has been acknowledged
+ - Volume feedback to LMS when changed on the player can be disabled by <volume_feedback>
+ - User Guide update
+ - Add build date/time to version
+ 
+0.2.6.0 (not released)
  - Volume changes detected and forwarded back to LMS
  - Use 'old gain' for volume to avoid using 'volume curve'
  - Enable icy metadata (streaming radio title changes) for players that support it
  - add <send_icy> to control usage of icy metadata
  - Few small memory leaks fixed
  - Use remote artwork when available instead of coverid
- - Artwork was not set when LMS server address was not discovered (set in XML config file)
+ - Artwork was not set when LMS server address was not discovered (when set in XML config file)
  - Always discover server even if ip:port is set in XML config file
- - Add autoplay to start playing automatically on power on
+ - Add <autoplay> to start playing automatically on power on
  - remove DLNA.ORG_OP field as byte seek and time seek are not supported
- - <seek_after_pause> now forces a proper 'stop' of the UPnP player
- - add <byte_seek> option to authorize players to close/re-opne connection on pause and seek in byte
+ - add <byte_seek> option to authorize players to close/re-open connection on pause and seek in byte
  - SET_URI/SET_NEXTURI code factorization (remove 2 steps)
  - time in squeeze2upnp handled in ms instead of s
- - in Linux the mutex timeout for sq_open can be set wrong
+ - in Linux the mutex timeout for sq_open could be set wrong
  - on MR deletion, unlock mutex before joining
  - UPnP auto-renewal timeout of 30s instead of 300s
- - Device is not removed as long as subscription is renewed, even if it missed discovery
- - When receiing on/off, do not force a STOP
+ - Device is not removed as long as subscription is auto renewed, even if it missed discovery
+ - When receiving on/off, do not force a STOP anymore
+ - Remove <force_volume> parameter
+ - Remove <pause_volume> parameter and replace it by SetMute function
  - (P) update some strings
  - (P) add ICY metadata option
  - (P) set log lines to 1000

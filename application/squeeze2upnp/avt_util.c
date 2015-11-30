@@ -31,8 +31,8 @@
 #include "squeeze2upnp.h"
 
 /*
-TODO
- - build the DIDLE string with a proper XML constructor rather than string tinkering
+WARNING
+ - ALL THESE FUNCTION MUST BE CALLED WITH MUTEX LOCKED
 */
 
  /* DLNA.ORG_CI: conversion indicator parameter (integer)
@@ -107,68 +107,91 @@ static char DLNA_OPT[] = ";DLNA.ORG_OP=01;DLNA.ORG_FLAGS=01700000000000000000000
 static log_level loglevel;
 static char *CreateDIDL(char *URI, char *ProtInfo, struct sq_metadata_s *MetaData, struct sMRConfig *Config);
 
+
 /*----------------------------------------------------------------------------*/
 void AVTInit(log_level level)
 {
 	loglevel = level;
 }
 
+
 /*----------------------------------------------------------------------------*/
-int AVTSetURI(char *ControlURL, char *URI, char *ProtInfo, struct sq_metadata_s *MetaData, struct sMRConfig *Config, void *Cookie)
+bool SubmitTransportAction(struct sMR *Device, IXML_Document *ActionNode)
 {
-	IXML_Document *ActionNode = NULL;
-	int rc;
-	char *DIDLData;
+	int rc = 0;
 
-	DIDLData = CreateDIDL(URI, ProtInfo, MetaData, Config);
-	LOG_DEBUG("DIDL header: %s", DIDLData);
+	if (!Device->WaitCookie) {
+		Device->WaitCookie = Device->seqN++;
+		rc = UpnpSendActionAsync(glControlPointHandle, Device->Service[AVT_SRV_IDX].ControlURL,
+									 AV_TRANSPORT, NULL, ActionNode, CallbackActionHandler,
+									 Device->WaitCookie);
 
-	LOG_INFO("uPNP setURI %s for %s (cookie %p)", URI, ControlURL, Cookie);
-	ActionNode =  UpnpMakeAction("SetAVTransportURI", AV_TRANSPORT, 0, NULL);
-	UpnpAddToAction(&ActionNode, "SetAVTransportURI", AV_TRANSPORT, "InstanceID", "0");
-	UpnpAddToAction(&ActionNode, "SetAVTransportURI", AV_TRANSPORT, "CurrentURI", URI);
-	UpnpAddToAction(&ActionNode, "SetAVTransportURI", AV_TRANSPORT, "CurrentURIMetaData", DIDLData);
+		if (rc != UPNP_E_SUCCESS) {
+			LOG_ERROR("Error in UpnpSendActionAsync -- %d", rc);
+		}
 
-	rc = UpnpSendActionAsync(glControlPointHandle, ControlURL, AV_TRANSPORT, NULL,
-							 ActionNode, CallbackActionHandler, Cookie);
-
-	if (rc != UPNP_E_SUCCESS) {
-		LOG_ERROR("Error in UpnpSendActionAsync -- %d", rc);
+		ixmlDocument_free(ActionNode);
+	}
+	else {
+		tAction *Action = malloc(sizeof(tAction));
+		Action->Device = Device;
+		Action->ActionNode = ActionNode;
+		QueueInsert(&Device->ActionQueue, Action);
 	}
 
-	free(DIDLData);
-	if (ActionNode) ixmlDocument_free(ActionNode);
+	return (rc == 0);
+}
 
-	return rc;
+
+/*----------------------------------------------------------------------------*/
+void AVTActionFlush(tQueue *Queue)
+{
+	tAction *Action;
+
+	while ((Action = QueueExtract(Queue)) != NULL) {
+		free(Action);
+	}
+}
+
+
+/*----------------------------------------------------------------------------*/
+bool AVTSetURI(struct sMR *Device)
+{
+	IXML_Document *ActionNode = NULL;
+	char *DIDLData;
+
+	DIDLData = CreateDIDL(Device->CurrentURI, Device->ProtInfo, &Device->MetaData, &Device->Config);
+	LOG_DEBUG("DIDL header: %s", DIDLData);
+
+	LOG_INFO("uPNP setURI %s for %s (cookie %p)", Device->CurrentURI, Device->Service[AVT_SRV_IDX].ControlURL, Device->seqN);
+
+	if ((ActionNode = UpnpMakeAction("SetAVTransportURI", AV_TRANSPORT, 0, NULL)) == NULL) return false;
+	UpnpAddToAction(&ActionNode, "SetAVTransportURI", AV_TRANSPORT, "InstanceID", "0");
+	UpnpAddToAction(&ActionNode, "SetAVTransportURI", AV_TRANSPORT, "CurrentURI", Device->CurrentURI);
+	UpnpAddToAction(&ActionNode, "SetAVTransportURI", AV_TRANSPORT, "CurrentURIMetaData", DIDLData);
+	free(DIDLData);
+
+	return SubmitTransportAction(Device, ActionNode);
 }
 
 /*----------------------------------------------------------------------------*/
-int AVTSetNextURI(char *ControlURL, char *URI, char *ProtInfo, struct sq_metadata_s *MetaData, struct sMRConfig *Config, void *Cookie)
+bool AVTSetNextURI(struct sMR *Device)
 {
 	IXML_Document *ActionNode = NULL;
-	int rc;
 	char *DIDLData;
 
-	DIDLData = CreateDIDL(URI, ProtInfo, MetaData, Config);
+	DIDLData = CreateDIDL(Device->NextURI, Device->ProtInfo, &Device->MetaData, &Device->Config);
 	LOG_DEBUG("DIDL header: %s", DIDLData);
 
-	LOG_INFO("uPNP setNextURI %s for %s (cookie %p)", URI, ControlURL, Cookie);
-	ActionNode =  UpnpMakeAction("SetNextAVTransportURI", AV_TRANSPORT, 0, NULL);
+	LOG_INFO("uPNP setNextURI %s for %s (cookie %p)", Device->NextURI, Device->Service[AVT_SRV_IDX].ControlURL, Device->seqN);
+
+	if ((ActionNode = UpnpMakeAction("SetNextAVTransportURI", AV_TRANSPORT, 0, NULL)) == NULL) return false;
 	UpnpAddToAction(&ActionNode, "SetNextAVTransportURI", AV_TRANSPORT, "InstanceID", "0");
-	UpnpAddToAction(&ActionNode, "SetNextAVTransportURI", AV_TRANSPORT, "NextURI", URI);
+	UpnpAddToAction(&ActionNode, "SetNextAVTransportURI", AV_TRANSPORT, "NextURI", Device->NextURI);
 	UpnpAddToAction(&ActionNode, "SetNextAVTransportURI", AV_TRANSPORT, "NextURIMetaData", DIDLData);
-
-	rc = UpnpSendActionAsync(glControlPointHandle, ControlURL, AV_TRANSPORT, NULL,
-							 ActionNode, CallbackActionHandler, Cookie);
-
-	if (rc != UPNP_E_SUCCESS) {
-		LOG_ERROR("Error in UpnpSendActionAsync -- %d", rc);
-	}
-
 	free(DIDLData);
-	if (ActionNode) ixmlDocument_free(ActionNode);
 
-	return rc;
+	return SubmitTransportAction(Device, ActionNode);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -178,68 +201,110 @@ int AVTCallAction(char *ControlURL, char *Action, void *Cookie)
 	int rc;
 
 	LOG_SDEBUG("uPNP %s for %s (cookie %p)", Action, ControlURL, Cookie);
-	ActionNode =  UpnpMakeAction(Action, AV_TRANSPORT, 0, NULL);
+
+	if ((ActionNode = UpnpMakeAction(Action, AV_TRANSPORT, 0, NULL)) == NULL) return false;
 	UpnpAddToAction(&ActionNode, Action, AV_TRANSPORT, "InstanceID", "0");
 
 	rc = UpnpSendActionAsync(glControlPointHandle, ControlURL, AV_TRANSPORT, NULL,
 							 ActionNode, CallbackActionHandler, Cookie);
 
 	if (rc != UPNP_E_SUCCESS) LOG_ERROR("Error in UpnpSendActionAsync -- %d", rc);
-
-	if (ActionNode) ixmlDocument_free(ActionNode);
+	ixmlDocument_free(ActionNode);
 
 	return rc;
 }
 
 
 /*----------------------------------------------------------------------------*/
-int AVTPlay(char *ControlURL, void *Cookie)
+bool AVTPlay(struct sMR *Device)
 {
 	IXML_Document *ActionNode = NULL;
-	int rc;
 
-	LOG_INFO("uPNP play for %s (cookie %p)", ControlURL, Cookie);
-	ActionNode =  UpnpMakeAction("Play", AV_TRANSPORT, 0, NULL);
+	LOG_INFO("uPNP play for %s (cookie %p)", Device->Service[AVT_SRV_IDX].ControlURL, Device->seqN);
+
+	if ((ActionNode =  UpnpMakeAction("Play", AV_TRANSPORT, 0, NULL)) == NULL) return false;
 	UpnpAddToAction(&ActionNode, "Play", AV_TRANSPORT, "InstanceID", "0");
 	UpnpAddToAction(&ActionNode, "Play", AV_TRANSPORT, "Speed", "1");
 
-	rc = UpnpSendActionAsync(glControlPointHandle, ControlURL, AV_TRANSPORT, NULL,
-							 ActionNode, CallbackActionHandler, Cookie);
-
-	if (rc != UPNP_E_SUCCESS) {
-		LOG_ERROR("Error in UpnpSendActionAsync -- %d", rc);
-	}
-
-	if (ActionNode) ixmlDocument_free(ActionNode);
-
-	return rc;
+	return SubmitTransportAction(Device, ActionNode);
 }
 
+
 /*----------------------------------------------------------------------------*/
-int AVTSetPlayMode(char *ControlURL, void *Cookie)
+bool AVTSetPlayMode(struct sMR *Device)
 {
 	IXML_Document *ActionNode = NULL;
-	int rc;
 
-	LOG_INFO("uPNP set play mode for %s (cookie %p)", ControlURL, Cookie);
-	ActionNode =  UpnpMakeAction("SetPlayMode", AV_TRANSPORT, 0, NULL);
+	LOG_INFO("uPNP set play mode for %s (cookie %p)", Device->Service[AVT_SRV_IDX].ControlURL, Device->seqN);
+	if ((ActionNode =  UpnpMakeAction("SetPlayMode", AV_TRANSPORT, 0, NULL)) == NULL) return false;;
 	UpnpAddToAction(&ActionNode, "SetPlayMode", AV_TRANSPORT, "InstanceID", "0");
 	UpnpAddToAction(&ActionNode, "SetPlayMode", AV_TRANSPORT, "NewPlayMode", "NORMAL");
 
-	rc = UpnpSendActionAsync(glControlPointHandle, ControlURL, AV_TRANSPORT, NULL,
-							 ActionNode, CallbackActionHandler, Cookie);
+	return SubmitTransportAction(Device, ActionNode);
+}
+
+
+/*----------------------------------------------------------------------------*/
+bool AVTSeek(struct sMR *Device, unsigned Interval)
+{
+	IXML_Document *ActionNode = NULL;
+	char	params[128];
+
+	LOG_INFO("uPNP seek for %s (%ds) (cookie %p)", Device->Service[AVT_SRV_IDX].ControlURL, Device->seqN);
+
+	if ((ActionNode =  UpnpMakeAction("Seek", AV_TRANSPORT, 0, NULL)) == NULL) return false;
+	UpnpAddToAction(&ActionNode, "Seek", AV_TRANSPORT, "InstanceID", "0");
+	sprintf(params, "%d", (int) (Interval / 1000 + 0.5));
+	UpnpAddToAction(&ActionNode, "Seek", AV_TRANSPORT, "Unit", params);
+	UpnpAddToAction(&ActionNode, "Seek", AV_TRANSPORT, "Target", "REL_TIME");
+
+	return SubmitTransportAction(Device, ActionNode);
+}
+
+
+/*----------------------------------------------------------------------------*/
+bool AVTBasic(struct sMR *Device, char *Action)
+{
+	IXML_Document *ActionNode = NULL;
+
+	LOG_INFO("uPNP %s for %s (cookie %p)", Action, Device->Service[AVT_SRV_IDX].ControlURL, Device->seqN);
+
+	if ((ActionNode = UpnpMakeAction(Action, AV_TRANSPORT, 0, NULL)) == NULL) return false;
+	UpnpAddToAction(&ActionNode, Action, AV_TRANSPORT, "InstanceID", "0");
+
+	return SubmitTransportAction(Device, ActionNode);
+}
+
+
+/*----------------------------------------------------------------------------*/
+bool AVTStop(struct sMR *Device)
+{
+	int rc;
+	IXML_Document *ActionNode = NULL;
+
+	LOG_INFO("uPNP stop for %s (cookie %p)", Device->Service[AVT_SRV_IDX].ControlURL, Device->seqN);
+
+	if ((ActionNode = UpnpMakeAction("Stop", AV_TRANSPORT, 0, NULL)) == NULL) return false;
+	UpnpAddToAction(&ActionNode, "Stop", AV_TRANSPORT, "InstanceID", "0");
+	AVTActionFlush(&Device->ActionQueue);
+
+	Device->WaitCookie = Device->seqN++;
+	rc = UpnpSendActionAsync(glControlPointHandle, Device->Service[AVT_SRV_IDX].ControlURL,
+									 AV_TRANSPORT, NULL, ActionNode, CallbackActionHandler,
+									 Device->WaitCookie);
 
 	if (rc != UPNP_E_SUCCESS) {
 		LOG_ERROR("Error in UpnpSendActionAsync -- %d", rc);
 	}
 
-	if (ActionNode) ixmlDocument_free(ActionNode);
+	ixmlDocument_free(ActionNode);
 
-	return rc;
+	return (rc == 0);
 }
 
+
 /*----------------------------------------------------------------------------*/
-int SetVolume(char *ControlURL, u8_t Volume, void *Cookie)
+int CtrlSetVolume(char *ControlURL, u8_t Volume, void *Cookie)
 {
 	IXML_Document *ActionNode = NULL;
 	int rc;
@@ -266,15 +331,16 @@ int SetVolume(char *ControlURL, u8_t Volume, void *Cookie)
 
 
 /*----------------------------------------------------------------------------*/
-int GetVolume(char *ControlURL, void *Cookie)
+int CtrlSetMute(char *ControlURL, bool Mute, void *Cookie)
 {
 	IXML_Document *ActionNode = NULL;
 	int rc;
 
-	LOG_SDEBUG("uPNP get volume for %s (cookie %p)", ControlURL, Cookie);
-	ActionNode =  UpnpMakeAction("GetVolume", RENDERING_CTRL, 0, NULL);
-	UpnpAddToAction(&ActionNode, "GetVolume", RENDERING_CTRL, "InstanceID", "0");
-	UpnpAddToAction(&ActionNode, "GetVolume", RENDERING_CTRL, "Channel", "Master");
+	LOG_INFO("uPNP mute %d for %s (cookie %p)", Mute, ControlURL, Cookie);
+	ActionNode =  UpnpMakeAction("SetMute", RENDERING_CTRL, 0, NULL);
+	UpnpAddToAction(&ActionNode, "SetMute", RENDERING_CTRL, "InstanceID", "0");
+	UpnpAddToAction(&ActionNode, "SetMute", RENDERING_CTRL, "Channel", "Master");
+	UpnpAddToAction(&ActionNode, "SetMute", RENDERING_CTRL, "DesiredMute", Mute ? "1" : "0");
 
 	rc = UpnpSendActionAsync(glControlPointHandle, ControlURL, RENDERING_CTRL, NULL,
 							 ActionNode, CallbackActionHandler, Cookie);
@@ -289,57 +355,8 @@ int GetVolume(char *ControlURL, void *Cookie)
 }
 
 
-
 /*----------------------------------------------------------------------------*/
-int AVTSeek(char *ControlURL, unsigned Interval, void *Cookie)
-{
-	IXML_Document *ActionNode = NULL;
-	int rc;
-	char	params[128];
-
-	LOG_INFO("uPNP seek for %s (%ds) (cookie %p)", ControlURL, Interval, Cookie);
-	ActionNode =  UpnpMakeAction("Seek", AV_TRANSPORT, 0, NULL);
-	UpnpAddToAction(&ActionNode, "Seek", AV_TRANSPORT, "InstanceID", "0");
-	sprintf(params, "%d", (int) (Interval / 1000 + 0.5));
-	UpnpAddToAction(&ActionNode, "Seek", AV_TRANSPORT, "Unit", params);
-	UpnpAddToAction(&ActionNode, "Seek", AV_TRANSPORT, "Target", "REL_TIME");
-
-	rc = UpnpSendActionAsync(glControlPointHandle, ControlURL, AV_TRANSPORT, NULL,
-							 ActionNode, CallbackActionHandler, Cookie);
-
-	if (rc != UPNP_E_SUCCESS) {
-		LOG_ERROR("Error in UpnpSendActionAsync -- %d", rc);
-	}
-
-	if (ActionNode) ixmlDocument_free(ActionNode);
-
-	return rc;
-}
-
-/*----------------------------------------------------------------------------*/
-int AVTBasic(char *ControlURL, char *Action, void *Cookie)
-{
-	IXML_Document *ActionNode = NULL;
-	int rc;
-
-	LOG_INFO("uPNP %s for %s (cookie %p)", Action, ControlURL, Cookie);
-	ActionNode =  UpnpMakeAction(Action, AV_TRANSPORT, 0, NULL);
-	UpnpAddToAction(&ActionNode, Action, AV_TRANSPORT, "InstanceID", "0");
-
-	rc = UpnpSendActionAsync(glControlPointHandle, ControlURL, AV_TRANSPORT, NULL,
-							 ActionNode, CallbackActionHandler, Cookie);
-
-	if (rc != UPNP_E_SUCCESS) {
-		LOG_ERROR("Error in UpnpSendActionAsync -- %d", rc);
-	}
-
-	if (ActionNode) ixmlDocument_free(ActionNode);
-
-	return rc;
-}
-
-/*----------------------------------------------------------------------------*/
-int GetProtocolInfo(char *ControlURL, void *Cookie)
+int GetProtocolInfo(char *ControlURL, void *Cookie)
 {
 	IXML_Document *ActionNode = NULL;
 	int rc;
