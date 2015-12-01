@@ -3,6 +3,8 @@
  - Volume feedback to LMS when changed on the player can be disabled by <volume_feedback>
  - User Guide update
  - Add build date/time to version
+ - When streaming a webradio using wav format, pseudo file size was not set properly
+ - MAC address parameter was not read properly in config file (was overflowing on <send_icy> parameter)
  
 0.2.6.0 (not released)
  - Volume changes detected and forwarded back to LMS

@@ -514,9 +514,13 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "send_metadata")) Conf->SendMetaData = atol(val);
 	if (!strcmp(name, "send_coverart")) Conf->SendCoverArt = atol(val);
 	if (!strcmp(name, "name")) strcpy(Conf->Name, val);
-	if (!strcmp(name, "mac"))  sscanf(val,"%2hhx:%2hhx:%2hhx:%2hhx:%2hhx:%2hhx",
-								   &sq_conf->mac[0],&sq_conf->mac[1],&sq_conf->mac[2],
-								   &sq_conf->mac[3],&sq_conf->mac[4],&sq_conf->mac[5]);
+	if (!strcmp(name, "mac"))  {
+		unsigned mac[6];
+		int i;
+		// seems to be a Windows scanf buf, cannot support %hhx
+		sscanf(val,"%2x:%2x:%2x:%2x:%2x:%2x", &mac[0], &mac[1], &mac[2], &mac[3], &mac[4], &mac[5]);
+		for (i = 0; i < 6; i++) sq_conf->mac[i] = mac[i];
+	}
 }
 
 /*----------------------------------------------------------------------------*/
@@ -534,8 +538,14 @@ static void LoadGlobalItem(char *name, char *val)
 	if (!strcmp(name, "upnp_log")) glLog.upnp = debug2level(val);
 	if (!strcmp(name, "main_log")) glLog.main = debug2level(val);
 	if (!strcmp(name, "sq2mr_log")) glLog.sq2mr = debug2level(val);
-	if (!strcmp(name, "base_mac"))  sscanf(val,"%2hhx:%2hhx:%2hhx:%2hhx:%2hhx:%2hhx",
-								   &glMac[0],&glMac[1],&glMac[2],&glMac[3],&glMac[4],&glMac[5]);
+	if (!strcmp(name, "base_mac"))  {
+		unsigned mac[6];
+		int i;
+		// seems to be a Windows scanf buf, cannot support %hhx
+		sscanf(val,"%2x:%2x:%2x:%2x:%2x:%2x", &mac[0], &mac[1], &mac[2], &mac[3], &mac[4], &mac[5]);
+		for (i = 0; i < 6; i++) glMac[i] = mac[i];
+
+	}
 	if (!strcmp(name, "upnp_scan_interval")) gluPNPScanInterval = atol(val);
 	if (!strcmp(name, "upnp_scan_timeout")) gluPNPScanTimeout = atol(val);
 	if (!strcmp(name, "log_limit")) glLogLimit = atol(val);

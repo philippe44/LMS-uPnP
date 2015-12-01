@@ -44,6 +44,7 @@
 #include <netdb.h>
 #include <netinet/in.h>
 #include <netinet/if_ether.h>
+#include <sys/time.h>
 #endif
 
 #include <fcntl.h>

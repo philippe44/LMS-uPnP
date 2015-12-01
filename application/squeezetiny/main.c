@@ -728,31 +728,33 @@ void sq_set_sizes(void *desc)
 {
 	out_ctx_t *p = (out_ctx_t*) desc;
 	u8_t sample_size;
-	div_t duration;
+	div_t buf;
+	u32_t duration;
 
 	p->raw_size = p->file_size;
 
-	// if the track is remote and infinite, this is a live stream
-	if (p->remote && !p->duration) return;
-
-	// if not a raw format, then duration and raw size cannot be altered
-	if (strcmp(p->ext, "wav") && strcmp(p->ext, "aif") && strcmp(p->ext, "pcm")) return;
+	// if not a raw format, then duration and raw size cannot be altered
+	if (strcmp(p->ext, "wav") && strcmp(p->ext, "aif") && strcmp(p->ext, "pcm")) return;
 
 	sample_size = (p->sample_size == 24 && p->owner->config.L24_format == L24_TRUNC_16) ? 16 : p->sample_size;
+	duration = p->duration;
 
 	// duration is missing from metadata but using a HTTP no size format, need to take a guess
-	if (!p->duration) {
-		p->duration =  (p->file_size < 0) ?
-						(1 << 31) / ((u32_t) p->sample_rate * (u32_t) (sample_size/8) * (u32_t) p->channels) :
-						(p->file_size) / ((u32_t) p->sample_rate * (u32_t) (sample_size/8) * (u32_t) p->channels);
-		p->duration *= 1000;
+	if (!duration) {
+		duration =  (p->file_size < 0) ?
+					(1 << 31) / ((u32_t) p->sample_rate * (u32_t) (sample_size/8) * (u32_t) p->channels) :
+					(p->file_size) / ((u32_t) p->sample_rate * (u32_t) (sample_size/8) * (u32_t) p->channels);
+		duration *= 1000;
 	}
 
-	duration = div(p->duration, 1000);
-	p->raw_size = duration.quot * (u32_t) p->sample_rate * (u32_t) (sample_size/8) * (u32_t) p->channels;
-	p->raw_size += (duration.rem * (u32_t) p->sample_rate * (u32_t) (sample_size/8) * (u32_t) p->channels) / 1000;
+	buf = div(duration, 1000);
+	p->raw_size = buf.quot * (u32_t) p->sample_rate * (u32_t) (sample_size/8) * (u32_t) p->channels;
+	p->raw_size += (buf.rem * (u32_t) p->sample_rate * (u32_t) (sample_size/8) * (u32_t) p->channels) / 1000;
 
-	// HTTP streaming using no size, nothing else to change
+	// for live stream, do not set duration, but all above was needed
+	if (p->duration && !p->remote) p->duration = duration;
+
+	// HTTP streaming using no size, nothing else to change, no need for CONTENT LENGTH
 	if (p->file_size < 0) return;
 
 	if (!strcmp(p->ext, "wav")) p->file_size = p->raw_size + 36 + 8;
