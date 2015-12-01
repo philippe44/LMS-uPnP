@@ -305,15 +305,9 @@ static int	uPNPTerminate(void);
 
 			sprintf(uri, "http://%s:%d/%s/%s.%s", glIPaddress, glPort, glBaseVDIR, p->name, p->ext);
 
-			if (device->Config.SendMetaData) {
-				sq_get_metadata(device->SqueezeHandle, &device->MetaData, (action == SQ_SETURI) ? false : true);
-				p->file_size = device->MetaData.file_size ?
-							   device->MetaData.file_size : device->Config.StreamLength;
-			}
-			else {
-				sq_default_metadata(&device->MetaData, true);
-				p->file_size = device->Config.StreamLength;
-			}
+			sq_get_metadata(device->SqueezeHandle, &device->MetaData, (action == SQ_SETURI) ? false : true);
+			p->file_size = device->MetaData.file_size ?
+						   device->MetaData.file_size : device->Config.StreamLength;
 
 			p->duration 	= device->MetaData.duration;
 			p->src_format 	= ext2format(device->MetaData.path);
@@ -853,7 +847,7 @@ static void *UpdateMRThread(void *args)
 	struct sMR *Device = NULL;
 	int i, TimeStamp;
 
-	LOG_DEBUG("Begin uPnP devices update", NULL);
+	LOG_DEBUG("Begin UPnP devices update", NULL);
 	TimeStamp = gettime_ms();
 
 	// first add any newly found uPNP renderer
@@ -945,7 +939,7 @@ static void *UpdateMRThread(void *args)
 		SaveConfig(glConfigName, glConfigID, false);
 	}
 
-	LOG_DEBUG("End uPnP devices update %d", gettime_ms() - TimeStamp);
+	LOG_DEBUG("End UPnP devices update %d", gettime_ms() - TimeStamp);
 	return NULL;
 }
 
@@ -1545,7 +1539,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (!Start()) {
-		LOG_ERROR("Cannot start uPnP", NULL);
+		LOG_ERROR("Cannot start UPnP", NULL);
 		strcpy(resp, "exit");
 	}
 
@@ -1627,7 +1621,7 @@ int main(int argc, char *argv[])
 	glMainRunning = false;
 	LOG_INFO("stopping squeelite devices ...", NULL);
 	sq_stop();
-	LOG_INFO("stopping uPnP devices ...", NULL);
+	LOG_INFO("stopping UPnP devices ...", NULL);
 	Stop();
 	LOG_INFO("all done", NULL);
 

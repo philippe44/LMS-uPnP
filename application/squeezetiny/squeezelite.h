@@ -486,6 +486,7 @@ typedef struct out_ctx_s {
 	u32_t				duration;
 	s32_t				raw_size;
 	bool				remote;
+	bool  				live;
 	u32_t				track_hash;
 	struct {
 		bool 	update;

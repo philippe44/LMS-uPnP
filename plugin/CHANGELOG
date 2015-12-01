@@ -5,6 +5,8 @@
  - Add build date/time to version
  - When streaming a webradio using wav format, pseudo file size was not set properly
  - MAC address parameter was not read properly in config file (was overflowing on <send_icy> parameter)
+ - Always gather metadata from LMS, <send_metadata> only stops sending of coverart, album, artist and title 
+ - Tracks over one hour where rolling over to 0 
  
 0.2.6.0 (not released)
  - Volume changes detected and forwarded back to LMS

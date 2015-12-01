@@ -358,7 +358,7 @@ void sq_default_metadata(sq_metadata_t *metadata, bool init)
 {
 	if (init) sq_init_metadata(metadata);
 
-	if (!metadata->title) metadata->title 	= strdup("[LMS to uPnP]");
+	if (!metadata->title) metadata->title 	= strdup("[LMS to UPnP]");
 	if (!metadata->album) metadata->album 	= strdup("[no album]");
 	if (!metadata->artist) metadata->artist = strdup("[no artist]");
 	if (!metadata->genre) metadata->genre 	= strdup("[no genre]");
@@ -634,9 +634,9 @@ bool sq_is_remote(const char *urn)
 	for (i = 0; i < MAX_PLAYER; i++) {
 		if (!thread_ctx[i].in_use) continue;
 		if (strstr(urn, thread_ctx[i].out_ctx[0].buf_name))
-			return thread_ctx[i].config.send_icy && thread_ctx[i].out_ctx[0].remote && !thread_ctx[i].out_ctx[0].duration;
+			return thread_ctx[i].config.send_icy && thread_ctx[i].out_ctx[0].live;
 		if (strstr(urn, thread_ctx[i].out_ctx[1].buf_name))
-			return thread_ctx[i].config.send_icy && thread_ctx[i].out_ctx[1].remote && !thread_ctx[i].out_ctx[1].duration;
+			return thread_ctx[i].config.send_icy && thread_ctx[i].out_ctx[1].live;
 	}
 
 	return true;
@@ -728,8 +728,7 @@ void sq_set_sizes(void *desc)
 {
 	out_ctx_t *p = (out_ctx_t*) desc;
 	u8_t sample_size;
-	div_t buf;
-	u32_t duration;
+	div_t duration;
 
 	p->raw_size = p->file_size;
 
@@ -737,22 +736,18 @@ void sq_set_sizes(void *desc)
 	if (strcmp(p->ext, "wav") && strcmp(p->ext, "aif") && strcmp(p->ext, "pcm")) return;
 
 	sample_size = (p->sample_size == 24 && p->owner->config.L24_format == L24_TRUNC_16) ? 16 : p->sample_size;
-	duration = p->duration;
 
 	// duration is missing from metadata but using a HTTP no size format, need to take a guess
-	if (!duration) {
-		duration =  (p->file_size < 0) ?
+	if (!p->duration) {
+		p->duration =  (p->file_size < 0) ?
 					(1 << 31) / ((u32_t) p->sample_rate * (u32_t) (sample_size/8) * (u32_t) p->channels) :
 					(p->file_size) / ((u32_t) p->sample_rate * (u32_t) (sample_size/8) * (u32_t) p->channels);
-		duration *= 1000;
+		p->duration *= 1000;
 	}
 
-	buf = div(duration, 1000);
-	p->raw_size = buf.quot * (u32_t) p->sample_rate * (u32_t) (sample_size/8) * (u32_t) p->channels;
-	p->raw_size += (buf.rem * (u32_t) p->sample_rate * (u32_t) (sample_size/8) * (u32_t) p->channels) / 1000;
-
-	// for live stream, do not set duration, but all above was needed
-	if (p->duration && !p->remote) p->duration = duration;
+	duration = div(p->duration, 1000);
+	p->raw_size = duration.quot * (u32_t) p->sample_rate * (u32_t) (sample_size/8) * (u32_t) p->channels;
+	p->raw_size += (duration.rem * (u32_t) p->sample_rate * (u32_t) (sample_size/8) * (u32_t) p->channels) / 1000;
 
 	// HTTP streaming using no size, nothing else to change, no need for CONTENT LENGTH
 	if (p->file_size < 0) return;

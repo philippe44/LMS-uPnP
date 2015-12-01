@@ -388,11 +388,9 @@ s64_t Time2Int(char *Time)
 		ret += atol(p + 1)*60;
 	}
 
-	//p = strrchr(Time, ':');
 	p = Time;
-	if (p) {
-		*p = '\0';
-		ret += atol(p + 1)*3600;
+	if (p && *p) {
+		ret += atol(p)*3600;
 	}
 
 	return ret;

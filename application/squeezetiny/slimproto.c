@@ -387,6 +387,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 					ctx->out_ctx[idx].duration = uri.duration;
 					ctx->out_ctx[idx].src_format = uri.src_format;
 					ctx->out_ctx[idx].remote = uri.remote;
+					ctx->out_ctx[idx].live = uri.remote && (uri.duration == 0);
 					ctx->out_ctx[idx].track_hash = uri.track_hash;
 					sq_set_sizes(ctx->out_ctx + idx);
 				}
