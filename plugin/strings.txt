@@ -145,12 +145,23 @@ PLUGIN_UPNPBRIDGE_SCANTIMEOUT
 PLUGIN_UPNPBRIDGE_TEXTDEFAULT
 	EN	The following parameters apply to ALL players - enter "default" (without ") in text boxes to set to default values
 
-PLUGIN_UPNPBRIDGE_STREAMLENGTH
-	EN	HTTP streaming option
+PLUGIN_UPNPBRIDGE_HTTPOPTIONS
+	EN	Player communication options
 
-PLUGIN_UPNPBRIDGE_STREAMLENGTH_DESC
-	EN	The true size of the stream is unknown by LMS. Some UPnP players are not happy with "chunked" HTTP streaming and require
-	EN	a true length (see the user guide in https://github.com/philippe44/LMS-to-UPnP for details.)
+PLUGIN_UPNPBRIDGE_HTTPOPTIONS_DESC
+	EN	Various streaming options for communication with LMS and with the UPnP player (see user guide)
+	EN	<br>- LMS does not provide the file size to be sent. The best HTTP mode is to use "chunked encoding" but some UPnP players
+	EN	do not work with that option and require other solutions to set expected length
+	EN	<br>- Live streams (webradios) require a timeout to detect idle connection
+	
+PLUGIN_UPNPBRIDGE_STREAMLENGTH
+	EN	HTTP mode
+	
+PLUGIN_UPNPBRIDGE_MAXREADWAIT
+	EN	Streaming timeout (x50ms)
+
+PLUGIN_UPNPBRIDGE_DUALGET
+	EN	Dual GET response
 
 PLUGIN_UPNPBRIDGE_ACCEPTNEXTURI
 	EN	Player supports gapless 

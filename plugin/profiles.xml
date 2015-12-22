@@ -10,6 +10,7 @@
 	<L24_format>2</L24_format>
 	<max_volume>100</max_volume>
 	<match_endianness>0</match_endianness>
+	<max_read_wait>600</max_read_wait>
 	<profile name=''></profile>
 	<profile name='foobar 2000'></profile>
 	<profile name='Sonos'>
@@ -90,6 +91,12 @@
 		<profile name='CR-N755'>
 			<accept_nexturi>0</accept_nexturi>
 		</profile>
+	</profile>
+	<profile name='PURE One Flow'>
+		<codecs>aac,pcm,flc,mp3</codecs>
+		<stream_length>1000000000</stream_length>
+		<raw_audio_format>wav,aiff</raw_audio_format>
+		<sample_rate>48000</sample_rate>
 	</profile>
 </squeeze2upnp>
 

@@ -7,6 +7,12 @@
  - MAC address parameter was not read properly in config file (was overflowing on <send_icy> parameter)
  - Always gather metadata from LMS, <send_metadata> only stops sending of coverart, album, artist and title 
  - Tracks over one hour where rolling over to 0 
+ - Remove vorbis_comment header in repositioning (check that is was needed for NamUniti)
+ - Add (-5) HTTP streaming mode that forces a buffering of the whole audio file before answering HTTP GET request. Allows to send a real size to player (for webradio, a fake size is sent)
+ - Add powerpc build (static and dynamic)
+ - (P) <max_read_wait> accessible from configuration screen
+ - (P) add armv5 static and powerpc builds
+ - NB: with -5 HTTP streaming, it seems that some players do not detect properly the end of re-positionned flac files
  
 0.2.6.0 (not released)
  - Volume changes detected and forwarded back to LMS
@@ -102,7 +108,7 @@
  - removed memory leak in SaveConfig (nodelist using wrong free)
  - add the full channel and sample rate in DIDL header, not only in content-type
  - OSX version is now multi-architecture, named squeeze2upnp-osx-multi
- - Some players do not feel "CurrentURI" properly in GetMediaInfo. Use the "CurrentURIMetaData" and parse it instead
+ - Some players do not set "CurrentURI" properly in GetMediaInfo. Use the "CurrentURIMetaData" and parse it instead
  - Added partial AIFF support (not sending AIFF to player but accepting AIFF=PCM from LMS) ==> less byte-reordering needed
  - Codecs capabilities send to LMS only include codecs supported by UPnP player
  - added <raw_audio_format> as a comma-separated, ordered, list of file format sent to UPnP players amongst (pcm, aif, wav)
@@ -122,7 +128,7 @@
  - add <max_volume> parameter to scale and limit the <volume_curve>. Any value calculated from volume curve is scaled by <max_volume>/100
  - Window version is renamed squeeze2upnp-win
  - add -I command line option to auto-save config file at each scan
- - some players trigger false detectio of URI change by reporting empty nextURI, so check the nextURI contains "-idx-" pattern
+ - some players trigger false detection of URI change by reporting empty nextURI, so check the nextURI contains "-idx-" pattern
  - when saving an existing device, the UPnP friendly name was used, even if a different name was set in configuration
  - add -k option to force immediate exit on SIGINT, SIGQUIT and SIGTERM
  - handle SIGINT, SIGQUIT and SIGTERM properly

@@ -594,7 +594,7 @@ sq_dev_handle_t sq_urn2handle(const char *urn)
 
 
 /*---------------------------------------------------------------------------*/
-void *sq_get_info(const char *urn, s32_t *size, char **content_type, u16_t interval)
+void *sq_get_info(const char *urn, s32_t *size, char **content_type, char **dlna_content, u16_t interval)
 {
 	int i = 0;
 	out_ctx_t *out = NULL;
@@ -607,22 +607,56 @@ void *sq_get_info(const char *urn, s32_t *size, char **content_type, u16_t inter
 		if (strstr(urn, thread_ctx[i].out_ctx[1].buf_name)) out = &thread_ctx[i].out_ctx[1];
 	}
 
-	if (out) {
-		i--;
-		p = malloc(strlen(out->content_type) + 1);
-		strcpy(p, out->content_type);
-		*size = out->file_size;
-		*content_type = p;
-
-		if (out->remote) out->icy.interval = interval;
-		else out->icy.interval = 0;
-
-		return &thread_ctx[i];
-	}
-	else {
+	if (!out) {
 		*content_type = strdup("audio/unknown");
+		LOG_ERROR("Unknown URN %s", urn);
 		return NULL;
 	}
+
+	// point to the right context !
+	i--;
+
+	/*
+	Some players send 2 GET for the same URL - this is not supported and a
+	HTTP NOT FOUND (404) shall be answered. But some others send a GET after
+	the SETURI and then, when they receive the PLAY, they close the socket and
+	send another GET, but the close might be received after the 2nd GET (due to
+	threading) and this would be confused with a dual GET. A mutex with timeout
+	is used to solve this, but the actual lock shall be done in the GET (open)
+	request not in the INFO request.
+	NB: this has an impact if a player requests an INFO on an opened file, but
+	it is assumed that this case does not happen in UPnP
+	*/
+
+	if (out->read_file) {
+		if (mutex_timedlock(out->mutex, 1000)) {
+			LOG_WARN("[%p]: File opened twice %s (returning NOT FOUND)", out->owner, urn);
+			return NULL;
+		}
+		else mutex_unlock(out->mutex);
+	}
+
+	// in case the whole file must be buffered
+	if (out->file_size == HTTP_BUFFERED) {
+		LOG_INFO("[%p]: waiting for whole file buffering", out->owner);
+		if (out->duration) while (out->write_file) usleep(50000);
+		else out->file_size = 1000000000;
+		LOG_INFO("[%p]: file buffered", out->owner);
+	}
+
+	*size = out->file_size;
+	*content_type = strdup(out->content_type);
+
+	if (dlna_content) {
+		if ((p = stristr(out->proto_info, ":DLNA")) != NULL) *dlna_content = strdup(p + 1);
+		else *dlna_content = strdup("");
+	}
+
+	if (out->remote) out->icy.interval = interval;
+	else out->icy.interval = 0;
+
+	LOG_INFO("[%p]: GetInfo %s %d %s", &thread_ctx[i], urn, out->file_size, out->content_type);
+	return &thread_ctx[i];
 }
 
 
@@ -674,30 +708,17 @@ void *sq_open(const char *urn)
 		char buf[SQ_STR_LENGTH];
 		struct thread_ctx_s *ctx = out->owner; 		// for the macro to work ... ugh
 
-		/*
-		Some players send 2 GET for the same URL - this is not supported. But
-		others send a GET after the SETURI and then, when they receive the PLAY,
-		they close the socket and send another GET, but the close might be
-		received after the GET (threading) and might be confused with a 2nd GET
-		so a mutex with timeout should solve this
-		*/
-		if (mutex_timedlock(out->mutex, 1000) && out->read_file) {
-			LOG_WARN("[%p]: cannot open file twice %s", out->owner, urn);
-			return NULL;
-		}
-
 		sq_reset_icy(out, true);
 
 		LOCK_S;LOCK_O;
-		if (!out->read_file) {
-			// read counters are not set here. they are set
-			sprintf(buf, "%s/%s", thread_ctx[i-1].config.buffer_dir, out->buf_name);
-			out->read_file = fopen(buf, "rb");
-			LOG_INFO("[%p]: open", out->owner);
-			if (!out->read_file) out = NULL;
-		}
-		// Some clients try to open 2 sessions : do not allow that
-		else out = NULL;
+
+		// read counters are not set here. they are set
+		sprintf(buf, "%s/%s", thread_ctx[i-1].config.buffer_dir, out->buf_name);
+		mutex_lock(out->mutex);
+		out->read_file = fopen(buf, "rb");
+		LOG_INFO("[%p]: open", out->owner);
+		if (!out->read_file) out = NULL;
+
 		UNLOCK_S;UNLOCK_O;
 	}
 
@@ -912,10 +933,8 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 	the connection
 	*/
 	if ((!read_b || ((p->file_size > 0 ) && (p->read_count_t >= p->file_size))) && wait && !p->write_file) {
-#ifndef __EARLY_STMd__
 		ctx->read_ended = true;
 		wake_controller(ctx);
-#endif
 		LOG_INFO("[%p]: read (end of track) w:%d", ctx, wait);
 	}
 

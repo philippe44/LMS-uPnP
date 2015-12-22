@@ -30,6 +30,71 @@
 
 static log_level loglevel = lWARN;
 
+ /* DLNA.ORG_CI: conversion indicator parameter (integer)
+ *     0 not transcoded
+ *     1 transcoded
+ */
+typedef enum {
+  DLNA_ORG_CONVERSION_NONE = 0,
+  DLNA_ORG_CONVERSION_TRANSCODED = 1,
+} dlna_org_conversion_t;
+
+/* DLNA.ORG_OP: operations parameter (string)
+ *     "00" (or "0") neither time seek range nor range supported
+ *     "01" range supported
+ *     "10" time seek range supported
+ *     "11" both time seek range and range supported
+ */
+typedef enum {
+  DLNA_ORG_OPERATION_NONE                  = 0x00,
+  DLNA_ORG_OPERATION_RANGE                 = 0x01,
+  DLNA_ORG_OPERATION_TIMESEEK              = 0x10,
+} dlna_org_operation_t;
+
+/* DLNA.ORG_FLAGS, padded with 24 trailing 0s
+ *     8000 0000  31  senderPaced
+ *     4000 0000  30  lsopTimeBasedSeekSupported
+ *     2000 0000  29  lsopByteBasedSeekSupported
+ *     1000 0000  28  playcontainerSupported
+ *      800 0000  27  s0IncreasingSupported
+ *      400 0000  26  sNIncreasingSupported
+ *      200 0000  25  rtspPauseSupported
+ *      100 0000  24  streamingTransferModeSupported
+ *       80 0000  23  interactiveTransferModeSupported
+ *       40 0000  22  backgroundTransferModeSupported
+ *       20 0000  21  connectionStallingSupported
+ *       10 0000  20  dlnaVersion15Supported
+ *
+ *     Example: (1 << 24) | (1 << 22) | (1 << 21) | (1 << 20)
+ *       DLNA.ORG_FLAGS=0170 0000[0000 0000 0000 0000 0000 0000] // [] show padding
+ */
+typedef enum {
+  DLNA_ORG_FLAG_SENDER_PACED               = (1 << 31),
+  DLNA_ORG_FLAG_TIME_BASED_SEEK            = (1 << 30),
+  DLNA_ORG_FLAG_BYTE_BASED_SEEK            = (1 << 29),
+  DLNA_ORG_FLAG_PLAY_CONTAINER             = (1 << 28),
+
+  DLNA_ORG_FLAG_S0_INCREASE                = (1 << 27),
+  DLNA_ORG_FLAG_SN_INCREASE                = (1 << 26),
+  DLNA_ORG_FLAG_RTSP_PAUSE                 = (1 << 25),
+  DLNA_ORG_FLAG_STREAMING_TRANSFERT_MODE    = (1 << 24),
+
+  DLNA_ORG_FLAG_INTERACTIVE_TRANSFERT_MODE = (1 << 23),
+  DLNA_ORG_FLAG_BACKGROUND_TRANSFERT_MODE  = (1 << 22),
+  DLNA_ORG_FLAG_CONNECTION_STALL           = (1 << 21),
+  DLNA_ORG_FLAG_DLNA_V15                   = (1 << 20),
+} dlna_org_flags_t;
+
+
+#define DLNA_ORG_OP (DLNA_ORG_OPERATION_RANGE)
+// GNU pre-processor seems to be confused if this is multiline ...
+#define DLNA_ORG_FLAG ( DLNA_ORG_FLAG_STREAMING_TRANSFERT_MODE | DLNA_ORG_FLAG_BACKGROUND_TRANSFERT_MODE | DLNA_ORG_FLAG_CONNECTION_STALL |	DLNA_ORG_FLAG_DLNA_V15 )
+
+/*
+static char DLNA_OPT[] = ";DLNA.ORG_OP=01;DLNA.ORG_FLAGS=01700000000000000000000000000000";
+*/
+
+
 /*----------------------------------------------------------------------------*/
 void MRutilInit(log_level level)
 {
@@ -104,7 +169,7 @@ static char *format2ext(u8_t format)
 			}
 			// re-set file extension
 			strcpy(uri->ext, "pcm");
-            // if the proposed format accepts any rate & channel, give it a try
+			// if the proposed format accepts any rate & channel, give it a try
 			if (!strstr(*p, "channels") && !strstr(*p, "rate")) {
 				int size = strstr(*p, fmt) - *p;
 
@@ -134,9 +199,10 @@ static char *format2ext(u8_t format)
 	}
 
 	return true;
-}
+ }
 
-/*----------------------------------------------------------------------------*/
+
+ /*----------------------------------------------------------------------------*/
 static bool SetContentTypeRawAudio(struct sMR *Device, sq_seturi_t *uri, bool MatchEndianness)
 {
 	bool ret = false;
@@ -174,24 +240,41 @@ static bool SetContentTypeRawAudio(struct sMR *Device, sq_seturi_t *uri, bool Ma
 	return ret;
 }
 
+
 /*----------------------------------------------------------------------------*/
 bool SetContentType(struct sMR *Device, sq_seturi_t *uri)
 {
+	char buf[SQ_STR_LENGTH];
+	char *DLNAOrg;
+	bool rc;
+
 	strcpy(uri->ext, format2ext(uri->codec));
 
 	switch (uri->codec) {
-	case 'm': return _SetContentType(Device->ProtocolCap, uri, 3, "audio/mp3", "audio/mpeg", "audio/mpeg3");
-	case 'f': return _SetContentType(Device->ProtocolCap, uri, 2, "audio/x-flac", "audio/flac");
-	case 'w': return _SetContentType(Device->ProtocolCap, uri, 2, "audio/x-wma", "audio/wma");
-	case 'o': return _SetContentType(Device->ProtocolCap, uri, 1, "audio/ogg");
-	case 'a': return _SetContentType(Device->ProtocolCap, uri, 4, "audio/x-aac", "audio/aac", "audio/m4a", "audio/mp4");
-	case 'l': return _SetContentType(Device->ProtocolCap, uri, 1, "audio/m4a");
-	case 'p': return SetContentTypeRawAudio(Device, uri, Device->Config.MatchEndianness);
+	case 'm': rc = _SetContentType(Device->ProtocolCap, uri, 3, "audio/mp3", "audio/mpeg", "audio/mpeg3"); break;
+	case 'f': rc = _SetContentType(Device->ProtocolCap, uri, 2, "audio/x-flac", "audio/flac");break;
+	case 'w': rc = _SetContentType(Device->ProtocolCap, uri, 2, "audio/x-wma", "audio/wma");break;
+	case 'o': rc = _SetContentType(Device->ProtocolCap, uri, 1, "audio/ogg");break;
+	case 'a': rc = _SetContentType(Device->ProtocolCap, uri, 4, "audio/x-aac", "audio/aac", "audio/m4a", "audio/mp4");break;
+	case 'l': rc = _SetContentType(Device->ProtocolCap, uri, 1, "audio/m4a");break;
+	case 'p': rc = SetContentTypeRawAudio(Device, uri, Device->Config.MatchEndianness);break;
 	default:
 		strcpy(uri->content_type, "unknown");
 		strcpy(uri->proto_info, "");
 		return false;
 	}
+
+	if (Device->Config.ByteSeek) DLNAOrg = ";DLNA.ORG_OP=01;DLNA.ORG_CI=0";
+	else DLNAOrg = ";DLNA.ORG_CI=0";
+
+	sprintf(buf, "%s;DLNA.ORG_FLAGS=%08x000000000000000000000000",
+				  DLNAOrg, DLNA_ORG_FLAG | ((uri->duration) ? 0 : DLNA_ORG_FLAG_SN_INCREASE));
+
+
+	if (uri->proto_info[strlen(uri->proto_info) - 1] == ':') strcat(uri->proto_info, buf + 1);
+	else strcat(uri->proto_info, buf);
+
+	return rc;
 }
 
 
@@ -650,4 +733,36 @@ void *LoadConfig(char *name, tMRConfig *Conf, sq_dev_param_t *sq_conf)
 	return doc;
  }
 
+
+ /*
+"http-get:*:audio/mpeg:DLNA.ORG_PN=MP3;DLNA.ORG_OP=01;DLNA.ORG_FLAGS=$flags",
+"http-get:*:audio/L16;rate=8000;channels=1:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=01,DLNA.ORG_FLAGS=$flags",
+"http-get:*:audio/L16;rate=8000;channels=2:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=01,DLNA.ORG_FLAGS=$flags",
+"http-get:*:audio/L16;rate=11025;channels=1:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=01,DLNA.ORG_FLAGS=$flags",
+"http-get:*:audio/L16;rate=11025;channels=2:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=01,DLNA.ORG_FLAGS=$flags",
+"http-get:*:audio/L16;rate=12000;channels=1:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=01,DLNA.ORG_FLAGS=$flags",
+"http-get:*:audio/L16;rate=12000;channels=2:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=01,DLNA.ORG_FLAGS=$flags",
+"http-get:*:audio/L16;rate=16000;channels=1:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=01,DLNA.ORG_FLAGS=$flags",
+"http-get:*:audio/L16;rate=16000;channels=2:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=01,DLNA.ORG_FLAGS=$flags",
+"http-get:*:audio/L16;rate=22050;channels=1:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=01,DLNA.ORG_FLAGS=$flags",
+"http-get:*:audio/L16;rate=22050;channels=2:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=01,DLNA.ORG_FLAGS=$flags",
+"http-get:*:audio/L16;rate=24000;channels=1:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=01,DLNA.ORG_FLAGS=$flags",
+"http-get:*:audio/L16;rate=24000;channels=2:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=01,DLNA.ORG_FLAGS=$flags",
+"http-get:*:audio/L16;rate=32000;channels=1:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=01,DLNA.ORG_FLAGS=$flags",
+"http-get:*:audio/L16;rate=32000;channels=2:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=01,DLNA.ORG_FLAGS=$flags",
+"http-get:*:audio/L16;rate=44100;channels=1:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=01,DLNA.ORG_FLAGS=$flags",
+"http-get:*:audio/L16;rate=44100;channels=2:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=01,DLNA.ORG_FLAGS=$flags",
+"http-get:*:audio/L16;rate=48000;channels=1:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=01,DLNA.ORG_FLAGS=$flags",
+"http-get:*:audio/L16;rate=48000;channels=2:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=01,DLNA.ORG_FLAGS=$flags",
+"http-get:*:audio/vnd.dlna.adts:DLNA.ORG_PN=AAC_ADTS;DLNA.ORG_OP=01;DLNA.ORG_FLAGS=$flags",
+"http-get:*:audio/vnd.dlna.adts:DLNA.ORG_PN=HEAAC_L2_ADTS;DLNA.ORG_OP=01;DLNA.ORG_FLAGS=$flags",
+"http-get:*:audio/mp4:DLNA.ORG_PN=AAC_ISO;DLNA.ORG_OP=00;DLNA.ORG_FLAGS=$flags",
+"http-get:*:audio/mp4:DLNA.ORG_PN=AAC_ISO_320;DLNA.ORG_OP=00;DLNA.ORG_FLAGS=$flags",
+"http-get:*:audio/mp4:DLNA.ORG_PN=HEAAC_L2_ISO;DLNA.ORG_OP=00;DLNA.ORG_FLAGS=$flags",
+"http-get:*:audio/x-ms-wma:DLNA.ORG_PN=WMABASE;DLNA.ORG_OP=01;DLNA.ORG_FLAGS=$flags",
+"http-get:*:audio/x-ms-wma:DLNA.ORG_PN=WMAFULL;DLNA.ORG_OP=01;DLNA.ORG_FLAGS=$flags",
+"http-get:*:audio/x-ms-wma:DLNA.ORG_PN=WMAPRO;DLNA.ORG_OP=01;DLNA.ORG_FLAGS=$flags",
+"http-get:*:application/ogg:DLNA.ORG_OP=00;DLNA.ORG_FLAGS=$flags",
+"http-get:*:audio/x-flac:DLNA.ORG_OP=00;DLNA.ORG_FLAGS=$flags",
+*/
 

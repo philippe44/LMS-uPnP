@@ -382,6 +382,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 
 				if (rc) {
 					strcpy(ctx->out_ctx[idx].content_type, uri.content_type);
+					strcpy(ctx->out_ctx[idx].proto_info, uri.proto_info);
 					strcpy(ctx->out_ctx[idx].ext, uri.ext);
 					ctx->out_ctx[idx].file_size = uri.file_size;
 					ctx->out_ctx[idx].duration = uri.duration;

@@ -109,16 +109,9 @@ flac_streaminfo_t FLAC_FULL_STREAMINFO = {
 		0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa }
 };
 
-
-static u8_t flac_vorbis_block[] = { 0x84,0x00,0x00,0x28,0x20,0x00,0x00,0x00,0x72,
-									0x65,0x66,0x65,0x72,0x65,0x6E,0x63,0x65,0x20,
-									0x6C,0x69,0x62,0x46,0x4C,0x41,0x43,0x20,0x31,
-									0x2E,0x32,0x2E,0x31,0x20,0x32,0x30,0x30,0x37,
-									0x30,0x39,0x31,0x37,0x00,0x00,0x00,0x00 };
-
 static u8_t flac_header[] = {
 			'f', 'L', 'a', 'C',
-			0x00,
+			0x80,
 			(u8_t) ((u32_t) sizeof(flac_streaminfo_t) >> 16),
 			(u8_t) ((u32_t) sizeof(flac_streaminfo_t) >> 8),
 			(u8_t) ((u32_t) sizeof(flac_streaminfo_t))
@@ -436,8 +429,14 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 				LOG_ERROR("[%p]: write file not opened %s", ctx, buf);
 			}
 
-			// re-size buffer if needed
-			if (ctx->config.buffer_limit != -1 && out->write_count > (u32_t) ctx->config.buffer_limit) {
+			/*
+			Re-size buffer if needed. This is disabled if the streaming mode is
+			to require the whole file to be stored. Note that out->file_size is
+			set *after* the whole file is acquired at the end of this routine,
+			which does not conflict with this test or is set in sq_get_info if
+			duration is 0 (live stream)	which is the desired behavior
+			*/
+			if (out->file_size != HTTP_BUFFERED && ctx->config.buffer_limit != -1 && out->write_count > (u32_t) ctx->config.buffer_limit) {
 				u8_t *buf;
 				u32_t n;
 				int rc;
@@ -520,7 +519,6 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 								streaminfo->combo[3] = BYTE_4(FLAC_COMBO(rate, channels, sample_size));
 								out->write_count = fwrite(&flac_header, 1, sizeof(flac_header), out->write_file);
 								out->write_count += fwrite(streaminfo, 1, sizeof(flac_streaminfo_t), out->write_file);
-								out->write_count += fwrite(flac_vorbis_block, 1, sizeof(flac_vorbis_block), out->write_file);
 								out->write_count_t = out->write_count;
 								LOG_INFO("[%p]: flac header ch:%d, s:%d, r:%d, b:%d", ctx, channels, sample_size, rate, block_size);
 								if (!rate || !sample_size || !channels) {
@@ -735,11 +733,8 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 			(out->file_size > 0 && (out->write_count_t >= out->file_size)))) {
 			LOG_INFO("[%p] wrote total %Ld", ctx, out->write_count_t);
 			fclose(out->write_file);
+			if (out->file_size == HTTP_BUFFERED) out->file_size = out->write_count_t;
 			out->write_file = NULL;
-#ifdef __EARLY_STMd__
-			ctx->read_ended = true;
-			wake_controller(ctx);
-#endif
 
 			UNLOCK_S;
 			buf_flush(ctx->streambuf);

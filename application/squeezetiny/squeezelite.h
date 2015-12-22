@@ -507,6 +507,7 @@ typedef struct out_ctx_s {
 	bool				endianness;
 	u8_t				channels;
 	char				content_type[SQ_STR_LENGTH];
+	char				proto_info[SQ_STR_LENGTH];
 	u32_t				read_count, write_count;
 	u64_t				read_count_t, write_count_t;
 	u32_t				close_count;

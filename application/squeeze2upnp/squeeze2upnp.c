@@ -104,8 +104,8 @@ sq_dev_param_t glDeviceParam = {
 						SQ_RATE_96000, SQ_RATE_48000, SQ_RATE_44100,
 						SQ_RATE_32000, SQ_RATE_24000, SQ_RATE_22500, SQ_RATE_16000,
 						SQ_RATE_12000, SQ_RATE_11025, SQ_RATE_8000, 0 },
-					-1,
-					100,
+					-1,         // get can retrun as mucvh as required by UPnP
+					600,		// wait 100*50ms wait for data from LMS
 					"flc,pcm,mp3",
 					SQ_RATE_48000,
 					L24_PACKED_LPCM,
@@ -297,14 +297,6 @@ static int	uPNPTerminate(void);
 			LOG_INFO("[%p]: codec:%c, ch:%d, s:%d, r:%d", device, p->codec,
 										p->channels, p->sample_size, p->sample_rate);
 
-			if (!SetContentType(device, p)) {
-				LOG_ERROR("[%p]: no matching codec in player", caller);
-				rc = false;
-				break;
-			}
-
-			sprintf(uri, "http://%s:%d/%s/%s.%s", glIPaddress, glPort, glBaseVDIR, p->name, p->ext);
-
 			sq_get_metadata(device->SqueezeHandle, &device->MetaData, (action == SQ_SETURI) ? false : true);
 			p->file_size = device->MetaData.file_size ?
 						   device->MetaData.file_size : device->Config.StreamLength;
@@ -315,9 +307,20 @@ static int	uPNPTerminate(void);
 			p->track_hash	= device->MetaData.track_hash;
 			if (!device->Config.SendCoverArt) NFREE(device->MetaData.artwork);
 
+			// must be done *after* duration has been set
+			if (!SetContentType(device, p)) {
+				LOG_ERROR("[%p]: no matching codec in player", caller);
+				rc = false;
+				break;
+			}
+
+			sprintf(uri, "http://%s:%d/%s/%s.%s", glIPaddress, glPort, glBaseVDIR, p->name, p->ext);
+
+			// to detect properly transition
+			NFREE(device->NextURI);
+			strcpy(device->ProtoInfo, p->proto_info);
+
 			if (action == SQ_SETNEXTURI) {
-				NFREE(device->NextURI);
-				strcpy(device->ProtInfo, p->proto_info);
 				device->NextURI = strdup(uri);
 
 				if (device->Config.AcceptNextURI){
@@ -328,10 +331,7 @@ static int	uPNPTerminate(void);
 				LOG_INFO("[%p]: next URI set %s", device, device->NextURI);
 			}
 			else {
-				// to detect properly transition
 				NFREE(device->CurrentURI);
-				NFREE(device->NextURI);
-				strcpy(device->ProtInfo, p->proto_info);
 				device->CurrentURI = strdup(uri);
 
 				AVTSetURI(device);

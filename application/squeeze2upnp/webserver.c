@@ -30,9 +30,9 @@ static log_level	loglevel = lWARN;
 int WebGetInfo(const char *FileName, struct File_Info *Info)
 {
 	struct stat Status;
-	void 		*p;
 	s32_t 		FileSize;
 	u16_t		IcyInterval = 0;
+	char 		*dlna_options, **ContentFeatures = NULL;
 	struct Extra_Headers *Headers = Info->extra_headers;
 
 	while (Headers->name) {
@@ -53,6 +53,10 @@ int WebGetInfo(const char *FileName, struct File_Info *Info)
 			Headers->resp = p;
 		}
 
+		if (stristr(Headers->name, "getcontentFeatures.dlna.org") && stristr(Headers->value ,"1")) {
+			ContentFeatures = &Headers->resp;
+		}
+
 		/*
 		if (stristr(Headers->name, "TimeSeekRange.dlna.org")) {
 			u32_t h = 0, m = 0, s = 0, ms = 0;
@@ -71,15 +75,23 @@ int WebGetInfo(const char *FileName, struct File_Info *Info)
 		Headers++;
 	}
 
-	p = sq_get_info(FileName, &FileSize, &Info->content_type, IcyInterval);
+	if(!sq_get_info(FileName, &FileSize, &Info->content_type, &dlna_options, IcyInterval)) {
+		return UPNP_E_FILE_NOT_FOUND;
+	}
+
+	if (ContentFeatures) {
+		char *dlna_rsp = "contentFeatures.dlna.org";
+
+		*ContentFeatures = malloc(strlen(dlna_rsp) + strlen(dlna_options) + 1);
+		sprintf(*ContentFeatures, "%s: %s", dlna_rsp, dlna_options);
+	}
+	free(dlna_options);
 
 	Status.st_ctime 	= 0;
 	Info->is_directory 	= false;
 	Info->is_readable 	= true;
 	Info->last_modified = Status.st_ctime;
 	Info->file_length 	= FileSize;
-
-	LOG_INFO("[%p]: GetInfo %s %Ld %s", p, FileName, (s64_t) Info->file_length, Info->content_type);
 
 	return UPNP_E_SUCCESS;
 }

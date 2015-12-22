@@ -13,6 +13,7 @@ typedef	sq_action_t sq_event_t;
 
 #define MAX_SUPPORTED_SAMPLERATES 16
 #define TEST_RATES = { 384000, 352000, 192000, 176400, 96000, 88200, 48000, 44100, 32000, 24000, 22500, 16000, 12000, 11025, 8000, 0 }
+#define HTTP_BUFFERED	-5
 
 typedef enum { SQ_RATE_384000 = 384000, SQ_RATE_352000 = 352000,
 			   SQ_RATE_192000 = 192000, SQ_RATE_176400 = 176400,
@@ -112,7 +113,7 @@ void 				sq_free_metadata(struct sq_metadata_s *metadata);
 bool 				sq_set_time(sq_dev_handle_t handle, u32_t time);
 void*				sq_urn2MR(const char *urn);
 sq_dev_handle_t 	sq_urn2handle(const char *urn);
-void*				sq_get_info(const char *urn, s32_t *filesize, char **content_type, u16_t interval);	// string must be released by caller
+void*				sq_get_info(const char *urn, s32_t *filesize, char **content_type, char **dlna_content, u16_t interval);	// strings must be released by caller
 void*				sq_open(const char *urn);
 void*				sq_isopen(const char *urn);
 void				sq_set_sizes(void *desc);
