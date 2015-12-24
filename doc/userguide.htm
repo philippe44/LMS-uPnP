@@ -2231,23 +2231,31 @@ value larger than the largest of your audio encoded tracks - try between
 section </span></i><span lang=EN-GB>3.5.1</span><i><span lang=EN-GB
 style='font-size:11.0pt;color:black'>.</span></i></p>
 
-<p class=MsoNormalCxSpMiddle><span lang=EN-GB style='font-size:11.0pt;
-color:black'>[HTTP streaming option]</span></p>
+<p class=MsoNormalCxSpMiddle><span style='font-size:11.0pt;color:black'>[</span><span
+style='font-size:11.0pt;color:black'>Player communication option</span><span
+style='font-size:11.0pt;color:black'>s</span></span><span style='font-size:
+11.0pt;color:black'> </span><span style='font-family:"Times New Roman","serif" !msorm'><span
+lang=EN-GB style='font-size:11.0pt;font-family:Wingdings;color:black'>è</span></span><span
+lang=EN-GB style='font-size:11.0pt;color:black'> </span><span style='font-size:
+11.0pt;color:black'>HTTP </span><span style='font-size:11.0pt;color:black'>mode</span><span
+style='font-size:11.0pt;color:black'>]</span></p>
 
-<p class=MsoNormalCxSpMiddle><span lang=EN-GB>&nbsp;</span></p>
-
-<p class=MsoNormalCxSpMiddle><span lang=EN-GB style='font-size:11.0pt;
-color:black'>&nbsp;</span></p>
+<p class=MsoNormalCxSpMiddle>&nbsp;</p>
 
 <p class=MsoNormalCxSpMiddle><b><span lang=EN-GB style='font-size:11.0pt;
-color:black'>&lt;max_read_wait&gt;[value &gt; 10]&lt;/max_read_wait&gt;</span></b><span
-lang=EN-GB style='font-size:11.0pt;color:black'> <i>default = 100</i></span></p>
+color:black'>&lt;max_read_wait&gt;[-1 | value &gt; 10]&lt;/max_read_wait&gt;</span></b><span
+lang=EN-GB style='font-size:11.0pt;color:black'> <i>default = 1000</i></span></p>
 
 <p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
 color:black'>When the buffer of data from LMS is empty but more data is
 expected from LMS, this option sets the amount of time in Nx50ms (where value =
-N) that sq2u waits before signalling end of stream to the renderer. 
-Recommended value is 100 (a 5 second wait).</span></i></p>
+N) that sq2u waits before signalling end of stream to the renderer. Set it to
+-1 for infinite wait (TCP socket timeout will apply).  </span></i></p>
+
+<p class=MsoNormalCxSpMiddle><span lang=EN-GB style='font-size:11.0pt;
+color:black'>[Player communication options</span> </span><span lang=EN-GB
+style='font-size:11.0pt;font-family:Wingdings;color:black'>è</span><span
+lang=EN-GB style='font-size:11.0pt;color:black'> Streaming timeout (x50ms)</span>]</span></p>
 
 <p class=MsoNormalCxSpMiddle><span lang=EN-GB style='font-size:11.0pt;
 color:black'>&nbsp;</span></p>
@@ -2282,28 +2290,6 @@ color:black'>The mode of operation – leave at 2 for this version of sq2u</span
 
 <p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
 color:black'>&nbsp;</span></i></p>
-
-<p class=MsoNormalCxSpMiddle><b><span lang=EN-CA style='font-size:11.0pt;
-color:black'>&lt;dual_GET&gt;0,1,2&lt;/dual_GET&gt;</span></b><span lang=EN-CA
-style='font-size:11.0pt;color:black'> <i>default = 0</i></span></p>
-
-<p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
-color:black'>When retrieving the audio file buffered by sq2u, some players send
-two consecutive HTTP GET requests. This is authorized by the standard, but to
-handle repositioning properly, sq2u cannot support that. Three type of answers
-can be returned to the player when the second GET is received</span></i></p>
-
-<p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
-color:black'>0: HTTP error 404: file not found</span></i></p>
-
-<p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
-color:black'>1: HTTP normal response 200, but with an empty file (0 bytes)</span></i></p>
-
-<p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
-color:black'>2: HTTP error 505: internal server error</span></i></p>
-
-<p class=MsoNormalCxSpMiddle><span lang=EN-GB style='font-size:11.0pt;
-color:black'>&nbsp;</span></p>
 
 <p class=MsoNormalCxSpMiddle><b><span lang=EN-GB style='font-size:11.0pt;
 color:black'>&lt;seek_after_pause &gt;[0 | 1]&lt;/seek_after_pause&gt;</span></b><span
@@ -2822,13 +2808,10 @@ style='font-size:10.0pt;color:black'>&lt;keep_buffer_file&gt;0&lt;/keep_buffer_f
 style='font-size:10.0pt;color:black'>&lt;stream_length&gt;-3&lt;/stream_length&gt;</span></p>
 
 <p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span lang=EN-GB
-style='font-size:10.0pt;color:black'>&lt;max_read_wait&gt;100&lt;/max_read_wait&gt;</span></p>
+style='font-size:10.0pt;color:black'>&lt;max_read_wait&gt;1000&lt;/max_read_wait&gt;</span></p>
 
 <p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span lang=EN-GB
 style='font-size:10.0pt;color:black'>&lt;max_GET_bytes&gt;-1&lt;/max_GET_bytes&gt;</span></p>
-
-<p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span lang=EN-GB
-style='font-size:10.0pt;color:black'>&lt;dual_GET&gt;0&lt;/dual_GET&gt;</span></p>
 
 <p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span lang=EN-GB
 style='font-size:10.0pt;color:black'>&lt;enabled&gt;1&lt;/enabled&gt;</span></p>
@@ -2836,8 +2819,8 @@ style='font-size:10.0pt;color:black'>&lt;enabled&gt;1&lt;/enabled&gt;</span></p>
 <p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span lang=EN-US
 style='font-size:10.0pt;color:black'>&lt;process_mode&gt;2&lt;/process_mode&gt;</span></p>
 
-<p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span style='font-size:
-10.0pt;color:black'>&lt;codecs&gt;mp3&lt;/codecs&gt;</span></p>
+<p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span lang=EN-US
+style='font-size:10.0pt;color:black'>&lt;codecs&gt;mp3&lt;/codecs&gt;</span></p>
 
 <p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span lang=EN-GB
 style='font-size:10.0pt;color:black'>&lt;sample_rate&gt;48000&lt;/sample_rate&gt;</span></p>
@@ -2949,7 +2932,7 @@ PLAY:1&lt;/name&gt;</span></p>
 style='font-size:10.0pt;color:black'>&lt;enabled&gt;1&lt;/enabled&gt;</span></p>
 
 <p class=MsoNormalCxSpMiddle style='text-indent:35.4pt'><span style='font-size:
-10.0pt'>&lt;codecs&gt;</span><span style='font-size:10.0pt'>flc,mp3&lt;/codecs&gt;</span></p>
+10.0pt'>&lt;codecs&gt;flc,mp3&lt;/codecs&gt;</span></p>
 
 <p class=MsoNormalCxSpMiddle><span class=block><span style='font-size:10.0pt;
 color:black'>&lt;/device&gt;</span></span></p>

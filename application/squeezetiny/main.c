@@ -882,7 +882,7 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 			UNLOCK_S;LOCK_O;
 			LOG_SDEBUG("[%p] read %u bytes at %d", ctx, read_b, wait);
 			if (!read_b) usleep(50000);
-		} while (!read_b && p->write_file && wait-- && p->owner);
+		} while (!read_b && p->write_file && (wait == -1 || wait--) && p->owner);
 	}
 
 	/*

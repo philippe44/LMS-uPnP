@@ -8,6 +8,7 @@
  - Always gather metadata from LMS, <send_metadata> only stops sending of coverart, album, artist and title 
  - Tracks over one hour where rolling over to 0 
  - Remove vorbis_comment header in repositioning (check that is was needed for NamUniti)
+ - <max_read_wait> can be set to -1 for infinite wait of LMS audio data 
  - Add (-5) HTTP streaming mode that forces a buffering of the whole audio file before answering HTTP GET request. Allows to send a real size to player (for webradio, a fake size is sent)
  - Add powerpc build (static and dynamic)
  - (P) <max_read_wait> accessible from configuration screen
