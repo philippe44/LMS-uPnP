@@ -863,10 +863,10 @@ normally but no song will be played</span></p>
 name="__RefHeading__1149_395429088"></a><span lang=EN-GB>Setting up the Codecs</span></p>
 
 <p class=MsoNormal style='background:white'><span lang=EN-GB style='color:black'>By
-default sq2u supports pcm, flc (for flac), aif (for aiff) and mp3 'codecs' (plus
-limited support for aac).  If you are using only mp3 and your LMS does not have
-access to the LAME program you may find that files or streams in formats other
-than mp3 will not work.  </span></p>
+default sq2u supports pcm, flc (for flac), aif (for aiff) and mp3 'codecs'
+(plus limited support for aac).  If you are using only mp3 and your LMS does
+not have access to the LAME program you may find that files or streams in
+formats other than mp3 will not work.  </span></p>
 
 <p class=MsoNormal><span lang=EN-GB>If some of your renderers support different
 types of format you can tailor the codecs for each renderer on the settings
@@ -911,16 +911,16 @@ etc.).</span></p>
 lang=EN-GB style='font-size:11.0pt;font-family:"Verdana","sans-serif";
 color:black'>&nbsp;</span></p>
 
-<p class=MsoNormal><b><u><span lang=EN-GB style='color:black'>It is strongly
-suggested that before you start to play on a device you check the volume for
-the device in LMS is not near the maximum, so as to avoid damaging your
-speakers.  When using sq2u and LMS to control a renderer you should avoid using
-any controls on the renderer itself (or its remote), except the volume control
-in some cases (there is an option to allow this). Npte that sq2u tries to
-forward remote/local control to LMS, but there are a few corner cases where it
-will not work properly. If you find that when you start up your renderer always
-plays the last song it played, possibly at high volume, either make sure you
-clear the LMS playlist before you stop, or better still set the LMS player's
+<p class=MsoNormal><b><u><span lang=EN-GB style='color:black'>It is strongly suggested
+that before you start to play on a device you check the volume for the device
+in LMS is not near the maximum, so as to avoid damaging your speakers.  When
+using sq2u and LMS to control a renderer you should avoid using any controls on
+the renderer itself (or its remote), except the volume control in some cases
+(there is an option to allow this). Npte that sq2u tries to forward
+remote/local control to LMS, but there are a few corner cases where it will not
+work properly. If you find that when you start up your renderer always plays
+the last song it played, possibly at high volume, either make sure you clear
+the LMS playlist before you stop, or better still set the LMS player's
 parameter under &quot;settings&quot;, “player”, &quot;audio&quot;, &quot;power
 on resume&quot; to &quot;stop at power off, remain stopped at power on”.</span></u></b></p>
 
@@ -1042,10 +1042,11 @@ devices will be created. Alternatively, you can launch sq2u with the “-i
 <p class=MsoNormal style='margin-bottom:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB style='color:black'>&nbsp;</span></p>
 
-<p class=MsoNormal><span lang=EN-GB>You can also use the “–I” option that automatically
-save the configuration file, preserving existing parameters but adding any
-newly discovered player. Note that missing player will NOT be removed, you have
-to remove them manually or restart with a fresh configuration file.</span></p>
+<p class=MsoNormal><span lang=EN-GB>You can also use the “–I” option that
+automatically save the configuration file, preserving existing parameters but
+adding any newly discovered player. Note that missing player will NOT be
+removed, you have to remove them manually or restart with a fresh configuration
+file.</span></p>
 
 <p class=MsoNormal><span lang=EN-GB style='color:black'>If you are
 knowledgeable about such things, you can arrange to start sq2u at boot time as
@@ -1068,8 +1069,8 @@ lang=EN-GB style='color:black'>Using Server Power Control to Start Squeeze2upnp<
 <p class=MsoNormal><span lang=EN-GB style='color:black'>If running sq2u on a
 headless system (i.e. one with no normal access to keyboard or monitor) you may
 want to be able to start and stop the program remotely.  If you have your own
-way of doing this, fine.  If not, you can, if you wish, use a method from
-within the LMS GUI.  </span></p>
+way of doing this, fine.  If not, you can, if you wish, use a method from within
+the LMS GUI.  </span></p>
 
 <p class=MsoNormal><span lang=EN-GB style='color:black'>There is an LMS plugin
 called Server Power Control.  Go to the Settings, Plugins page.  In Additional
@@ -1391,8 +1392,9 @@ re-positioned.  The LMS File Type for flac should now show flac transcoded to
 
 <p class=MsoNormal><span lang=EN-GB style='color:black'>If you do not have LAME
 installed you may have problems with other codecs being transcoded to mp3s.  If
-you cannot install LAME, make sure all your other required source codecs translate
-to flac or pcm in the LMS File Types (mp3s should still play natively).</span></p>
+you cannot install LAME, make sure all your other required source codecs
+translate to flac or pcm in the LMS File Types (mp3s should still play
+natively).</span></p>
 
 <p class=MsoListParagraph style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB>It is also worth looking at the LMS settings for each configured
@@ -1427,16 +1429,16 @@ LMS will it be under the control of LMS.</span></p>
 time you want to use it independently from LMS might be inconvenient.
 Unfortunately, LMS can send volume commands even to a “stopped” renderer and
 that can be inconvenient. To avoid these “spurious” volume commands (unless you
-use LMS to send an explicit “play” request), set the option
-&lt;volume_on_play&gt; to 1. </span><span lang=EN-GB style='color:black'>If you
-want to control volume only from the renderer and ignore all LMS volume
-commands, set &lt;volume_on_play&gt; to -1 and LMS will have no influence on
-the renderer’s volume</span></p>
+use LMS to send an explicit “play” request), set the option &lt;volume_on_play&gt;
+to 1. </span><span lang=EN-GB style='color:black'>If you want to control volume
+only from the renderer and ignore all LMS volume commands, set
+&lt;volume_on_play&gt; to -1 and LMS will have no influence on the renderer’s
+volume</span></p>
 
 <p class=MsoListParagraphCxSpFirst style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB style='color:black'>Now, what if you want to use the renderer with
-LMS, but want to use some of the renderer’s own controls at the same time? Doing
-this is not recommended, but, pause and play commands requested using the
+LMS, but want to use some of the renderer’s own controls at the same time?
+Doing this is not recommended, but, pause and play commands requested using the
 renderer's own controls are forwarded to LMS so that it synchronizes
 accordingly. This takes up to 1 second to be taken into account, so a frenetic
 series of play/pause commands will create problems. Volume commands are
@@ -1529,11 +1531,11 @@ font-weight:normal;font-style:normal'>Technical Explanation</span></span></h3>
 lang=EN-GB>&nbsp;</span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
-lang=EN-GB>HTTP allows clients to request a specific range of bytes from the server,
-rather than the complete file, and that range can be “open-ended” (i.e. start
-from byte N, but no end of range is given). Some complications arise when the
-server does not know the size of the file to be sent AND the client asks for an
-open-ended range. Typically some clients always send a request for 1<sup>st</sup>
+lang=EN-GB>HTTP allows clients to request a specific range of bytes from the
+server, rather than the complete file, and that range can be “open-ended” (i.e.
+start from byte N, but no end of range is given). Some complications arise when
+the server does not know the size of the file to be sent AND the client asks
+for an open-ended range. Typically some clients always send a request for 1<sup>st</sup>
 byte to “no-end”, which requires a HTTP PARTIAL REPONSE, instead of a sending a
 simple request with no range (whole file) that would have required a HTTP OK
 response.</span></p>
@@ -1603,7 +1605,9 @@ the actual file size to the UPnP player, but at the expenses of a potential
 long delay before playback starts, especially if the file size is large. The
 parameter &lt;buffer_limit&gt; is ignored and the buffered file will be as
 large as needed. When playing live webradio, this method obviously cannot work
-and sq2u will set a 'fake' file size of 1,000,000,000 bytes. </span></p>
+and sq2u will set a 'fake' file size of 1,000,000,000 bytes. <u>Note that this
+mode is incompatible with any synchronization, even with simple synchronous
+start</u></span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB>&nbsp;</span></p>
@@ -1617,8 +1621,8 @@ lang=EN-GB>&nbsp;</span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB>UPnP/DLNA renderers have a very different way of pausing a track
-compared to LMS and this makes a simple question a complex problem. To
-pause/resume, DLNA players can use 3 techniques</span></p>
+compared to LMS and this makes a simple question a complex problem. To pause/resume,
+DLNA players can use 3 techniques</span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB>&nbsp;</span></p>
@@ -1830,13 +1834,13 @@ lang=EN-GB>&nbsp;</span></p>
 name=move42809342119></a><span lang=EN-GB>Sending a WAV or an AIFF file to a
 player requires the addition of a header and sq2u does that on-the-fly but
 these format are not made for streaming and require the total file size to be
-set in the header. When such header insertion is required, sq2u needs to set
-the file size. It guesses it based on track duration, sample rate and sample
-size (rounding error is below 1ms). Note that when &lt;stream_length&gt; is set
-to a positive value, sq2u will also adjust this value to match the real size of
-the file to be transmitted, based on the above calculation. This causes the
-UPnP player to close the connection once it has received the whole file (as set
-in header and/or stream_length). </span></p>
+set in the header. When such header insertion is required, sq2u needs to set the
+file size. It guesses it based on track duration, sample rate and sample size
+(rounding error is below 1ms). Note that when &lt;stream_length&gt; is set to a
+positive value, sq2u will also adjust this value to match the real size of the
+file to be transmitted, based on the above calculation. This causes the UPnP
+player to close the connection once it has received the whole file (as set in
+header and/or stream_length). </span></p>
 
 <p class=MsoListParagraphCxSpMiddle style='margin:0cm;margin-bottom:.0001pt'><span
 lang=EN-GB>&nbsp;</span></p>
@@ -2231,14 +2235,10 @@ value larger than the largest of your audio encoded tracks - try between
 section </span></i><span lang=EN-GB>3.5.1</span><i><span lang=EN-GB
 style='font-size:11.0pt;color:black'>.</span></i></p>
 
-<p class=MsoNormalCxSpMiddle><span style='font-size:11.0pt;color:black'>[</span><span
-style='font-size:11.0pt;color:black'>Player communication option</span><span
-style='font-size:11.0pt;color:black'>s</span></span><span style='font-size:
-11.0pt;color:black'> </span><span style='font-family:"Times New Roman","serif" !msorm'><span
-lang=EN-GB style='font-size:11.0pt;font-family:Wingdings;color:black'>è</span></span><span
-lang=EN-GB style='font-size:11.0pt;color:black'> </span><span style='font-size:
-11.0pt;color:black'>HTTP </span><span style='font-size:11.0pt;color:black'>mode</span><span
-style='font-size:11.0pt;color:black'>]</span></p>
+<p class=MsoNormalCxSpMiddle><span style='font-size:11.0pt;color:black'>[Player
+communication options </span><span lang=EN-GB style='font-size:11.0pt;
+font-family:Wingdings;color:black'>è</span><span lang=EN-GB style='font-size:
+11.0pt;color:black'> </span><span style='font-size:11.0pt;color:black'>HTTP mode]</span></p>
 
 <p class=MsoNormalCxSpMiddle>&nbsp;</p>
 
@@ -2253,16 +2253,17 @@ N) that sq2u waits before signalling end of stream to the renderer. Set it to
 -1 for infinite wait (TCP socket timeout will apply).  </span></i></p>
 
 <p class=MsoNormalCxSpMiddle><span lang=EN-GB style='font-size:11.0pt;
-color:black'>[Player communication options</span> </span><span lang=EN-GB
+color:black'>[Player communication options </span><span lang=EN-GB
 style='font-size:11.0pt;font-family:Wingdings;color:black'>è</span><span
-lang=EN-GB style='font-size:11.0pt;color:black'> Streaming timeout (x50ms)</span>]</span></p>
+lang=EN-GB style='font-size:11.0pt;color:black'> Streaming timeout (x50ms)]</span></p>
 
 <p class=MsoNormalCxSpMiddle><span lang=EN-GB style='font-size:11.0pt;
 color:black'>&nbsp;</span></p>
 
 <p class=MsoNormalCxSpMiddle><b><span lang=EN-GB style='font-size:11.0pt;
-color:black'>&lt;max_GET_bytes&gt;[0 | -1 | value  &gt; 100000]&lt;/max_GET_bytes&gt;</span></b><span
-lang=EN-GB style='font-size:11.0pt;color:black'> <i>default = -1</i></span></p>
+color:black'>&lt;max_GET_bytes&gt;[0 | -1 | value  &gt;
+100000]&lt;/max_GET_bytes&gt;</span></b><span lang=EN-GB style='font-size:11.0pt;
+color:black'> <i>default = -1</i></span></p>
 
 <p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
 color:black'>Limit the size of a chunk of stream data sent by sq2u to a
@@ -2555,8 +2556,8 @@ color:black'>1: header re-inserted with 0 for total number of sample and
 checksum</span></i></p>
 
 <p class=MsoNormalCxSpMiddle><i><span lang=EN-GB style='font-size:11.0pt;
-color:black'>2: header re-inserted with 2^32-1 for total number of samples and
-0xaa (170) 16 times for checksum</span></i></p>
+color:black'>2: header re-inserted with 2^32-1 for total number of samples and 0xaa
+(170) 16 times for checksum</span></i></p>
 
 <p class=MsoNormalCxSpMiddle><span lang=EN-US style='font-size:11.0pt;
 color:black'>[Audio codec parameters </span><span lang=EN-GB style='font-size:
