@@ -1,6 +1,8 @@
+0.2.7.1
+ - Add ReplayGain for uncompressed format
+ 
 0.2.7.0
  - UPnP actions are now in a queue and processed after previous has been acknowledged
- - Volume feedback to LMS when changed on the player can be disabled by <volume_feedback>
  - User Guide update
  - Add build date/time to version
  - When streaming a webradio using wav format, pseudo file size was not set properly
@@ -11,12 +13,8 @@
  - <max_read_wait> can be set to -1 for infinite wait of LMS audio data 
  - Add (-5) HTTP streaming mode that forces a buffering of the whole audio file before answering HTTP GET request. Allows to send a real size to player (for webradio, a fake size is sent)
  - Add powerpc build (static and dynamic)
- - (P) <max_read_wait> accessible from configuration screen
- - (P) add armv5 static and powerpc builds
- - NB: with -5 HTTP streaming, it seems that some players do not detect properly the end of re-positionned flac files
- 
-0.2.6.0 (not released)
  - Volume changes detected and forwarded back to LMS
+ - Volume feedback to LMS when changed on the player can be disabled by <volume_feedback>
  - Use 'old gain' for volume to avoid using 'volume curve'
  - Enable icy metadata (streaming radio title changes) for players that support it
  - add <send_icy> to control usage of icy metadata
@@ -32,16 +30,21 @@
  - in Linux the mutex timeout for sq_open could be set wrong
  - on MR deletion, unlock mutex before joining
  - UPnP auto-renewal timeout of 30s instead of 300s
- - Device is not removed as long as subscription is auto renewed, even if it missed discovery
+ - Device is not removed as long as subscription is auto renewed, even if it missed UPnP discovery
  - When receiving on/off, do not force a STOP anymore
  - Remove <force_volume> parameter
  - Remove <pause_volume> parameter and replace it by SetMute function
+ - use QEMU for all builds except Windows and OSX
  - (P) update some strings
  - (P) add ICY metadata option
  - (P) set log lines to 1000
  - (P) add byte_seek option
  - (P) some comment/help cleaning
- - (P) link to log, config and guide were potentially system-wide conflicting
+ - (P) hyperlinks to log, config and guide were potentially system-wide conflicting
+ - (P) <max_read_wait> accessible from configuration screen
+ - (P) add armv5 static and powerpc builds management
+ - NB: with -5 HTTP streaming, it seems that some players do not detect properly the end of re-positionned flac files
+
    
 0.2.5.0
  - in XMLFindAndParseService search ends if a service list is empty. It should end only when no service list remains

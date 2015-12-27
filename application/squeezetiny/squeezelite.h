@@ -505,6 +505,7 @@ typedef struct out_ctx_s {
 	u8_t				sample_size;
 	u32_t				sample_rate;
 	bool				endianness;
+	u32_t				replay_gain;
 	u8_t				channels;
 	char				content_type[SQ_STR_LENGTH];
 	char				proto_info[SQ_STR_LENGTH];

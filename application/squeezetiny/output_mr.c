@@ -227,82 +227,8 @@ static u16_t flac_block_size(u8_t block_size)
 }
 
 /*---------------------------------------------------------------------------*/
-#if 0
-static int _mr_write_frames(frames_t out_frames, bool silence, s32_t gainL, s32_t gainR,
-								s32_t cross_gain_in, s32_t cross_gain_out, s32_t **cross_ptr, struct thread_ctx_s *ctx) {
-
-	u8_t *obuf;
-
-	if (!silence) {
-
-		if (ctx->output.fade == FADE_ACTIVE && ctx->output.fade_dir == FADE_CROSS && *cross_ptr) {
-			_apply_cross(ctx->outputbuf, out_frames, cross_gain_in, cross_gain_out, cross_ptr);
-		}
-
-		obuf = ctx->outputbuf->readp;
-
-	} else {
-
-		obuf = silencebuf;
-	}
-
-	IF_DSD(
-		   if (ctx->output.dop) {
-			   if (silence) {
-				   obuf = silencebuf_dop;
-			   }
-			   update_dop_marker((u32_t *)obuf, out_frames);
-		   }
-	)
-
-	_scale_and_pack_frames(ctx->buf + ctx->buffill * ctx->bytes_per_frame, (s32_t *)(void *)obuf, out_frames, gainL, gainR, ctx->output.format);
-	ctx->buffill += out_frames;
-
-	return (int)out_frames;
-}
-#endif
-
-#if 0
-/*---------------------------------------------------------------------------*/
-static void output_thread(struct thread_ctx_s *ctx) {
-
-	LOCK_O;
-
-	switch (ctx->output.format) {
-	case S32_LE:
-		ctx->bytes_per_frame = 4 * 2; break;
-	case S24_3LE:
-		ctx->bytes_per_frame = 3 * 2; break;
-	case S16_LE:
-		ctx->bytes_per_frame = 2 * 2; break;
-	default:
-		ctx->bytes_per_frame = 4 * 2; break;
-	}
-
-	UNLOCK_O;
-
-	while (ctx->mr_running) {
-
-		LOCK_O;
-
-		ctx->output.device_frames = 0;
-		ctx->output.updated = gettime_ms();
-		ctx->output.frames_played_dmp = ctx->output.frames_played;
-
-		_output_frames(FRAME_BLOCK, ctx);
-
-		UNLOCK_O;
-
-		if (ctx->buffill) {
-			fwrite(ctx->buf, bytes_per_frame, buffill, stdout);
-			ctx->buffill = 0;
-		}
-	}
-}
-#else
 static void output_thread(struct thread_ctx_s *ctx) {
 }
-#endif
 
 /*---------------------------------------------------------------------------*/
 void output_mr_loglevel(log_level level) {
@@ -341,6 +267,101 @@ size_t truncate16(u8_t *p, size_t *space, bool src_endianness, bool dst_endianne
 
 	return (*space * 2) / 3;
 }
+
+#define MAX_VAL16 0x7fffffffLL
+#define MAX_VAL24 0x7fffffffffLL
+#define MAX_VAL32 0x7fffffffffffLL
+/*---------------------------------------------------------------------------*/
+size_t apply_gain(void *p, size_t *space, u8_t inc, bool endianness, u32_t gain)
+{
+	size_t i;
+
+	if (!gain) return *space;
+
+
+	*space = (*space / inc) * inc;
+
+	switch (inc) {
+		case 2: {
+			s16_t *buf = p;
+			s64_t sample;
+
+			if (endianness) {
+				for (i = 0; i < *space/inc; i++, buf++) {
+					sample = *buf * (s64_t) gain;
+					if (sample > MAX_VAL16) sample = MAX_VAL16;
+					else if (sample < -MAX_VAL16) sample = -MAX_VAL16;
+					*buf = sample >> 16;
+			   }
+			}
+			else {
+				for (i = 0; i < *space/inc; i++, buf++) {
+					sample = (s16_t) (((*buf << 8) & 0xff00) | ((*buf >> 8) & 0xff)) * (s64_t) gain;
+					if (sample > MAX_VAL16) sample = MAX_VAL16;
+					else if (sample < -MAX_VAL16) sample = -MAX_VAL16;
+					sample >>= 16;
+					*buf = ((sample >> 8) & 0xff) | ((sample << 8) & 0xff00);
+				}
+			}
+			break;
+		}
+		case 3: {
+			u8_t *buf = p;
+			s64_t sample;
+
+			// for 24 bits samples, first put the sample in the 3 upper bytes
+			if (endianness) {
+				for (i = 0; i < *space/inc; i++, buf += 3) {
+					sample = (s32_t) ((((u32_t) *buf) << 8) | ((u32_t) *(buf+1) << 16) | ((u32_t) *(buf+2) << 24)) * (s64_t) gain;
+					if (sample > MAX_VAL32) sample = MAX_VAL32;
+					else if (sample < -MAX_VAL32) sample = -MAX_VAL32;
+					sample >>= 16+8;
+					*buf = sample;
+					*(buf+1) = sample >> 8;
+					*(buf+2) = sample >> 16;
+				}
+			}
+			else {
+				for (i = 0; i < *space/inc; i++, buf += 3) {
+					sample = (s32_t) ((((u32_t) *buf) << 24) | ((u32_t) *(buf+1) << 16) | ((u32_t) *(buf+2) << 8)) * (s64_t) gain;
+					if (sample > MAX_VAL32) sample = MAX_VAL32;
+					else if (sample < -MAX_VAL32) sample = -MAX_VAL32;
+					sample >>= 16+8;
+					*buf = sample >> 16;
+					*(buf+1) = sample >> 8;
+					*(buf+2) = sample;
+				}
+		   }
+			break;
+		}
+		case 4: {
+			s32_t *buf = p;
+			s64_t sample;
+
+			if (endianness) {
+				for (i = 0; i < *space/inc; i++, buf++) {
+					sample = *buf * (s64_t) gain;
+					if (sample > MAX_VAL32) sample = MAX_VAL32;
+					else if (sample < -MAX_VAL32) sample = -MAX_VAL32;
+					*buf = sample >> 16;
+				}
+			}
+			else {
+				for (i = 0; i < *space/inc; i++, buf++) {
+					sample = *buf * (s64_t) gain;
+					if (sample > MAX_VAL32) sample = MAX_VAL32;
+					else if (sample < -MAX_VAL32) sample = -MAX_VAL32;
+					sample >>= 16;
+					*buf = ((sample >> 24) & 0xff) | ((sample >> 8) & 0xff00) | ((sample << 8) & 0xff0000) | ((sample << 24) & 0xff000000);
+				}
+			}
+			break;
+		}
+	}
+
+	return *space;
+}
+
 
 /*---------------------------------------------------------------------------*/
 size_t _change_endianness(u8_t *p, size_t *space, u8_t inc)
@@ -555,6 +576,9 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 
 				p = _buf_readp(ctx->streambuf);
 
+				// apply gain if any
+				nb_write = apply_gain(p, &space, out->sample_size / 8, out->endianness, out->replay_gain);
+
 				// 3 bytes but truncate that to 2 bytes
 				if (out->sample_size == 24 && (ctx->config.L24_format == L24_TRUNC_16 ||
 											   ctx->config.L24_format == L24_TRUNC_16_PCM)) {
@@ -656,7 +680,10 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 					}
 				}
 
-				// 3 bytes truncated to 2 bytes or simply change indianess
+				// apply gain if any
+				nb_write = apply_gain(_buf_readp(ctx->streambuf), &space, out->sample_size / 8, out->endianness, out->replay_gain);
+
+				// 3 bytes truncated to 2 bytes or simply change endianness
 				if (out->sample_size == 24 && ctx->config.L24_format == L24_TRUNC_16) {
 					nb_write = truncate16(_buf_readp(ctx->streambuf), &space, out->endianness, 1);
 				}
@@ -704,6 +731,9 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 						 nb_write = space -= 8;
 					}
 				}
+
+				// apply gain if any
+				nb_write = apply_gain(_buf_readp(ctx->streambuf), &space, out->sample_size / 8, out->endianness, out->replay_gain);
 
 				// 3 bytes truncated to 2 bytes or simply change indianess
 				if (out->sample_size == 24 && ctx->config.L24_format == L24_TRUNC_16) {
