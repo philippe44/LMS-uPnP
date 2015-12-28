@@ -1,5 +1,6 @@
 0.2.7.1
  - Add ReplayGain for uncompressed format
+ - Corrected memory leak when no matching codec was found
  
 0.2.7.0
  - UPnP actions are now in a queue and processed after previous has been acknowledged

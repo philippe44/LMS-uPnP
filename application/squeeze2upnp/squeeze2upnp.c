@@ -310,6 +310,7 @@ static int	uPNPTerminate(void);
 			// must be done *after* duration has been set
 			if (!SetContentType(device, p)) {
 				LOG_ERROR("[%p]: no matching codec in player", caller);
+				sq_free_metadata(&device->MetaData);
 				rc = false;
 				break;
 			}
