@@ -276,7 +276,7 @@ size_t apply_gain(void *p, size_t *space, u8_t inc, bool endianness, u32_t gain)
 {
 	size_t i;
 
-	if (!gain) return *space;
+	if (!gain || gain == 65536) return *space;
 
 
 	*space = (*space / inc) * inc;
