@@ -1,3 +1,11 @@
+0.2.7.3
+ - Free device search was missing ;
+ - Filter out result of old status update after a play/pause/stop has been required
+ - Stop requesting status update while waiting for  play/pause/stop
+
+0.2.7.2
+ - minor changes
+ 
 0.2.7.1
  - Add ReplayGain for uncompressed format
  - Corrected memory leak when no matching codec was found

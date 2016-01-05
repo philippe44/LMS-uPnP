@@ -101,7 +101,7 @@ struct sMR {
 	sq_action_t		sqState;
 	s64_t			Elapsed, Duration;
 	u8_t			*seqN;
-	void			*WaitCookie;
+	void			*WaitCookie, *StartCookie;
 	tQueue			ActionQueue;
 	unsigned		TrackPoll, StatePoll;
 	bool			UPnPTimeOut, UPnPConnected;

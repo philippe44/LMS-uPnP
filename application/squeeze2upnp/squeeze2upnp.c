@@ -618,27 +618,38 @@ int CallbackActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 
 			LOG_SDEBUG("[%p]: ac %i %s (cookie %p)", p, EventType, Action->CtrlUrl, Cookie);
 
-			/*
-			If waited action has been completed, proceed to next one if any and
-			set the state to unknown so that it will be re-acquired in all cases
-			*/
-			if (p->WaitCookie && Cookie == p->WaitCookie) {
+			// If waited action has been completed, proceed to next one if any
+			if (p->WaitCookie)  {
 				const char *Resp = XMLGetLocalName(Action->ActionResult, 1);
 
 				LOG_DEBUG("[%p]: Waited action %s", p, Resp ? Resp : "<none>");
 
+				// discard everything else except waiting action
+				if (Cookie != p->WaitCookie) break;
+
 				ithread_mutex_lock(&p->Mutex);
+
+				p->StartCookie = p->WaitCookie;
 				ProcessQueue(p);
 
-				// these action require the player state to be re-acquired
+				/*
+				when certain waited action has been completed, the state need
+				to be re-acquired because a 'stop' state might be missed when
+				(eg) repositionning where two consecutive status update will
+				give 'playing', the 'stop' in the middle being unseen
+				*/
 				if (Resp && (!strcasecmp(Resp, "StopResponse") ||
-					!strcasecmp(Resp, "PlayResponse") || !strcasecmp(Resp, "PauseResponse"))) {
+							 !strcasecmp(Resp, "PlayResponse") ||
+							 !strcasecmp(Resp, "PauseResponse"))) {
 					p->State = UNKNOWN;
 				}
 
 				ithread_mutex_unlock(&p->Mutex);
 				break;
 			}
+
+			// don't proceed anything that is too old
+			if (Cookie < p->StartCookie) break;
 
 			// transport state response
 			r = XMLGetFirstDocumentItem(Action->ActionResult, "CurrentTransportState");
@@ -825,6 +836,64 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 	return 0;
 }
 
+
+/*----------------------------------------------------------------------------*/
+#define TRACK_POLL  (1000)
+#define STATE_POLL  (500)
+#define VOLUME_POLL (10000)
+#define METADATA_POLL (10000)
+#define MAX_ACTION_ERRORS (5)
+static void *MRThread(void *args)
+{
+	int elapsed;
+	unsigned last;
+	struct sMR *p = (struct sMR*) args;
+
+	last = gettime_ms();
+
+	for (; p->Running;  usleep(500000)) {
+		elapsed = gettime_ms() - last;
+		p->StatePoll += elapsed;
+		p->TrackPoll += elapsed;
+
+		ithread_mutex_lock(&p->Mutex);
+
+		/*
+		should not request any status update if we are stopped, off or waiting
+		for an action to be performed
+		*/
+		if (!p->on || (p->sqState == SQ_STOP && p->State == STOPPED) ||
+			 p->ErrorCount > MAX_ACTION_ERRORS ||
+			 p->WaitCookie) {
+			ithread_mutex_unlock(&p->Mutex);
+			last = gettime_ms();
+			continue;
+		}
+
+		// get track position & CurrentURI
+		if (p->TrackPoll > TRACK_POLL) {
+			p->TrackPoll = 0;
+			if (p->State != STOPPED && p->State != PAUSED) {
+				AVTCallAction(p->Service[AVT_SRV_IDX].ControlURL, "GetPositionInfo", p->seqN++);
+			}
+		}
+
+		// do polling as event is broken in many uPNP devices
+
+		if (p->StatePoll > STATE_POLL) {
+			p->StatePoll = 0;
+			AVTCallAction(p->Service[AVT_SRV_IDX].ControlURL, "GetTransportInfo", p->seqN++);
+		}
+
+				// do polling as event is broken in many uPNP devices
+		ithread_mutex_unlock(&p->Mutex);
+		last = gettime_ms();
+	}
+
+	return NULL;
+}
+
+
 /*----------------------------------------------------------------------------*/
 static bool RefreshTO(char *UDN)
 {
@@ -885,7 +954,7 @@ static void *UpdateMRThread(void *args)
 		UDN = XMLGetFirstDocumentItem(DescDoc, "UDN");
 		if (!strstr(Manufacturer, cLogitech) && !RefreshTO(UDN)) {
 			// new device so search a free spot.
-			for (i = 0; i < MAX_RENDERERS && glMRDevices[i].InUse; i++)
+			for (i = 0; i < MAX_RENDERERS && glMRDevices[i].InUse; i++);
 
 			// no more room !
 			if (i == MAX_RENDERERS) {
@@ -999,54 +1068,7 @@ static void *MainThread(void *args)
 	return NULL;
 }
 
-/*----------------------------------------------------------------------------*/
-#define TRACK_POLL  (1000)
-#define STATE_POLL  (500)
-#define VOLUME_POLL (10000)
-#define METADATA_POLL (10000)
-#define MAX_ACTION_ERRORS (5)
-static void *MRThread(void *args)
-{
-	int elapsed;
-	unsigned last;
-	struct sMR *p = (struct sMR*) args;
 
-	last = gettime_ms();
-	for (; p->Running;  usleep(500000)) {
-		elapsed = gettime_ms() - last;
-		ithread_mutex_lock(&p->Mutex);
-
-		// make sure that both domains are in sync that nothing shall be done
-		if (!p->on || (p->sqState == SQ_STOP && p->State == STOPPED) ||
-			 p->ErrorCount > MAX_ACTION_ERRORS) {
-			ithread_mutex_unlock(&p->Mutex);
-			last = gettime_ms();
-			continue;
-		}
-
-		// get track position & CurrentURI
-		p->TrackPoll += elapsed;
-		if (p->TrackPoll > TRACK_POLL) {
-			p->TrackPoll = 0;
-			if (p->State != STOPPED && p->State != PAUSED) {
-				AVTCallAction(p->Service[AVT_SRV_IDX].ControlURL, "GetPositionInfo", p->seqN++);
-			}
-		}
-
-		// do polling as event is broken in many uPNP devices
-		p->StatePoll += elapsed;
-		if (p->StatePoll > STATE_POLL) {
-			p->StatePoll = 0;
-			AVTCallAction(p->Service[AVT_SRV_IDX].ControlURL, "GetTransportInfo", p->seqN++);
-		}
-
-				// do polling as event is broken in many uPNP devices
-		ithread_mutex_unlock(&p->Mutex);
-		last = gettime_ms();
-	}
-
-	return NULL;
-}
 
 /*----------------------------------------------------------------------------*/
 int uPNPInitialize(char *IPaddress, unsigned int *Port)
@@ -1225,6 +1247,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	Device->InUse = true;
 	Device->sqState = SQ_STOP;
 	Device->State = STOPPED;
+	Device->WaitCookie = Device->StartCookie = NULL;
 	strcpy(Device->UDN, UDN);
 	strcpy(Device->DescDocURL, location);
 	strcpy(Device->FriendlyName, friendlyName);
