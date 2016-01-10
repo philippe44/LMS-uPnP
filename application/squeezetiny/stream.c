@@ -24,7 +24,8 @@
 
 #include <fcntl.h>
 
-static log_level loglevel = lWARN;
+extern log_level stream_loglevel;
+static log_level *loglevel = &stream_loglevel;
 
 #define LOCK_S   mutex_lock(ctx->streambuf->mutex)
 #define UNLOCK_S mutex_unlock(ctx->streambuf->mutex)
@@ -288,11 +289,6 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 	return 0;
 }
 
-/*---------------------------------------------------------------------------*/
-void stream_loglevel(log_level level) {
-	LOG_ERROR("stream change log", level);
-	loglevel = level;
-}
 
 /*---------------------------------------------------------------------------*/
 void stream_thread_init(unsigned stream_buf_size, struct thread_ctx_s *ctx) {

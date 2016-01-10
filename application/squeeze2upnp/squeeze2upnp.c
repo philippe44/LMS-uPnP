@@ -49,7 +49,7 @@ TODO :
 char				glBaseVDIR[] = "LMS2UPNP";
 char				glSQServer[SQ_STR_LENGTH] = "?";
 u8_t				glMac[6] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05 };
-sq_log_level_t		glLog = { lINFO, lINFO, lINFO, lINFO, lINFO, lINFO, lINFO, lINFO, lINFO};
+
 #if LINUX || FREEBSD
 bool				glDaemonize = false;
 #endif
@@ -60,6 +60,16 @@ static char			*glPidFile = NULL;
 static char			*glSaveConfigFile = NULL;
 bool				glAutoSaveConfigFile = false;
 bool				glGracefullShutdown = true;
+
+log_level	slimproto_loglevel = lWARN;
+log_level	stream_loglevel = lWARN;
+log_level	decode_loglevel = lWARN;
+log_level	output_loglevel = lWARN;
+log_level	web_loglevel = lWARN;
+log_level	main_loglevel = lINFO;
+log_level	slimmain_loglevel = lINFO;
+log_level	util_loglevel = lWARN;
+log_level	upnp_loglevel = lINFO;
 
 tMRConfig			glMRConfig = {
 							-3L,
@@ -152,7 +162,7 @@ static const struct cSearchedSRV_s
 /*----------------------------------------------------------------------------*/
 /* locals */
 /*----------------------------------------------------------------------------*/
-static log_level 	loglevel = lWARN;
+static log_level 	*loglevel = &main_loglevel;
 ithread_t			glUpdateMRThread;
 static bool			glMainRunning = true;
 static struct sLocList {
@@ -172,7 +182,7 @@ static struct sLocList {
 //		   "  -e <codec1>,<codec2>\tExplicitly exclude native support of one or more codecs; known codecs: " CODECS "\n"
 		   "  -f <logfile>\t\tWrite debug to logfile\n"
   		   "  -p <pid file>\t\twrite PID in file\n"
-		   "  -d <log>=<level>\tSet logging level, logs: all|slimproto|stream|decode|output|web|upnp|main|sq2mr, level: info|debug|sdebug\n"
+		   "  -d <log>=<level>\tSet logging level, logs: all|slimproto|stream|decode|output|web|main|util|upnp, level: error|warn|info|debug|sdebug\n"
 #if RESAMPLE
 		   "  -R -u [params]\tResample, params = <recipe>:<flags>:<attenuation>:<precision>:<passband_end>:<stopband_start>:<phase_response>,\n"
 		   "  \t\t\t recipe = (v|h|m|l|q)(L|I|M)(s) [E|X], E = exception - resample only if native rate not supported, X = async - resample to max rate for device, otherwise to max sync rate\n"
@@ -1450,18 +1460,20 @@ bool ParseArgs(int argc, char **argv) {
 				char *v = strtok(NULL, "=");
 				log_level new = lWARN;
 				if (l && v) {
+					if (!strcmp(v, "error"))  new = lERROR;
+					if (!strcmp(v, "warn"))   new = lWARN;
 					if (!strcmp(v, "info"))   new = lINFO;
 					if (!strcmp(v, "debug"))  new = lDEBUG;
 					if (!strcmp(v, "sdebug")) new = lSDEBUG;
-					if (!strcmp(l, "all") || !strcmp(l, "slimproto")) glLog.slimproto = new;
-					if (!strcmp(l, "all") || !strcmp(l, "stream"))    glLog.stream = new;
-					if (!strcmp(l, "all") || !strcmp(l, "decode"))    glLog.decode = new;
-					if (!strcmp(l, "all") || !strcmp(l, "output"))    glLog.output = new;
-					if (!strcmp(l, "all") || !strcmp(l, "web")) glLog.web = new;
-					if (!strcmp(l, "all") || !strcmp(l, "upnp"))    glLog.upnp = new;
-					if (!strcmp(l, "all") || !strcmp(l, "main"))    glLog.main = new;
-					if (!strcmp(l, "all") || !strcmp(l, "sq2mr"))    glLog.sq2mr = new;
-
+					if (!strcmp(l, "all") || !strcmp(l, "slimproto"))	slimproto_loglevel = new;
+					if (!strcmp(l, "all") || !strcmp(l, "stream"))    	stream_loglevel = new;
+					if (!strcmp(l, "all") || !strcmp(l, "decode"))    	decode_loglevel = new;
+					if (!strcmp(l, "all") || !strcmp(l, "output"))    	output_loglevel = new;
+					if (!strcmp(l, "all") || !strcmp(l, "web")) 	  	web_loglevel = new;
+					if (!strcmp(l, "all") || !strcmp(l, "main"))     	main_loglevel = new;
+					if (!strcmp(l, "all") || !strcmp(l, "util"))    	util_loglevel = new;
+					if (!strcmp(l, "all") || !strcmp(l, "upnp"))    	upnp_loglevel = new;
+					if (!strcmp(l, "all") || !strcmp(l, "slimmain"))    slimmain_loglevel = new;
 				}
 				else {
 					printf("%s", usage);
@@ -1544,17 +1556,11 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (strstr(glSQServer, "?")) sq_init(NULL, glMac, &glLog);
-	else sq_init(glSQServer, glMac, &glLog);
+	if (strstr(glSQServer, "?")) sq_init(NULL, glMac);
+	else sq_init(glSQServer, glMac);
 
-	loglevel = glLog.sq2mr;
-	uPNPLogLevel(glLog.upnp);
-	WebServerLogLevel(glLog.web);
-	AVTInit(glLog.sq2mr);
-	MRutilInit(glLog.sq2mr);
-
-	tmpdir = malloc(SQ_STR_LENGTH);
-	GetTempPath(SQ_STR_LENGTH, tmpdir);
+	tmpdir = malloc(SQ_STR_LENGTH);
+	GetTempPath(SQ_STR_LENGTH, tmpdir);
 	LOG_INFO("Buffer path %s", tmpdir);
 	free(tmpdir);
 
@@ -1589,50 +1595,54 @@ int main(int argc, char *argv[])
 			Sleep(INFINITE);
 #endif
 #endif
-
-		if (!strcmp(resp, "sdbg"))	{
+		if (!strcmp(resp, "streamdbg"))	{
 			char level[20];
 			i = scanf("%s", level);
-			stream_loglevel(debug2level(level));
+			stream_loglevel = debug2level(level);
 		}
 
-		if (!strcmp(resp, "odbg"))	{
+		if (!strcmp(resp, "outputdbg"))	{
 			char level[20];
 			i = scanf("%s", level);
-			output_mr_loglevel(debug2level(level));
+			output_loglevel = debug2level(level);
 		}
 
-		if (!strcmp(resp, "pdbg"))	{
+		if (!strcmp(resp, "slimprotodbg"))	{
 			char level[20];
 			i = scanf("%s", level);
-			slimproto_loglevel(debug2level(level));
+			slimproto_loglevel = debug2level(level);
 		}
 
-		if (!strcmp(resp, "wdbg"))	{
+		if (!strcmp(resp, "webdbg"))	{
 			char level[20];
 			i = scanf("%s", level);
-			WebServerLogLevel(debug2level(level));
+			web_loglevel = debug2level(level);
 		}
 
-		if (!strcmp(resp, "mdbg"))	{
+		if (!strcmp(resp, "maindbg"))	{
 			char level[20];
 			i = scanf("%s", level);
-			main_loglevel(debug2level(level));
+			main_loglevel = debug2level(level);
 		}
 
-
-		if (!strcmp(resp, "qdbg"))	{
+		if (!strcmp(resp, "slimmainqdbg"))	{
 			char level[20];
 			i = scanf("%s", level);
-			LOG_ERROR("Squeeze change log", NULL);
-			loglevel = debug2level(level);
+			slimmain_loglevel = debug2level(level);
 		}
 
-		if (!strcmp(resp, "udbg"))	{
+		if (!strcmp(resp, "utildbg"))	{
 			char level[20];
 			i = scanf("%s", level);
-			uPNPLogLevel(debug2level(level));
+			util_loglevel = debug2level(level);
 		}
+
+		if (!strcmp(resp, "upnpdbg"))	{
+			char level[20];
+			i = scanf("%s", level);
+			upnp_loglevel = debug2level(level);
+		}
+
 
 		 if (!strcmp(resp, "save"))	{
 			char name[128];

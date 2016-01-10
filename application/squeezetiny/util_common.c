@@ -11,6 +11,11 @@
 #include "squeezedefs.h"
 #include "util_common.h"
 
+
+extern log_level 	util_loglevel;
+
+//static log_level 	*loglevel = &util_loglevel;
+
 // logging functions
 const char *logtime(void) {
 	static char buf[100];

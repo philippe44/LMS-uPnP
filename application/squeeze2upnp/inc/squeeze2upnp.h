@@ -124,7 +124,6 @@ extern unsigned int 		glPort;
 extern char 				glIPaddress[];
 extern char 				gluPNPSocket[];
 extern u8_t		   			glMac[6];
-extern sq_log_level_t		glLog;
 extern s32_t				glLogLimit;
 extern tMRConfig			glMRConfig;
 extern sq_dev_param_t		glDeviceParam;

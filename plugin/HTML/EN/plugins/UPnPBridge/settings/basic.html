@@ -5,7 +5,7 @@
 		
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_AUTORUN" desc="PLUGIN_UPNPBRIDGE_AUTORUN_DESC" %]
 		<input name="autorun" type="checkbox" [% IF autorun %] checked [% END %]> [% "PLUGIN_UPNPBRIDGE_RUNNING_$running" | string %] [% IF binary %] ([% binary %]) [% END %]
-		&nbsp&nbsp<b><a href="upnpbridge-guide.htm" target="user guide">[% "PLUGIN_UPNPBRIDGE_USERGUIDELINK" | string %]</a></b>
+		&nbsp&nbsp<b><a href="[% webroot %]upnpbridge-guide.htm" target="user guide">[% "PLUGIN_UPNPBRIDGE_USERGUIDELINK" | string %]</a></b>
 		[%IF running %] <b><font color="red">&nbsp&nbsp[% "PLUGIN_UPNPBRIDGE_WARNING" | string %]</font></b> [% END %]
 	[% END %]
 	
@@ -36,14 +36,14 @@
 	[% END %]
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_DEBUG" desc="PLUGIN_UPNPBRIDGE_DEBUG_DESC" %]
 		<select class="stdedit" name="debugs" id="debugs">
-		[% FOREACH entry IN [ '', 'all', 'output', 'stream', 'slimproto', 'decode' ] %]
+		[% FOREACH entry IN [ '', 'all', 'output', 'stream', 'slimproto', 'decode', 'slimmain', 'upnp', 'util', 'web', 'main'] %]
 			<option [% IF entry == debugs %]selected[% END %] value="[% entry %]">[% "PLUGIN_UPNPBRIDGE_$entry" | string %]</option>
 		[% END %]
 		</select>
 	[% END %]
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_LOGGING" desc="PLUGIN_UPNPBRIDGE_LOGGING_DESC" %]
 		<input name="logging" type="checkbox" [% IF logging %] checked [% END %]>&nbsp[% "PLUGIN_UPNPBRIDGE_LOGENABLE" | string %]
-		&nbsp<a href="/upnpbridge-log.log" target="log">[% "PLUGIN_UPNPBRIDGE_LOGLINK" | string %]</a>
+		&nbsp<a href="[% webroot %]upnpbridge-log.log" target="log">[% "PLUGIN_UPNPBRIDGE_LOGLINK" | string %]</a>
 		&nbsp[% "PLUGIN_UPNPBRIDGE_LOGSIZE" | string %]&nbsp<input type="text" class="stdedit" name="log_limit" id="log_limit" value="[% log_limit %]" size="2"> 
 		&nbsp<input name="eraselog" type="checkbox" [% IF eraselog %] checked [% END %]>&nbsp[% "PLUGIN_UPNPBRIDGE_ERASELOG" | string %]
 		&nbsp<input name="cleanlog" type="submit" value=[% "PLUGIN_UPNPBRIDGE_CLEANLOG" | string %]> 
@@ -51,7 +51,7 @@
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_CONFIG" desc="PLUGIN_UPNPBRIDGE_CONFIG_DESC" %]
 		[% configpath %]
 		<input type="text" class="stdedit" name="configfile" id="configfile" value="[% configfile %]" size="20">
-		<a href="/upnpbridge-config.xml" target="config">[% "PLUGIN_UPNPBRIDGE_CONFLINK" | string %]</a>
+		<a href="[% webroot %]upnpbridge-config.xml" target="config">[% "PLUGIN_UPNPBRIDGE_CONFLINK" | string %]</a>
 		&nbsp&nbsp<input name="autosave" type="checkbox" [% IF autosave %] checked [% END %]>[% "PLUGIN_UPNPBRIDGE_AUTOSAVECONFIG" | string %]
 		[% IF binary %]
 			&nbsp<input name="genconfig" type="submit" onclick="alert('generating configuration will take ~30 seconds')" value=[% "PLUGIN_UPNPBRIDGE_GENCONFIG" | string %]>

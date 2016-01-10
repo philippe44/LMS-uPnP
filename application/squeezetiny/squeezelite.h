@@ -275,7 +275,6 @@ void buf_destroy(struct buffer *buf);
 
 // slimproto.c
 void slimproto_close(struct thread_ctx_s *ctx);
-void slimproto_init(log_level level, bool full);
 void slimproto_reset(struct thread_ctx_s *ctx);
 void slimproto_thread_init(char *server, u8_t mac[], const char *name, const char *namefile, struct thread_ctx_s *ctx);
 void wake_controller(struct thread_ctx_s *ctx);
@@ -303,7 +302,6 @@ struct streamstate {
 	bool  meta_send;
 };
 
-void stream_init(log_level level, bool full);
 void stream_thread_init(unsigned buf_size, struct thread_ctx_s *ctx);
 void stream_close(struct thread_ctx_s *ctx);
 void stream_file(const char *header, size_t header_len, unsigned threshold, struct thread_ctx_s *ctx);
@@ -343,7 +341,7 @@ struct codec {
 	decode_state (*decode)(void);
 };
 
-void decode_init(log_level level, const char *include_codecs, const char *exclude_codecs, bool full);
+void decode_init(const char *include_codecs, const char *exclude_codecs, bool full);
 void decode_thread_init(struct thread_ctx_s *ctx);
 
 void decode_close(struct thread_ctx_s *ctx);
@@ -424,7 +422,6 @@ struct outputstate {
 #endif
 };
 
-void output_init(log_level level, bool full);
 void output_init_common(char *device, unsigned output_buf_size, unsigned rates[], struct thread_ctx_s *ctx);
 void output_close_common(struct thread_ctx_s *ctx);
 void output_flush(struct thread_ctx_s *ctx);
@@ -434,7 +431,6 @@ void _checkfade(bool, struct thread_ctx_s *ctx);
 void wake_output(struct thread_ctx_s *ctx);
 
 // output_mr.c
-void output_mr_init(log_level level, bool full);
 void output_mr_thread_init(unsigned output_buf_size, char *params, sq_rate_t[], unsigned rate_delay, struct thread_ctx_s *ctx);
 void output_mr_close(struct thread_ctx_s *ctx);
 

@@ -33,7 +33,8 @@
 /*----------------------------------------------------------------------------*/
 /* locals */
 /*----------------------------------------------------------------------------*/
-static log_level loglevel = lWARN;
+extern log_level util_loglevel;
+static log_level *loglevel = &util_loglevel;
 static IXML_Node *_getAttributeNode(IXML_Node *node, char *SearchAttr);
 
 /*----------------------------------------------------------------------------*/
@@ -487,9 +488,4 @@ char *uPNPEvent2String(Upnp_EventType S)
 	return "";
 }
 
-void uPNPLogLevel(log_level level)
-{
-	LOG_WARN("uPNP change log", NULL);
-	loglevel = level;
-}
 

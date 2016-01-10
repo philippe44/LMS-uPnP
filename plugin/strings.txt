@@ -78,6 +78,21 @@ PLUGIN_UPNPBRIDGE_SLIMPROTO
 PLUGIN_UPNPBRIDGE_DECODE
 	EN	Decode debugging
 
+PLUGIN_UPNPBRIDGE_UPNP
+	EN	UPnP debugging
+
+PLUGIN_UPNPBRIDGE_UTIL
+	EN	Utilities debugging
+
+PLUGIN_UPNPBRIDGE_SLIMMAIN
+	EN	Slim Main function debugging
+
+PLUGIN_UPNPBRIDGE_WEB
+	EN	Webserver debugging
+
+PLUGIN_UPNPBRIDGE_MAIN
+	EN	Main application debugging
+
 PLUGIN_UPNPBRIDGE_LOGGING
 	EN	Logging options
 	

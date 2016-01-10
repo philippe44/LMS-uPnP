@@ -36,7 +36,8 @@
 #define LOCAL_PLAYER_PORT 0x0d9b     // 3483
 #endif
 
-static log_level loglevel = lWARN;
+extern log_level slimproto_loglevel;
+static log_level *loglevel = &slimproto_loglevel;
 
 #define LOCK_S   mutex_lock(ctx->streambuf->mutex)
 #define UNLOCK_S mutex_unlock(ctx->streambuf->mutex)
@@ -946,11 +947,6 @@ void slimproto_close(struct thread_ctx_s *ctx) {
 #endif
 }
 
-/*---------------------------------------------------------------------------*/
-void slimproto_loglevel(log_level level) {
-	LOG_ERROR("slimproto change log", level);
-	loglevel = level;
-}
 
 /*---------------------------------------------------------------------------*/
 void slimproto_thread_init(char *server, u8_t mac[6], const char *name, const char *namefile, struct thread_ctx_s *ctx) {

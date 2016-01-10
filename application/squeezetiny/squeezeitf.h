@@ -59,18 +59,6 @@ typedef	struct sq_dev_param_s {
 	bool		send_icy;
 } sq_dev_param_t;
 
-typedef struct sq_log_level_s {		// must be one of lERROR, lINFO, lDEBUG or lSDEBUG
-	log_level	general;
-	log_level	slimproto;
-	log_level	output;
-	log_level	stream;
-	log_level	decode;
-	log_level	main;
-	log_level	upnp;
-	log_level	sq2mr;
-	log_level	web;
-} sq_log_level_t;
-
 typedef struct
 {
 	char	name[SQ_STR_LENGTH];
@@ -95,7 +83,7 @@ typedef bool (*sq_callback_t)(sq_dev_handle_t handle, void *caller_id, sq_action
 
 char*				sq_parse_args(int argc, char**argv);
 // all params can be NULL
-void				sq_init(char *server, u8_t mac[6], sq_log_level_t *);
+void				sq_init(char *server, u8_t mac[6]);
 void				sq_stop(void);
 
 // only name cannot be NULL
@@ -122,11 +110,5 @@ int					sq_read(void *desc, void *dst, unsigned bytes);
 int					sq_seek(void *desc, off_t bytes, int from);
 bool 				sq_is_remote(const char *urn);
 
-void stream_loglevel(log_level level);
-void slimproto_loglevel(log_level level);
-void output_loglevel(log_level level);
-void output_mr_loglevel(log_level level);
-void decode_loglevel(log_level level);
-void main_loglevel(log_level level);
 #endif
 

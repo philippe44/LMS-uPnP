@@ -49,6 +49,8 @@
 
 #include <fcntl.h>
 
+extern log_level 	util_loglevel;
+//static log_level 	*loglevel = &util_loglevel;
 
 // cmdline parsing
 char *next_param(char *src, char c) {

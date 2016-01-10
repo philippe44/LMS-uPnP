@@ -35,16 +35,10 @@ WARNING
  - ALL THESE FUNCTION MUST BE CALLED WITH MUTEX LOCKED
 */
 
+extern log_level	upnp_loglevel;
+static log_level 	*loglevel = &upnp_loglevel;
 
-static log_level loglevel;
 static char *CreateDIDL(char *URI, char *ProtInfo, struct sq_metadata_s *MetaData, struct sMRConfig *Config);
-
-
-/*----------------------------------------------------------------------------*/
-void AVTInit(log_level level)
-{
-	loglevel = level;
-}
 
 
 /*----------------------------------------------------------------------------*/

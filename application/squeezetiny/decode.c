@@ -25,7 +25,9 @@
 #define READ_SIZE  512
 #define WRITE_SIZE 32 * 1024
 
-log_level 		loglevel = lWARN;
+extern log_level 	decode_loglevel;
+static log_level 	*loglevel = &decode_loglevel;
+
 struct codec	*codecs[MAX_CODECS];
 
 #define LOCK_S   mutex_lock(ctx->streambuf->mutex)
@@ -115,12 +117,10 @@ static void *decode_thread(struct thread_ctx_s *ctx) {
 
 
 /*---------------------------------------------------------------------------*/
-void decode_init(log_level level, const char *include_codecs, const char *exclude_codecs, bool full) {
+void decode_init(const char *include_codecs, const char *exclude_codecs, bool full) {
 #if DSD || FFMPEG || !defined(NO_CODEC)
 	int i = 0;
 #endif
-
-	loglevel = level;
 
 	LOG_DEBUG("init decode, include codecs: %s exclude codecs: %s", include_codecs ? include_codecs : "", exclude_codecs);
 

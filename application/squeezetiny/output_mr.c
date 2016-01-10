@@ -28,7 +28,8 @@ TODO
 
 #define FRAME_BLOCK MAX_SILENCE_FRAMES
 
-static log_level loglevel = lWARN;
+extern log_level	output_loglevel;
+static log_level 	*loglevel = &output_loglevel;
 
 #define BYTE_1(n)	((u8_t) (n >> 24))
 #define BYTE_2(n)	((u8_t) (n >> 16))
@@ -228,12 +229,6 @@ static u16_t flac_block_size(u8_t block_size)
 
 /*---------------------------------------------------------------------------*/
 static void output_thread(struct thread_ctx_s *ctx) {
-}
-
-/*---------------------------------------------------------------------------*/
-void output_mr_loglevel(log_level level) {
-	LOG_ERROR("output_mr init %d", level);
-	loglevel = level;
 }
 
 /*---------------------------------------------------------------------------*/

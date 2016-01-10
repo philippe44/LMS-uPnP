@@ -93,7 +93,9 @@ static char				gl_exclude_codecs[SQ_STR_LENGTH];
 /*----------------------------------------------------------------------------*/
 static void sq_wipe_device(struct thread_ctx_s *ctx);
 
-static log_level	loglevel = lWARN;
+extern log_level	 main_loglevel;
+static log_level	*loglevel = &main_loglevel;
+
 
 /*---------------------------------------------------------------------------*/
 void sq_stop() {
@@ -142,12 +144,6 @@ void sq_delete_device(sq_dev_handle_t handle) {
 	sq_wipe_device(ctx);
 }
 
-/*---------------------------------------------------------------------------*/
-void main_loglevel(log_level level)
-{
-	LOG_WARN("main change log", NULL);
-	loglevel = level;
-}
 
 /*---------------------------------------------------------------------------*/
 void *sq_urn2MR(const char *urn)
@@ -1045,7 +1041,7 @@ int sq_read(void *desc, void *dst, unsigned bytes)
  }
 
 /*---------------------------------------------------------------------------*/
-void sq_init(char *server, u8_t mac[6], sq_log_level_t *log)
+void sq_init(char *server, u8_t mac[6])
 {
 	if (server) {
 		strcpy(_gl_server, server);
@@ -1071,12 +1067,7 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 	winsock_init();
 #endif
 
-	loglevel = log->general;
-	slimproto_loglevel(log->slimproto);
-	stream_loglevel(log->stream);
-//	output_init(gl_log.output, true);
-	output_mr_loglevel(log->output);
-	decode_init(log->decode, gl_include_codecs, gl_exclude_codecs, true);
+	decode_init(gl_include_codecs, gl_exclude_codecs, true);
 }
 
 /*---------------------------------------------------------------------------*/
