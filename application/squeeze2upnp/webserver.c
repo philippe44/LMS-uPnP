@@ -28,6 +28,8 @@
 extern log_level	web_loglevel;
 static log_level	*loglevel = &web_loglevel;
 
+
+/*---------------------------------------------------------------------------*/
 int WebGetInfo(const char *FileName, struct File_Info *Info)
 {
 	struct stat Status;
@@ -97,6 +99,8 @@ int WebGetInfo(const char *FileName, struct File_Info *Info)
 	return UPNP_E_SUCCESS;
 }
 
+
+/*---------------------------------------------------------------------------*/
 UpnpWebFileHandle WebOpen(const char *FileName, enum UpnpOpenFileMode Mode)
 {
 	void *p;
@@ -110,11 +114,15 @@ UpnpWebFileHandle WebOpen(const char *FileName, enum UpnpOpenFileMode Mode)
 	return (UpnpWebFileHandle) p;
 }
 
+
+/*---------------------------------------------------------------------------*/
 int WebWrite(UpnpWebFileHandle FileHandle, char *buf, size_t buflen)
 {
 	return 0;
 }
 
+
+/*---------------------------------------------------------------------------*/
 int WebRead(UpnpWebFileHandle FileHandle, char *buf, size_t buflen)
 {
 	int read;
