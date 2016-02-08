@@ -2,7 +2,10 @@
  - Free device search was missing ;
  - Filter out result of old status update after a play/pause/stop has been required
  - Stop requesting status update while waiting for  play/pause/stop
+ - remove ppc build
  - (dev-2) Log system re-organization
+ - (dev-3) Duration shall not be adjusted when playing a live stream
+ 
 
 0.2.7.2
  - minor changes

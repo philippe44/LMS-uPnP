@@ -544,7 +544,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 	}
 	NFREE(rsp);
 
-	if (!next) {
+	if (!next && metadata->duration) {
 		sprintf(cmd, "%s time", ctx->cli_id);
 		rsp = cli_send_cmd(cmd, true, true, ctx);
 		if (rsp && *rsp) metadata->duration -= (u32_t) (atof(rsp) * 1000);
