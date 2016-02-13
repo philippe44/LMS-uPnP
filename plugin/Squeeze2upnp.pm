@@ -32,8 +32,12 @@ sub binaries {
 			return qw(squeeze2upnp-armv6hf squeeze2upnp-armv6hf-static squeeze2upnp-armv5 squeeze2upnp-armv5-static);
 		}
 		
+		if ($os->{'binArch'} =~ /powerpc/) {
+			return qw(squeeze2upnp-ppc squeeze2upnp-ppc-static);
+		}
+		
 		# fallback to offering all linux options for case when architecture detection does not work
-		return qw(squeeze2upnp-x86-64 squeeze2upnp-x86 squeeze2upnp-x86-static squeeze2upnp-armv6hf squeeze2upnp-armv6hf-static squeeze2upnp-armv5 squeeze2upnp-armv5-static);
+		return qw(squeeze2upnp-x86-64 squeeze2upnp-x86 squeeze2upnp-x86-static squeeze2upnp-armv6hf squeeze2upnp-armv6hf-static squeeze2upnp-armv5 squeeze2upnp-armv5-static squeeze2upnp-ppc squeeze2upnp-ppc-static);
 	}
 	
 	if ($os->{'os'} eq 'Darwin') {

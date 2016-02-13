@@ -557,7 +557,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 				metadata->artist, metadata->album, metadata->title,
 				metadata->genre, div(metadata->duration, 1000).quot,
 				div(metadata->duration,1000).rem, metadata->file_size,
-				metadata->artwork);
+				metadata->artwork ? metadata->artwork : "");
 
 	return true;
 }

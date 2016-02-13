@@ -5,6 +5,7 @@
  - remove ppc build
  - (dev-2) Log system re-organization
  - (dev-3) Duration shall not be adjusted when playing a live stream
+ - (dev-4) Gathering metadata while rescanning library caused a NULL pointer usage
  
 
 0.2.7.2
