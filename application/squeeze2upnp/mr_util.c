@@ -367,6 +367,7 @@ void ParseProtocolInfo(struct sMR *Device, char *Info)
 	char *p = Info;
 	int n = 0, i = 0;
 	int size = strlen(Info);
+	bool flac = false;
 
 	// strtok is no re-entrant
 	memset(Device->ProtocolCap, 0, sizeof(char*) * (MAX_PROTO + 1));
@@ -376,6 +377,7 @@ void ParseProtocolInfo(struct sMR *Device, char *Info)
 		if (strstr(p, "http-get") && strstr(p, "audio")) {
 			Device->ProtocolCap[i] = malloc(strlen(p) + 1);
 			strcpy(Device->ProtocolCap[i], p);
+			if (strstr(p, "flac")) flac = true;
 			i++;
 		}
 		p += strlen(p) + 1;
@@ -384,6 +386,9 @@ void ParseProtocolInfo(struct sMR *Device, char *Info)
 	// remove trailing "*" as we WILL add DLNA-related info, so some options to come
 	for (i = 0; (p = Device->ProtocolCap[i]) != NULL; i++)
 		if (p[strlen(p) - 1] == '*') p[strlen(p) - 1] = '\0';
+
+	if (Device->Config.AllowFlac && flac == false && i < MAX_PROTO)
+		Device->ProtocolCap[i] = strdup("http-get:*:audio/flac:");
 
 	Device->ProtocolCapReady = true;
 }
@@ -508,6 +513,7 @@ void SaveConfig(char *name, void *ref, bool full)
 		XMLAddNode(doc, common, "sample_rate", "%d", (int) glDeviceParam.sample_rate);
 		XMLAddNode(doc, common, "L24_format", "%d", (int) glDeviceParam.L24_format);
 		XMLAddNode(doc, common, "flac_header", "%d", (int) glDeviceParam.flac_header);
+		XMLAddNode(doc, common, "allow_flac", "%d", (int) glMRConfig.AllowFlac);
 		XMLAddNode(doc, common, "seek_after_pause", "%d", (int) glMRConfig.SeekAfterPause);
 		XMLAddNode(doc, common, "byte_seek", "%d", (int) glMRConfig.ByteSeek);
 		XMLAddNode(doc, common, "send_icy", "%d", (int) glDeviceParam.send_icy);
@@ -589,6 +595,7 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "sample_rate"))sq_conf->sample_rate = atol(val);
 	if (!strcmp(name, "L24_format"))sq_conf->L24_format = atol(val);
 	if (!strcmp(name, "flac_header"))sq_conf->flac_header = atol(val);
+	if (!strcmp(name, "allow_flac")) Conf->AllowFlac = atol(val);
 	if (!strcmp(name, "keep_buffer_file"))sq_conf->keep_buffer_file = atol(val);
 	if (!strcmp(name, "upnp_remove_count"))Conf->UPnPRemoveCount = atol(val);
 	if (!strcmp(name, "raw_audio_format")) strcpy(Conf->RawAudioFormat, val);

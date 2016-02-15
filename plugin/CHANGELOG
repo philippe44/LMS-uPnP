@@ -6,6 +6,7 @@
  - (dev-2) Log system re-organization
  - (dev-3) Duration shall not be adjusted when playing a live stream
  - (dev-4) Gathering metadata while rescanning library caused a NULL pointer usage
+ - (dev-5) Add <allow_flac> to allow usage of flac even if ProtocolSink does not specify it
  
 
 0.2.7.2

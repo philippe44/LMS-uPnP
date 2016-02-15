@@ -79,6 +79,7 @@ struct sService {
 	char		RawAudioFormat[SQ_STR_LENGTH];
 	bool		MatchEndianness;
 	bool		AutoPlay;
+	bool 		AllowFlac;
 } tMRConfig;
 
 struct sMR {
