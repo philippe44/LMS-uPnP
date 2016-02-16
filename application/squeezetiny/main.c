@@ -215,7 +215,7 @@ static char *cli_decode(char *str) {
 static char *cli_find_tag(char *str, char *tag)
 {
 	char *p, *res = NULL;
-	char *buf = malloc(strlen(str));
+	char *buf = malloc(max(strlen(str), strlen(tag)) + 4);
 
 	strcpy(buf, tag);
 	strcat(buf, "%3a");
