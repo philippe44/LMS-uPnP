@@ -94,9 +94,9 @@ int _mutex_timedlock(pthread_mutex_t *m, u32_t ms_wait)
 	struct timespec ts;
 
 	if (!clock_gettime(CLOCK_REALTIME, &ts)) {
-		u32_t nsec = ts.tv_nsec + (ms_wait % 1000) * 1000000;
-		ts.tv_sec += ms_wait / 1000 + (nsec / 1000000000);
-		ts.tv_nsec += nsec % 1000000000;
+		ts.tv_nsec += (ms_wait % 1000) * 1000000;
+		ts.tv_sec += ms_wait / 1000 + (ts.tv_nsec / 1000000000);
+		ts.tv_nsec = ts.tv_nsec % 1000000000;
 		rc = pthread_mutex_timedlock(m, &ts);
 	}
 	return rc;

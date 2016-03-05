@@ -8,6 +8,7 @@
  - (dev-4) Gathering metadata while rescanning library caused a NULL pointer usage
  - (dev-5) Add <allow_flac> to allow usage of flac even if ProtocolSink does not specify it
  - (dev-5) When LMS was rescanning, an overflow happended during metadata gathering
+ - (dev-7) mutex timeout value for double GET was wrong (nano sec oveflow)
  
 
 0.2.7.2
