@@ -10,6 +10,7 @@
  - (dev-5) When LMS was rescanning, an overflow happended during metadata gathering
  - (dev-7) mutex timeout value for double GET was wrong (nano seconds overflow)
  - (dev-8) search serviceType without the version:1 to take the most recent one
+ - (dev-9) using wrong serviceType in dev-8
 
 0.2.7.2
  - minor changes
