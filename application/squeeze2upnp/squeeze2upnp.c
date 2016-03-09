@@ -43,6 +43,10 @@ TODO :
 - samplerate management will have to be reviewed when decode will be used
 */
 
+#define	AV_TRANSPORT 	"urn:schemas-upnp-org:service:AVTransport"
+#define	RENDERING_CTRL 	"urn:schemas-upnp-org:service:RenderingControl"
+#define	CONNECTION_MGR 	"urn:schemas-upnp-org:service:ConnectionManager"
+
 /*----------------------------------------------------------------------------*/
 /* globals initialized */
 /*----------------------------------------------------------------------------*/
@@ -361,7 +365,7 @@ static int	uPNPTerminate(void);
 			}
 			if (device->CurrentURI) {
 				if (device->Muted && device->Config.VolumeOnPlay != -1) {
-					CtrlSetMute(device->Service[REND_SRV_IDX].ControlURL, false, device->seqN++);
+					CtrlSetMute(device, false, device->seqN++);
 					device->Muted = false;
 				}
 
@@ -376,12 +380,12 @@ static int	uPNPTerminate(void);
 				device->sqState = SQ_PLAY;
 
 				if (device->Muted && device->Config.VolumeOnPlay != -1) {
-					CtrlSetMute(device->Service[REND_SRV_IDX].ControlURL, false, device->seqN++);
+					CtrlSetMute(device, false, device->seqN++);
 					device->Muted = false;
 				}
 
 				if (device->Config.VolumeOnPlay == 1)
-					CtrlSetVolume(device->Service[REND_SRV_IDX].ControlURL, device->Volume, device->seqN++);
+					CtrlSetVolume(device, device->Volume, device->seqN++);
 			}
 			else rc = false;
 			break;
@@ -417,10 +421,10 @@ static int	uPNPTerminate(void);
 			// only transmit while playing
 			if (!device->Config.VolumeOnPlay || device->sqState == SQ_PLAY) {
 				if (device->Volume) {
-					if (device->Muted) CtrlSetMute(device->Service[REND_SRV_IDX].ControlURL, false, device->seqN++);
-					CtrlSetVolume(device->Service[REND_SRV_IDX].ControlURL, device->Volume, device->seqN++);
+					if (device->Muted) CtrlSetMute(device, false, device->seqN++);
+					CtrlSetVolume(device, device->Volume, device->seqN++);
 				}
-				else CtrlSetMute(device->Service[REND_SRV_IDX].ControlURL, true, device->seqN++);
+				else CtrlSetMute(device, true, device->seqN++);
 				device->Muted = (device->Volume == 0);
 			}
 
@@ -884,7 +888,7 @@ static void *MRThread(void *args)
 		if (p->TrackPoll > TRACK_POLL) {
 			p->TrackPoll = 0;
 			if (p->State != STOPPED && p->State != PAUSED) {
-				AVTCallAction(p->Service[AVT_SRV_IDX].ControlURL, "GetPositionInfo", p->seqN++);
+				AVTCallAction(p, "GetPositionInfo", p->seqN++);
 			}
 		}
 
@@ -892,7 +896,7 @@ static void *MRThread(void *args)
 
 		if (p->StatePoll > STATE_POLL) {
 			p->StatePoll = 0;
-			AVTCallAction(p->Service[AVT_SRV_IDX].ControlURL, "GetTransportInfo", p->seqN++);
+			AVTCallAction(p, "GetTransportInfo", p->seqN++);
 		}
 
 				// do polling as event is broken in many uPNP devices
@@ -1212,6 +1216,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	char *URLBase = NULL;
 	char *presURL = NULL;
 	char *ServiceId = NULL;
+	char *ServiceType = NULL;
 	char *EventURL = NULL;
 	char *ControlURL = NULL;
 	char *manufacturer = NULL;
@@ -1275,25 +1280,26 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	/* find the different services */
 	for (i = 0; i < NB_SRV; i++) {
 		strcpy(Device->Service[i].Id, "");
-		if (XMLFindAndParseService(DescDoc, location, cSearchedSRV[i].name, &ServiceId, &EventURL, &ControlURL)) {
+		if (XMLFindAndParseService(DescDoc, location, cSearchedSRV[i].name, &ServiceType, &ServiceId, &EventURL, &ControlURL)) {
 			struct sService *s = &Device->Service[cSearchedSRV[i].idx];
-			LOG_SDEBUG("\tservice [%s] %s, %s, %s", cSearchedSRV[i].name, ServiceId, EventURL, ControlURL);
+			LOG_SDEBUG("\tservice [%s] %s %s, %s, %s", cSearchedSRV[i].name, ServiceType, ServiceId, EventURL, ControlURL);
 
 			strncpy(s->Id, ServiceId, RESOURCE_LENGTH-1);
 			strncpy(s->ControlURL, ControlURL, RESOURCE_LENGTH-1);
 			strncpy(s->EventURL, EventURL, RESOURCE_LENGTH - 1);
-			strcpy(s->Type, cSearchedSRV[i].name);
+			strncpy(s->Type, ServiceType, RESOURCE_LENGTH - 1);
 			if ((s->TimeOut = cSearchedSRV[i].TimeOut) != 0)
 				UpnpSubscribe(glControlPointHandle, s->EventURL, &s->TimeOut, s->SID);
 		}
 		NFREE(ServiceId);
+		NFREE(ServiceType);
 		NFREE(EventURL);
 		NFREE(ControlURL);
 	}
 
 	// send a request for "sink" (will be returned in a callback)
 	Device->ProtocolCapReady = false;
-	GetProtocolInfo(Device->Service[CNX_MGR_IDX].ControlURL, Device->seqN++);
+	GetProtocolInfo(Device, Device->seqN++);
 
 	NFREE(deviceType);
 	NFREE(friendlyName);

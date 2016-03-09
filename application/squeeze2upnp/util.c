@@ -165,7 +165,7 @@ static IXML_NodeList *XMLGetNthServiceList(IXML_Document *doc, unsigned int n, b
 
 /*----------------------------------------------------------------------------*/
 int XMLFindAndParseService(IXML_Document *DescDoc, const char *location,
-	const char *serviceType, char **serviceId, char **eventURL, char **controlURL)
+	const char *serviceTypeBase, char **serviceType, char **serviceId, char **eventURL, char **controlURL)
 {
 	unsigned int i;
 	unsigned long length;
@@ -195,10 +195,13 @@ int XMLFindAndParseService(IXML_Document *DescDoc, const char *location,
 		length = ixmlNodeList_length(serviceList);
 		for (i = 0; i < length; i++) {
 			service = (IXML_Element *)ixmlNodeList_item(serviceList, i);
-			tempServiceType = XMLGetFirstElementItem((IXML_Element *)service, "serviceType");
-			LOG_SDEBUG("serviceType %s", tempServiceType);
+			*serviceType = XMLGetFirstElementItem((IXML_Element *)service, "serviceType");
+			LOG_SDEBUG("serviceType %s", serviceType);
 
-			if (tempServiceType && strcmp(tempServiceType, serviceType) == 0) {
+			// remove version from service type
+			tempServiceType = strdup(*serviceType);
+			*strrchr(tempServiceType, ':') = '\0';
+			if (tempServiceType && strcmp(tempServiceType, serviceTypeBase) == 0) {
 				NFREE(*serviceId);
 				*serviceId = XMLGetFirstElementItem(service, "serviceId");
 				LOG_SDEBUG("Service %s, serviceId: %s", serviceType, serviceId);

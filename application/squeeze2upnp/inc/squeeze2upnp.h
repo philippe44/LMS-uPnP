@@ -38,9 +38,6 @@
 
 #define MAX_PROTO		128
 #define MAX_RENDERERS	32
-#define	AV_TRANSPORT 	"urn:schemas-upnp-org:service:AVTransport:1"
-#define	RENDERING_CTRL 	"urn:schemas-upnp-org:service:RenderingControl:1"
-#define	CONNECTION_MGR 	"urn:schemas-upnp-org:service:ConnectionManager:1"
 #define MAGIC			0xAABBCCDD
 #define RESOURCE_LENGTH	250
 #define	SCAN_TIMEOUT 	15

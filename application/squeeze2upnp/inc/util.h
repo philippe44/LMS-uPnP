@@ -51,8 +51,8 @@ IXML_Node  	*XMLAddNode(IXML_Document *doc, IXML_Node *parent, char *name, char 
 int 	   	XMLAddAttribute(IXML_Document *doc, IXML_Node *parent, char *name, char *fmt, ...);
 char 	   	*XMLGetFirstDocumentItem(IXML_Document *doc, const char *item);
 int 	   	XMLFindAndParseService(IXML_Document *DescDoc, const char *location,
-							const char *serviceType, char **serviceId,
-							char **eventURL, char **controlURL);
+							const char *serviceTypeBase, char **serviceId,
+							char **serviceType, char **eventURL, char **controlURL);
 
 void 	   	uPNPLogLevel(log_level level);
 #endif

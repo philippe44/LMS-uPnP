@@ -40,16 +40,16 @@ typedef struct sAction {
 void 	AVTInit(log_level level);
 bool 	AVTSetURI(struct sMR *Device);
 bool 	AVTSetNextURI(struct sMR *Device);
-int 	AVTCallAction(char *ControlURL, char *Var, void *Cookie);
+int 	AVTCallAction(struct sMR *Device, char *Var, void *Cookie);
 bool 	AVTPlay(struct sMR *Device);
 bool 	AVTSetPlayMode(struct sMR *Device);
 bool 	AVTSeek(struct sMR *Device, unsigned Interval);
 bool 	AVTBasic(struct sMR *Device, char *Action);
 bool 	AVTStop(struct sMR *Device);
 void	AVTActionFlush(tQueue *Queue);
-int 	CtrlSetVolume(char *ControlURL, u8_t Volume, void *Cookie);
-int 	CtrlSetMute(char *ControlURL, bool Mute, void *Cookie);
-int 	GetProtocolInfo(char *ControlURL, void *Cookie);
+int 	CtrlSetVolume(struct sMR *Device, u8_t Volume, void *Cookie);
+int 	CtrlSetMute(struct sMR *Device, bool Mute, void *Cookie);
+int 	GetProtocolInfo(struct sMR *Device, void *Cookie);
 
 #endif
 
