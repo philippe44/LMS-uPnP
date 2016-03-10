@@ -195,13 +195,14 @@ int XMLFindAndParseService(IXML_Document *DescDoc, const char *location,
 		length = ixmlNodeList_length(serviceList);
 		for (i = 0; i < length; i++) {
 			service = (IXML_Element *)ixmlNodeList_item(serviceList, i);
-			*serviceType = XMLGetFirstElementItem((IXML_Element *)service, "serviceType");
+			tempServiceType = XMLGetFirstElementItem((IXML_Element *)service, "serviceType");
 			LOG_SDEBUG("serviceType %s", serviceType);
 
 			// remove version from service type
-			tempServiceType = strdup(*serviceType);
 			*strrchr(tempServiceType, ':') = '\0';
 			if (tempServiceType && strcmp(tempServiceType, serviceTypeBase) == 0) {
+				NFREE(*serviceType);
+				*serviceType = XMLGetFirstElementItem((IXML_Element *)service, "serviceType");
 				NFREE(*serviceId);
 				*serviceId = XMLGetFirstElementItem(service, "serviceId");
 				LOG_SDEBUG("Service %s, serviceId: %s", serviceType, serviceId);

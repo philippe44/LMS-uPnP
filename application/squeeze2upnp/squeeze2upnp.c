@@ -539,20 +539,21 @@ void SyncNotifState(char *State, struct sMR* Device)
 
 
 /*----------------------------------------------------------------------------*/
-bool ProcessQueue(struct sMR *Device) {
-	int rc = 0;
+bool ProcessQueue(struct sMR *Device)
+{
+	struct sService *Service = &Device->Service[AVT_SRV_IDX];
 	tAction *Action;
+	int rc = 0;
 
 	Device->WaitCookie = 0;
 	if ((Action = QueueExtract(&Device->ActionQueue)) == NULL) return false;
 
 	Device->WaitCookie = Device->seqN++;
-	rc = UpnpSendActionAsync(glControlPointHandle, Device->Service[AVT_SRV_IDX].ControlURL,
-									 AV_TRANSPORT, NULL, Action->ActionNode, CallbackActionHandler,
-									 Device->WaitCookie);
+	rc = UpnpSendActionAsync(glControlPointHandle, Service->ControlURL, Service->Type,
+							 NULL, Action->ActionNode, CallbackActionHandler, Device->WaitCookie);
 
 	if (rc != UPNP_E_SUCCESS) {
-			LOG_ERROR("Error in queued UpnpSendActionAsync -- %d", rc);
+		LOG_ERROR("Error in queued UpnpSendActionAsync -- %d", rc);
 	}
 
 	free(Action);
