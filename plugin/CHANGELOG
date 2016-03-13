@@ -12,6 +12,7 @@
  - (dev-8) search serviceType without the version:1 to take the most recent one
  - (dev-9) using wrong serviceType in dev-8
  - (dev-10) using AV_TRANSPORT was missing :ver
+ - (dev-11) force soft float point on armv5
 
 0.2.7.2
  - minor changes

@@ -482,8 +482,8 @@ void SyncNotifState(char *State, struct sMR* Device)
 				the device did not have time to buffer next track data. In
 				this case, give it a nudge
 				*/
-			AVTBasic(Device, "Next");
-			LOG_WARN("[%p]: nudge next track required %s", Device, Device->NextURI);
+				AVTBasic(Device, "Next");
+				LOG_WARN("[%p]: nudge next track required %s", Device, Device->NextURI);
 			}
 		}
 		// This is an end of track and nothing else to play or a LMS stop
