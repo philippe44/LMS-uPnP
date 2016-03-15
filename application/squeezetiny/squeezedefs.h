@@ -1,7 +1,7 @@
 #ifndef __SQUEEZEDEFS_H
 #define __SQUEEZEDEFS_H
 
-#define VERSION "v0.2.7.3-dev-11"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.7.3-dev-12"" ("__DATE__" @ "__TIME__")"
 
 #if defined(linux)
 #define LINUX     1
@@ -65,6 +65,7 @@ typedef int64_t   s64_t;
 #define mutex_create_p(m) pthread_mutexattr_t attr; pthread_mutexattr_init(&attr); pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_INHERIT); pthread_mutex_init(&m, &attr); pthread_mutexattr_destroy(&attr)
 #define mutex_lock(m) pthread_mutex_lock(&m)
 #define mutex_unlock(m) pthread_mutex_unlock(&m)
+#define mutex_trylock(m) pthread_mutex_trylock(&m)
 #define mutex_destroy(m) pthread_mutex_destroy(&m)
 #define thread_type pthread_t
 #define mutex_timedlock(m, t) _mutex_timedlock(&m, t)
@@ -107,6 +108,7 @@ typedef __int64 s64_t;
 #define mutex_lock(m) WaitForSingleObject(m, INFINITE)
 #define mutex_timedlock(m,t) WaitForSingleObject(m, t)
 #define mutex_unlock(m) ReleaseMutex(m)
+#define mutex_trylock(m) WaitForSingleObject(m, 0)
 #define mutex_destroy(m) CloseHandle(m)
 #define thread_type HANDLE
 

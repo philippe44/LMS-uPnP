@@ -344,6 +344,12 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 
 				idx = ctx->out_idx = (ctx->out_idx + 1) & 0x01;
 
+				if (mutex_trylock(ctx->out_ctx[idx].mutex)) {
+					LOG_WARN("[%p]: file mutex was locked", ctx);
+				}
+				// we have a locked mutex no matter what
+				mutex_unlock(ctx->out_ctx[idx].mutex);
+
 				if (ctx->out_ctx[idx].read_file) {
 					LOG_WARN("[%p]: read file left open", ctx, ctx->out_ctx[idx].buf_name);
 					fclose(ctx->out_ctx[idx].read_file);

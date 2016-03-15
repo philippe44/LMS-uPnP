@@ -13,6 +13,7 @@
  - (dev-9) using wrong serviceType in dev-8
  - (dev-10) using AV_TRANSPORT was missing :ver
  - (dev-11) force soft float point on armv5
+ - (dev-12) buffer mutex was left locked if sq_close was not called, causing dead lock
 
 0.2.7.2
  - minor changes
