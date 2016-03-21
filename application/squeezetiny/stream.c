@@ -152,7 +152,6 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 
 					// read one byte at a time to catch end of header
 					char c;
-					static int endtok;
 
 					int n = recv(ctx->fd, &c, 1, 0);
 					if (n <= 0) {
@@ -175,15 +174,15 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 					}
 
 					if (ctx->stream.header_len > 1 && (c == '\r' || c == '\n')) {
-						endtok++;
-						if (endtok == 4) {
+						ctx->stream.endtok++;
+						if (ctx->stream.endtok == 4) {
 							*(ctx->stream.header + ctx->stream.header_len) = '\0';
 							LOG_INFO("[%p] headers: len: %d\n%s", ctx, ctx->stream.header_len, ctx->stream.header);
 							ctx->stream.state = ctx->stream.cont_wait ? STREAMING_WAIT : STREAMING_BUFFERING;
 							wake_controller(ctx);
 						}
 					} else {
-						endtok = 0;
+						ctx->stream.endtok = 0;
 					}
 
 					UNLOCK_S;

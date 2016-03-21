@@ -291,6 +291,7 @@ struct streamstate {
 	disconnect_code disconnect;
 	char *header;
 	size_t header_len;
+	int endtok;
 	bool sent_headers;
 	bool cont_wait;
 	u64_t bytes;

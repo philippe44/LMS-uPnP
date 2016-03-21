@@ -1,3 +1,6 @@
+0.2.7.4-dev-1
+ - in stream thread, endtok static parameter was breaking multi-thread !
+
 0.2.7.3
  - Free device search was missing ;
  - Filter out result of old status update after a play/pause/stop has been required
