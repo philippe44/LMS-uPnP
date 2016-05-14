@@ -1,5 +1,7 @@
 0.2.7.4-dev-1
  - in stream thread, endtok static parameter was breaking multi-thread !
+ - hash32 check for NULL string
+ (dev-2): when receiving and unsollicited stop in paused mode, do not generate an error as it would lead LMS to move to next track
 
 0.2.7.3
  - Free device search was missing ;

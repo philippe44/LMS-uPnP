@@ -166,6 +166,8 @@ u32_t hash32(char *str)
 {
 	u32_t hash = 5381;
 	s32_t c;
+	
+	if (!str) return 0;
 
 	while ((c = *str++) != 0)
 		hash = ((hash << 5) + hash) + c; /* hash * 33 + c */

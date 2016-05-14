@@ -489,6 +489,7 @@ void SyncNotifState(char *State, struct sMR* Device)
 		// This is an end of track and nothing else to play or a LMS stop
 		else {
 			LOG_INFO("%s: uPNP stop", Device->FriendlyName);
+			if (Device->State == PAUSED) Param = true;
 			Event = SQ_STOP;
 		}
 
