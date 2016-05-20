@@ -1,4 +1,9 @@
-0.2.7.4-dev-1
+0.2.8.0
+ - if MAC cannot be retrieved, use a fake one from UDN
+ - force first 2 bytes of MAC to be 0xbb unless <mac_address> is set in config file
+ - remove <base_mac> parameter
+ 
+0.2.7.4 (not released)
  - in stream thread, endtok static parameter was breaking multi-thread !
  - hash32 check for NULL string
  (dev-2): when receiving and unsollicited stop in paused mode, do not generate an error as it would lead LMS to move to next track

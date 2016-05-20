@@ -83,7 +83,7 @@ typedef bool (*sq_callback_t)(sq_dev_handle_t handle, void *caller_id, sq_action
 
 char*				sq_parse_args(int argc, char**argv);
 // all params can be NULL
-void				sq_init(char *server, u8_t mac[6]);
+void				sq_init(char *server);
 void				sq_stop(void);
 
 // only name cannot be NULL

@@ -11,13 +11,12 @@
 	<max_volume>100</max_volume>
 	<match_endianness>0</match_endianness>
 	<max_read_wait>600</max_read_wait>
-	<profile name='Jongo S3x'>
-	<stream_length>1000000000</stream_length>
-	<max_read_wait>600</max_read_wait>
-	<codecs>aac,pcm,flc,mp3</codecs>
-	<raw_audio_format>wav,aiff</raw_audio_format>
-	</profile>	
 	<profile name=''></profile>
+	<profile name='Jongo S3x'>
+		<stream_length>1000000000</stream_length>
+		<codecs>aac,pcm,flc,mp3</codecs>
+		<allow_flac>1</allow_flac>
+	</profile>	
 	<profile name='foobar 2000'></profile>
 	<profile name='Sonos'>
 		<stream_length>1000000000</stream_length>

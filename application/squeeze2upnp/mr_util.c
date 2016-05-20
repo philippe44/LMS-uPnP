@@ -483,8 +483,6 @@ void SaveConfig(char *name, void *ref, bool full)
 
 		XMLAddNode(doc, root, "server", glSQServer);
 		XMLAddNode(doc, root, "upnp_socket", gluPNPSocket);
-		XMLAddNode(doc, root, "base_mac", "%02x:%02x:%02x:%02x:%02x:%02x", glMac[0],
-					glMac[1], glMac[2], glMac[3], glMac[4], glMac[5]);
 		XMLAddNode(doc, root, "slimproto_log", level2debug(slimproto_loglevel));
 		XMLAddNode(doc, root, "stream_log", level2debug(stream_loglevel));
 		XMLAddNode(doc, root, "output_log", level2debug(output_loglevel));
@@ -635,14 +633,6 @@ static void LoadGlobalItem(char *name, char *val)
 	if (!strcmp(name, "slimmain_log")) slimmain_loglevel = debug2level(val);
 	if (!strcmp(name, "upnp_log")) upnp_loglevel = debug2level(val);
 	if (!strcmp(name, "util_log")) util_loglevel = debug2level(val);
-	if (!strcmp(name, "base_mac"))  {
-		unsigned mac[6];
-		int i;
-		// seems to be a Windows scanf buf, cannot support %hhx
-		sscanf(val,"%2x:%2x:%2x:%2x:%2x:%2x", &mac[0], &mac[1], &mac[2], &mac[3], &mac[4], &mac[5]);
-		for (i = 0; i < 6; i++) glMac[i] = mac[i];
-
-	}
 	if (!strcmp(name, "upnp_scan_interval")) gluPNPScanInterval = atol(val);
 	if (!strcmp(name, "upnp_scan_timeout")) gluPNPScanTimeout = atol(val);
 	if (!strcmp(name, "log_limit")) glLogLimit = atol(val);

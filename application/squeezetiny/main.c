@@ -74,7 +74,7 @@ struct thread_ctx_s thread_ctx[MAX_PLAYER];
 /*----------------------------------------------------------------------------*/
 static char 			_gl_server[SERVER_NAME_LEN + 1];
 static char 			*gl_server = NULL;
-static u8_t				gl_last_mac[6];
+
 #if 0
 static unsigned 		gl_rate_delay = 0;
 #endif
@@ -1041,7 +1041,7 @@ int sq_read(void *desc, void *dst, unsigned bytes)
  }
 
 /*---------------------------------------------------------------------------*/
-void sq_init(char *server, u8_t mac[6])
+void sq_init(char *server)
 {
 	if (server) {
 		strcpy(_gl_server, server);
@@ -1059,9 +1059,6 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 		gl_output_buf_size *= scale;
 	 }
 #endif
-
-	// mac cannot be NULL
-	memcpy(gl_last_mac, mac, 6);
 
 #if WIN
 	winsock_init();
@@ -1131,11 +1128,6 @@ bool sq_run_device(sq_dev_handle_t handle, char *name, sq_dev_param_t *param)
 	if (access(ctx->config.buffer_dir, 2)) {
 		LOG_ERROR("[%p]: cannot access %s", ctx, ctx->config.buffer_dir);
 		return false;
-	}
-
-	if (!memcmp(ctx->config.mac, "\0\0\0\0\0\0", 6)) {
-		gl_last_mac[5] = (gl_last_mac[5] + 1) &0xFF;
-		memcpy(ctx->config.mac, gl_last_mac, 6);
 	}
 
 	if ((u32_t) ctx->config.buffer_limit < max(ctx->config.stream_buf_size, ctx->config.output_buf_size) * 4) {
