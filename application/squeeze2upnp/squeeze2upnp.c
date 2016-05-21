@@ -1276,9 +1276,9 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 			u32_t hash = hash32(UDN);
 
 			LOG_ERROR("[%p]: cannot get mac %s, creating fake %x", Device, Device->FriendlyName, hash);
-			memset(Device->sq_config.mac, 0xbb, 2);
 			memcpy(Device->sq_config.mac + 2, &hash, 4);
 		}
+		memset(Device->sq_config.mac, 0xbb, 2);
 	}
 
 	/* find the different services */
