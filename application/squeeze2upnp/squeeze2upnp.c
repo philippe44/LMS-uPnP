@@ -1222,8 +1222,8 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	char *ControlURL = NULL;
 	char *manufacturer = NULL;
 	int i;
-	u32_t mac_size = 6;
 	pthread_attr_t attr;
+	u32_t mac_size = 6;
 
 	// read parameters from default then config file
 	memset(Device, 0, sizeof(struct sMR));
