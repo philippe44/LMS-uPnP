@@ -249,6 +249,9 @@ PLUGIN_UPNPBRIDGE_RAWAUDIOFORMAT
 PLUGIN_UPNPBRIDGE_MATCHENDIANNESS
 	EN	Match byte order
 
+PLUGIN_UPNPBRIDGE_SERVER
+	EN	LMS Server
+	
 PLUGIN_UPNPBRIDGE_ENABLED
 	EN	Enabled
 	
@@ -271,8 +274,11 @@ PLUGIN_UPNPBRIDGE_UPNPMGMT
 	EN	Player discovery options
 	
 PLUGIN_UPNPBRIDGE_UPNPMGMT_DESC
-	EN	Misc options<br>- For the default list newly discovered players can be automatically added to LMS – For individual players a 
-	EN	player can be enabled or disabled<br>- Number of UPnP scan cycles a player can be found missing before being removed
+	EN	Misc options
+	EN	<br>- For the default list newly discovered players can be automatically added to LMS 
+	EN	<br>– For individual players a player can be enabled or disabled
+	EN	<br>- Number of UPnP scan cycles a player can be found missing before being removed
+	EN	<br>- Force LMS server (? for auto-discovery)
 
 PLUGIN_UPNPBRIDGE_ENABLEDEFS
 	EN	Player is enabled

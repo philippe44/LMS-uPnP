@@ -276,7 +276,7 @@ void buf_destroy(struct buffer *buf);
 // slimproto.c
 void slimproto_close(struct thread_ctx_s *ctx);
 void slimproto_reset(struct thread_ctx_s *ctx);
-void slimproto_thread_init(char *server, u8_t mac[], const char *name, const char *namefile, struct thread_ctx_s *ctx);
+void slimproto_thread_init(const char *name, const char *namefile, struct thread_ctx_s *ctx);
 void wake_controller(struct thread_ctx_s *ctx);
 void send_packet(u8_t *packet, size_t len, sockfd sock);
 void wake_controller(struct thread_ctx_s *ctx);
@@ -472,7 +472,6 @@ typedef struct {
 typedef enum {TRACK_STOPPED = 0, TRACK_STARTED, TRACK_PAUSED} track_status_t;
 
 #define PLAYER_NAME_LEN 64
-#define SERVER_NAME_LEN	250
 #define SERVER_VERSION_LEN	32
 #define MAX_PLAYER		32
 
@@ -541,7 +540,6 @@ struct thread_ctx_s {
 	out_ctx_t			out_ctx[2];
 	in_addr_t 	slimproto_ip;
 	unsigned 	slimproto_port;
-	char		server[SERVER_NAME_LEN + 1];
 	char		server_version[SERVER_VERSION_LEN + 1];
 	char		server_port[5+1];
 	char		server_ip[4*(3+1)+1];

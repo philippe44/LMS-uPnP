@@ -193,7 +193,8 @@
 	[% END %]
 	
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_UPNPMGMT" desc="PLUGIN_UPNPBRIDGE_UPNPMGMT_DESC" %]
-		[% "PLUGIN_UPNPBRIDGE_ENABLEDEFS" | string %]
+		[% "PLUGIN_UPNPBRIDGE_SERVER" | string %]&nbsp<input type="text" class="stdedit" name="server" id="server" value="[% server %]" size="10">
+		&nbsp[% "PLUGIN_UPNPBRIDGE_ENABLEDEFS" | string %]
 		<select class="stdedit" name="enabled" id="enabled">
 		[% FOREACH entry IN YESNOBOX %] 
 			<option [% IF entry.1 == enabled %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>

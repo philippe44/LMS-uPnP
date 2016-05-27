@@ -581,9 +581,6 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 	event_handle ehandles[2];
 	int timeouts = 0;
 
-	ctx->aiff_header = false;
-	if ((strstr(ctx->server_version, "7.7")) || strstr(ctx->server_version, "7.8")) ctx->aiff_header = true;
-
 	set_readwake_handles(ehandles, ctx->sock, ctx->wake_e);
 
 	while (ctx->running && !ctx->new_server) {
@@ -852,7 +849,15 @@ void discover_server(struct thread_ctx_s *ctx) {
 
 	closesocket(disc_sock);
 
-	ctx->slimproto_ip = ctx->serv_addr.sin_addr.s_addr = s.sin_addr.s_addr;
+	if ((strstr(ctx->server_version, "7.7")) || strstr(ctx->server_version, "7.8")) ctx->aiff_header = true;
+	else ctx->aiff_header = false;
+
+	ctx->slimproto_ip =  s.sin_addr.s_addr;
+	ctx->slimproto_port = ntohs(s.sin_port);
+
+	ctx->serv_addr.sin_port = s.sin_port;
+	ctx->serv_addr.sin_addr.s_addr = s.sin_addr.s_addr;
+	ctx->serv_addr.sin_family = AF_INET;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -868,9 +873,11 @@ static void slimproto(struct thread_ctx_s *ctx) {
 
 		if (ctx->new_server) {
 			ctx->slimproto_ip = ctx->new_server;
-			LOG_INFO("[%p] switching server to %s:%d", ctx, inet_ntoa(ctx->serv_addr.sin_addr), ntohs(ctx->serv_addr.sin_port));
 			ctx->new_server = 0;
 			reconnect = false;
+
+			discover_server(ctx);
+			LOG_INFO("[%p] switching server to %s:%d", ctx, inet_ntoa(ctx->serv_addr.sin_addr), ntohs(ctx->serv_addr.sin_port));
 		}
 
 		ctx->sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -884,7 +891,10 @@ static void slimproto(struct thread_ctx_s *ctx) {
 			sleep(5);
 
 			// rediscover server if it was not set at startup
-			if (!ctx->server && ++failed_connect > 5) discover_server(ctx);
+			if (!strcmp(ctx->config.server, "?") && ++failed_connect > 5) {
+				ctx->slimproto_ip = 0;
+				discover_server(ctx);
+			}
 
 		} else {
 
@@ -955,24 +965,20 @@ void slimproto_close(struct thread_ctx_s *ctx) {
 
 
 /*---------------------------------------------------------------------------*/
-void slimproto_thread_init(char *server, u8_t mac[6], const char *name, const char *namefile, struct thread_ctx_s *ctx) {
+void slimproto_thread_init(const char *name, const char *namefile, struct thread_ctx_s *ctx) {
 	wake_create(ctx->wake_e);
 
 	ctx->running = true;
 	ctx->slimproto_ip = 0;
-	ctx->slimproto_port = 0;
+	ctx->slimproto_port = PORT;
 	ctx->sock = -1;
 
-	if (server) {
-		server_addr(server, &ctx->slimproto_ip, &ctx->slimproto_port);
-		strncpy(ctx->server, server, SERVER_NAME_LEN);
+	
+	if (strcmp(ctx->config.server, "?")) {
+		server_addr(ctx->config.server, &ctx->slimproto_ip, &ctx->slimproto_port);
 	}
 
 	discover_server(ctx);
-
-	if (!ctx->slimproto_port) {
-		ctx->slimproto_port = PORT;
-	}
 
 	if (name) {
 		strncpy(ctx->player_name, name, PLAYER_NAME_LEN);
@@ -982,6 +988,7 @@ void slimproto_thread_init(char *server, u8_t mac[6], const char *name, const ch
 	/* could be avoided as whole context is reset at init ...*/
 	strcpy(ctx->var_cap, "");
 	ctx->new_server_cap = NULL;
+	ctx->new_server = 0;
 
 	LOCK_O;
 	sprintf(ctx->fixed_cap, ",MaxSampleRate=%u", ctx->config.sample_rate);
@@ -990,7 +997,7 @@ void slimproto_thread_init(char *server, u8_t mac[6], const char *name, const ch
 	if (ctx->config.mode != SQ_FULL) {
 		strcat(ctx->fixed_cap, ",");
 		strcat(ctx->fixed_cap, ctx->config.codecs);
-    }
+	}
 	else
 	{
 #if 0
@@ -1004,15 +1011,10 @@ void slimproto_thread_init(char *server, u8_t mac[6], const char *name, const ch
 	}
 	UNLOCK_O;
 
-	ctx->serv_addr.sin_family = AF_INET;
-	ctx->serv_addr.sin_addr.s_addr = ctx->slimproto_ip;
-	ctx->serv_addr.sin_port = htons(ctx->slimproto_port);
-
-	memcpy(ctx->mac, mac, 6);
+	memcpy(ctx->mac, ctx->config.mac, 6);
 
 	LOG_INFO("[%p] connecting to %s:%d", ctx, inet_ntoa(ctx->serv_addr.sin_addr), ntohs(ctx->serv_addr.sin_port));
 
-	ctx->new_server = 0;
 	ctx->play_running = ctx-> track_ended = false;
 	ctx->track_status = TRACK_STOPPED;
 

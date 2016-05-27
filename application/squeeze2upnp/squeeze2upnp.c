@@ -51,7 +51,6 @@ TODO :
 /* globals initialized */
 /*----------------------------------------------------------------------------*/
 char				glBaseVDIR[] = "LMS2UPNP";
-char				glSQServer[SQ_STR_LENGTH] = "?";
 
 #if LINUX || FREEBSD
 bool				glDaemonize = false;
@@ -120,6 +119,7 @@ sq_dev_param_t glDeviceParam = {
 					-1,         // get can retrun as mucvh as required by UPnP
 					1000,		// wait 1000*50ms for data from LMS
 					"pcm,flc,mp3",
+					"?",
 					SQ_RATE_48000,
 					L24_PACKED_LPCM,
 					FLAC_NORMAL_HEADER,
@@ -1420,7 +1420,7 @@ bool ParseArgs(int argc, char **argv) {
 
 		switch (opt[0]) {
 		case 's':
-			strcpy(glSQServer, optarg);
+			strcpy(glDeviceParam.server, optarg);
 			break;
 #if RESAMPLE
 		case 'u':
@@ -1566,8 +1566,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (strstr(glSQServer, "?")) sq_init(NULL);
-	else sq_init(glSQServer);
+	sq_init();
 
 	tmpdir = malloc(SQ_STR_LENGTH);
 	GetTempPath(SQ_STR_LENGTH, tmpdir);

@@ -72,8 +72,6 @@ struct thread_ctx_s thread_ctx[MAX_PLAYER];
 /*----------------------------------------------------------------------------*/
 /* locals */
 /*----------------------------------------------------------------------------*/
-static char 			_gl_server[SERVER_NAME_LEN + 1];
-static char 			*gl_server = NULL;
 
 #if 0
 static unsigned 		gl_rate_delay = 0;
@@ -1041,25 +1039,8 @@ int sq_read(void *desc, void *dst, unsigned bytes)
  }
 
 /*---------------------------------------------------------------------------*/
-void sq_init(char *server)
+void sq_init(void)
 {
-	if (server) {
-		strcpy(_gl_server, server);
-		gl_server = _gl_server;
-	}
-	else gl_server = NULL;
-
-#if 0
-	if (gl_resample) {
-		unsigned scale = 8;
-
-		scale = gl_rate[0] / 44100;
-		if (scale > 8) scale = 8;
-		if (scale < 1) scale = 1;
-		gl_output_buf_size *= scale;
-	 }
-#endif
-
 #if WIN
 	winsock_init();
 #endif
@@ -1175,7 +1156,7 @@ bool sq_run_device(sq_dev_handle_t handle, char *name, sq_dev_param_t *param)
 	}
 #endif
 
-	slimproto_thread_init(gl_server, ctx->config.mac, name, "", ctx);
+	slimproto_thread_init(name, "", ctx);
 
 	return true;
 }

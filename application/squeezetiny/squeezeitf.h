@@ -49,6 +49,7 @@ typedef	struct sq_dev_param_s {
 	int			max_get_bytes;		 // max size allowed in a single read
 	int			max_read_wait;
 	char		codecs[SQ_STR_LENGTH];
+	char		server[SQ_STR_LENGTH];
 	sq_rate_e	sample_rate;
 	sq_L24_pack_t		L24_format;
 	sq_flac_header_t	flac_header;
@@ -83,7 +84,7 @@ typedef bool (*sq_callback_t)(sq_dev_handle_t handle, void *caller_id, sq_action
 
 char*				sq_parse_args(int argc, char**argv);
 // all params can be NULL
-void				sq_init(char *server);
+void				sq_init(void);
 void				sq_stop(void);
 
 // only name cannot be NULL
