@@ -1,6 +1,7 @@
 0.2.9.0
  - move <server> parameter from global to <common> (parameter copy for compatibility needs to be removed later)
  - fix server switch & rediscovery
+ - add -x64 static version
  
 0.2.8.0
  - if MAC cannot be retrieved, create a fake one from UDN
