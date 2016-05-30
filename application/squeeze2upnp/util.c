@@ -335,7 +335,6 @@ IXML_Node *_getAttributeNode(IXML_Node *node, char *SearchAttr)
 IXML_Node *XMLAddNode(IXML_Document *doc, IXML_Node *parent, char *name, char *fmt, ...)
 {
 	IXML_Node *node, *elm;
-//	IXML_Element *elm;
 
 	char buf[256];
 	va_list args;

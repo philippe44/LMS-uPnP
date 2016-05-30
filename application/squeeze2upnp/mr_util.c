@@ -533,14 +533,24 @@ void SaveConfig(char *name, void *ref, bool full)
 		if (!glMRDevices[i].InUse) continue;
 		else p = &glMRDevices[i];
 
+		// existing device, keep param and update "name" if LMS has requested it
 		if (old_doc && ((dev_node = (IXML_Node*) FindMRConfig(old_doc, p->UDN)) != NULL)) {
+			IXML_Node *node;
+
 			dev_node = ixmlNode_cloneNode(dev_node, true);
-			ixmlNode_appendChild((IXML_Node*) doc, root);
+			ixmlNode_appendChild((IXML_Node*) root, dev_node);
+			node = (IXML_Node*) ixmlDocument_getElementById((IXML_Document*) dev_node, "name");
+			node = ixmlNode_getFirstChild(node);
+			ixmlNode_setNodeValue(node, p->sq_config.name);
+			// TODO: remove after migration
+			if (!ixmlDocument_getElementById((IXML_Document*) dev_node, "friendly_name")) XMLAddNode(doc, dev_node, "friendly_name", p->FriendlyName);
 		}
+		// new device, add nodes
 		else {
 			dev_node = XMLAddNode(doc, root, "device", NULL);
 			XMLAddNode(doc, dev_node, "udn", p->UDN);
-			XMLAddNode(doc, dev_node, "name", *(p->Config.Name) ? p->Config.Name : p->FriendlyName);
+			XMLAddNode(doc, dev_node, "name", p->FriendlyName);
+			XMLAddNode(doc, dev_node, "friendly_name", p->FriendlyName);
 			XMLAddNode(doc, dev_node, "mac", "%02x:%02x:%02x:%02x:%02x:%02x", p->sq_config.mac[0],
 						p->sq_config.mac[1], p->sq_config.mac[2], p->sq_config.mac[3], p->sq_config.mac[4], p->sq_config.mac[5]);
 			XMLAddNode(doc, dev_node, "enabled", "%d", (int) p->Config.Enabled);
@@ -607,7 +617,8 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "accept_nexturi")) Conf->AcceptNextURI = atol(val);
 	if (!strcmp(name, "send_metadata")) Conf->SendMetaData = atol(val);
 	if (!strcmp(name, "send_coverart")) Conf->SendCoverArt = atol(val);
-	if (!strcmp(name, "name")) strcpy(Conf->Name, val);
+	if (!strcmp(name, "name")) strcpy(sq_conf->name, val);
+	if (!strcmp(name, "friendly_name")) strcpy(Conf->Name, val);
 	if (!strcmp(name, "server")) strcpy(sq_conf->server, val);
 	if (!strcmp(name, "mac"))  {
 		unsigned mac[6];

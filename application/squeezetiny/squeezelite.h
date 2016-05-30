@@ -276,7 +276,7 @@ void buf_destroy(struct buffer *buf);
 // slimproto.c
 void slimproto_close(struct thread_ctx_s *ctx);
 void slimproto_reset(struct thread_ctx_s *ctx);
-void slimproto_thread_init(const char *name, const char *namefile, struct thread_ctx_s *ctx);
+void slimproto_thread_init(struct thread_ctx_s *ctx);
 void wake_controller(struct thread_ctx_s *ctx);
 void send_packet(u8_t *packet, size_t len, sockfd sock);
 void wake_controller(struct thread_ctx_s *ctx);
@@ -523,7 +523,6 @@ struct thread_ctx_s {
 	u32_t 	new_server;
 	char 	*new_server_cap;
 	char	fixed_cap[128], var_cap[128];
-	char 	player_name[PLAYER_NAME_LEN + 1];
 	status_t			status;
 	struct streamstate	stream;
 	struct outputstate 	output;

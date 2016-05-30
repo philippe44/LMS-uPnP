@@ -124,6 +124,7 @@ sq_dev_param_t glDeviceParam = {
 					L24_PACKED_LPCM,
 					FLAC_NORMAL_HEADER,
 					"?",
+					"",
 					-1L,
 					0,
 					{ 0x00,0x00,0x00,0x00,0x00,0x00 },
@@ -429,6 +430,9 @@ static int	uPNPTerminate(void);
 
 			break;
 		}
+		case SQ_SETNAME:
+			strcpy(device->sq_config.name, param);
+			break;
 		default:
 			break;
 	}
@@ -982,9 +986,8 @@ static void *UpdateMRThread(void *args)
 			if (AddMRDevice(Device, UDN, DescDoc, p->Location) && !glSaveConfigFile) {
 				// create a new slimdevice
 				Device->SqueezeHandle = sq_reserve_device(Device, &sq_callback);
-				if (!Device->SqueezeHandle || !sq_run_device(Device->SqueezeHandle,
-					*(Device->Config.Name) ? Device->Config.Name : Device->FriendlyName,
-					&Device->sq_config)) {
+				if (!*(Device->sq_config.name)) strcpy(Device->sq_config.name, Device->FriendlyName);
+				if (!Device->SqueezeHandle || !sq_run_device(Device->SqueezeHandle, &Device->sq_config)) {
 					sq_release_device(Device->SqueezeHandle);
 					Device->SqueezeHandle = 0;
 					LOG_ERROR("[%p]: cannot create squeezelite instance (%s)", Device, Device->FriendlyName);

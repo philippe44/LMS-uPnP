@@ -1,3 +1,7 @@
+0.2.9.1
+ - Player name set from LMS are now persistent, no need to set it from the plugin settings
+ - adding <friendly_name> parameter to keep trace or true player name
+
 0.2.9.0
  - move <server> parameter from global to <common> (parameter copy for compatibility needs to be removed later)
  - fix server switch & rediscovery

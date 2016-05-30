@@ -489,15 +489,16 @@ static void process_setd(u8_t *pkt, int len,struct thread_ctx_s *ctx) {
 	// handle player name query and change
 	if (setd->id == 0) {
 		if (len == 5) {
-			if (strlen(ctx->player_name)) {
-				sendSETDName(ctx->player_name, ctx->sock);
+			if (strlen(ctx->config.name)) {
+				sendSETDName(ctx->config.name, ctx->sock);
 			}
 		} else if (len > 5) {
-			strncpy(ctx->player_name, setd->data, PLAYER_NAME_LEN);
-			ctx->player_name[PLAYER_NAME_LEN] = '\0';
+			strncpy(ctx->config.name, setd->data, SQ_STR_LENGTH);
+			ctx->config.name[SQ_STR_LENGTH - 1] = '\0';
 			LOG_DEBUG("[%p] set name: %s", ctx, setd->data);
 			// confirm change to server
 			sendSETDName(setd->data, ctx->sock);
+			ctx_callback(ctx, SQ_SETNAME, NULL, (void*) ctx->config.name);
 		}
 	}
 }
@@ -955,7 +956,7 @@ static void slimproto(struct thread_ctx_s *ctx) {
 
 /*---------------------------------------------------------------------------*/
 void slimproto_close(struct thread_ctx_s *ctx) {
-	LOG_INFO("[%p] slimproto stop for %s", ctx, ctx->player_name);
+	LOG_INFO("[%p] slimproto stop for %s", ctx, ctx->config.name);
   	ctx->running = false;
 	wake_controller(ctx);
 #if LINUX || OSX || FREEBSD
@@ -965,7 +966,7 @@ void slimproto_close(struct thread_ctx_s *ctx) {
 
 
 /*---------------------------------------------------------------------------*/
-void slimproto_thread_init(const char *name, const char *namefile, struct thread_ctx_s *ctx) {
+void slimproto_thread_init(struct thread_ctx_s *ctx) {
 	wake_create(ctx->wake_e);
 
 	ctx->running = true;
@@ -973,17 +974,12 @@ void slimproto_thread_init(const char *name, const char *namefile, struct thread
 	ctx->slimproto_port = PORT;
 	ctx->sock = -1;
 
-	
+
 	if (strcmp(ctx->config.server, "?")) {
 		server_addr(ctx->config.server, &ctx->slimproto_ip, &ctx->slimproto_port);
 	}
 
 	discover_server(ctx);
-
-	if (name) {
-		strncpy(ctx->player_name, name, PLAYER_NAME_LEN);
-		ctx->player_name[PLAYER_NAME_LEN] = '\0';
-	}
 
 	/* could be avoided as whole context is reset at init ...*/
 	strcpy(ctx->var_cap, "");

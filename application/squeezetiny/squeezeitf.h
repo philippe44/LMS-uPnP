@@ -7,7 +7,7 @@
 #define SQ_STR_LENGTH	256
 
 typedef enum {SQ_NONE, SQ_SETFORMAT, SQ_SETURI, SQ_SETNEXTURI, SQ_PLAY, SQ_PAUSE, SQ_UNPAUSE, SQ_STOP, SQ_SEEK,
-			  SQ_VOLUME, SQ_TIME, SQ_TRACK_CHANGE, SQ_ONOFF, SQ_NEXT} sq_action_t;
+			  SQ_VOLUME, SQ_TIME, SQ_TRACK_CHANGE, SQ_ONOFF, SQ_NEXT, SQ_SETNAME} sq_action_t;
 typedef enum {SQ_STREAM = 2, SQ_FULL = 3} sq_mode_t;
 typedef	sq_action_t sq_event_t;
 
@@ -54,6 +54,7 @@ typedef	struct sq_dev_param_s {
 	sq_L24_pack_t		L24_format;
 	sq_flac_header_t	flac_header;
 	char		buffer_dir[SQ_STR_LENGTH];
+	char		name[SQ_STR_LENGTH];
 	s32_t		buffer_limit;
 	int			keep_buffer_file;
 	u8_t		mac[6];
@@ -88,7 +89,7 @@ void				sq_init(void);
 void				sq_stop(void);
 
 // only name cannot be NULL
-bool			 	sq_run_device(sq_dev_handle_t handle, char *name, sq_dev_param_t *param);
+bool			 	sq_run_device(sq_dev_handle_t handle, sq_dev_param_t *param);
 void				sq_delete_device(sq_dev_handle_t);
 sq_dev_handle_t		sq_reserve_device(void *caller_id, sq_callback_t callback);
 void				sq_release_device(sq_dev_handle_t);
