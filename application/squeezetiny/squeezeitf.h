@@ -47,7 +47,6 @@ typedef	struct sq_dev_param_s {
 	sq_mode_t	mode;
 	sq_rate_t	rate[MAX_SUPPORTED_SAMPLERATES];
 	int			max_get_bytes;		 // max size allowed in a single read
-	int			max_read_wait;
 	char		codecs[SQ_STR_LENGTH];
 	char		server[SQ_STR_LENGTH];
 	sq_rate_e	sample_rate;
@@ -56,6 +55,7 @@ typedef	struct sq_dev_param_s {
 	char		buffer_dir[SQ_STR_LENGTH];
 	char		name[SQ_STR_LENGTH];
 	s32_t		buffer_limit;
+	s32_t		stream_pacing_size;
 	int			keep_buffer_file;
 	u8_t		mac[6];
 	bool		send_icy;

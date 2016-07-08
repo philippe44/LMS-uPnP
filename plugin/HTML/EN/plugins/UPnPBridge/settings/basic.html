@@ -123,26 +123,21 @@
 		<div><b><i>[% "PLUGIN_UPNPBRIDGE_TEXTDEFAULT" | string %]</i></b></div>
 	[% END %]
 -->	
-	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_HTTPOPTIONS" desc="PLUGIN_UPNPBRIDGE_HTTPOPTIONS_DESC" %]
+	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_PLAYEROPTIONS" desc="PLUGIN_UPNPBRIDGE_PLAYEROPTIONS_DESC" %]
 		[% "PLUGIN_UPNPBRIDGE_STREAMLENGTH" | string %]&nbsp
 		<select class="stdedit" name="stream_length" id="stream_length">
 		[% FOREACH entry IN [ ['',''], ['chunked','-3'], ['chunked (open range)','-2'], ['no size','-1'], ['no size (open range)','-4'], ['fixed large size','1000000000'], ['full buffering','-5'] ] %]
 			<option [% IF entry.1 == stream_length %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
 		[% END %]
 		</select>
-		&nbsp&nbsp[% "PLUGIN_UPNPBRIDGE_MAXREADWAIT" | string %]
-		&nbsp<input type="text" class="stdedit" name="max_read_wait" id="max_read_wait" value="[% max_read_wait %]" size="3">
-	[% END %]
-	
-	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_ACCEPTNEXTURI" desc="PLUGIN_UPNPBRIDGE_ACCEPTNEXTURI_DESC" %]
-		<select class="stdedit" name="accept_nexturi" id="accept_nexturi">
+		&nbsp&nbsp[% "PLUGIN_UPNPBRIDGE_ACCEPTNEXTURI" | string %]
+		&nbsp<select class="stdedit" name="accept_nexturi" id="accept_nexturi">
 		[% FOREACH entry IN YESNOBOX %] 
 			<option [% IF entry.1 == accept_nexturi %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
 		[% END %]
 		</select>
 	[% END %]
-	</font>
-		
+	
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_PAUSEMGMT" desc="PLUGIN_UPNPBRIDGE_PAUSEMGMT_DESC" %]
 		[% "PLUGIN_UPNPBRIDGE_SEEKAFTERPAUSE" | string %]&nbsp
 		<select class="stdedit" name="seek_after_pause" id="seek_after_pause">
@@ -159,8 +154,9 @@
 	[% END %]
 	
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_BUFFERS" desc="PLUGIN_UPNPBRIDGE_BUFFERS_DESC" %]
-		[% "PLUGIN_UPNPBRIDGE_BUFFERDIR" | string %]&nbsp<input type="text" class="stdedit" name="buffer_dir" id="buffer_dir" value="[% buffer_dir %]" size="30">
-		[% "PLUGIN_UPNPBRIDGE_BUFFERLIMIT" | string %]&nbsp<input type="text" class="stdedit" name="buffer_limit" id="buffer_limit" value="[% buffer_limit %]" size="10">
+		[% "PLUGIN_UPNPBRIDGE_BUFFERDIR" | string %]&nbsp<input type="text" class="stdedit" name="buffer_dir" id="buffer_dir" value="[% buffer_dir %]" size="20">
+		[% "PLUGIN_UPNPBRIDGE_BUFFERLIMIT" | string %]&nbsp<input type="text" class="stdedit" name="buffer_limit" id="buffer_limit" value="[% buffer_limit %]" size="5">
+		[% "PLUGIN_UPNPBRIDGE_STREAMPACINGSIZE" | string %]&nbsp<input type="text" class="stdedit" name="stream_pacing_size" id="stream_pacing_size" value="[% stream_pacing_size %]" size="4">
 	[% END %]
 	
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_CODECSPARAM" desc="PLUGIN_UPNPBRIDGE_CODECSPARAM_DESC" %]

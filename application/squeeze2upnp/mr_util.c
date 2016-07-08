@@ -501,7 +501,7 @@ void SaveConfig(char *name, void *ref, bool full)
 		XMLAddNode(doc, common, "buffer_dir", glDeviceParam.buffer_dir);
 		XMLAddNode(doc, common, "buffer_limit", "%d", (u32_t) glDeviceParam.buffer_limit);
 		XMLAddNode(doc, common, "stream_length", "%d", (s32_t) glMRConfig.StreamLength);
-		XMLAddNode(doc, common, "max_read_wait", "%d", (int) glDeviceParam.max_read_wait);
+		XMLAddNode(doc, common, "stream_pacing_size", "%d", (int) glDeviceParam.stream_pacing_size);
 		XMLAddNode(doc, common, "max_GET_bytes", "%d", (s32_t) glDeviceParam.max_get_bytes);
 		XMLAddNode(doc, common, "keep_buffer_file", "%d", (int) glDeviceParam.keep_buffer_file);
 		XMLAddNode(doc, common, "enabled", "%d", (int) glMRConfig.Enabled);
@@ -591,7 +591,7 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "buffer_dir")) strcpy(sq_conf->buffer_dir, val);
 	if (!strcmp(name, "buffer_limit")) sq_conf->buffer_limit = atol(val);
 	if (!strcmp(name, "stream_length")) Conf->StreamLength = atol(val);
-	if (!strcmp(name, "max_read_wait")) sq_conf->max_read_wait = atol(val);
+	if (!strcmp(name, "stream_pacing_size")) sq_conf->stream_pacing_size = atol(val);
 	if (!strcmp(name, "max_GET_bytes")) sq_conf->max_get_bytes = atol(val);
 	if (!strcmp(name, "send_icy")) sq_conf->send_icy = atol(val);
 	if (!strcmp(name, "enabled")) Conf->Enabled = atol(val);

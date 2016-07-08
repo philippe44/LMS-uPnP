@@ -445,6 +445,14 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 				LOG_ERROR("[%p]: write file not opened %s", ctx, buf);
 			}
 
+			// LMS will need to wait for the player to consume data ...
+			if (out->remote && ctx->config.stream_pacing_size != -1 && (out->write_count - out->read_count) > (u32_t) ctx->config.stream_pacing_size) {
+				UNLOCK_S;
+				LOG_SDEBUG("[%p] pacing (%d)", ctx, out->write_count - out->read_count);
+				usleep(100000);
+				continue;
+			}
+
 			/*
 			Re-size buffer if needed. This is disabled if the streaming mode is
 			to require the whole file to be stored. Note that out->file_size is

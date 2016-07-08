@@ -231,6 +231,8 @@ static char *cli_decode(char *str) {
 	return res;
 }
 
+#define CLI_SEND_SLEEP (10000)
+#define CLI_SEND_TO (1*1000000)
 /*---------------------------------------------------------------------------*/
 char *cli_send_cmd(char *cmd, bool req, bool decode, struct thread_ctx_s *ctx)
 {
@@ -241,7 +243,7 @@ static char *cli_decode(char *str) {
 	char *rsp = NULL;
 
 	mutex_lock(ctx->cli_mutex);
-	wait = ctx->config.max_read_wait;
+	wait = CLI_SEND_TO / CLI_SEND_SLEEP;
 
 	cmd = cli_encode(cmd);
 	if (req) len = sprintf(packet, "%s ?\n", cmd);
@@ -252,7 +254,7 @@ static char *cli_decode(char *str) {
 	len = 0;
 	while (wait--)	{
 		int k;
-		usleep(10000);
+		usleep(CLI_SEND_SLEEP);
 		k = recv(ctx->cli_sock, packet + len, CLI_LEN-1 - len, 0);
 		if (k < 0) continue;
 		len += k;
@@ -476,7 +478,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 	else metadata->remote = false;
 	NFREE(rsp)
 
-	sprintf(cmd, "songinfo 0 10 url:%s tags:cfldatgrK", metadata->path);
+	sprintf(cmd, "%s songinfo 0 10 url:%s tags:cfldatgrK", ctx->cli_id, metadata->path);
 	rsp = cli_send_cmd(cmd, false, false, ctx);
 
 	if (rsp && *rsp) {
@@ -834,6 +836,8 @@ int sq_seek(void *desc, off_t bytes, int from)
 	return rc;
 }
 
+#define SQ_READ_SLEEP (50000)
+#define SQ_READ_TO (10*1000000)
 /*---------------------------------------------------------------------------*/
 int sq_read(void *desc, void *dst, unsigned bytes)
 {
@@ -861,23 +865,21 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 
 	if (p->icy.interval) bytes = min(bytes, p->icy.remain);
 
-	wait = ctx->config.max_read_wait;
-	if (ctx->config.mode == SQ_STREAM) {
-		do
-		{
-			LOCK_S;LOCK_O;
-			if (p->read_file) {
-				read_b += fread(dst, 1, bytes, p->read_file);
+	wait = SQ_READ_TO / SQ_READ_SLEEP;
+	do
+	{
+		LOCK_S;LOCK_O;
+		if (p->read_file) {
+			read_b = fread(dst, 1, bytes, p->read_file);
 #if OSX
-				// to reset EOF pointer
-				fseek(p->read_file, 0, SEEK_CUR);
+			// to reset EOF pointer
+			fseek(p->read_file, 0, SEEK_CUR);
 #endif
-			}
-			UNLOCK_S;LOCK_O;
-			LOG_SDEBUG("[%p] read %u bytes at %d", ctx, read_b, wait);
-			if (!read_b) usleep(50000);
-		} while (!read_b && p->write_file && (wait == -1 || wait--) && p->owner);
-	}
+		}
+		UNLOCK_S;LOCK_O;
+		LOG_SDEBUG("[%p] read %u bytes at %d", ctx, read_b, wait);
+		if (!read_b) usleep(SQ_READ_SLEEP);
+	} while (!read_b && p->write_file && (wait == -1 || wait--) && p->owner);
 
 	/*
 	there is tiny chance for a race condition where the device is deleted

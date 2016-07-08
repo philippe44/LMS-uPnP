@@ -55,7 +55,7 @@ PLUGIN_UPNPBRIDGE_OPTIONS_DESC
 	EN	for details.
 
 PLUGIN_UPNPBRIDGE_DEBUG
-	EN	Debug Settings
+	EN	Additional debugging
 
 PLUGIN_UPNPBRIDGE_DEBUG_DESC
 	EN	Specify debugging level for writing to the log file.
@@ -160,29 +160,20 @@ PLUGIN_UPNPBRIDGE_SCANTIMEOUT
 PLUGIN_UPNPBRIDGE_TEXTDEFAULT
 	EN	The following parameters apply to ALL players - enter "default" (without ") in text boxes to set to default values
 
-PLUGIN_UPNPBRIDGE_HTTPOPTIONS
-	EN	Player communication options
+PLUGIN_UPNPBRIDGE_PLAYEROPTIONS
+	EN	Player handling options
 
-PLUGIN_UPNPBRIDGE_HTTPOPTIONS_DESC
-	EN	Various streaming options for communication with LMS and with the UPnP player (see user guide)
-	EN	<br>- LMS does not provide the file size to be sent. The best HTTP mode is to use "chunked encoding" but some UPnP players
-	EN	do not work with that option and require other solutions to set expected length
-	EN	<br>- Live streams (webradios) require a timeout to detect idle connection
+PLUGIN_UPNPBRIDGE_PLAYEROPTIONS_DESC
+	EN	Options for communication with LMS and UPnP player (see user guide)
+	EN	<br>- LMS does not provide the file size to be sent. The best HTTP mode is to use "chunked encoding" but some
+	EN	 UPnP players do not work with that option and require other solutions to set expected length
+	EN	<br>- Some players don't support gapless playback and thus don't automatically move to next track in playlist. 
 	
 PLUGIN_UPNPBRIDGE_STREAMLENGTH
 	EN	HTTP mode
-	
-PLUGIN_UPNPBRIDGE_MAXREADWAIT
-	EN	Streaming timeout (x50ms)
-
-PLUGIN_UPNPBRIDGE_DUALGET
-	EN	Dual GET response
 
 PLUGIN_UPNPBRIDGE_ACCEPTNEXTURI
-	EN	Player supports gapless 
-
-PLUGIN_UPNPBRIDGE_ACCEPTNEXTURI_DESC
-	EN	Some players don't support gapless playback and thus don't automatically move to next track in playlist. 
+	EN	Support gapless 
 
 PLUGIN_UPNPBRIDGE_PAUSEMGMT
 	EN	Pause/Resume management
@@ -208,21 +199,26 @@ PLUGIN_UPNPBRIDGE_BUFFERS
 	EN	Audio file buffers
 
 PLUGIN_UPNPBRIDGE_BUFFERS_DESC
-	EN	Audio streams are buffered locally while sending to the UPnP player. <br>- Enter ? to let the system decide which directory 
-	EN	to use<br>- "Max Size" defines the largest size a single file can take before it is shrunk. Set to -1 for unlimited
+	EN	Audio streams are buffered locally while sending to the UPnP player. 
+	EN	<br>- Enter ? to let the system decide which directory to use
+	EN	<br>- "Max Size" sets the size a single file can take before it is shrunk. Set to -1 for unlimited
+	EN	<br>- "Pacing Size" set size of write ahead to prevent buffering spike for remote streams. Set to -1 for unlimited (see user guide)
 
 PLUGIN_UPNPBRIDGE_BUFFERDIR
 	EN	Directory
 
 PLUGIN_UPNPBRIDGE_BUFFERLIMIT
 	EN	Max Size
+	
+PLUGIN_UPNPBRIDGE_STREAMPACINGSIZE
+	EN	Pacing size
 
 PLUGIN_UPNPBRIDGE_CODECSPARAM
 	EN	Audio codec parameters
 
 PLUGIN_UPNPBRIDGE_CODECSPARAM_DESC
 	EN	Several codecs are supported by the UPnP player. They will be reported to LMS to decide when to do transcoding. 
-	EN	<i>- Supported Codecs</i> is an ordered, comma-separated, list made of mp3, flc, aif, pcm, aac and alc
+	EN	<br><i>- Supported Codecs</i> is an ordered, comma-separated, list made of mp3, flc, aif, pcm, aac and alc
 	EN	For example, to only support (in order of preference) PCM then FLAC and then MP3 , enter "pcm,flc,mp3" (without "")
 	EN	(<b>aac and alc are untested</b>. 
 	EN	<br><b>NB: if a codec listed here is NOT supported by the player, it will be removed from the list sent to LMS</b>

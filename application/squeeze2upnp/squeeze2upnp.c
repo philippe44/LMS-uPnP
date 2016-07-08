@@ -116,8 +116,7 @@ sq_dev_param_t glDeviceParam = {
 						SQ_RATE_96000, SQ_RATE_48000, SQ_RATE_44100,
 						SQ_RATE_32000, SQ_RATE_24000, SQ_RATE_22500, SQ_RATE_16000,
 						SQ_RATE_12000, SQ_RATE_11025, SQ_RATE_8000, 0 },
-					-1,         // get can retrun as mucvh as required by UPnP
-					1000,		// wait 1000*50ms for data from LMS
+					-1,         // get can retrun as much as required by UPnP
 					"pcm,flc,mp3",
 					"?",
 					SQ_RATE_48000,
@@ -126,6 +125,7 @@ sq_dev_param_t glDeviceParam = {
 					"?",
 					"",
 					-1L,
+					2048*1024,
 					0,
 					{ 0x00,0x00,0x00,0x00,0x00,0x00 },
 					false,
