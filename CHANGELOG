@@ -1,8 +1,9 @@
 0.2.9.2
  - when using "songinfo" query, LMS wants a client_id, although documented differently
- - max read_wait fixed at 20s
+ - max_read_wait fixed at 20s
  - add pacing option to prevent buffering to be greedy (use <pacing_size)
  - cli_wait set at 1s
+ - Refresh of configuration file was not adding missing parameters
  
 0.2.9.1
  - Player name set from LMS are now persistent, no need to set it from the plugin settings
