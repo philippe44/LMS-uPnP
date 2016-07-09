@@ -47,13 +47,20 @@ u32_t	FLAC_CODED_RATES[] = { 0, 88200, 176400, 192000, 8000, 16000, 22050,
 u8_t	FLAC_CODED_CHANNELS[] = { 1, 2, 3, 4, 5, 6, 7, 8, 2, 2, 2, 0, 0, 0, 0, 0 };
 u8_t	FLAC_CODED_SAMPLE_SIZE[] = { 0, 8, 12, 0, 16, 20, 24, 0 };
 
+#if SL_LITTLE_ENDIAN
 #define FLAC_TAG	(0xf8ff)	// byte order is reversed because it's treated as a u16
 #define FLAC_GET_FRAME_TAG(n)	((u16_t) ((n) & 0xf8ff))
+#define FLAC_GET_BLOCK_STRATEGY(n) ((u16_t) ((n) & 0x0100))
+#else
+#define FLAC_GET_FRAME_TAG(n)	((u16_t) ((n) & 0xfff8))
+#define FLAC_TAG	(0xfff8)	// byte order is reversed because it's treated as a u16
+#define FLAC_GET_BLOCK_STRATEGY(n) ((u16_t) ((n) & 0x0001))
+#endif
+
 #define FLAC_GET_BLOCK_SIZE(n)	((u8_t) ((n) >> 4) & 0x0f)
 #define FLAC_GET_FRAME_RATE(n) ((u8_t) ((n) & 0x0f))
 #define FLAC_GET_FRAME_CHANNEL(n) ((u8_t) ((n) >> 4) & 0x0f)
 #define FLAC_GET_FRAME_SAMPLE_SIZE(n) ((u8_t) ((n) >> 1) & 0x07)
-#define FLAC_GET_BLOCK_STRATEGY(n) ((u16_t) ((n) & 0x0100))
 
 #define FLAC_RECV_MIN	128
 
@@ -125,8 +132,8 @@ static struct wave_header_s {
 	u32_t	chunk_size;
 	u8_t	format[4];
 	u8_t	subchunk1_id[4];
-	u32_t	subchunk1_size;
-	u16_t	audio_format;
+	u8_t	subchunk1_size[4];
+	u8_t	audio_format[2];
 	u16_t	channels;
 	u32_t	sample_rate;
 	u32_t   byte_rate;
@@ -136,23 +143,23 @@ static struct wave_header_s {
 	u32_t	subchunk2_size;
 } wave_header = {
 		{ 'R', 'I', 'F', 'F' },
-		1000000000 + 8,
+		0,
 		{ 'W', 'A', 'V', 'E' },
 		{ 'f','m','t',' ' },
-		16,
-		1,
+		{ 16, 0, 0, 0 },
+		{ 1, 0 },
 		0,
 		0,
 		0,
 		0,
 		0,
 		{ 'd', 'a', 't', 'a' },
-		1000000000 - sizeof(struct wave_header_s) - 8 - 8
+		0, 		//chunk_size - sizeof(struct wave_header_s) - 8 - 8
 	};
 
 
 /*---------------------------------- AIFF ------------------------------------*/
-static struct aiff_header_s {
+static struct aiff_header_s {			// need to use all u8 due to padding
 	u8_t 	chunk_id[4];
 	u8_t	chunk_size[4];
 	u8_t	format[4];
@@ -208,12 +215,43 @@ extern u8_t *silencebuf_dop;
 #endif
 
 /*---------------------------------------------------------------------------*/
-static void set32(u8_t *dst, u32_t src)
+static void little16(void *dst, u16_t src)
 {
-	*dst++ = (u8_t) (src >> 24);
-	*dst++ = (u8_t) (src >> 16);
-	*dst++ = (u8_t) (src >> 8);
-	*dst = (u8_t) (src);
+	u8_t *p = (u8_t*) dst;
+
+	*p++ = (u8_t) (src);
+	*p = (u8_t) (src >> 8);
+}
+
+/*---------------------------------------------------------------------------*/
+static void little32(void *dst, u32_t src)
+{
+	u8_t *p = (u8_t*) dst;
+
+	*p++ = (u8_t) (src);
+	*p++ = (u8_t) (src >> 8);
+	*p++ = (u8_t) (src >> 16);
+	*p = (u8_t) (src >> 24);
+
+}
+/*---------------------------------------------------------------------------*/
+static void big16(void *dst, u16_t src)
+{
+	u8_t *p = (u8_t*) dst;
+
+	*p++ = (u8_t) (src >> 8);
+	*p = (u8_t) (src);
+}
+
+/*---------------------------------------------------------------------------*/
+static void big32(void *dst, u32_t src)
+{
+	u8_t *p = (u8_t*) dst;
+
+	*p++ = (u8_t) (src >> 24);
+	*p++ = (u8_t) (src >> 16);
+	*p++ = (u8_t) (src >> 8);
+	*p = (u8_t) (src);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -655,13 +693,13 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 					struct wave_header_s *header = malloc(sizeof(struct wave_header_s));
 
 					memcpy(header, &wave_header, sizeof(struct wave_header_s));
-					header->channels = out->channels;
-					header->bits_per_sample = sample_size;
-					header->sample_rate = out->sample_rate;
-					header->byte_rate = out->sample_rate * out->channels * (sample_size / 8);
-					header->block_align = out->channels * (sample_size / 8);
-					header->subchunk2_size = out->raw_size;
-					header->chunk_size = 36 + header->subchunk2_size;
+					little16(&header->channels, out->channels);
+					little16(&header->bits_per_sample, sample_size);
+					little32(&header->sample_rate, out->sample_rate);
+					little32(&header->byte_rate, out->sample_rate * out->channels * (sample_size / 8));
+					little16(&header->block_align, out->channels * (sample_size / 8));
+					little32(&header->subchunk2_size, out->raw_size);
+					little32(&header->chunk_size, 36 + header->subchunk2_size);
 
 					out->write_count = fwrite(header, 1, sizeof(struct wave_header_s), out->write_file);
 					out->write_count_t = out->write_count;
@@ -707,13 +745,12 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 					div_t duration = div(out->duration, 1000);
 
 					memcpy(header, &aiff_header, sizeof(struct aiff_header_s));
-					header->channels[1] = (u8_t) out->channels;
-					header->sample_size[1] = sample_size;
-					header->sample_rate_num[0] = (u8_t) (out->sample_rate >> 8);
-					header->sample_rate_num[1] = (u8_t) out->sample_rate;
-					set32(header->data_size, out->raw_size + 8);
-					set32(header->chunk_size, (out->raw_size+8+8) + (18+8) + 4);
-					set32(header->frames, duration.quot * out->sample_rate + (duration.rem * out->sample_rate) / 1000);
+					big16(header->channels, out->channels);
+					big16(header->sample_size, sample_size);
+					big16(header->sample_rate_num, out->sample_rate);
+					big32(&header->data_size, out->raw_size + 8);
+					big32(&header->chunk_size, (out->raw_size+8+8) + (18+8) + 4);
+					big32(&header->frames, duration.quot * out->sample_rate + (duration.rem * out->sample_rate) / 1000);
 
 					out->write_count = fwrite(header, 1, sizeof(struct aiff_header_s) - AIFF_PAD_SIZE, out->write_file);
 					out->write_count_t = out->write_count;

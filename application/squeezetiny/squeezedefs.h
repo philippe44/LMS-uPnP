@@ -1,7 +1,7 @@
 #ifndef __SQUEEZEDEFS_H
 #define __SQUEEZEDEFS_H
 
-#define VERSION "v0.2.9.2-dev-2"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.9.2-dev-3"" ("__DATE__" @ "__TIME__")"
 
 #if defined(linux)
 #define LINUX     1
@@ -127,6 +127,8 @@ typedef __int64 s64_t;
 #define ssize_t int
 
 #define RTLD_NOW 0
+
+#define SL_LITTLE_ENDIAN (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
 
 #endif
 

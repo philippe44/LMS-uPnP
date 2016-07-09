@@ -141,8 +141,6 @@
 
 #define MAX_HEADER 4096 // do not reduce as icy-meta max is 4080
 
-#define SL_LITTLE_ENDIAN (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>

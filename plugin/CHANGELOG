@@ -4,6 +4,7 @@
  - add pacing option to prevent buffering to be greedy (use <pacing_size)
  - cli_wait set at 1s
  - Refresh of configuration file was not adding missing parameters
+ - (dev-3) Handle PPC byte ordering
  
 0.2.9.1
  - Player name set from LMS are now persistent, no need to set it from the plugin settings
