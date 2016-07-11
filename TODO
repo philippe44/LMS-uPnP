@@ -1,4 +1,5 @@
 - Add a volume timing management like in squeeze2cast to avoid some loop effect with fast volume changes
+- Why does foobar fail on aiff?
 
 UNLIKELY
 - enhance metadata management: add albumart and filesize (LMS won't give it)

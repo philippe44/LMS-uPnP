@@ -837,7 +837,7 @@ int sq_seek(void *desc, off_t bytes, int from)
 }
 
 #define SQ_READ_SLEEP (50000)
-#define SQ_READ_TO (10*1000000)
+#define SQ_READ_TO (60*1000000)
 /*---------------------------------------------------------------------------*/
 int sq_read(void *desc, void *dst, unsigned bytes)
 {
