@@ -821,10 +821,10 @@ int sq_seek(void *desc, off_t bytes, int from)
 		an illegal request, so SEEK_CUR does not make sense (see httpreadwrite.c)
 		*/
 
-		LOG_INFO("[%p]: seek %d (c:%d)", ctx, bytes - (p->write_count_t - p->write_count));
+		LOG_INFO("[%p]: seek %Ld (c:%Ld)", ctx, bytes, (u64_t) (bytes - (p->write_count_t - p->write_count)));
 		bytes -= p->write_count_t - p->write_count;
 		if (bytes < 0) {
-			LOG_WARN("[%p]: seek unreachable b:%d t:%d r:%d", p->owner, bytes, p->write_count_t, p->write_count);
+			LOG_WARN("[%p]: seek unreachable b:%Ld t:%Ld r:%d", p->owner, bytes, p->write_count_t, p->write_count);
 			bytes = 0;
 		}
 		rc = fseek(p->read_file, bytes, SEEK_SET);

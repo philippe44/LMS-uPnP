@@ -1,3 +1,24 @@
+/*
+ *  Squeezelite - lightweight headless squeezebox emulator
+ *
+ *  (c) Adrian Smith 2012-2015, triode1@btinternet.com
+ *  (c) Philippe, philippe_44@outlook.com for multi-instance modifications
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -9,11 +30,38 @@
 #endif
 
 #include "squeezedefs.h"
+
+#if LINUX || OSX || FREEBSD
+#include <sys/ioctl.h>
+#include <net/if.h>
+#include <net/if_arp.h>
+#include <netdb.h>
+#if FREEBSD
+#include <ifaddrs.h>
+#include <net/if_dl.h>
+#include <net/if_types.h>
+#endif
+#endif
+#if WIN
+#include <iphlpapi.h>
+#endif
+#if OSX
+#include <sys/socket.h>
+#include <sys/sysctl.h>
+#include <net/if_dl.h>
+#include <net/if_types.h>
+#include <net/route.h>
+#include <ifaddrs.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <netinet/if_ether.h>
+#include <sys/time.h>
+#endif
+
 #include "util_common.h"
 
 
 extern log_level 	util_loglevel;
-
 //static log_level 	*loglevel = &util_loglevel;
 
 // logging functions
@@ -166,7 +214,7 @@ u32_t hash32(char *str)
 {
 	u32_t hash = 5381;
 	s32_t c;
-	
+
 	if (!str) return 0;
 
 	while ((c = *str++) != 0)
@@ -231,5 +279,204 @@ char *toxml(char *src)
 
 	return res;
 }
+
+#if LINUX || OSX || BSD
+bool get_interface(struct in_addr *addr)
+{
+	struct ifreq *ifreq;
+	struct ifconf ifconf;
+	char buf[512];
+	unsigned i, nb;
+	int fd;
+	bool valid = false;
+
+	fd = socket(AF_INET, SOCK_DGRAM, 0);
+
+	ifconf.ifc_len = sizeof(buf);
+	ifconf.ifc_buf = buf;
+
+	if (ioctl(fd, SIOCGIFCONF, &ifconf)!=0) return false;
+
+	ifreq = ifconf.ifc_req;
+	nb = ifconf.ifc_len / sizeof(struct ifreq);
+
+	for (i = 0; i < nb; i++) {
+		ioctl(fd, SIOCGIFFLAGS, &ifreq[i]);
+		//!(ifreq[i].ifr_flags & IFF_POINTTOPOINT);
+		if ((ifreq[i].ifr_flags & IFF_UP) &&
+			!(ifreq[i].ifr_flags & IFF_LOOPBACK) &&
+			ifreq[i].ifr_flags & IFF_MULTICAST) {
+				*addr = ((struct sockaddr_in *) &(ifreq[i].ifr_addr))->sin_addr;
+				valid = true;
+				break;
+		 }
+	}
+
+	close(fd);
+	return valid;
+}
+#endif
+
+
+#if WIN
+bool get_interface(struct in_addr *addr)
+{
+	INTERFACE_INFO ifList[20];
+	unsigned bytes;
+	int i, nb;
+	bool valid = false;
+	int fd;
+
+	memset(addr, 0, sizeof(struct in_addr));
+	fd = socket(AF_INET, SOCK_DGRAM, 0);
+
+	if (WSAIoctl(fd, SIO_GET_INTERFACE_LIST, 0, 0, (void*) &ifList, sizeof(ifList), (void*) &bytes, 0, 0) == SOCKET_ERROR) return false;
+
+	nb = bytes / sizeof(INTERFACE_INFO);
+	for (i = 0; i < nb; i++) {
+		if ((ifList[i].iiFlags & IFF_UP) &&
+			!(ifList[i].iiFlags & IFF_POINTTOPOINT) &&
+			!(ifList[i].iiFlags & IFF_LOOPBACK) &&
+			(ifList[i].iiFlags & IFF_MULTICAST)) {
+				*addr = ((struct sockaddr_in *) &(ifList[i].iiAddress))->sin_addr;
+				valid = true;
+			break;
+		}
+	}
+
+	close(fd);
+	return valid;
+}
+#endif
+
+
+
+#define MAX_INTERFACES 256
+#define DEFAULT_INTERFACE 1
+#if !WIN
+#define INVALID_SOCKET (-1)
+#endif
+bool get_local_hostname(char *out, size_t out_len)
+{
+	bool ret = true;
+	char tempstr[INET_ADDRSTRLEN];
+	const char *p = NULL;
+
+#if WIN
+	struct hostent *h = NULL;
+	struct sockaddr_in LocalAddr;
+
+	memset(&LocalAddr, 0, sizeof(LocalAddr));
+
+	gethostname(out, out_len);
+	h = gethostbyname(out);
+	if (h != NULL) {
+		memcpy(&LocalAddr.sin_addr, h->h_addr_list[0], 4);
+		p = inet_ntop(AF_INET, &LocalAddr.sin_addr, tempstr, sizeof(tempstr));
+		if (p) strncpy(out, p, out_len);
+		else return false;
+	}
+	else return false;
+#elif OSX || FREEBSD
+	struct ifaddrs *ifap, *ifa;
+
+	if (getifaddrs(&ifap) != 0) return false;
+
+	/* cycle through available interfaces */
+	for (ifa = ifap; ifa != NULL; ifa = ifa->ifa_next) {
+		/* Skip loopback, point-to-point and down interfaces,
+		 * except don't skip down interfaces
+		 * if we're trying to get a list of configurable interfaces. */
+		if ((ifa->ifa_flags & IFF_LOOPBACK) ||
+			(!( ifa->ifa_flags & IFF_UP))) {
+			continue;
+		}
+		if (ifa->ifa_addr->sa_family == AF_INET) {
+			/* We don't want the loopback interface. */
+			if (((struct sockaddr_in *)(ifa->ifa_addr))->sin_addr.s_addr ==
+				htonl(INADDR_LOOPBACK)) {
+				continue;
+			}
+			p = inet_ntop(AF_INET,
+				&((struct sockaddr_in *)(ifa->ifa_addr))->sin_addr,
+				tempstr, sizeof(tempstr));
+			if (p) strncpy(out, p, out_len);
+			else return false;
+			break;
+		}
+	}
+	freeifaddrs(ifap);
+
+	ret = ifa ? true : false;
+#else
+	char szBuffer[MAX_INTERFACES * sizeof (struct ifreq)];
+	struct ifconf ifConf;
+	struct ifreq ifReq;
+	int nResult;
+	long unsigned int i;
+	int LocalSock;
+	struct sockaddr_in LocalAddr;
+	int j = 0;
+
+	/* purify */
+	memset(&ifConf,  0, sizeof(ifConf));
+	memset(&ifReq,   0, sizeof(ifReq));
+	memset(szBuffer, 0, sizeof(szBuffer));
+	memset(&LocalAddr, 0, sizeof(LocalAddr));
+
+	/* Create an unbound datagram socket to do the SIOCGIFADDR ioctl on.  */
+	LocalSock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	if (LocalSock == INVALID_SOCKET) return false;
+	/* Get the interface configuration information... */
+	ifConf.ifc_len = (int)sizeof szBuffer;
+	ifConf.ifc_ifcu.ifcu_buf = (caddr_t) szBuffer;
+	nResult = ioctl(LocalSock, SIOCGIFCONF, &ifConf);
+	if (nResult < 0) {
+		close(LocalSock);
+		return false;
+	}
+
+	/* Cycle through the list of interfaces looking for IP addresses. */
+	for (i = 0lu; i < (long unsigned int)ifConf.ifc_len && j < DEFAULT_INTERFACE; ) {
+		struct ifreq *pifReq =
+			(struct ifreq *)((caddr_t)ifConf.ifc_req + i);
+		i += sizeof *pifReq;
+		/* See if this is the sort of interface we want to deal with. */
+		memset(ifReq.ifr_name, 0, sizeof(ifReq.ifr_name));
+		strncpy(ifReq.ifr_name, pifReq->ifr_name,
+			sizeof(ifReq.ifr_name) - 1);
+		/* Skip loopback, point-to-point and down interfaces,
+		 * except don't skip down interfaces
+		 * if we're trying to get a list of configurable interfaces. */
+		ioctl(LocalSock, SIOCGIFFLAGS, &ifReq);
+		if ((ifReq.ifr_flags & IFF_LOOPBACK) ||
+			(!(ifReq.ifr_flags & IFF_UP))) {
+			continue;
+		}
+		if (pifReq->ifr_addr.sa_family == AF_INET) {
+			/* Get a pointer to the address...*/
+			memcpy(&LocalAddr, &pifReq->ifr_addr,
+				sizeof pifReq->ifr_addr);
+			/* We don't want the loopback interface. */
+			if (LocalAddr.sin_addr.s_addr ==
+				htonl(INADDR_LOOPBACK)) {
+				continue;
+			}
+		}
+		/* increment j if we found an address which is not loopback
+		 * and is up */
+		j++;
+	}
+	close(LocalSock);
+
+	p = inet_ntop(AF_INET, &LocalAddr.sin_addr, tempstr, sizeof(tempstr));
+	if (p) strncpy(out, p, out_len);
+	else return false;
+#endif
+	return ret;
+}
+
+
+
 
 
