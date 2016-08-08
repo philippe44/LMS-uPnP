@@ -27,6 +27,7 @@
 #include "mr_util.h"
 #include "util.h"
 #include "util_common.h"
+#include "log_util.h"
 
 extern log_level	slimproto_loglevel;
 extern log_level	stream_loglevel;

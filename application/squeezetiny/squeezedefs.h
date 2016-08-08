@@ -1,31 +1,30 @@
+/*
+ *  Squeeze2xxx - squeezebox emulator gateway
+ *
+ *  (c) Adrian Smith 2012-2014, triode1@btinternet.com
+ *	(c) Philippe 2015-2016, philippe_44@outlook.com
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
 #ifndef __SQUEEZEDEFS_H
 #define __SQUEEZEDEFS_H
 
-#define VERSION "v0.2.9.2-dev-5"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.9.2-dev-6"" ("__DATE__" @ "__TIME__")"
 
-#if defined(linux)
-#define LINUX     1
-#define OSX       0
-#define WIN       0
-#define FREEBSD   0
-#elif defined (__APPLE__)
-#define LINUX     0
-#define OSX       1
-#define WIN       0
-#define FREEBSD   0
-#elif defined (_MSC_VER) || defined(__BORLANDC__)
-#define LINUX     0
-#define OSX       0
-#define WIN       1
-#define FREEBSD   0
-#elif defined(__FreeBSD__)
-#define LINUX     0
-#define OSX       0
-#define WIN       0
-#define FREEBSD   1
-#else
-#error unknown target
-#endif
+#include "platform.h"
 
 #if LINUX || OSX || FREEBSD
 #include <sys/types.h>
@@ -46,19 +45,6 @@
 #define SLIMPROTO_THREAD_STACK_SIZE  64 * 1024
 #define thread_t pthread_t;
 #define closesocket(s) close(s)
-#define last_error() errno
-#define ERROR_WOULDBLOCK EWOULDBLOCK
-
-typedef u_int8_t  u8_t;
-typedef u_int16_t u16_t;
-typedef u_int32_t u32_t;
-typedef u_int64_t u64_t;
-typedef int16_t   s16_t;
-typedef int32_t   s32_t;
-typedef int64_t   s64_t;
-
-#define min(a,b) (((a) < (b)) ? (a) : (b))
-#define max(a,b) (((a) > (b)) ? (a) : (b))
 
 #define mutex_type pthread_mutex_t
 #define mutex_create(m) pthread_mutex_init(&m, NULL)
@@ -70,10 +56,6 @@ typedef int64_t   s64_t;
 #define thread_type pthread_t
 #define mutex_timedlock(m, t) _mutex_timedlock(&m, t)
 int _mutex_timedlock(mutex_type *m, u32_t wait);
-int SendARP(in_addr_t src, in_addr_t dst, u8_t mac[], u32_t *size);
-#define fresize(f,s) ftruncate(fileno(f), s)
-char *strlwr(char *str);
-char *GetTempPath(u16_t size, char *path);
 
 #endif
 
@@ -91,14 +73,6 @@ char *GetTempPath(u16_t size, char *path);
 #define OUTPUT_THREAD_STACK_SIZE (1024 * 64)
 #define SLIMPROTO_THREAD_STACK_SIZE  (1024 * 64)
 
-typedef unsigned __int8  u8_t;
-typedef unsigned __int16 u16_t;
-typedef unsigned __int32 u32_t;
-typedef unsigned __int64 u64_t;
-typedef __int16 s16_t;
-typedef __int32 s32_t;
-typedef __int64 s64_t;
-
 #define inline __inline
 
 #define mutex_type HANDLE
@@ -112,24 +86,6 @@ typedef __int64 s64_t;
 #define mutex_destroy(m) CloseHandle(m)
 #define thread_type HANDLE
 
-#define usleep(x) Sleep(x/1000)
-#define sleep(x) Sleep(x*1000)
-#define last_error() WSAGetLastError()
-#define ERROR_WOULDBLOCK WSAEWOULDBLOCK
-#define open _open
-#define read _read
-#define snprintf _snprintf
-#define fresize(f, s) chsize(fileno(f), s)
-#define strcasecmp stricmp
-
-#define in_addr_t u32_t
-#define socklen_t int
-#define ssize_t int
-
-#define RTLD_NOW 0
-
 #endif
-
-#define SL_LITTLE_ENDIAN (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
 
 #endif     // __SQUEEZEDEFS_H

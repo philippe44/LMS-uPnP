@@ -29,6 +29,7 @@
 #include "ixml.h" /* for IXML_Document, IXML_Element */
 #include "upnp.h" /* for Upnp_EventType */
 #include "util_common.h"
+#include "log_util.h"
 
 typedef struct sQueue {
 	struct sQueue *next;

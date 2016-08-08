@@ -59,59 +59,11 @@
 #endif
 
 #include "util_common.h"
+#include "log_util.h"
 
 
 extern log_level 	util_loglevel;
 //static log_level 	*loglevel = &util_loglevel;
-
-// logging functions
-const char *logtime(void) {
-	static char buf[100];
-#if WIN
-	SYSTEMTIME lt;
-	GetLocalTime(&lt);
-	sprintf(buf, "[%02d:%02d:%02d.%03d]", lt.wHour, lt.wMinute, lt.wSecond, lt.wMilliseconds);
-#else
-	struct timeval tv;
-	gettimeofday(&tv, NULL);
-	strftime(buf, sizeof(buf), "[%T.", localtime(&tv.tv_sec));
-	sprintf(buf+strlen(buf), "%06ld]", (long)tv.tv_usec);
-#endif
-	return buf;
-}
-
-/*---------------------------------------------------------------------------*/
-void logprint(const char *fmt, ...) {
-	va_list args;
-
-	va_start(args, fmt);
-	vfprintf(stderr, fmt, args);
-	fflush(stderr);
-}
-
-/*---------------------------------------------------------------------------*/
-log_level debug2level(char *level)
-{
-	if (!strcmp(level, "error")) return lERROR;
-	if (!strcmp(level, "warn")) return lWARN;
-	if (!strcmp(level, "info")) return lINFO;
-	if (!strcmp(level, "debug")) return lDEBUG;
-	if (!strcmp(level, "sdebug")) return lSDEBUG;
-	return lWARN;
-}
-
-/*---------------------------------------------------------------------------*/
-char *level2debug(log_level level)
-{
-	switch (level) {
-	case lERROR: return "error";
-	case lWARN: return "warn";
-	case lINFO: return "info";
-	case lDEBUG: return "debug";
-	case lSDEBUG: return "debug";
-	default: return "warn";
-	}
-}
 
 /*---------------------------------------------------------------------------*/
 #if 0

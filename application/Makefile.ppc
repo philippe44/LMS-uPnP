@@ -1,0 +1,9 @@
+CFLAGS  ?= -Wall -fPIC -ggdb -O2 $(OPTS) $(INCLUDE) $(DEFINES)
+LDFLAGS ?= -lpthread -lm -lrt -lz -L. 
+
+OBJ					= bin/ppc
+EXECUTABLE 			= bin/squeeze2upnp-ppc
+EXECUTABLE_STATIC	= bin/squeeze2upnp-ppc-static
+
+include Makefile
+

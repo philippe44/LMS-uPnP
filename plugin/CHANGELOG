@@ -6,6 +6,9 @@
  - Refresh of configuration file was not adding missing parameters
  - (dev-3) Handle PPC byte ordering
  - (dev-5) sq_seek log not using proper int (off_t) size on 64 bits platforms
+ - (dev-6) armv5 renamed armv5-el
+ - (dev-6) setname was not working when device was powered off
+ - (dev-6) re-connect if CLI socket is closed
  
 0.2.9.1
  - Player name set from LMS are now persistent, no need to set it from the plugin settings

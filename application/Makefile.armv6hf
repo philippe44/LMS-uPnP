@@ -1,0 +1,11 @@
+CFLAGS  ?= -Wall -fPIC -ggdb -O2 $(OPTS) $(INCLUDE) $(DEFINES)
+LDFLAGS ?= -lpthread -lm -lrt -L. 
+
+# for LD debug -s
+
+OBJ					= bin/armv6hf
+EXECUTABLE 			= bin/squeeze2upnp-armv6hf
+EXECUTABLE_STATIC 	= bin/squeeze2upnp-armv6hf-static
+
+include Makefile
+

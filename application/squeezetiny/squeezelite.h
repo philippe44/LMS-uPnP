@@ -2,6 +2,7 @@
  *  Squeezelite - lightweight headless squeezebox emulator
  *
  *  (c) Adrian Smith 2012-2014, triode1@btinternet.com
+  *	(c) Philippe 2015-2016, philippe_44@outlook.com
  *  
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -154,6 +155,7 @@
 
 #include "squeezeitf.h"
 #include "util_common.h"
+#include "log_util.h"
 
 #if !defined(MSG_NOSIGNAL)
 #define MSG_NOSIGNAL 0

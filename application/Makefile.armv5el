@@ -1,0 +1,11 @@
+CFLAGS  ?= -Wall -mfloat-abi=soft -fPIC -ggdb -O2 $(OPTS) $(INCLUDE) $(DEFINES)
+LDFLAGS ?= -lpthread -lm -lrt -L. 
+
+# for LD debug -s
+
+OBJ					= bin/armv5el
+EXECUTABLE 			= bin/squeeze2upnp-armv5el
+EXECUTABLE_STATIC 	= bin/squeeze2upnp-armv5el-static
+
+include Makefile
+
