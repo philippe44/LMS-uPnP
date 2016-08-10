@@ -540,12 +540,22 @@ void SaveConfig(char *name, void *ref, bool full)
 			IXML_Node *node;
 
 			ixmlDocument_importNode(doc, dev_node, true, &dev_node);
+
+			// TODO: remove after migration
+			XMLUpdateNode(doc, dev_node, "friendly_name", p->FriendlyName);
+			if (!strstr(p->sq_config.server, "?")) XMLUpdateNode(doc, dev_node, "server", p->sq_config.server);
+
 			ixmlNode_appendChild((IXML_Node*) root, dev_node);
 			node = (IXML_Node*) ixmlDocument_getElementById((IXML_Document*) dev_node, "name");
 			node = ixmlNode_getFirstChild(node);
 			ixmlNode_setNodeValue(node, p->sq_config.name);
-			// TODO: remove after migration
-			XMLUpdateNode(doc, dev_node, "friendly_name", p->FriendlyName);
+
+			if (!strstr(p->sq_config.server, "?")) {
+				ixmlNode_appendChild((IXML_Node*) root, dev_node);
+				node = (IXML_Node*) ixmlDocument_getElementById((IXML_Document*) dev_node, "server");
+				node = ixmlNode_getFirstChild(node);
+				ixmlNode_setNodeValue(node, p->sq_config.server);
+			}
 		}
 		// new device, add nodes
 		else {
@@ -553,6 +563,7 @@ void SaveConfig(char *name, void *ref, bool full)
 			XMLAddNode(doc, dev_node, "udn", p->UDN);
 			XMLAddNode(doc, dev_node, "name", p->FriendlyName);
 			XMLAddNode(doc, dev_node, "friendly_name", p->FriendlyName);
+			if (!strstr(p->sq_config.server, "?")) XMLAddNode(doc, dev_node, "server", p->sq_config.server);
 			XMLAddNode(doc, dev_node, "mac", "%02x:%02x:%02x:%02x:%02x:%02x", p->sq_config.mac[0],
 						p->sq_config.mac[1], p->sq_config.mac[2], p->sq_config.mac[3], p->sq_config.mac[4], p->sq_config.mac[5]);
 			XMLAddNode(doc, dev_node, "enabled", "%d", (int) p->Config.Enabled);

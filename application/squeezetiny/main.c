@@ -257,7 +257,10 @@ static char *cli_decode(char *str) {
 		int k;
 		usleep(CLI_SEND_SLEEP);
 		k = recv(ctx->cli_sock, packet + len, CLI_LEN-1 - len, 0);
-		if (k < 0) continue;
+		if (k < 0) {
+			if (last_error() == ERROR_WOULDBLOCK) continue;
+			else break;
+		}
 		len += k;
 		packet[len] = '\0';
 		if (strchr(packet, '\n') && stristr(packet, cmd)) {

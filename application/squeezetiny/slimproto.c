@@ -534,6 +534,8 @@ static void process_serv(u8_t *pkt, int len,struct thread_ctx_s *ctx) {
 			ctx->new_server_cap = NULL;
 		}
 	}
+
+	ctx_callback(ctx, SQ_SETSERVER, NULL, (void*) &ctx->new_server);
 }
 
 /*---------------------------------------------------------------------------*/
