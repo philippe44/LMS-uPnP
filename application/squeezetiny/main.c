@@ -233,24 +233,24 @@ static char *cli_decode(char *str) {
 }
 
 #define CLI_SEND_SLEEP (10000)
-#define CLI_SEND_TO (1*1000000)
+#define CLI_SEND_TO (1*1000000)
 /*---------------------------------------------------------------------------*/
 char *cli_send_cmd(char *cmd, bool req, bool decode, struct thread_ctx_s *ctx)
-{
+{
 #define CLI_LEN 2048
 	char packet[CLI_LEN];
-	int wait;
-	size_t len;
-	char *rsp = NULL;
+	int wait;
+	size_t len;
+	char *rsp = NULL;
 
-	mutex_lock(ctx->cli_mutex);
+	mutex_lock(ctx->cli_mutex);
 	wait = CLI_SEND_TO / CLI_SEND_SLEEP;
-
 	cmd = cli_encode(cmd);
 	if (req) len = sprintf(packet, "%s ?\n", cmd);
-	else len = sprintf(packet, "%s\n", cmd);
+	else len = sprintf(packet, "%s\n", cmd);
+	
+	LOG_SDEBUG("[%p]: cmd %s", ctx, packet);
 	send_packet((u8_t*) packet, len, ctx->cli_sock);
-
 	// first receive the tag and then point to the last '\n'
 	len = 0;
 	while (wait--)	{
@@ -272,8 +272,10 @@ static char *cli_decode(char *str) {
 	if (!wait) {
 		LOG_WARN("[%p]: Timeout waiting for CLI reponse (%s)", ctx, cmd);
 	}
+	
+	LOG_SDEBUG("[%p]: rsp %s", ctx, rsp);
 
-	if (rsp) {
+	if (rsp && *rsp) {
 		for (rsp += strlen(cmd); *rsp == ' '; rsp++);
 		if (decode) rsp = cli_decode(rsp);
 		else rsp = strdup(rsp);
