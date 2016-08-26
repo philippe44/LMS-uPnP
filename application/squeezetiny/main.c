@@ -275,8 +275,10 @@ static char *cli_decode(char *str) {
 	
 	LOG_SDEBUG("[%p]: rsp %s", ctx, rsp);
 
-	if (rsp && *rsp) {
-		for (rsp += strlen(cmd); *rsp == ' '; rsp++);
+	if (rsp && ((rsp = stristr(rsp, cmd)) != NULL)) {
+		rsp += strlen(cmd);
+		while (*rsp && *rsp == ' ') rsp++;
+
 		if (decode) rsp = cli_decode(rsp);
 		else rsp = strdup(rsp);
 		*(strrchr(rsp, '\n')) = '\0';
@@ -474,25 +476,20 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 		NFREE(rsp);
 	}
 
-	sprintf(cmd, "%s playlist path %d", ctx->cli_id, idx);
-	if (!rsp || !*rsp) {
-		LOG_ERROR("[%p]: missing path", ctx);
-		NFREE(rsp);
-		sq_default_metadata(metadata, true);
-		return false;
-	}
-
-	metadata->path = rsp;
-	metadata->track_hash = hash32(metadata->path);
-
 	sprintf(cmd, "%s playlist remote %d", ctx->cli_id, idx);
 	rsp  = cli_send_cmd(cmd, true, true, ctx);
 	if (rsp && *rsp == '1') metadata->remote = true;
 	else metadata->remote = false;
 	NFREE(rsp)
 
-	sprintf(cmd, "%s songinfo 0 10 url:%s tags:cfldatgrK", ctx->cli_id, metadata->path);
-	rsp = cli_send_cmd(cmd, false, false, ctx);
+	sprintf(cmd, "%s playlist path %d", ctx->cli_id, idx);
+	rsp = cli_send_cmd(cmd, true, true, ctx);
+	if (rsp && *rsp) {
+		metadata->path = rsp;
+		metadata->track_hash = hash32(metadata->path);
+		sprintf(cmd, "%s songinfo 0 10 url:%s tags:cfldatgrK", ctx->cli_id, metadata->path);
+		rsp = cli_send_cmd(cmd, false, false, ctx);
+	}
 
 	if (rsp && *rsp) {
 		metadata->title = cli_find_tag(rsp, "title");

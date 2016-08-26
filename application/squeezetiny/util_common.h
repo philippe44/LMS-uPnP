@@ -33,6 +33,6 @@ char *stristr(char *s1, char *s2);
 char *toxml(char *src);
 u32_t hash32(char *str);
 bool get_interface(struct in_addr *addr);
-bool get_local_hostname(char *out, size_t out_len);
+in_addr_t get_localhost(char **name);
 
 #endif

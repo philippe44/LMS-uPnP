@@ -303,36 +303,40 @@ bool get_interface(struct in_addr *addr)
 
 
 
+/*---------------------------------------------------------------------------*/
 #define MAX_INTERFACES 256
 #define DEFAULT_INTERFACE 1
-#if !WIN
+#if !defined(WIN32)
 #define INVALID_SOCKET (-1)
 #endif
-bool get_local_hostname(char *out, size_t out_len)
+in_addr_t get_localhost(char **name)
 {
-	bool ret = true;
-	char tempstr[INET_ADDRSTRLEN];
-	const char *p = NULL;
-
-#if WIN
+#ifdef WIN32
+	char buf[256];
 	struct hostent *h = NULL;
 	struct sockaddr_in LocalAddr;
 
 	memset(&LocalAddr, 0, sizeof(LocalAddr));
 
-	gethostname(out, out_len);
-	h = gethostbyname(out);
+	gethostname(buf, 256);
+	h = gethostbyname(buf);
+
+	if (name) *name = strdup(buf);
+
 	if (h != NULL) {
 		memcpy(&LocalAddr.sin_addr, h->h_addr_list[0], 4);
-		p = inet_ntop(AF_INET, &LocalAddr.sin_addr, tempstr, sizeof(tempstr));
-		if (p) strncpy(out, p, out_len);
-		else return false;
+		return LocalAddr.sin_addr.s_addr;
 	}
-	else return false;
-#elif OSX || FREEBSD
+	else return INADDR_ANY;
+#elif defined (__APPLE__) || defined(__FreeBSD__)
 	struct ifaddrs *ifap, *ifa;
 
-	if (getifaddrs(&ifap) != 0) return false;
+	if (name) {
+		*name = malloc(256);
+		gethostname(*name, 256);
+	}
+
+	if (getifaddrs(&ifap) != 0) return INADDR_ANY;
 
 	/* cycle through available interfaces */
 	for (ifa = ifap; ifa != NULL; ifa = ifa->ifa_next) {
@@ -349,17 +353,13 @@ bool get_local_hostname(char *out, size_t out_len)
 				htonl(INADDR_LOOPBACK)) {
 				continue;
 			}
-			p = inet_ntop(AF_INET,
-				&((struct sockaddr_in *)(ifa->ifa_addr))->sin_addr,
-				tempstr, sizeof(tempstr));
-			if (p) strncpy(out, p, out_len);
-			else return false;
+			return ((struct sockaddr_in *)(ifa->ifa_addr))->sin_addr.s_addr;
 			break;
 		}
 	}
 	freeifaddrs(ifap);
 
-	ret = ifa ? true : false;
+	return INADDR_ANY;
 #else
 	char szBuffer[MAX_INTERFACES * sizeof (struct ifreq)];
 	struct ifconf ifConf;
@@ -369,6 +369,11 @@ bool get_local_hostname(char *out, size_t out_len)
 	int LocalSock;
 	struct sockaddr_in LocalAddr;
 	int j = 0;
+
+	if (name) {
+		*name = malloc(256);
+		gethostname(*name, 256);
+	}
 
 	/* purify */
 	memset(&ifConf,  0, sizeof(ifConf));
@@ -385,7 +390,7 @@ bool get_local_hostname(char *out, size_t out_len)
 	nResult = ioctl(LocalSock, SIOCGIFCONF, &ifConf);
 	if (nResult < 0) {
 		close(LocalSock);
-		return false;
+		return INADDR_ANY;
 	}
 
 	/* Cycle through the list of interfaces looking for IP addresses. */
@@ -421,14 +426,8 @@ bool get_local_hostname(char *out, size_t out_len)
 	}
 	close(LocalSock);
 
-	p = inet_ntop(AF_INET, &LocalAddr.sin_addr, tempstr, sizeof(tempstr));
-	if (p) strncpy(out, p, out_len);
-	else return false;
+	return LocalAddr.sin_addr.s_addr;
 #endif
-	return ret;
 }
-
-
-
 
 
