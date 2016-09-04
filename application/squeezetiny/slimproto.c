@@ -584,10 +584,6 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 	u32_t now;
 	event_handle ehandles[2];
 	int timeouts = 0;
-	struct pollfd pfds;
-
-	pfds.fd = ctx->cli_sock;
-	pfds.events = POLLOUT | POLLIN;
 
 	set_readwake_handles(ehandles, ctx->sock, ctx->wake_e);
 
@@ -644,11 +640,13 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 				wake = true;
 			}
 
-			if (ctx->cli_sock > 0 && (poll(&pfds, 1, 0) < 0 ||
-				(pfds.revents & POLLERR) || (pfds.revents & POLLHUP) ||
-				(pfds.revents & POLLNVAL))) {
-				LOG_ERROR("[%p] FATAL: cli socket closed", ctx);
-				return;
+			if (ctx->cli_sock > 0 && gettime_ms() > ctx->cli_timestamp + 10000) {
+				if (!mutex_trylock(ctx->cli_mutex)) {
+					LOG_INFO("[%p] Closing CLI socket %d", ctx, ctx->cli_sock);
+					closesocket(ctx->cli_sock);
+					ctx->cli_sock = -1;
+					mutex_unlock(ctx->cli_mutex);
+				}
 			}
 
 			timeouts = 0;
@@ -879,7 +877,6 @@ void discover_server(struct thread_ctx_s *ctx) {
 static void slimproto(struct thread_ctx_s *ctx) {
 	bool reconnect = false;
 	unsigned failed_connect = 0;
-	struct sockaddr_in cli_addr;
 
 	mutex_create(ctx->mutex);
 	mutex_create(ctx->cli_mutex);
@@ -895,8 +892,8 @@ static void slimproto(struct thread_ctx_s *ctx) {
 			LOG_INFO("[%p] switching server to %s:%d", ctx, inet_ntoa(ctx->serv_addr.sin_addr), ntohs(ctx->serv_addr.sin_port));
 		}
 
+		ctx->cli_sock = -1;
 		ctx->sock = socket(AF_INET, SOCK_STREAM, 0);
-
 		set_nonblock(ctx->sock);
 		set_nosigpipe(ctx->sock);
 
@@ -926,26 +923,6 @@ static void slimproto(struct thread_ctx_s *ctx) {
 			}
 
 			sendHELO(reconnect, ctx->fixed_cap, ctx->var_cap, ctx->mac, ctx);
-
-			/*
-			there could be a global CLIn socket for all the devices, but this
-			would require a mutex to handle it to make sure command / response
-			are sent in the right sequence ... at that time, let's use a CLI
-			socket per machine
-			*/
-			// open CLI socket
-			ctx->cli_sock = socket(AF_INET, SOCK_STREAM, 0);
-			set_nonblock(ctx->cli_sock);
-			set_nosigpipe(ctx->cli_sock);
-
-			cli_addr.sin_family = AF_INET;
-			cli_addr.sin_addr.s_addr = ctx->slimproto_ip;
-			cli_addr.sin_port = htons(9090);
-
-			if (connect_timeout(ctx->cli_sock, (struct sockaddr *) &cli_addr, sizeof(cli_addr), 1) != 0) {
-				LOG_ERROR("[%p] unable to connect to server with cli %u", ctx, failed_connect);
-				ctx->cli_sock = -1;
-			}
 
 			slimproto_run(ctx);
 

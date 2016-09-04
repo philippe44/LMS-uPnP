@@ -82,9 +82,10 @@ tMRConfig			glMRConfig = {
 							0,
 							true,
 							"",
+							1,
 							true,
 							true,
-							true,
+							0,
 							true,
 							true,
 							100,
@@ -337,8 +338,9 @@ static int	uPNPTerminate(void);
 
 			if (action == SQ_SETNEXTURI) {
 				device->NextURI = strdup(uri);
+				device->NextDuration = p->duration / 1000;
 
-				if (device->Config.AcceptNextURI){
+				if (device->Config.AcceptNextURI && device->NextDuration > device->Config.MinGapless){
 					AVTSetNextURI(device);
 					sq_free_metadata(&device->MetaData);
 				}
@@ -468,12 +470,13 @@ void SyncNotifState(char *State, struct sMR* Device)
 
 	if (!strcmp(State, "STOPPED") && Device->State != STOPPED) {
 		if (Device->NextURI) {
-			if (!Device->Config.AcceptNextURI) {
+			if (!Device->Config.AcceptNextURI || Device->NextDuration < Device->Config.MinGapless) {
 				// fake a "SETURI" and a "PLAY" request
 				NFREE(Device->CurrentURI);
 				Device->CurrentURI = malloc(strlen(Device->NextURI) + 1);
 				strcpy(Device->CurrentURI, Device->NextURI);
 				NFREE(Device->NextURI);
+				Device->NextDuration = 0;
 
 				AVTSetURI(Device);
 				sq_free_metadata(&Device->MetaData);
@@ -1241,6 +1244,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	// Read key elements from description document
 	deviceType = XMLGetFirstDocumentItem(DescDoc, "deviceType");
 	friendlyName = XMLGetFirstDocumentItem(DescDoc, "friendlyName");
+	if (!friendlyName || !*friendlyName) friendlyName = strdup(UDN);
 	URLBase = XMLGetFirstDocumentItem(DescDoc, "URLBase");
 	presURL = XMLGetFirstDocumentItem(DescDoc, "presentationURL");
 	manufacturer = XMLGetFirstDocumentItem(DescDoc, "manufacturer");

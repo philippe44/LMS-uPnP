@@ -546,6 +546,7 @@ struct thread_ctx_s {
 	u8_t 		mac[6];
 	char		cli_id[18];		// (6*2)+(5*':')+NULL
 	mutex_type	cli_mutex;
+	u32_t		cli_timestamp;
 	bool		aiff_header;
 //	u8_t *buf;					// for output_mr
 //	unsigned buffill;			// for output_mr

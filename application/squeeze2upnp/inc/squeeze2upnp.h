@@ -69,6 +69,7 @@ struct sService {
 	int 		VolumeOnPlay;		// change only volume when playing has started or disable volume commands
 	bool		VolumeFeedback;
 	bool		AcceptNextURI;
+	int			MinGapless;
 	bool		SendMetaData;
 	bool		SendCoverArt;
 	int			MaxVolume;
@@ -94,6 +95,7 @@ struct sMR {
 	enum eMRstate 	State;
 	char			*CurrentURI;
 	char			*NextURI;
+	int				NextDuration;
 	char			ProtoInfo[SQ_STR_LENGTH];		// a bit patchy ... used for faulty NEXTURI players
 	sq_metadata_t	MetaData;
 	sq_action_t		sqState;

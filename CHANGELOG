@@ -1,3 +1,8 @@
+0.2.9.4
+ - force non gapless for track below <min_gapless> to be treated with non gapless method (workaround for some faulty players)
+ - too many CLI socket were consumed when all bridges were opened - open on demand and close after 10sec
+ - seek offset trace had wrong format (%zu)
+ 
 0.2.9.3
  - when "friendlyName" is missing (should never happen ...), replace it with UDN 
  
