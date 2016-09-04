@@ -934,7 +934,7 @@ static void slimproto(struct thread_ctx_s *ctx) {
 		}
 
 		closesocket(ctx->sock);
-		closesocket(ctx->cli_sock);
+		if (ctx->cli_sock != -1) closesocket(ctx->cli_sock);
 		if (ctx->new_server_cap)	{
 			free(ctx->new_server_cap);
 			ctx->new_server_cap = NULL;
