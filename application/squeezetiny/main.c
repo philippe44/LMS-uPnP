@@ -333,7 +333,7 @@ u32_t sq_get_time(sq_dev_handle_t handle)
 	char *rsp;
 	u32_t time = 0;
 
-	if (!handle || !ctx->cli_sock || !ctx->in_use) {
+	if (!handle || !ctx->in_use) {
 		LOG_ERROR("[%p]: no handle or CLI socket %d", ctx, handle);
 		return 0;
 	}
@@ -358,7 +358,7 @@ bool sq_set_time(sq_dev_handle_t handle, u32_t time)
 	char cmd[128];
 	char *rsp;
 
-	if (!handle || !ctx->cli_sock || !ctx->in_use) {
+	if (!handle || !ctx->in_use) {
 		LOG_ERROR("[%p]: no handle or cli socket %d", ctx, handle);
 		return false;
 	}
@@ -482,7 +482,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 	char *rsp, *p;
 	u16_t idx;
 
-	if (!handle || !ctx->cli_sock || !ctx->in_use) {
+	if (!handle || !ctx->in_use) {
 		LOG_ERROR("[%p]: no handle or CLI socket %d", ctx, handle);
 		sq_default_metadata(metadata, true);
 		return false;
