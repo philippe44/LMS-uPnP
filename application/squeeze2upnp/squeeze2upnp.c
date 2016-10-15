@@ -81,6 +81,7 @@ tMRConfig			glMRConfig = {
 							false,
 							0,
 							true,
+							false,
 							"",
 							1,
 							true,
@@ -991,7 +992,7 @@ static void *UpdateMRThread(void *args)
 			Device = &glMRDevices[i];
 			if (AddMRDevice(Device, UDN, DescDoc, p->Location) && !glSaveConfigFile) {
 				// create a new slimdevice
-				Device->SqueezeHandle = sq_reserve_device(Device, &sq_callback);
+				Device->SqueezeHandle = sq_reserve_device(Device, Device->on, &sq_callback);
 				if (!*(Device->sq_config.name)) strcpy(Device->sq_config.name, Device->FriendlyName);
 				if (!Device->SqueezeHandle || !sq_run_device(Device->SqueezeHandle, &Device->sq_config)) {
 					sq_release_device(Device->SqueezeHandle);
@@ -1265,7 +1266,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	Device->UPnPTimeOut = false;
 	Device->UPnPConnected = true;
 	Device->UPnPMissingCount = Device->Config.UPnPRemoveCount;
-	Device->on = false;
+	Device->on = Device->Config.DefaultOn;
 	Device->Muted = true;	//assume device is muted
 	Device->SqueezeHandle = 0;
 	Device->ErrorCount = 0;

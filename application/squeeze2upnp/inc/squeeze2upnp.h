@@ -64,7 +64,8 @@ struct sService {
 	bool		SeekAfterPause;
 	bool		ByteSeek;
 	u16_t		VolumeCorrector;	// not yet
-	bool		Enabled;			//
+	bool		Enabled;
+	bool		DefaultOn;
 	char		Name[SQ_STR_LENGTH];
 	int 		VolumeOnPlay;		// change only volume when playing has started or disable volume commands
 	bool		VolumeFeedback;

@@ -112,7 +112,7 @@ void				sq_stop(void);
 // only name cannot be NULL
 bool			 	sq_run_device(sq_dev_handle_t handle, sq_dev_param_t *param);
 void				sq_delete_device(sq_dev_handle_t);
-sq_dev_handle_t		sq_reserve_device(void *caller_id, sq_callback_t callback);
+sq_dev_handle_t		sq_reserve_device(void *caller_id, bool on, sq_callback_t callback);
 void				sq_release_device(sq_dev_handle_t);
 
 bool				sq_call(sq_dev_handle_t handle, sq_action_t action, void *param);

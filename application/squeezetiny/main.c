@@ -1103,7 +1103,7 @@ void sq_release_device(sq_dev_handle_t handle)
 }
 
 /*---------------------------------------------------------------------------*/
-sq_dev_handle_t sq_reserve_device(void *MR, sq_callback_t callback)
+sq_dev_handle_t sq_reserve_device(void *MR, bool on, sq_callback_t callback)
 {
 	int ctx_i;
 	struct thread_ctx_s *ctx;
@@ -1122,7 +1122,7 @@ sq_dev_handle_t sq_reserve_device(void *MR, sq_callback_t callback)
 
 	ctx = thread_ctx + ctx_i;
 	ctx->self = ctx_i + 1;
-	ctx->on = false;
+	ctx->on = on;
 	ctx->callback = callback;
 	ctx->MR = MR;
 
