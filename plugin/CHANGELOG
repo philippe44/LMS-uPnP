@@ -1,5 +1,5 @@
 0.2.10.0
- - add <roon_mode> to start with roon compatibility (default on and no cli use)
+ - add <roon_mode> for Roon compatibility (default on and no cli use)
 
 0.2.9.5
  - get_time/set_time and get_metadata were not re-opening CLI socket (testing it before)
