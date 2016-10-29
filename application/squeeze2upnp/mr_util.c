@@ -508,7 +508,7 @@ void SaveConfig(char *name, void *ref, bool full)
 	XMLUpdateNode(doc, common, "max_GET_bytes", "%d", (s32_t) glDeviceParam.max_get_bytes);
 	XMLUpdateNode(doc, common, "keep_buffer_file", "%d", (int) glDeviceParam.keep_buffer_file);
 	XMLUpdateNode(doc, common, "enabled", "%d", (int) glMRConfig.Enabled);
-	XMLUpdateNode(doc, common, "default_on", "%d", (int) glMRConfig.DefaultOn);
+	XMLUpdateNode(doc, common, "roon_mode", "%d", (int) glMRConfig.RoonMode);
 	XMLUpdateNode(doc, common, "process_mode", "%d", (int) glMRConfig.ProcessMode);
 	XMLUpdateNode(doc, common, "codecs", glDeviceParam.codecs);
 	XMLUpdateNode(doc, common, "sample_rate", "%d", (int) glDeviceParam.sample_rate);
@@ -610,7 +610,7 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "max_GET_bytes")) sq_conf->max_get_bytes = atol(val);
 	if (!strcmp(name, "send_icy")) sq_conf->send_icy = atol(val);
 	if (!strcmp(name, "enabled")) Conf->Enabled = atol(val);
-	if (!strcmp(name, "default_on")) Conf->DefaultOn = atol(val);
+	if (!strcmp(name, "roon_mode")) Conf->RoonMode = atol(val);
 	if (!strcmp(name, "process_mode")) {
 		Conf->ProcessMode = atol(val);
 		sq_conf->mode = Conf->ProcessMode;

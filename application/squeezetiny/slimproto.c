@@ -352,7 +352,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 				mutex_unlock(ctx->out_ctx[idx].mutex);
 
 				if (ctx->out_ctx[idx].read_file) {
-					LOG_WARN("[%p]: read file left open", ctx, ctx->out_ctx[idx].buf_name);
+					LOG_WARN("[%p]: read file left open %s", ctx, ctx->out_ctx[idx].buf_name);
 					fclose(ctx->out_ctx[idx].read_file);
 					ctx->out_ctx[idx].read_file = NULL;
 				}
@@ -360,7 +360,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 											   ctx->out_ctx[idx].close_count = 0;
 
 				if (ctx->out_ctx[idx].write_file) {
-					LOG_WARN("[%p]: write file left open", ctx, ctx->out_ctx[idx].buf_name);
+					LOG_WARN("[%p]: write file left open %s", ctx, ctx->out_ctx[idx].buf_name);
 					fclose(ctx->out_ctx[idx].write_file);
 				}
 

@@ -1,5 +1,5 @@
 0.2.10.0
- - add <default_on> to create the virtual player on by default (required by Roon)
+ - add <roon_mode> to start with roon compatibility (default on and no cli use)
 
 0.2.9.5
  - get_time/set_time and get_metadata were not re-opening CLI socket (testing it before)
@@ -15,7 +15,7 @@
 0.2.9.2
  - when using "songinfo" query, LMS wants a client_id, although documented differently
  - max_read_wait fixed at 20s
- - add pacing option to prevent buffering to be greedy (use <pacing_size)
+ - add pacing option to prevent buffering to be greedy (use <pacing_size>)
  - cli_wait set at 1s
  - Refresh of configuration file was not adding missing parameters
  - (dev-3) Handle PPC byte ordering

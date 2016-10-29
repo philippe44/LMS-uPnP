@@ -81,7 +81,6 @@ tMRConfig			glMRConfig = {
 							false,
 							0,
 							true,
-							false,
 							"",
 							1,
 							true,
@@ -93,6 +92,7 @@ tMRConfig			glMRConfig = {
 							1,
 							"raw",
 							1,
+							false,
 							false,
 					};
 
@@ -131,6 +131,7 @@ sq_dev_param_t glDeviceParam = {
 					0,
 					{ 0x00,0x00,0x00,0x00,0x00,0x00 },
 					false,
+					true,
 				} ;
 
 /*----------------------------------------------------------------------------*/
@@ -1266,7 +1267,6 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	Device->UPnPTimeOut = false;
 	Device->UPnPConnected = true;
 	Device->UPnPMissingCount = Device->Config.UPnPRemoveCount;
-	Device->on = Device->Config.DefaultOn;
 	Device->Muted = true;	//assume device is muted
 	Device->SqueezeHandle = 0;
 	Device->ErrorCount = 0;
@@ -1275,6 +1275,10 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	Device->sqState = SQ_STOP;
 	Device->State = STOPPED;
 	Device->WaitCookie = Device->StartCookie = NULL;
+	if (Device->Config.RoonMode) {
+		Device->on = true;
+		Device->sq_config.use_cli = false;
+    }
 	strcpy(Device->UDN, UDN);
 	strcpy(Device->DescDocURL, location);
 	strcpy(Device->FriendlyName, friendlyName);

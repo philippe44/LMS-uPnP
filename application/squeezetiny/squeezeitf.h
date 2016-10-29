@@ -80,6 +80,7 @@ typedef	struct sq_dev_param_s {
 	int			keep_buffer_file;
 	u8_t		mac[6];
 	bool		send_icy;
+	bool		use_cli;
 } sq_dev_param_t;
 
 typedef struct

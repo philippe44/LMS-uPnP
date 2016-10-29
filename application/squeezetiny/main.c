@@ -236,6 +236,7 @@ static char *cli_decode(char *str) {
 bool cli_open_socket(struct thread_ctx_s *ctx) {
 	struct sockaddr_in addr;
 
+	if (!ctx->config.use_cli) return false;
 	if (ctx->cli_sock > 0) return true;
 
 	ctx->cli_sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -333,6 +334,8 @@ u32_t sq_get_time(sq_dev_handle_t handle)
 	char *rsp;
 	u32_t time = 0;
 
+	if (!ctx->config.use_cli) return 0;
+
 	if (!handle || !ctx->in_use) {
 		LOG_ERROR("[%p]: no handle or CLI socket %d", ctx, handle);
 		return 0;
@@ -357,6 +360,8 @@ bool sq_set_time(sq_dev_handle_t handle, u32_t time)
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
 	char cmd[128];
 	char *rsp;
+
+	if (!ctx->config.use_cli) return false;
 
 	if (!handle || !ctx->in_use) {
 		LOG_ERROR("[%p]: no handle or cli socket %d", ctx, handle);
@@ -482,8 +487,10 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 	char *rsp, *p;
 	u16_t idx;
 
-	if (!handle || !ctx->in_use) {
-		LOG_ERROR("[%p]: no handle or CLI socket %d", ctx, handle);
+	if (!handle || !ctx->in_use || !ctx->config.use_cli) {
+		if (ctx->config.use_cli) {
+			LOG_ERROR("[%p]: no handle or CLI socket %d", ctx, handle);
+		}
 		sq_default_metadata(metadata, true);
 		return false;
 	}
