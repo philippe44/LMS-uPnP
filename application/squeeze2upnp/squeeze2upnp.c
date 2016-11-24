@@ -1525,7 +1525,6 @@ int main(int argc, char *argv[])
 {
 	int i;
 	char resp[20] = "";
-	char *tmpdir;
 
 	signal(SIGINT, sighandler);
 	signal(SIGTERM, sighandler);
@@ -1583,12 +1582,7 @@ int main(int argc, char *argv[])
 
 	sq_init();
 
-	tmpdir = malloc(SQ_STR_LENGTH);
-	GetTempPath(SQ_STR_LENGTH, tmpdir);
-	LOG_INFO("Buffer path %s", tmpdir);
-	free(tmpdir);
-
-	if (!strstr(gluPNPSocket, "?")) {
+	if (!strstr(gluPNPSocket, "?")) {
 		sscanf(gluPNPSocket, "%[^:]:%u", glIPaddress, &glPort);
 	}
 

@@ -1161,6 +1161,8 @@ bool sq_run_device(sq_dev_handle_t handle, sq_dev_param_t *param)
 		GetTempPath(SQ_STR_LENGTH, ctx->config.buffer_dir);
 	}
 
+	LOG_INFO("Buffer path %s", ctx->config.buffer_dir);
+
 	if (access(ctx->config.buffer_dir, 2)) {
 		LOG_ERROR("[%p]: cannot access %s", ctx, ctx->config.buffer_dir);
 		return false;
