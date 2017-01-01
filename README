@@ -2,14 +2,7 @@ This application is a bridge between Logitech Media Server (LMS) /
 SqueezeBox Server(SBS) and UPnP devices. It allows any UPnP device 
 to be used as a normal SqueezeBox device.
 
-===========================================================================
-There is now a LMS plugin for automatic installation and easy configuration
-It is part of the default 3rd party plugin list of LMS, but here is a 
-direct link to the stable version just in case
-http://sourceforge.net/projects/lms-to-upnp/files/stable/repo-sf.xml
-- or the version under development -
-http://sourceforge.net/projects/lms-to-upnp/files/dev/repo-sf.xml
-===========================================================================
+See support thread here: http://forums.slimdevices.com/showthread.php?103728-Announce-UPnPBridge-integrate-UPnP-DLNA-players-with-LMS-(squeeze2upnp)&p=820082&viewfull=1#post820082
 
 ===========================================================================
 MINIMUM TO READ FOR ADVANCED USE
