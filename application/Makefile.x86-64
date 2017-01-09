@@ -1,5 +1,5 @@
-CFLAGS  ?= -Wall -fPIC -ggdb -O2 $(OPTS) $(INCLUDE) $(DEFINES)
-LDFLAGS ?= -lpthread -lm -lrt -L. 
+CFLAGS  ?= -Wall -fPIC -ggdb -m64 -O2 $(OPTS) -I/usr/include/i386-linux-gnu $(INCLUDE) $(DEFINES)
+LDFLAGS ?= -s -m64 -lpthread -lm -lrt -L. 
 
 OBJ					= bin/x86-64
 EXECUTABLE 			= bin/squeeze2upnp-x86-64

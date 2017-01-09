@@ -30,7 +30,7 @@ PLUGIN_UPNPBRIDGE_BINARIES
 
 PLUGIN_UPNPBRIDGE_BINARIES_DESC
 	EN	Select the Squeeze2upnp binary which best matches your machine's architecture. 
-	EN	This option is only needed for arm based devices where multiple options are available and autodetection is not reliable.
+	EN	<br>For RaspberryPi, use only armv6hf version
 
 PLUGIN_UPNPBRIDGE_WARNING
 	EN	It is HIGHLY recommended to stop the bridge before changing parameters

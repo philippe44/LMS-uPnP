@@ -1,5 +1,10 @@
-0.2.10.1 
- - Do not seek if range if larger than received data (should help case of fixed larg size when "msart players" try to hey yje end of the song to guess the side)
+0.2.10.3
+ - move to cross-compilation chain to solve rpi-1 compatibility
+ - detect float problem at startup
+
+0.2.10.1
+ - Do not seek if range if larger than received data (should help case of fixed larg size when "smart players" try to seek to end of the song to guess the side)
+ - armv6 and above compilation
 
 0.2.10.0
  - add <roon_mode> for Roon compatibility (default on and no cli use)

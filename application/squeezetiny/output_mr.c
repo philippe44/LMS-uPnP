@@ -487,7 +487,7 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 			// LMS will need to wait for the player to consume data ...
 			if (out->remote && ctx->config.stream_pacing_size != -1 && (out->write_count - out->read_count) > (u32_t) ctx->config.stream_pacing_size) {
 				UNLOCK_S;
-				LOG_DEBUG("[%p] pacing (%d)", ctx, out->write_count - out->read_count);
+				LOG_DEBUG("[%p] pacing (%u)", ctx, out->write_count - out->read_count);
 				usleep(100000);
 				continue;
 			}
