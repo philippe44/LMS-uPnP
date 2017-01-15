@@ -1,6 +1,7 @@
 0.2.10.3
  - move to cross-compilation chain to solve rpi-1 compatibility
  - detect float problem at startup
+ - limits binary offering to float version when CPU with hard float detected
 
 0.2.10.1
  - Do not seek if range if larger than received data (should help case of fixed larg size when "smart players" try to seek to end of the song to guess the side)
