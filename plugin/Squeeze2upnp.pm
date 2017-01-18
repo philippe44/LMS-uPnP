@@ -28,8 +28,11 @@ sub binaries {
 		if ($os->{'binArch'} =~ /i386/) {
 			return qw(squeeze2upnp-x86 squeeze2upnp-x86-static);
 		}
+		if ($os->{'binArch'} =~ /armhf/) {
+			return qw(squeeze2upnp-armv6hf squeeze2upnp-armv6hf-static);
+		}
 		if ($os->{'binArch'} =~ /arm/) {
-			return qw(squeeze2upnp-armv6hf squeeze2upnp-armv6hf-static squeeze2upnp-armv5te squeeze2upnp-armv5te-static);
+			return qw(squeeze2upnp-armv5te squeeze2upnp-armv5te-static);
 		}
 		if ($os->{'binArch'} =~ /powerpc/) {
 			return qw(squeeze2upnp-ppc squeeze2upnp-ppc-static);

@@ -31,7 +31,7 @@ PLUGIN_UPNPBRIDGE_BINARIES
 PLUGIN_UPNPBRIDGE_BINARIES_DESC
 	EN	Select the Squeeze2upnp binary which best matches your machine's architecture.
 	EN	<br>- on raspi, use only armv6hf version
-	EN	<br>- armv5te emulates floating point if not provided by hardware
+	EN	<br>- armv5te emulates floating point
 	
 PLUGIN_UPNPBRIDGE_WARNING
 	EN	It is HIGHLY recommended to stop the bridge before changing parameters
