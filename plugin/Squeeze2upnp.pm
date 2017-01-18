@@ -28,18 +28,15 @@ sub binaries {
 		if ($os->{'binArch'} =~ /i386/) {
 			return qw(squeeze2upnp-x86 squeeze2upnp-x86-static);
 		}
-		if ($os->{'binArch'} =~ /armhf/) {
-			return qw(squeeze2upnp-armv6hf squeeze2upnp-armv6hf-static);
-		}
 		if ($os->{'binArch'} =~ /arm/) {
-			return qw(squeeze2upnp-armv5el squeeze2upnp-armv5el-static);
+			return qw(squeeze2upnp-armv6hf squeeze2upnp-armv6hf-static squeeze2upnp-armv5te squeeze2upnp-armv5te-static);
 		}
 		if ($os->{'binArch'} =~ /powerpc/) {
 			return qw(squeeze2upnp-ppc squeeze2upnp-ppc-static);
 		}
 		
 		# fallback to offering all linux options for case when architecture detection does not work
-		return qw(squeeze2upnp-x86-64 squeeze2upnp-x86-64-static squeeze2upnp-x86 squeeze2upnp-x86-static squeeze2upnp-armv6hf squeeze2upnp-armv6hf-static squeeze2upnp-armv5el squeeze2upnp-armv5el-static squeeze2upnp-ppc squeeze2upnp-ppc-static);
+		return qw(squeeze2upnp-x86-64 squeeze2upnp-x86-64-static squeeze2upnp-x86 squeeze2upnp-x86-static squeeze2upnp-armv6hf squeeze2upnp-armv6hf-static squeeze2upnp-armv5te squeeze2upnp-armv5te-static squeeze2upnp-ppc squeeze2upnp-ppc-static);
 	}
 	
 	if ($os->{'os'} eq 'Darwin') {
