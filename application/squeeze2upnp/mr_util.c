@@ -485,7 +485,7 @@ void SaveConfig(char *name, void *ref, bool full)
 		common = XMLAddNode(doc, root, "common", NULL);
 	}
 
-	XMLUpdateNode(doc, root, "upnp_socket", gluPNPSocket);
+	XMLUpdateNode(doc, root, "upnp_socket", glUPnPSocket);
 	XMLUpdateNode(doc, root, "slimproto_log", level2debug(slimproto_loglevel));
 	XMLUpdateNode(doc, root, "stream_log", level2debug(stream_loglevel));
 	XMLUpdateNode(doc, root, "output_log", level2debug(output_loglevel));
@@ -654,7 +654,7 @@ static void LoadGlobalItem(char *name, char *val)
 	// temporary to ensure parameter transfer from global to common
 	if (!strcmp(name, "server")) strcpy(glDeviceParam.server, val);
 
-	if (!strcmp(name, "upnp_socket")) strcpy(gluPNPSocket, val);
+	if (!strcmp(name, "upnp_socket")) strcpy(glUPnPSocket, val);
 	if (!strcmp(name, "slimproto_log")) slimproto_loglevel = debug2level(val);
 	if (!strcmp(name, "stream_log")) stream_loglevel = debug2level(val);
 	if (!strcmp(name, "output_log")) output_loglevel = debug2level(val);

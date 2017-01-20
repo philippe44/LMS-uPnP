@@ -147,10 +147,14 @@ PLUGIN_UPNPBRIDGE_UPNPSCAN_DESC
 
 PLUGIN_UPNPBRIDGE_UPNPSOCKET
 	EN	Network socket to use
+	
+PLUGIN_UPNPBRIDGE_USELMSSOCKET
+	EN	Use LMS' network interface
 
 PLUGIN_UPNPBRIDGE_UPNPSOCKET_DESC
 	EN	The socket (IP:port) used by the bridge. This is especially useful if you have a computer with multiple network interfaces.
-	EN	Use "?" (without ") to let the bridge decide
+	EN	Use "?" (without ") to let the bridge decide or check "use LMS' network interface" to make sure the Bridge uses the same
+	EN	network as LMS
 	
 PLUGIN_UPNPBRIDGE_SCANINTERVAL
 	EN	Scan for UPnP devices every

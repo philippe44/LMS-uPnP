@@ -1,6 +1,7 @@
 0.2.10.4
  - re-introduce armv5te with soft floating only
  - limit the binary offering to what's supported by the platform
+ - option to force use of LMS network interface (GUI and -b on command line)
 
 0.2.10.3
  - move to cross-compilation chain to solve rpi-1 compatibility

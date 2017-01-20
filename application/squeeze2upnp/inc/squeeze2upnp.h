@@ -123,7 +123,7 @@ struct sMR {
 extern UpnpClient_Handle   	glControlPointHandle;
 extern unsigned int 		glPort;
 extern char 				glIPaddress[];
-extern char 				gluPNPSocket[];
+extern char 				glUPnPSocket[];
 extern u8_t		   			glMac[6];
 extern s32_t				glLogLimit;
 extern tMRConfig			glMRConfig;

@@ -101,6 +101,10 @@ sub start {
 	if ($prefs->get('eraselog')) {
 		unlink $class->logFile;
 	}
+	
+	if ($prefs->get('useLMSsocket')) {
+		push @params, ("-b", Slim::Utils::Network::serverAddr());
+	}
 
 	if ($prefs->get('logging')) {
 		push @params, ("-f", $class->logFile);
