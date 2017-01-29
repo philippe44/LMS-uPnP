@@ -1,3 +1,6 @@
+0.2.10.5
+- add Linux sparc support (experimental)
+
 0.2.10.4
  - re-introduce armv5te with soft floating only
  - limit the binary offering to what's supported by the platform
