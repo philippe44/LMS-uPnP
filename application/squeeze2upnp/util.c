@@ -358,19 +358,22 @@ IXML_Node *XMLAddNode(IXML_Document *doc, IXML_Node *parent, char *name, char *f
 
 
 /*----------------------------------------------------------------------------*/
-IXML_Node *XMLUpdateNode(IXML_Document *doc, IXML_Node *parent, char *name, char *fmt, ...)
+IXML_Node *XMLUpdateNode(IXML_Document *doc, IXML_Node *parent, bool refresh, char *name, char *fmt, ...)
 {
+	char buf[256];
+	va_list args;
 	IXML_Node *node = (IXML_Node*) ixmlDocument_getElementById((IXML_Document*) parent, name);
 
-	if (!node) {
-		char buf[256];
-		va_list args;
+	va_start(args, fmt);
+	vsprintf(buf, fmt, args);
 
-		va_start(args, fmt);
-		vsprintf(buf, fmt, args);
-		node = XMLAddNode(doc, parent, name, buf);
-		va_end(args);
+	if (!node) XMLAddNode(doc, parent, name, buf);
+	else if (refresh) {
+		node = ixmlNode_getFirstChild(node);
+		ixmlNode_setNodeValue(node, buf);
 	}
+
+	va_end(args);
 
 	return node;
 }

@@ -132,6 +132,7 @@ sq_dev_param_t glDeviceParam = {
 					{ 0x00,0x00,0x00,0x00,0x00,0x00 },
 					false,
 					true,
+					{ "" },
 				} ;
 
 /*----------------------------------------------------------------------------*/
@@ -439,7 +440,7 @@ static int	uPNPTerminate(void);
 			strcpy(device->sq_config.name, param);
 			break;
 		case SQ_SETSERVER:
-			strcpy(device->sq_config.server, inet_ntoa(*(struct in_addr*) param));
+			strcpy(device->sq_config.dynamic.server, inet_ntoa(*(struct in_addr*) param));
 			break;
 		default:
 			break;

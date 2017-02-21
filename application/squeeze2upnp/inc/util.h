@@ -49,7 +49,7 @@ s64_t	 	Time2Int(char *Time);
 char 	   	*XMLGetChangeItem(IXML_Document *doc, char *Tag, char *SearchAttr, char *SearchVal, char *RetAttr);
 const char 	*XMLGetLocalName(IXML_Document *doc, int Depth);
 IXML_Node  	*XMLAddNode(IXML_Document *doc, IXML_Node *parent, char *name, char *fmt, ...);
-IXML_Node  	*XMLUpdateNode(IXML_Document *doc, IXML_Node *parent, char *name, char *fmt, ...);
+IXML_Node  	*XMLUpdateNode(IXML_Document *doc, IXML_Node *parent, bool refresh, char *name, char *fmt, ...);
 int 	   	XMLAddAttribute(IXML_Document *doc, IXML_Node *parent, char *name, char *fmt, ...);
 char 	   	*XMLGetFirstDocumentItem(IXML_Document *doc, const char *item);
 int 	   	XMLFindAndParseService(IXML_Document *DescDoc, const char *location,

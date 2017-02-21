@@ -81,6 +81,9 @@ typedef	struct sq_dev_param_s {
 	u8_t		mac[6];
 	bool		send_icy;
 	bool		use_cli;
+	struct {
+		char 	server[SQ_STR_LENGTH];
+	} dynamic;
 } sq_dev_param_t;
 
 typedef struct

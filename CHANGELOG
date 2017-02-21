@@ -1,3 +1,7 @@
+0.2.10.6
+ - when IP address of <common> was set, all devices were forced we the same address
+ - correct XML updating of <name>
+ 
 0.2.10.5
 - add Linux sparc support (experimental)
 
