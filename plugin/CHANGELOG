@@ -1,5 +1,6 @@
 0.2.10.7
  - do not remove missing player when remove_count is set to 0
+ - (dev-2) handle very small files where decode_running state could be missed
 
 0.2.10.6
  - when IP address of <common> was set, all devices were forced we the same address
