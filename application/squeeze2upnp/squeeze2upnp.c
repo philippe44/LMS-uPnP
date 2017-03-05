@@ -1022,7 +1022,7 @@ static void *UpdateMRThread(void *args)
 	// then walk through the list of devices to remove missing ones
 	for (i = 0; i < MAX_RENDERERS; i++) {
 		Device = &glMRDevices[i];
-		if (!Device->InUse) continue;
+		if (!Device->InUse || !Device->Config.UPnPRemoveCount) continue;
 		if (Device->UPnPTimeOut && Device->UPnPMissingCount) Device->UPnPMissingCount--;
 		if (Device->UPnPConnected || Device->UPnPMissingCount) continue;
 
