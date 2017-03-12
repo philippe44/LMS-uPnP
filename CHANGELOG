@@ -1,7 +1,8 @@
 0.2.10.7
  - do not remove missing player when remove_count is set to 0
- - (dev-2) handle very small files where decode_running state could be missed
- - (dev-2) limit sample rate when slimproto sends a rate above max_supported
+ - handle very small files where decode_running state could be missed
+ - limit sample rate when slimproto sends a rate above max_supported
+ - in the UI, rename 'default parameters' to 'common parameters'
 
 0.2.10.6
  - when IP address of <common> was set, all devices were forced we the same address

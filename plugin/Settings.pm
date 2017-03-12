@@ -268,7 +268,7 @@ sub handler2 {
 	if ($xmlconfig) {
 	
 		$params->{'devices'} = \@{$xmlconfig->{'device'}};
-		unshift(@{$params->{'devices'}}, {'name' => '[default parameters]', 'udn' => '.common.'});
+		unshift(@{$params->{'devices'}}, {'name' => '[common parameters]', 'udn' => '.common.'});
 		
 		$log->info("reading config: ", $params->{'seldevice'});
 		$log->debug(Dumper($params->{'devices'}));
