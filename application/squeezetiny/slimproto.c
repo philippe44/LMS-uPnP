@@ -736,8 +736,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 				_stream_disconnect = true;
 			}
 
-			if ((ctx->status.stream_state == STREAMING_HTTP || ctx->status.stream_state == STREAMING_FILE
-				|| ctx->stream.disconnect == DISCONNECT_OK) && !ctx->sentSTMl) {
+			if ((ctx->status.stream_state == STREAMING_HTTP || ctx->status.stream_state == STREAMING_FILE) && !ctx->sentSTMl) {
 				// autostart 2 and 3 require cont to be received first
 				if (ctx->autostart == 0) {
 					_sendSTMl = true;

@@ -1,6 +1,5 @@
 0.2.10.7
  - do not remove missing player when remove_count is set to 0
- - handle very small files where decode_running state could be missed
  - limit sample rate when slimproto sends a rate above max_supported
  - in the UI, rename 'default parameters' to 'common parameters'
 
