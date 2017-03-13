@@ -59,6 +59,7 @@ struct sService {
 typedef struct sMRConfig
 {
 	int			StreamLength;		// length of the "fake" file
+	char		CodecStreamLength[SQ_STR_LENGTH];
 	sq_mode_t	ProcessMode;   		// DIRECT, STREAM, FULL
 	bool		NoZeroVolume;		// prevent volume to be set at 0 between tracks
 	bool		SeekAfterPause;

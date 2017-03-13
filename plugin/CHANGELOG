@@ -1,3 +1,7 @@
+0.2.11.0
+ - HTTP mode (chunked, fixed length, no length) can be set by codec using <codec_stream_length>
+ - update profile.wml for Sonos using the above
+ 
 0.2.10.7
  - do not remove missing player when remove_count is set to 0
  - limit sample rate when slimproto sends a rate above max_supported

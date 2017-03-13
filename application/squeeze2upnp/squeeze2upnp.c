@@ -75,6 +75,7 @@ log_level	upnp_loglevel = lINFO;
 
 tMRConfig			glMRConfig = {
 							-3L,
+							"",
 							SQ_STREAM,
 							false,
 							false,
@@ -318,7 +319,8 @@ static int	uPNPTerminate(void);
 
 			sq_get_metadata(device->SqueezeHandle, &device->MetaData, (action == SQ_SETURI) ? false : true);
 			p->file_size = device->MetaData.file_size ?
-						   device->MetaData.file_size : device->Config.StreamLength;
+						   device->MetaData.file_size :
+						   Codec2Length(device->Config.StreamLength, p->codec, device->Config.CodecStreamLength);
 
 			p->duration 	= device->MetaData.duration;
 			p->src_format 	= ext2format(device->MetaData.path);
