@@ -383,7 +383,7 @@ int Codec2Length(char CodecShort, char *Rule)
 		p += strlen(p) + 1;
 	}
 
-	free(Rule);
+	free(p);
 
 	if (!mode || (mode > 0 && mode < 100000000L)) mode = HTTP_DEFAULT_MODE;
 
