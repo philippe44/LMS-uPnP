@@ -366,7 +366,8 @@ struct sMR* SID2Device(char *SID)
 /*----------------------------------------------------------------------------*/
 int Codec2Length(char CodecShort, char *Rule)
 {
-	char *p = strdup(Rule);
+	char *buf = strdup(Rule);
+	char *p = buf;
 	char *end = p + strlen(p);
 	char *Codec = format2ext(CodecShort);
 	int mode = HTTP_DEFAULT_MODE;
@@ -383,7 +384,7 @@ int Codec2Length(char CodecShort, char *Rule)
 		p += strlen(p) + 1;
 	}
 
-	free(p);
+	free(buf);
 
 	if (!mode || (mode > 0 && mode < 100000000L)) mode = HTTP_DEFAULT_MODE;
 
