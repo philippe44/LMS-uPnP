@@ -364,17 +364,20 @@ struct sMR* SID2Device(char *SID)
 
 
 /*----------------------------------------------------------------------------*/
-int Codec2Length(int DefaultLength, char CodecShort, char *Rule)
+int Codec2Length(char CodecShort, char *Rule)
 {
 	char *p = strdup(Rule);
 	char *end = p + strlen(p);
 	char *Codec = format2ext(CodecShort);
+	int mode = HTTP_DEFAULT_MODE;
+
+	mode = atol(p);
 
 	// strtok is not re-entrant
 	while (p < end && (p = strtok(p, ",")) != NULL) {
 		if (stristr(p, Codec)) {
 			p = strchr(p, ':') + 1;
-			DefaultLength = atol(p);
+			mode = atol(p);
 			break;
 		}
 		p += strlen(p) + 1;
@@ -382,7 +385,9 @@ int Codec2Length(int DefaultLength, char CodecShort, char *Rule)
 
 	free(Rule);
 
-   return DefaultLength;
+	if (!mode || (mode > 0 && mode < 100000000L)) mode = HTTP_DEFAULT_MODE;
+
+	return mode;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -526,8 +531,7 @@ void SaveConfig(char *name, void *ref, bool full)
 	XMLUpdateNode(doc, common, false, "output_size", "%d", (u32_t) glDeviceParam.output_buf_size);
 	XMLUpdateNode(doc, common, false, "buffer_dir", glDeviceParam.buffer_dir);
 	XMLUpdateNode(doc, common, false, "buffer_limit", "%d", (u32_t) glDeviceParam.buffer_limit);
-	XMLUpdateNode(doc, common, false, "stream_length", "%d", (s32_t) glMRConfig.StreamLength);
-	XMLUpdateNode(doc, common, false, "codec_stream_length", glMRConfig.CodecStreamLength);
+	XMLUpdateNode(doc, common, false, "stream_length", glMRConfig.StreamLength);
 	XMLUpdateNode(doc, common, false, "stream_pacing_size", "%d", (int) glDeviceParam.stream_pacing_size);
 	XMLUpdateNode(doc, common, false, "max_GET_bytes", "%d", (s32_t) glDeviceParam.max_get_bytes);
 	XMLUpdateNode(doc, common, false, "keep_buffer_file", "%d", (int) glDeviceParam.keep_buffer_file);
@@ -616,8 +620,7 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "output_size")) sq_conf->output_buf_size = atol(val);
 	if (!strcmp(name, "buffer_dir")) strcpy(sq_conf->buffer_dir, val);
 	if (!strcmp(name, "buffer_limit")) sq_conf->buffer_limit = atol(val);
-	if (!strcmp(name, "stream_length")) Conf->StreamLength = atol(val);
-	if (!strcmp(name, "codec_stream_length")) strcpy(Conf->CodecStreamLength, val);
+	if (!strcmp(name, "stream_length")) strcpy(Conf->StreamLength, val);
 	if (!strcmp(name, "stream_pacing_size")) sq_conf->stream_pacing_size = atol(val);
 	if (!strcmp(name, "max_GET_bytes")) sq_conf->max_get_bytes = atol(val);
 	if (!strcmp(name, "send_icy")) sq_conf->send_icy = atol(val);

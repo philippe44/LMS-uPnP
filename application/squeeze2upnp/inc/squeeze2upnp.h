@@ -43,6 +43,8 @@
 #define	SCAN_TIMEOUT 	15
 #define SCAN_INTERVAL	30
 
+#define	HTTP_DEFAULT_MODE	-3
+
 
 enum 	eMRstate { UNKNOWN, STOPPED, PLAYING, PAUSED, TRANSITIONING };
 enum 	{ AVT_SRV_IDX = 0, REND_SRV_IDX, CNX_MGR_IDX, NB_SRV };
@@ -58,8 +60,7 @@ struct sService {
 
 typedef struct sMRConfig
 {
-	int			StreamLength;		// length of the "fake" file
-	char		CodecStreamLength[SQ_STR_LENGTH];
+	char		StreamLength[SQ_STR_LENGTH];
 	sq_mode_t	ProcessMode;   		// DIRECT, STREAM, FULL
 	bool		NoZeroVolume;		// prevent volume to be set at 0 between tracks
 	bool		SeekAfterPause;

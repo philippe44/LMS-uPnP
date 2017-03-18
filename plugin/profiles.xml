@@ -19,7 +19,7 @@
 	</profile>	
 	<profile name='foobar 2000'></profile>
 	<profile name='Sonos'>
-		<codec_stream_length>mp3:1000000000</codec_stream_length>
+		<stream_length>-3,mp3:1000000000</stream_length>
 		<raw_audio_format>wav,aiff</raw_audio_format>
 	</profile>
 	<profile name='Marantz'>

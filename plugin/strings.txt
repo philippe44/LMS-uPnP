@@ -171,12 +171,13 @@ PLUGIN_UPNPBRIDGE_PLAYEROPTIONS
 PLUGIN_UPNPBRIDGE_PLAYEROPTIONS_DESC
 	EN	Options for communication with LMS and UPnP player (see user guide)
 	EN	<br>- LMS does not provide the file size to be sent. The best HTTP mode is to use "chunked encoding" but some
-	EN	 UPnP players do not work with that option and require other solutions to set expected length
+	EN	UPnP players do not work with that option and require other solutions to set expected length
+	EN	A per-codec HTTP mode can be manually entered using syntax: "default_mode","codec_1":"mode","codec_N":"mode"
 	EN	<br>- Some players don't support gapless playback and thus don't automatically move to next track in playlist. 
 	
 PLUGIN_UPNPBRIDGE_STREAMLENGTH
 	EN	HTTP mode
-
+	
 PLUGIN_UPNPBRIDGE_ACCEPTNEXTURI
 	EN	Support gapless 
 

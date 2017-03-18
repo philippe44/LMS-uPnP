@@ -1,6 +1,6 @@
 0.2.11.0
- - HTTP mode (chunked, fixed length, no length) can be set by codec using <codec_stream_length>
- - update profile.wml for Sonos using the above
+ - <stream_length> enhanced to support HTTP mode by codec
+ - update profile.xml for Sonos using the above
  
 0.2.10.7
  - do not remove missing player when remove_count is set to 0

@@ -124,13 +124,24 @@
 		<div><b><i>[% "PLUGIN_UPNPBRIDGE_TEXTDEFAULT" | string %]</i></b></div>
 	[% END %]
 -->	
+	
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_PLAYEROPTIONS" desc="PLUGIN_UPNPBRIDGE_PLAYEROPTIONS_DESC" %]
+	
+		<script type="text/javascript">
+		function combo(thelist, theinput) {
+			theinput = document.getElementById(theinput);
+			var idx = thelist.selectedIndex;
+			theinput.value = thelist.options[idx].value;
+		}
+		</script>	
+	
 		[% "PLUGIN_UPNPBRIDGE_STREAMLENGTH" | string %]&nbsp
-		<select class="stdedit" name="stream_length" id="stream_length">
+		<select name="combo_stream_length" id="combo_stream_length" onchange="combo(this, 'stream_length')">
 		[% FOREACH entry IN [ ['',''], ['chunked','-3'], ['chunked (open range)','-2'], ['no size','-1'], ['no size (open range)','-4'], ['fixed large size','1000000000'], ['full buffering','-5'] ] %]
-			<option [% IF entry.1 == stream_length %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+			<option label="[% entry.0 %]" [% IF entry.1 == stream_length %]selected[% END %] value="[% entry.1 %]">
 		[% END %]
 		</select>
+		<input type="text" id="stream_length" name="stream_length" value="[% stream_length %]">
 		&nbsp&nbsp[% "PLUGIN_UPNPBRIDGE_ACCEPTNEXTURI" | string %]
 		&nbsp<select class="stdedit" name="accept_nexturi" id="accept_nexturi">
 		[% FOREACH entry IN YESNOBOX %] 
