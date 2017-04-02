@@ -820,6 +820,7 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 			NFREE(r);
 			break;
 		}
+		case UPNP_DISCOVERY_ADVERTISEMENT_BYEBYE:
 		case UPNP_EVENT_AUTORENEWAL_FAILED: {
 			struct Upnp_Event_Subscribe *d_Event = (struct Upnp_Event_Subscribe *)Event;
 			struct sMR *p;
@@ -827,8 +828,19 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 			p = SID2Device(d_Event->Sid);
 			if (!p) break;
 
-			LOG_WARN("[%p]: Auto-renewal failed", p);
-			p->UPnPConnected = false;
+			ithread_mutex_lock(&p->Mutex);
+
+			if (p->UPnPConnected) {
+				if (EventType == UPNP_EVENT_AUTORENEWAL_FAILED) {
+					LOG_WARN("[%p]: Auto-renewal failed", p);
+				} else {
+					LOG_INFO("[%p]: Player BYE-BYE", p);
+				}
+				p->UPnPConnected = false;
+			}
+
+			ithread_mutex_unlock(&p->Mutex);
+
 			break;
 		}
 		case UPNP_EVENT_SUBSCRIPTION_EXPIRED: {
@@ -855,7 +867,6 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 			break;
 		}
 		case UPNP_EVENT_SUBSCRIPTION_REQUEST:
-		case UPNP_DISCOVERY_ADVERTISEMENT_BYEBYE:
 		case UPNP_CONTROL_ACTION_REQUEST:
 		case UPNP_EVENT_UNSUBSCRIBE_COMPLETE:
 		case UPNP_CONTROL_GET_VAR_REQUEST:
@@ -931,9 +942,11 @@ static bool RefreshTO(char *UDN)
 
 	for (i = 0; i < MAX_RENDERERS; i++) {
 		if (glMRDevices[i].InUse && !strcmp(glMRDevices[i].UDN, UDN)) {
+			ithread_mutex_lock(&glMRDevices[i].Mutex);
 			glMRDevices[i].UPnPTimeOut = false;
 			glMRDevices[i].UPnPMissingCount = glMRDevices[i].Config.UPnPRemoveCount;
 			glMRDevices[i].ErrorCount = 0;
+			ithread_mutex_unlock(&glMRDevices[i].Mutex);
 			return true;
 		}
 	}
