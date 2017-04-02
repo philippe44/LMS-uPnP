@@ -1,3 +1,6 @@
+0.2.11.1
+ - When player properly disconnects (sends a bye-bye) event, it was not removed from list
+
 0.2.11.0
  - <stream_length> enhanced to support HTTP mode by codec
  - update profile.xml for Sonos using the above
