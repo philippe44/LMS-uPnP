@@ -12,6 +12,7 @@ sq_dev_handle_t mr_GetSqHandle(struct sMR *Device);
 struct sMR* 	mr_File2Device(const char *FileName);
 struct sMR* 	SID2Device(Upnp_SID Sid);
 struct sMR* 	CURL2Device(char *CtrlURL);
+struct sMR* 	UDN2Device(char *SID);
 struct sMR 		*IsDevice(void *Cookie);
 bool 			SetContentType(struct sMR *Device, sq_seturi_t *uri);
 

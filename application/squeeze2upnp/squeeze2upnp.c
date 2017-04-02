@@ -820,26 +820,34 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 			NFREE(r);
 			break;
 		}
-		case UPNP_DISCOVERY_ADVERTISEMENT_BYEBYE:
-		case UPNP_EVENT_AUTORENEWAL_FAILED: {
-			struct Upnp_Event_Subscribe *d_Event = (struct Upnp_Event_Subscribe *)Event;
-			struct sMR *p;
+		case UPNP_DISCOVERY_ADVERTISEMENT_BYEBYE: {
+			struct Upnp_Discovery *d_event = (struct Upnp_Discovery *) Event;
+			struct sMR *p = UDN2Device(d_event->DeviceId);
 
-			p = SID2Device(d_Event->Sid);
 			if (!p) break;
 
 			ithread_mutex_lock(&p->Mutex);
 
-			if (p->UPnPConnected) {
-				if (EventType == UPNP_EVENT_AUTORENEWAL_FAILED) {
-					LOG_WARN("[%p]: Auto-renewal failed", p);
-				} else {
-					LOG_INFO("[%p]: Player BYE-BYE", p);
-				}
+			if (!*d_event->ServiceType && p->UPnPConnected) {
 				p->UPnPConnected = false;
+				LOG_INFO("[%p]: Player BYE-BYE", p);
 			}
 
 			ithread_mutex_unlock(&p->Mutex);
+
+			break;
+		}
+		case UPNP_EVENT_AUTORENEWAL_FAILED: {
+			struct Upnp_Event_Subscribe *d_Event = (struct Upnp_Event_Subscribe *)Event;
+			struct sMR *p = SID2Device(d_Event->Sid);
+
+			if (!p) break;
+
+			ithread_mutex_lock(&p->Mutex);
+			p->UPnPConnected = false;
+			ithread_mutex_unlock(&p->Mutex);
+
+			LOG_WARN("[%p]: Auto-renewal failed", p);
 
 			break;
 		}

@@ -362,6 +362,21 @@ struct sMR* SID2Device(char *SID)
 	return NULL;
 }
 
+/*----------------------------------------------------------------------------*/
+struct sMR* UDN2Device(char *UDN)
+{
+	int i;
+
+	for (i = 0; i < MAX_RENDERERS; i++) {
+		if (!glMRDevices[i].InUse) continue;
+		if (!strcmp(glMRDevices[i].UDN, UDN)) {
+			return &glMRDevices[i];
+		}
+	}
+
+	return NULL;
+}
+
 
 /*----------------------------------------------------------------------------*/
 int Codec2Length(char CodecShort, char *Rule)
