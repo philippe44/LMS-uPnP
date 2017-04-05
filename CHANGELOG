@@ -1,3 +1,6 @@
+0.2.11.2
+ - When using LMS as image proxy, artwork_url must be prefixed with http://<server>:<port>
+
 0.2.11.1
  - When player properly disconnects (sends a bye-bye) event, it was not removed from list
 

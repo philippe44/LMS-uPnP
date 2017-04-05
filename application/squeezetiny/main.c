@@ -604,6 +604,14 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 		NFREE(rsp);
 	}
 
+	if (metadata->artwork && !strncmp(metadata->artwork, "/imageproxy/", strlen("/imageproxy/"))) {
+		char *artwork = malloc(SQ_STR_LENGTH);
+
+		snprintf(artwork, SQ_STR_LENGTH, "http://%s:%s%s", ctx->server_ip, ctx->server_port, metadata->artwork);
+		free(metadata->artwork);
+		metadata->artwork = artwork;
+	}
+
 	sq_default_metadata(metadata, false);
 
 	LOG_INFO("[%p]: idx %d\n\tartist:%s\n\talbum:%s\n\ttitle:%s\n\tgenre:%s\n\tduration:%d.%03d\n\tsize:%d\n\tcover:%s", ctx, idx,
