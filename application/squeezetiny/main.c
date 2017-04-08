@@ -285,7 +285,7 @@ bool cli_open_socket(struct thread_ctx_s *ctx) {
 	cmd = cli_encode(cmd);
 	if (req) len = sprintf(packet, "%s ?\n", cmd);
 	else len = sprintf(packet, "%s\n", cmd);
-	
+
 	LOG_SDEBUG("[%p]: cmd %s", ctx, packet);
 	send_packet((u8_t*) packet, len, ctx->cli_sock);
 	// first receive the tag and then point to the last '\n'
@@ -670,6 +670,20 @@ void *sq_get_info(const char *urn, s32_t *size, char **content_type, char **dlna
 		return NULL;
 	}
 
+	/*
+	When using "fake length" some players (Sonos) will try to re-open the same
+	(old) file after they receive the "setnexturi" command. It's because they
+	have not received the expected amount of data, so they try another time. The
+	solution is to lock access to the current file and refuse to reopen it or
+	getinfo from it once the full content has been set, until the player has
+	requested the next file
+	*/
+	if (out->lock) {
+		*content_type = strdup("audio/unknown");
+		LOG_INFO("[%p]: context is locked", out->owner);
+		return NULL;
+	}
+
 	// point to the right context !
 	i--;
 
@@ -757,8 +771,20 @@ void *sq_open(const char *urn)
 
 	for (i = 0; i < MAX_PLAYER && !out; i++) {
 		if (!thread_ctx[i].in_use) continue;
-		if (strstr(urn, thread_ctx[i].out_ctx[0].buf_name)) out = &thread_ctx[i].out_ctx[0];
-		if (strstr(urn, thread_ctx[i].out_ctx[1].buf_name)) out = &thread_ctx[i].out_ctx[1];
+		if (strstr(urn, thread_ctx[i].out_ctx[0].buf_name)) {
+			out = &thread_ctx[i].out_ctx[0];
+			thread_ctx[i].out_ctx[1].lock = false;
+		}
+		else if (strstr(urn, thread_ctx[i].out_ctx[1].buf_name)) {
+			out = &thread_ctx[i].out_ctx[1];
+			thread_ctx[i].out_ctx[0].lock = false;
+		}
+	}
+
+	// see getinfo comment - but this should not happen
+	if (out && out->lock) {
+		LOG_WARN("[%p]: trying to open a locked context, should not be here", out->owner);
+		out = NULL;
 	}
 
 	if (out) {
@@ -991,6 +1017,8 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 	*/
 	if ((!read_b || ((p->file_size > 0 ) && (p->read_count_t >= p->file_size))) && wait && !p->write_file) {
 		ctx->read_ended = true;
+		// see getinfo comment about lockign context after full read
+		p->lock = true;
 		wake_controller(ctx);
 		LOG_INFO("[%p]: read (end of track) w:%d", ctx, wait);
 	}
@@ -1199,6 +1227,7 @@ bool sq_run_device(sq_dev_handle_t handle, sq_dev_param_t *param)
 		mutex_create(ctx->out_ctx[i].mutex);
 		ctx->out_ctx[i].owner = ctx;
 		ctx->out_ctx[i].idx = i;
+		ctx->out_ctx[i].lock = false;
 		strcpy(ctx->out_ctx[i].content_type, "audio/unknown");
 	}
 
