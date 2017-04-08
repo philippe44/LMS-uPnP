@@ -103,6 +103,7 @@ struct sMR {
 	sq_metadata_t	MetaData;
 	sq_action_t		sqState;
 	s64_t			Elapsed, Duration;
+	bool			ExpectStop;
 	u8_t			*seqN;
 	void			*WaitCookie, *StartCookie;
 	tQueue			ActionQueue;

@@ -343,9 +343,9 @@ static int	uPNPTerminate(void);
 
 			if (action == SQ_SETNEXTURI) {
 				device->NextURI = strdup(uri);
-				device->NextDuration = p->duration / 1000;
+				device->NextDuration = p->duration;
 
-				if (device->Config.AcceptNextURI && device->NextDuration > device->Config.MinGapless){
+				if (device->Config.AcceptNextURI && device->NextDuration > device->Config.MinGapless * 1000){
 					AVTSetNextURI(device);
 					sq_free_metadata(&device->MetaData);
 				}
@@ -355,6 +355,8 @@ static int	uPNPTerminate(void);
 			else {
 				NFREE(device->CurrentURI);
 				device->CurrentURI = strdup(uri);
+				device->Duration = p->duration;
+				device->ExpectStop = false;
 
 				AVTSetURI(device);
 				sq_free_metadata(&device->MetaData);
@@ -402,6 +404,7 @@ static int	uPNPTerminate(void);
 			NFREE(device->NextURI);
 			sq_free_metadata(&device->MetaData);
 			device->sqState = action;
+			device->ExpectStop = true;
 			break;
 		case SQ_PAUSE:
 			AVTBasic(device, "Pause");
@@ -481,6 +484,8 @@ void SyncNotifState(char *State, struct sMR* Device)
 				Device->CurrentURI = malloc(strlen(Device->NextURI) + 1);
 				strcpy(Device->CurrentURI, Device->NextURI);
 				NFREE(Device->NextURI);
+				Device->Duration = Device->NextDuration;
+				Device->ExpectStop = false;
 				Device->NextDuration = 0;
 
 				AVTSetURI(Device);
@@ -503,7 +508,7 @@ void SyncNotifState(char *State, struct sMR* Device)
 		// This is an end of track and nothing else to play or a LMS stop
 		else {
 			LOG_INFO("%s: uPNP stop", Device->FriendlyName);
-			if (Device->State == PAUSED) Param = true;
+			if (Device->State == PAUSED || !Device->ExpectStop) Param = true;
 			Event = SQ_STOP;
 		}
 
@@ -692,6 +697,7 @@ int CallbackActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 				r = XMLGetFirstDocumentItem(Action->ActionResult, "RelTime");
 				if (r) {
 					p->Elapsed = 1000L * Time2Int(r);
+					if (p->Duration && (p->Elapsed + 5000 > p->Duration)) p->ExpectStop = true;
 					LOG_SDEBUG("[%p]: position %d (cookie %p)", p, p->Elapsed, Cookie);
 					// discard any time info unless we are confirmed playing
 					sq_notify(p->SqueezeHandle, p, SQ_TIME, NULL, &p->Elapsed);
@@ -731,6 +737,8 @@ int CallbackActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 					LOG_INFO("Detected URI change %s %s", p->CurrentURI, r);
 					NFREE(p->CurrentURI);
 					NFREE(p->NextURI);
+					p->Duration = p->NextDuration;
+					p->ExpectStop = false;
 					p->CurrentURI = malloc(strlen(r) + 1);
 					strcpy(p->CurrentURI, r);
 					ithread_mutex_unlock(&p->Mutex);

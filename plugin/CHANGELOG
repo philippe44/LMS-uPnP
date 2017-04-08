@@ -1,3 +1,6 @@
+0.2.11.3.2
+ - allow "stop" from remote to stop LMS (will not work in the last 5 seconds of playback)
+ 
 0.2.11.3.1
  - when fake size HTTP length is required (Sonos), stop the player from trying to re-open the file once it has all been sent
  - on Windows, retry sending on CLI command socket as it fails with ENOTCONN sometimes at first send after opening ...
