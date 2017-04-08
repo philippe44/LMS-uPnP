@@ -1,6 +1,7 @@
-0.2.11.3-dev-1
+0.2.11.3.1
  - when fake size HTTP length is required (Sonos), stop the player from trying to re-open the file once it has all been sent
  - on Windows, retry sending on CLI command socket as it fails with ENOTCONN sometimes at first send after opening ...
+ - development versions now have an extra digit to enable auto-update
  
 0.2.11.2
  - When using LMS as image proxy, artwork_url must be prefixed with http://<server>:<port>
