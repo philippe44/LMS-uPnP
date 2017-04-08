@@ -920,7 +920,7 @@ void output_flush(struct thread_ctx_s *ctx) {
 			remove(buf);
 		}
 
-		ctx->out_ctx[i].lock = false;
+		ctx->out_ctx[i].completed = false;
 
 	}
 	UNLOCK_S;UNLOCK_O;
