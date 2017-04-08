@@ -1,3 +1,6 @@
+0.2.11.3.3
+ - ICY update url built correctly when using imageproxy
+ 
 0.2.11.3.2
  - allow "stop" from remote to stop LMS (will not work in the last 5 seconds of playback)
  

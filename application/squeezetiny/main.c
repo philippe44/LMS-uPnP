@@ -33,6 +33,7 @@
 #include <ctype.h>
 
 #define TITLE "Squeezelite " VERSION ", Copyright 2012-2014 Adrian Smith + Philippe."
+#define IMAGEPROXY "/imageproxy/"
 
 #ifndef NO_CODEC
 #define CODECS_BASE "flac,pcm,mp3,ogg,aac"
@@ -470,11 +471,19 @@ void sq_update_icy(struct out_ctx_s *p)
 	else artwork = NULL;
 	NFREE(rsp);
 
-	if (artwork && (!p->icy.artwork || strcmp(p->icy.artwork, artwork)))  {
+	if (artwork && (!p->icy.artwork || !strstr(p->icy.artwork, artwork)))  {
 		NFREE(p->icy.artwork);
-		p->icy.artwork = strdup(artwork);
+
+		if (!strncmp(artwork, IMAGEPROXY, strlen(IMAGEPROXY))) {
+			p->icy.artwork = malloc(SQ_STR_LENGTH);
+			snprintf(p->icy.artwork, SQ_STR_LENGTH, "http://%s:%s%s", ctx->server_ip, ctx->server_port, artwork);
+		} else {
+			p->icy.artwork = strdup(artwork);
+		}
+
 		p->icy.update = true;
 	}
+
 	NFREE(artwork);
 }
 
@@ -604,7 +613,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 		NFREE(rsp);
 	}
 
-	if (metadata->artwork && !strncmp(metadata->artwork, "/imageproxy/", strlen("/imageproxy/"))) {
+	if (metadata->artwork && !strncmp(metadata->artwork, IMAGEPROXY, strlen(IMAGEPROXY))) {
 		char *artwork = malloc(SQ_STR_LENGTH);
 
 		snprintf(artwork, SQ_STR_LENGTH, "http://%s:%s%s", ctx->server_ip, ctx->server_port, metadata->artwork);
