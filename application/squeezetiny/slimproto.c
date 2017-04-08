@@ -111,6 +111,7 @@ void send_packet(u8_t *packet, size_t len, sockfd sock) {
 				usleep(1000);
 				continue;
 			}
+			LOG_WARN("failed writing to socket: %u, %s", error, strerror(last_error()));
 			return;
 		}
 		ptr += n;
