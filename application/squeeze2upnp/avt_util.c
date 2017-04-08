@@ -335,10 +335,8 @@ int GetProtocolInfo(struct sMR *Device, void *Cookie)
 		XMLAddNode(doc, node, "dc:title", MetaData->title);
 		XMLAddNode(doc, node, "dc:creator", MetaData->artist);
 		XMLAddNode(doc, node, "upnp:genre", MetaData->genre);
+		if (MetaData->artwork) XMLAddNode(doc, node, "upnp:albumArtURI", "%s", MetaData->artwork);
 	}
-
-	if (MetaData->artwork && Config->SendMetaData)
-		XMLAddNode(doc, node, "upnp:albumArtURI", "%s", MetaData->artwork);
 
 	if (MetaData->duration) {
 		div_t duration 	= div(MetaData->duration, 1000);
