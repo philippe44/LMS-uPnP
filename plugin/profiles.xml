@@ -10,8 +10,24 @@
 	<L24_format>2</L24_format>
 	<max_volume>100</max_volume>
 	<match_endianness>0</match_endianness>
-	<max_read_wait>600</max_read_wait>
+	<max_read_wait>1200</max_read_wait>
 	<profile name=''></profile>
+	<profile name='_safe mode'>
+	<stream_length>1000000000</stream_length>
+	<accept_nexturi>0</accept_nexturi>
+	<seek_after_pause>1</seek_after_pause>
+	<codecs>pcm</codecs>
+	<raw_audio_format>raw,wave,aiff</raw_audio_format>
+	</profile>
+	<profile name='_normal mode'>
+	<stream_length>-3</stream_length>
+	<accept_nexturi>1</accept_nexturi>
+	<seek_after_pause>0</seek_after_pause>
+	<codecs>flc,mp3,pcm,aif</codecs>
+	<sample_rate>48000</sample_rate>
+	<raw_audio_format>wave,raw</raw_audio_format>
+	<match_endianness>1</match_endianness>
+	</profile>
 	<profile name='Jongo S3x'>
 		<stream_length>1000000000</stream_length>
 		<codecs>aac,pcm,flc,mp3</codecs>

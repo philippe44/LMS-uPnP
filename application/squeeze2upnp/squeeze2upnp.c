@@ -356,7 +356,6 @@ static int	uPNPTerminate(void);
 				NFREE(device->CurrentURI);
 				device->CurrentURI = strdup(uri);
 				device->Duration = p->duration;
-				device->ExpectStop = false;
 
 				AVTSetURI(device);
 				sq_free_metadata(&device->MetaData);
@@ -485,7 +484,6 @@ void SyncNotifState(char *State, struct sMR* Device)
 				strcpy(Device->CurrentURI, Device->NextURI);
 				NFREE(Device->NextURI);
 				Device->Duration = Device->NextDuration;
-				Device->ExpectStop = false;
 				Device->NextDuration = 0;
 
 				AVTSetURI(Device);
@@ -534,6 +532,7 @@ void SyncNotifState(char *State, struct sMR* Device)
 
 		LOG_INFO("%s: uPNP playing", Device->FriendlyName);
 		Device->State = PLAYING;
+		Device->ExpectStop = false;
 		// avoid double play (causes a restart) in case of unsollicited play
 	}
 
@@ -697,7 +696,7 @@ int CallbackActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 				r = XMLGetFirstDocumentItem(Action->ActionResult, "RelTime");
 				if (r) {
 					p->Elapsed = 1000L * Time2Int(r);
-					if (p->Duration && (p->Elapsed + 5000 > p->Duration)) p->ExpectStop = true;
+					if (!p->NextURI && p->Duration && (p->Elapsed + 5000 > p->Duration)) p->ExpectStop = true;
 					LOG_SDEBUG("[%p]: position %d (cookie %p)", p, p->Elapsed, Cookie);
 					// discard any time info unless we are confirmed playing
 					sq_notify(p->SqueezeHandle, p, SQ_TIME, NULL, &p->Elapsed);
@@ -738,7 +737,6 @@ int CallbackActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 					NFREE(p->CurrentURI);
 					NFREE(p->NextURI);
 					p->Duration = p->NextDuration;
-					p->ExpectStop = false;
 					p->CurrentURI = malloc(strlen(r) + 1);
 					strcpy(p->CurrentURI, r);
 					ithread_mutex_unlock(&p->Mutex);
