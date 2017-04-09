@@ -370,10 +370,8 @@ int GetProtocolInfo(struct sMR *Device, void *Cookie)
 }
 
 
-#if 0
-// typical DIDL header
-
-"<DIDL-Lite xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:upnp=\"urn:schemas-upnp-org:metadata-1-0/upnp/\" xmlns=\"urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/\">"
+/* typical DIDL header
+"<DIDL-Lite xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:upnp=\"urn:schemas-upnp-org:metadata-1-0/upnp/\" xmlns=\"urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/\">"
 	"<item id=\"{2148F1D5-1BE6-47C3-81AF-615A960E3704}.0.4\" restricted=\"0\" parentID=\"4\">"
 		"<dc:title>Make You Feel My Love</dc:title>"
 		"<dc:creator>Adele</dc:creator>"
@@ -409,6 +407,6 @@ int GetProtocolInfo(struct sMR *Device, void *Cookie)
 		"</desc>"
    "</item>"
 "</DIDL-Lite>"
-#endif
+*/
 
 

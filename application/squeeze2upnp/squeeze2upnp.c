@@ -63,7 +63,7 @@ static char			*glSaveConfigFile = NULL;
 bool				glAutoSaveConfigFile = false;
 bool				glGracefullShutdown = true;
 
-log_level	slimproto_loglevel = lWARN;
+log_level	slimproto_loglevel = lINFO;
 log_level	stream_loglevel = lWARN;
 log_level	decode_loglevel = lWARN;
 log_level	output_loglevel = lWARN;
@@ -75,7 +75,6 @@ log_level	upnp_loglevel = lINFO;
 
 tMRConfig			glMRConfig = {
 							"-3",
-							SQ_STREAM,
 							false,
 							false,
 							false,
@@ -113,11 +112,6 @@ sq_dev_param_t glDeviceParam = {
 					 // both are multiple of 3*4(2) for buffer alignement on sample
 					(200 * 1024 * (4*3)),
 					(200 * 1024 * (4*3)),
-					SQ_STREAM,
-					{ 	SQ_RATE_384000, SQ_RATE_352000, SQ_RATE_192000, SQ_RATE_176400,
-						SQ_RATE_96000, SQ_RATE_48000, SQ_RATE_44100,
-						SQ_RATE_32000, SQ_RATE_24000, SQ_RATE_22500, SQ_RATE_16000,
-						SQ_RATE_12000, SQ_RATE_11025, SQ_RATE_8000, 0 },
 					-1,         // get can retrun as much as required by UPnP
 					"pcm,flc,mp3",
 					"?",
@@ -187,24 +181,10 @@ static struct sLocList {
 		   "  -x <config file>\tread config from file (default is ./config.xml)\n"
 		   "  -i <config file>\tdiscover players, save <config file> and exit\n"
 		   "  -I \t\t\tauto save config at every network scan\n"
-//		   "  -c <codec1>,<codec2>\tRestrict codecs to those specified, otherwise load all available codecs; known codecs: " CODECS "\n"
-//		   "  -e <codec1>,<codec2>\tExplicitly exclude native support of one or more codecs; known codecs: " CODECS "\n"
 		   "  -f <logfile>\t\tWrite debug to logfile\n"
-  		   "  -p <pid file>\t\twrite PID in file\n"
+		   "  -p <pid file>\t\twrite PID in file\n"
 		   "  -d <log>=<level>\tSet logging level, logs: all|slimproto|stream|decode|output|web|main|util|upnp, level: error|warn|info|debug|sdebug\n"
-#if RESAMPLE
-		   "  -R -u [params]\tResample, params = <recipe>:<flags>:<attenuation>:<precision>:<passband_end>:<stopband_start>:<phase_response>,\n"
-		   "  \t\t\t recipe = (v|h|m|l|q)(L|I|M)(s) [E|X], E = exception - resample only if native rate not supported, X = async - resample to max rate for device, otherwise to max sync rate\n"
-		   "  \t\t\t flags = num in hex,\n"
-		   "  \t\t\t attenuation = attenuation in dB to apply (default is -1db if not explicitly set),\n"
-		   "  \t\t\t precision = number of bits precision (NB. HQ = 20. VHQ = 28),\n"
-		   "  \t\t\t passband_end = number in percent (0dB pt. bandwidth to preserve. nyquist = 100%%),\n"
-		   "  \t\t\t stopband_start = number in percent (Aliasing/imaging control. > passband_end),\n"
-		   "  \t\t\t phase_response = 0-100 (0 = minimum / 50 = linear / 100 = maximum)\n"
-#endif
-#if DSD
-		   "  -D [delay]\t\tOutput device supports DSD over PCM (DoP), delay = optional delay switching between PCM and DoP in ms\n"
-#endif
+
 #if LINUX || FREEBSD
 		   "  -z \t\t\tDaemonize\n"
 #endif
@@ -234,22 +214,6 @@ static struct sLocList {
 #if WINEVENT
 		   " WINEVENT"
 #endif
-#if RESAMPLE_MP
-		   " RESAMPLE_MP"
-#else
-#if RESAMPLE
-		   " RESAMPLE"
-#endif
-#endif
-#if FFMPEG
-		   " FFMPEG"
-#endif
-#if DSD
-		   " DSD"
-#endif
-#if LINKALL
-		   " LINKALL"
-#endif
 		   "\n\n";
 
 static char license[] =
@@ -263,10 +227,6 @@ static char license[] =
 		   "GNU General Public License for more details.\n\n"
 		   "You should have received a copy of the GNU General Public License\n"
 		   "along with this program.  If not, see <http://www.gnu.org/licenses/>.\n\n"
-#if DSD
-		   "Contains dsd2pcm library Copyright 2009, 2011 Sebastian Gesemann which\n"
-		   "is subject to its own license.\n\n"
-#endif
 	;
 
 /*----------------------------------------------------------------------------*/
@@ -1455,14 +1415,7 @@ bool ParseArgs(int argc, char **argv) {
 		if (strstr("stxdfpib", opt) && optind < argc - 1) {
 			optarg = argv[optind + 1];
 			optind += 2;
-		} else if (strstr("tzZIk"
-#if RESAMPLE
-						  "uR"
-#endif
-#if DSD
-						  "D"
-#endif
-		  , opt)) {
+		} else if (strstr("tzZIk", opt)) {
 			optarg = NULL;
 			optind += 1;
 		}
@@ -1478,16 +1431,6 @@ bool ParseArgs(int argc, char **argv) {
 		case 'b':
 			strcpy(glUPnPSocket, optarg);
 			break;
-#if RESAMPLE
-		case 'u':
-		case 'R':
-			if (optind < argc && argv[optind] && argv[optind][0] != '-') {
-				gl_resample = argv[optind++];
-			} else {
-				gl_resample = "";
-			}
-			break;
-#endif
 		case 'f':
 			glLogFile = optarg;
 			break;
@@ -1510,14 +1453,6 @@ bool ParseArgs(int argc, char **argv) {
 #if LINUX || FREEBSD
 		case 'z':
 			glDaemonize = true;
-			break;
-#endif
-#if DSD
-		case 'D':
-			gl_dop = true;
-			if (optind < argc && argv[optind] && argv[optind][0] != '-') {
-				gl_dop_delay = atoi(argv[optind++]);
-			}
 			break;
 #endif
 		case 'd':

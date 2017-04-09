@@ -1,10 +1,13 @@
+0.2.12.0.1
+ - Big fat cleanup of all old useless squeezelite items (RESAMPLE, DSD, PROCESS, decoder, mode, codecs)
+
 0.2.11.3.4
  - MinGapless should be compared in ms, not s
  
 0.2.11.3.3
  - ICY update url built correctly when using imageproxy
  - add "_safe mode" and "_normal mode" to profiles.xml
- - Reset expect stop only when receiving a "PLAYING" state confirm
+ - Reset ExpectStop only when receiving a "PLAYING" state confirm
  
 0.2.11.3.2
  - allow "stop" from remote to stop LMS (will not work in the last 5 seconds of playback)

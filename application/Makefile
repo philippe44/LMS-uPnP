@@ -8,7 +8,7 @@ VALGRIND	= $(BASE)/valgrind
 UPNP 		= $(BASE)/libupnp/1.6.19
 FETCHER		= $(BASE)/http_fetcher
 
-DEFINES 	= -DNO_CODEC -D_FILE_OFFSET_BITS=64 
+DEFINES 	= -D_FILE_OFFSET_BITS=64 
 
 vpath %.c $(TOOLS):$(SRC):$(SQUEEZETINY)
 
@@ -21,7 +21,7 @@ INCLUDE = -I. \
 		  		  
 DEPS	= $(SQUEEZETINY)/squeezedefs.h
 				  
-SOURCES = 	slimproto.c buffer.c stream.c utils.c output_mr.c decode.c  main.c \
+SOURCES = 	slimproto.c buffer.c stream.c utils.c output_mr.c main.c \
 			util_common.c avt_util.c mr_util.c util.c webserver.c squeeze2upnp.c \
 			log_util.c
 		

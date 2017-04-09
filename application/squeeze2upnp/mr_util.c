@@ -553,7 +553,6 @@ void SaveConfig(char *name, void *ref, bool full)
 	XMLUpdateNode(doc, common, false, "keep_buffer_file", "%d", (int) glDeviceParam.keep_buffer_file);
 	XMLUpdateNode(doc, common, false, "enabled", "%d", (int) glMRConfig.Enabled);
 	XMLUpdateNode(doc, common, false, "roon_mode", "%d", (int) glMRConfig.RoonMode);
-	XMLUpdateNode(doc, common, false, "process_mode", "%d", (int) glMRConfig.ProcessMode);
 	XMLUpdateNode(doc, common, false, "codecs", glDeviceParam.codecs);
 	XMLUpdateNode(doc, common, false, "sample_rate", "%d", (int) glDeviceParam.sample_rate);
 	XMLUpdateNode(doc, common, false, "L24_format", "%d", (int) glDeviceParam.L24_format);
@@ -642,10 +641,6 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "send_icy")) sq_conf->send_icy = atol(val);
 	if (!strcmp(name, "enabled")) Conf->Enabled = atol(val);
 	if (!strcmp(name, "roon_mode")) Conf->RoonMode = atol(val);
-	if (!strcmp(name, "process_mode")) {
-		Conf->ProcessMode = atol(val);
-		sq_conf->mode = Conf->ProcessMode;
-	}
 	if (!strcmp(name, "codecs")) strcpy(sq_conf->codecs, val);
 	if (!strcmp(name, "sample_rate"))sq_conf->sample_rate = atol(val);
 	if (!strcmp(name, "L24_format"))sq_conf->L24_format = atol(val);

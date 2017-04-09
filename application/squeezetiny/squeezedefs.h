@@ -22,7 +22,7 @@
 #ifndef __SQUEEZEDEFS_H
 #define __SQUEEZEDEFS_H
 
-#define VERSION "v0.2.11.3.4"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.12.0.1"" ("__DATE__" @ "__TIME__")"
 
 #include "platform.h"
 
@@ -40,7 +40,6 @@
 #include <signal.h>
 
 #define STREAM_THREAD_STACK_SIZE  64 * 1024
-#define DECODE_THREAD_STACK_SIZE 32 * 1024
 #define OUTPUT_THREAD_STACK_SIZE  64 * 1024
 #define SLIMPROTO_THREAD_STACK_SIZE  64 * 1024
 #define thread_t pthread_t;

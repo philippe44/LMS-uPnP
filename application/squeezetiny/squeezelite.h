@@ -40,106 +40,6 @@
 #define WINEVENT  1
 #endif
 
-#if defined(RESAMPLE) || defined(RESAMPLE_MP)
-#undef  RESAMPLE
-#define RESAMPLE  1 // resampling
-#define PROCESS   1 // any sample processing (only resampling at present)
-#else
-#define RESAMPLE  0
-#define PROCESS   0
-#endif
-#if defined(RESAMPLE_MP)
-#undef RESAMPLE_MP
-#define RESAMPLE_MP 1
-#else
-#define RESAMPLE_MP 0
-#endif
-
-#if defined(FFMPEG)
-#undef FFMPEG
-#define FFMPEG    1
-#else
-#define FFMPEG    0
-#endif
-
-#if defined(DSD)
-#undef DSD
-#define DSD       1
-#define IF_DSD(x) { x }
-#else
-#undef DSD
-#define DSD       0
-#define IF_DSD(x)
-#endif
-
-#if defined(LINKALL)
-#undef LINKALL
-#define LINKALL   1 // link all libraries at build time - requires all to be available at run time
-#else
-#define LINKALL   0
-#endif
-
-
-#if !LINKALL
-
-// dynamically loaded libraries at run time
-
-#if LINUX
-#define LIBFLAC "libFLAC.so.8"
-#define LIBMAD  "libmad.so.0"
-#define LIBMPG "libmpg123.so.0"
-#define LIBVORBIS "libvorbisfile.so.3"
-#define LIBTREMOR "libvorbisidec.so.1"
-#define LIBFAAD "libfaad.so.2"
-#define LIBAVUTIL   "libavutil.so.%d"
-#define LIBAVCODEC  "libavcodec.so.%d"
-#define LIBAVFORMAT "libavformat.so.%d"
-#define LIBSOXR "libsoxr.so.0"
-#endif
-
-#if OSX
-#define LIBFLAC "libFLAC.8.dylib"
-#define LIBMAD  "libmad.0.dylib"
-#define LIBMPG "libmpg123.0.dylib"
-#define LIBVORBIS "libvorbisfile.3.dylib"
-#define LIBTREMOR "libvorbisidec.1.dylib"
-#define LIBFAAD "libfaad.2.dylib"
-#define LIBAVUTIL   "libavutil.%d.dylib"
-#define LIBAVCODEC  "libavcodec.%d.dylib"
-#define LIBAVFORMAT "libavformat.%d.dylib"
-#define LIBSOXR "libsoxr.0.dylib"
-#endif
-
-#if WIN
-#define LIBFLAC "libFLAC.dll"
-#define LIBMAD  "libmad-0.dll"
-#define LIBMPG "libmpg123-0.dll"
-#define LIBVORBIS "libvorbisfile.dll"
-#define LIBTREMOR "libvorbisidec.dll"
-#define LIBFAAD "libfaad2.dll"
-#define LIBAVUTIL   "avutil-%d.dll"
-#define LIBAVCODEC  "avcodec-%d.dll"
-#define LIBAVFORMAT "avformat-%d.dll"
-#define LIBSOXR "libsoxr.dll"
-#endif
-
-#if FREEBSD
-#define LIBFLAC "libFLAC.so.11"
-#define LIBMAD  "libmad.so.2"
-#define LIBMPG "libmpg123.so.0"
-#define LIBVORBIS "libvorbisfile.so.6"
-#define LIBTREMOR "libvorbisidec.so.1"
-#define LIBFAAD "libfaad.so.2"
-#define LIBAVUTIL   "libavutil.so.%d"
-#define LIBAVCODEC  "libavcodec.so.%d"
-#define LIBAVFORMAT "libavformat.so.%d"
-#endif
-
-#endif // !LINKALL
-
-// config options
-#define OUTPUTBUF_SIZE_CROSSFADE (OUTPUTBUF_SIZE * 12 / 10)
-
 #define MAX_HEADER 4096 // do not reduce as icy-meta max is 4080
 
 #include <stdio.h>
@@ -181,7 +81,7 @@ typedef int sockfd;
 #define wake_signal(e) write(e.fds[1], ".", 1)
 #define wake_clear(e) char c[10]; read(e, &c, 10)
 #define wake_close(e) close(e.fds[0]); close(e.fds[1])
-struct wake { 
+struct wake {
 	int fds[2];
 };
 #endif
@@ -204,12 +104,6 @@ struct wake {
 #else
 #error can not support u64_t
 #endif
-
-#define MAX_SILENCE_FRAMES 2048
-
-#define FIXED_ONE 0x10000
-
-#define BYTES_PER_FRAME 8
 
 // utils.c (non logging)
 typedef enum { EVENT_TIMEOUT = 0, EVENT_READ, EVENT_WAKE } event_type;
@@ -309,147 +203,18 @@ void stream_file(const char *header, size_t header_len, unsigned threshold, stru
 void stream_sock(u32_t ip, u16_t port, const char *header, size_t header_len, unsigned threshold, bool cont_wait, struct thread_ctx_s *ctx);
 bool stream_disconnect(struct thread_ctx_s *ctx);
 
-// decode.c
-typedef enum { DECODE_STOPPED = 0, DECODE_RUNNING, DECODE_COMPLETE, DECODE_ERROR } decode_state;
-
-struct decodestate {
-	decode_state state;
-	bool new_stream;
-	mutex_type mutex;
-#if PROCESS
-	bool direct;
-	bool process;
-#endif
-};
-
-#if PROCESS
-struct processstate {
-	u8_t *inbuf, *outbuf;
-	unsigned max_in_frames, max_out_frames;
-	unsigned in_frames, out_frames;
-	unsigned in_sample_rate, out_sample_rate;
-	unsigned long total_in, total_out;
-};
-#endif
-
-struct codec {
-	char id;
-	char *types;
-	unsigned min_read_bytes;
-	unsigned min_space;
-	void (*open)(u8_t sample_size, u8_t sample_rate, u8_t channels, u8_t endianness);
-	void (*close)(void);
-	decode_state (*decode)(void);
-};
-
-void decode_init(const char *include_codecs, const char *exclude_codecs, bool full);
-void decode_thread_init(struct thread_ctx_s *ctx);
-
-void decode_close(struct thread_ctx_s *ctx);
-void decode_flush(struct thread_ctx_s *ctx);
-unsigned decode_newstream(unsigned sample_rate, unsigned supported_rates[], struct thread_ctx_s *ctx);
-void codec_open(u8_t format, u8_t sample_size, u8_t sample_rate, u8_t channels, u8_t endianness, struct thread_ctx_s *ctx);
-
-#if PROCESS
-// process.c
-void process_samples(void);
-void process_drain(void);
-void process_flush(void);
-unsigned process_newstream(bool *direct, unsigned raw_sample_rate, unsigned supported_rates[]);
-void process_init(char *opt);
-#endif
-
-#if RESAMPLE
-// resample.c
-void resample_samples(struct processstate *process);
-bool resample_drain(struct processstate *process);
-bool resample_newstream(struct processstate *process, unsigned raw_sample_rate, unsigned supported_rates[]);
-void resample_flush(void);
-bool resample_init(char *opt);
-#endif
-
-// output.c output_pack.c
-typedef enum { OUTPUT_OFF = -1, OUTPUT_STOPPED = 0, OUTPUT_BUFFER, OUTPUT_RUNNING, 
-			   OUTPUT_PAUSE_FRAMES, OUTPUT_SKIP_FRAMES, OUTPUT_START_AT } output_state;
-
-typedef enum { S32_LE, S24_LE, S24_3LE, S16_LE } output_format;
-
-typedef enum { FADE_INACTIVE = 0, FADE_DUE, FADE_ACTIVE } fade_state;
-typedef enum { FADE_UP = 1, FADE_DOWN, FADE_CROSS } fade_dir;
-typedef enum { FADE_NONE = 0, FADE_CROSSFADE, FADE_IN, FADE_OUT, FADE_INOUT } fade_mode;
-
 struct outputstate {
-	output_state state;
-	output_format format;
-	const char *device;
 	bool  track_started;
-	int (* write_cb)(frames_t out_frames, bool silence, s32_t gainL, s32_t gainR, s32_t cross_gain_in, s32_t cross_gain_out, s32_t **cross_ptr);
-	unsigned start_frames;
-	unsigned frames_played;
-	unsigned frames_played_dmp;// frames played at the point delay is measured
-	unsigned current_sample_rate;
-	unsigned supported_rates[MAX_SUPPORTED_SAMPLERATES]; // ordered largest first so [0] is max_rate
-	unsigned default_sample_rate;
-	bool error_opening;
-	unsigned device_frames;
-	u32_t updated;
-	u32_t track_start_time;
-	u32_t current_replay_gain;
-	// was union
-	struct {
-		u32_t pause_frames;
-		u32_t skip_frames;
-		u32_t start_at;
-	};
-	unsigned next_sample_rate; // set in decode thread
-	u8_t  *track_start;        // set in decode thread
-	u32_t gainL;               // set by slimproto
-	u32_t gainR;               // set by slimproto
-	u32_t next_replay_gain;    // set by slimproto
-	unsigned threshold;        // set by slimproto
-	fade_state fade;
-	u8_t *fade_start;
-	u8_t *fade_end;
-	fade_dir fade_dir;
-	fade_mode fade_mode;       // set by slimproto
-	unsigned fade_secs;        // set by slimproto
-	unsigned rate_delay;
-	bool delay_active;
-#if DSD
-	bool next_dop;             // set in decode thread
-	bool dop;
-	bool has_dop;              // set in dop_init - output device supports dop
-	unsigned dop_delay;        // set in dop_init - delay in ms switching to/from dop
-#endif
 };
 
 void output_init_common(char *device, unsigned output_buf_size, unsigned rates[], struct thread_ctx_s *ctx);
 void output_close_common(struct thread_ctx_s *ctx);
 void output_flush(struct thread_ctx_s *ctx);
-// _* called with mutex locked
-frames_t _output_frames(frames_t avail, struct thread_ctx_s *ctx);
-void _checkfade(bool, struct thread_ctx_s *ctx);
 void wake_output(struct thread_ctx_s *ctx);
 
 // output_mr.c
-void output_mr_thread_init(unsigned output_buf_size, char *params, sq_rate_t[], unsigned rate_delay, struct thread_ctx_s *ctx);
+void output_mr_thread_init(unsigned output_buf_size, struct thread_ctx_s *ctx);
 void output_mr_close(struct thread_ctx_s *ctx);
-
-// output_pack.c
-void _scale_and_pack_frames(void *outputptr, s32_t *inputptr, frames_t cnt, s32_t gainL, s32_t gainR, output_format format);
-void _apply_cross(struct buffer *outputbuf, frames_t out_frames, s32_t cross_gain_in, s32_t cross_gain_out, s32_t **cross_ptr);
-void _apply_gain(struct buffer *outputbuf, frames_t count, s32_t gainL, s32_t gainR);
-s32_t gain(s32_t gain, s32_t sample);
-s32_t to_gain(float f);
-
-// dop.c
-#if DSD
-bool is_flac_dop(u32_t *lptr, u32_t *rptr, frames_t frames);
-void update_dop_marker(u32_t *ptr, frames_t frames);
-void dop_silence_frames(u32_t *ptr, frames_t frames);
-void dop_init(bool enable, unsigned delay);
-#endif
-
 
 /***************** main thread context**************/
 typedef struct {
@@ -465,7 +230,6 @@ typedef struct {
 	u32_t current_sample_rate;
 	u32_t last;
 	stream_state stream_state;
-	//
 	u32_t	ms_played;
 } status_t;
 
@@ -527,11 +291,6 @@ struct thread_ctx_s {
 	status_t			status;
 	struct streamstate	stream;
 	struct outputstate 	output;
-	struct decodestate 	decode;
-#if PROCESS
-	struct processtate	process;
-#endif
-	struct codec		*codec;
 	struct buffer		__s_buf;
 	struct buffer		__o_buf;
 	struct buffer		*streambuf;
@@ -549,15 +308,10 @@ struct thread_ctx_s {
 	mutex_type	cli_mutex;
 	u32_t		cli_timestamp;
 	bool		aiff_header;
-//	u8_t *buf;					// for output_mr
-//	unsigned buffill;			// for output_mr
-	int bytes_per_frame;		// for output_mr
 	bool	mr_running;			// for output_mr.c
 	bool	stream_running;		// for stream.c
-	bool	decode_running;		// for decode.c
 	thread_type mr_thread;		// outputmr.c child thread
 	thread_type stream_thread;	// stream.c child thread
-	thread_type decode_thread;	// decode.c child thread
 	thread_type	thread;			// main instance thread
 	struct sockaddr_in serv_addr;
 	#define MAXBUF 4096
@@ -582,20 +336,4 @@ struct thread_ctx_s {
 };
 
 extern struct thread_ctx_s thread_ctx[MAX_PLAYER];
-
-// codecs
-#define MAX_CODECS 9
-
-extern struct codec *codecs[MAX_CODECS];
-
-struct codec *register_flac(void);
-struct codec *register_pcm(void);
-struct codec *register_mad(void);
-struct codec *register_mpg(void);
-struct codec *register_vorbis(void);
-struct codec *register_faad(void);
-struct codec *register_dsd(void);
-struct codec *register_ff(const char *codec);
-
-
 

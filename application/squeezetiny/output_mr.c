@@ -27,8 +27,6 @@ TODO
 
 #include "squeezelite.h"
 
-#define FRAME_BLOCK MAX_SILENCE_FRAMES
-
 extern log_level	output_loglevel;
 static log_level 	*loglevel = &output_loglevel;
 
@@ -200,20 +198,8 @@ static struct aiff_header_s {			// need to use all u8 due to padding
 
 #define LOCK_S   mutex_lock(ctx->streambuf->mutex)
 #define UNLOCK_S mutex_unlock(ctx->streambuf->mutex)
-#if 0
-#define LOCK_O   mutex_lock(ctx->outputbuf->mutex)
-#define UNLOCK_O mutex_unlock(ctx->outputbuf->mutex)
-#else
 #define LOCK_O
 #define UNLOCK_O
-#endif
-#define LOCK_D   mutex_lock(ctx->decode.mutex);
-#define UNLOCK_D mutex_unlock(ctx->decode.mutex);
-
-extern u8_t *silencebuf;
-#if DSD
-extern u8_t *silencebuf_dop;
-#endif
 
 /*---------------------------------------------------------------------------*/
 static void little16(void *dst, u16_t src)
@@ -264,10 +250,6 @@ static u16_t flac_block_size(u8_t block_size)
 	if (block_size == 0x07) return 0;
 	if (block_size <= 0xf) return 256 * (1 << (block_size - 8));
 	return 0;
-}
-
-/*---------------------------------------------------------------------------*/
-static void output_thread(struct thread_ctx_s *ctx) {
 }
 
 /*---------------------------------------------------------------------------*/
@@ -819,31 +801,9 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 }
 
 /*---------------------------------------------------------------------------*/
-void output_mr_thread_init(unsigned output_buf_size, char *params, unsigned rate[], unsigned rate_delay, struct thread_ctx_s *ctx) {
+void output_mr_thread_init(unsigned output_buf_size, struct thread_ctx_s *ctx) {
 
 	LOG_DEBUG("[%p] init output media renderer", ctx);
-
-#if 0
-	ctx->buf = malloc(FRAME_BLOCK * BYTES_PER_FRAME);
-	if (!ctx->buf) {
-		LOG_ERROR("unable to malloc buf", NULL);
-		return;
-	}
-	ctx->buffill = 0;
-
-	memset(&ctx->output, 0, sizeof(ctx->output));
-
-	ctx->output.format = S16_LE;
-	ctx->output.start_frames = FRAME_BLOCK * 2;
-	ctx->output.write_cb = &_mr_write_frames;
-	ctx->output.rate_delay = rate_delay;
-	ctx->output.format = S16_LE;
-
-	// ensure output rate is specified to avoid test open
-	if (!rate[0]) rate[0] = 44100;
-
-	output_init_common("", output_buf_size, rate, ctx);
-#endif
 
 	ctx->mr_running = true;
 
@@ -851,29 +811,11 @@ void output_mr_thread_init(unsigned output_buf_size, char *params, unsigned rate
 	pthread_attr_t attr;
 	pthread_attr_init(&attr);
 	pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN + OUTPUT_THREAD_STACK_SIZE);
-	switch (ctx->config.mode) {
-	case SQ_FULL:
-			pthread_create(&ctx->mr_thread, &attr, (void *(*)(void*)) &output_thread, ctx);
-			break;
-	case SQ_STREAM:
-			pthread_create(&ctx->mr_thread, &attr, (void *(*)(void*)) &output_thru_thread, ctx);
-			break;
-	default:
-		break;
-	}
+	pthread_create(&ctx->mr_thread, &attr, (void *(*)(void*)) &output_thru_thread, ctx);
 	pthread_attr_destroy(&attr);
 #endif
 #if WIN
-	switch (ctx->config.mode) {
-	case SQ_FULL:
-		ctx->mr_thread = CreateThread(NULL, OUTPUT_THREAD_STACK_SIZE, (LPTHREAD_START_ROUTINE) &output_thread, ctx, 0, NULL);
-		break;
-	case SQ_STREAM:
-		ctx->mr_thread = CreateThread(NULL, OUTPUT_THREAD_STACK_SIZE, (LPTHREAD_START_ROUTINE)&output_thru_thread, ctx, 0, NULL);
-		break;
-	default:
-		break;
-	}
+	ctx->mr_thread = CreateThread(NULL, OUTPUT_THREAD_STACK_SIZE, (LPTHREAD_START_ROUTINE)&output_thru_thread, ctx, 0, NULL);
 #endif
 }
 
@@ -884,11 +826,6 @@ void output_mr_close(struct thread_ctx_s *ctx) {
 	LOCK_S;LOCK_O;
 	ctx->mr_running = false;
 	UNLOCK_S;UNLOCK_O;
-
-#if 0
-	free(ctx->buf);
-	output_close_common(ctx);
-#endif
 
 #if LINUX || OSX || FREEBSD
 	pthread_join(ctx->mr_thread, NULL);

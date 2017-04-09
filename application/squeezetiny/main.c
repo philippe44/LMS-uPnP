@@ -32,40 +32,12 @@
 #include <signal.h>
 #include <ctype.h>
 
-#define TITLE "Squeezelite " VERSION ", Copyright 2012-2014 Adrian Smith + Philippe."
 #define IMAGEPROXY "/imageproxy/"
-
-#ifndef NO_CODEC
-#define CODECS_BASE "flac,pcm,mp3,ogg,aac"
-#else
-#define CODECS_BASE "pcm,mp3"
-#endif
-
-#if FFMPEG
-#define CODECS_FF   ",wma,alac"
-#else
-#define CODECS_FF   ""
-#endif
-#if DSD
-#define CODECS_DSD  ",dsd"
-#else
-#define CODECS_DSD  ""
-#endif
-#define CODECS_MP3  " (mad,mpg for specific mp3 codec)"
-
-#define CODECS CODECS_BASE CODECS_FF CODECS_DSD CODECS_MP3
 
 #define LOCK_S   mutex_lock(ctx->streambuf->mutex)
 #define UNLOCK_S mutex_unlock(ctx->streambuf->mutex)
-#if 0
-#define LOCK_O   mutex_lock(ctx->outputbuf->mutex)
-#define UNLOCK_O mutex_unlock(ctx->outputbuf->mutex)
-#else
 #define LOCK_O
 #define UNLOCK_O
-#endif
-#define LOCK_D   mutex_lock(ctx->decode.mutex)
-#define UNLOCK_D mutex_unlock(ctx->decode.mutex)
 #define LOCK_P   mutex_lock(ctx->mutex)
 #define UNLOCK_P mutex_unlock(ctx->mutex)
 
@@ -74,28 +46,10 @@ struct thread_ctx_s thread_ctx[MAX_PLAYER];
 /*----------------------------------------------------------------------------*/
 /* locals */
 /*----------------------------------------------------------------------------*/
-
-#if 0
-static unsigned 		gl_rate_delay = 0;
-#endif
-#if RESAMPLE
-static char 			*gl_resample = NULL;
-#endif
-#if DSD
-static bool 			gl_dop	= false;
-static unsigned 		gl_dop_delay = 0;
-#endif
-static char				gl_include_codecs[SQ_STR_LENGTH];
-static char				gl_exclude_codecs[SQ_STR_LENGTH];
-
-/*----------------------------------------------------------------------------*/
-/* locals */
-/*----------------------------------------------------------------------------*/
 static void sq_wipe_device(struct thread_ctx_s *ctx);
 
 extern log_level	 main_loglevel;
 static log_level	*loglevel = &main_loglevel;
-
 
 /*---------------------------------------------------------------------------*/
 void sq_stop() {
@@ -120,7 +74,6 @@ void sq_wipe_device(struct thread_ctx_s *ctx) {
 
 	slimproto_close(ctx);
 	output_mr_close(ctx);
-	decode_close(ctx);
 	stream_close(ctx);
 
 	for (i = 0; i < 2; i++) {
@@ -1144,8 +1097,6 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 #if WIN
 	winsock_init();
 #endif
-
-	decode_init(gl_include_codecs, gl_exclude_codecs, true);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -1188,19 +1139,7 @@ bool sq_run_device(sq_dev_handle_t handle, sq_dev_param_t *param)
 	int i;
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
 
-#if 0
-	// set the output buffer size if not specified on the command line, take account of resampling
-	if (gl_resample) {
-		unsigned scale = 8;
-
-		scale = gl_rate[0] / 44100;
-		if (scale > 8) scale = 8;
-		if (scale < 1) scale = 1;
-		l_output_buf_size *= scale;
-	 }
-#endif
-
-	memcpy(&ctx->config, param, sizeof(sq_dev_param_t));
+	memcpy(&ctx->config, param, sizeof(sq_dev_param_t));
 
 	if (strstr(ctx->config.buffer_dir, "?")) {
 		GetTempPath(SQ_STR_LENGTH, ctx->config.buffer_dir);
@@ -1241,24 +1180,7 @@ bool sq_run_device(sq_dev_handle_t handle, sq_dev_param_t *param)
 	}
 
 	stream_thread_init(ctx->config.stream_buf_size, ctx);
-	output_mr_thread_init(ctx->config.output_buf_size, NULL, ctx->config.rate, 0, ctx);
-
-#if DSD
-	dop_thread_init(dop, dop_delay, ctx);
-#endif
-
-	decode_thread_init(ctx);
-#if 0
-	ctx->decode.new_stream = true;
-	ctx->decode.state = DECODE_STOPPED;
-#endif
-
-#if RESAMPLE
-	if (gl_resample) {
-		process_init(resample);
-	}
-#endif
-
+	output_mr_thread_init(ctx->config.output_buf_size, ctx);
 	slimproto_thread_init(ctx);
 
 	return true;

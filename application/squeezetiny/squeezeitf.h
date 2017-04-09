@@ -32,8 +32,6 @@ typedef enum {SQ_NONE, SQ_SETFORMAT, SQ_SETURI, SQ_SETNEXTURI, SQ_PLAY, SQ_PAUSE
 typedef enum {SQ_STREAM = 2, SQ_FULL = 3} sq_mode_t;
 typedef	sq_action_t sq_event_t;
 
-#define MAX_SUPPORTED_SAMPLERATES 16
-#define TEST_RATES = { 384000, 352000, 192000, 176400, 96000, 88200, 48000, 44100, 32000, 24000, 22500, 16000, 12000, 11025, 8000, 0 }
 #define HTTP_BUFFERED	-5
 
 typedef enum { SQ_RATE_384000 = 384000, SQ_RATE_352000 = 352000,
@@ -65,8 +63,6 @@ typedef struct sq_metadata_s {
 typedef	struct sq_dev_param_s {
 	unsigned 	stream_buf_size;
 	unsigned 	output_buf_size;
-	sq_mode_t	mode;
-	sq_rate_t	rate[MAX_SUPPORTED_SAMPLERATES];
 	int			max_get_bytes;		 // max size allowed in a single read
 	char		codecs[SQ_STR_LENGTH];
 	char		server[SQ_STR_LENGTH];
