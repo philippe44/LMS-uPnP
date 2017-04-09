@@ -477,7 +477,7 @@ void SyncNotifState(char *State, struct sMR* Device)
 
 	if (!strcmp(State, "STOPPED") && Device->State != STOPPED) {
 		if (Device->NextURI) {
-			if (!Device->Config.AcceptNextURI || Device->NextDuration < Device->Config.MinGapless) {
+			if (!Device->Config.AcceptNextURI || Device->NextDuration < Device->Config.MinGapless * 1000) {
 				// fake a "SETURI" and a "PLAY" request
 				NFREE(Device->CurrentURI);
 				Device->CurrentURI = malloc(strlen(Device->NextURI) + 1);

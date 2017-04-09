@@ -18,6 +18,7 @@
 	<seek_after_pause>1</seek_after_pause>
 	<codecs>pcm</codecs>
 	<raw_audio_format>raw,wave,aiff</raw_audio_format>
+	<min_gapless>30</min_gapless>
 	</profile>
 	<profile name='_normal mode'>
 	<stream_length>-3</stream_length>
