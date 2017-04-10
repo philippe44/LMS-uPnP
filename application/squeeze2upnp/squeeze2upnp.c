@@ -74,22 +74,21 @@ log_level	util_loglevel = lWARN;
 log_level	upnp_loglevel = lINFO;
 
 tMRConfig			glMRConfig = {
-							"-3",
+							"-3",      	// stream-length
 							false,
 							false,
 							false,
-							0,
 							true,
-							"",
+							"",      	// name
 							1,
 							true,
 							true,
-							0,
+							15,			// min_gapless
 							true,
 							true,
 							100,
 							1,
-							"raw",
+							"raw", 		// raw_audio_format
 							1,
 							false,
 							false,
@@ -305,12 +304,18 @@ static int	uPNPTerminate(void);
 				device->NextURI = strdup(uri);
 				device->NextDuration = p->duration;
 
-				if (device->Config.AcceptNextURI && device->NextDuration > device->Config.MinGapless * 1000){
+				if (!device->Config.AcceptNextURI ||
+					(device->NextDuration < device->Config.MinGapless * 1000) ||
+					(device->Elapsed + device->Config.MinGapless * 1000 > device->Duration) ) {
+					device->ExpectNext = true;
+					LOG_INFO("[%p]: next URI will wait stop %s", device, device->NextURI);
+
+				} else {
 					AVTSetNextURI(device);
 					sq_free_metadata(&device->MetaData);
+					device->ExpectNext = false;
+					LOG_INFO("[%p]: next URI set using gapless %s", device, device->NextURI);
 				}
-
-				LOG_INFO("[%p]: next URI set %s", device, device->NextURI);
 			}
 			else {
 				NFREE(device->CurrentURI);
@@ -437,7 +442,7 @@ void SyncNotifState(char *State, struct sMR* Device)
 
 	if (!strcmp(State, "STOPPED") && Device->State != STOPPED) {
 		if (Device->NextURI) {
-			if (!Device->Config.AcceptNextURI || Device->NextDuration < Device->Config.MinGapless * 1000) {
+			if (Device->ExpectNext) {
 				// fake a "SETURI" and a "PLAY" request
 				NFREE(Device->CurrentURI);
 				Device->CurrentURI = malloc(strlen(Device->NextURI) + 1);
@@ -455,8 +460,8 @@ void SyncNotifState(char *State, struct sMR* Device)
 			}
 			else  {
 				/*
-				This can happen if the SetNextURI has been sent too late and
-				the device did not have time to buffer next track data. In
+				This should not happen, but if SetNextURI has been sent too late
+				and	the device did not have time to buffer next track data. In
 				this case, give it a nudge
 				*/
 				AVTBasic(Device, "Next");

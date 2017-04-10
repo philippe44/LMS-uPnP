@@ -64,7 +64,6 @@ struct sService {
 	bool		NoZeroVolume;		// prevent volume to be set at 0 between tracks
 	bool		SeekAfterPause;
 	bool		ByteSeek;
-	u16_t		VolumeCorrector;	// not yet
 	bool		Enabled;
 	char		Name[SQ_STR_LENGTH];
 	int 		VolumeOnPlay;		// change only volume when playing has started or disable volume commands
@@ -97,6 +96,7 @@ struct sMR {
 	enum eMRstate 	State;
 	char			*CurrentURI;
 	char			*NextURI;
+	bool			ExpectNext;
 	int				NextDuration;
 	char			ProtoInfo[SQ_STR_LENGTH];		// a bit patchy ... used for faulty NEXTURI players
 	sq_metadata_t	MetaData;

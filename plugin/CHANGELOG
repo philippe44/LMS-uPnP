@@ -1,18 +1,14 @@
+0.2.12.0.2
+ - solve problem when SetNextURI arrives too late by using <min_gapless>
+
 0.2.12.0.1
  - Big fat cleanup of all old useless squeezelite items (RESAMPLE, DSD, PROCESS, decoder, mode, codecs)
 
-0.2.11.3.4
- - MinGapless should be compared in ms, not s
- 
-0.2.11.3.3
+0.2.11.3 <not published>
  - ICY update url built correctly when using imageproxy
  - add "_safe mode" and "_normal mode" to profiles.xml
- - Reset ExpectStop only when receiving a "PLAYING" state confirm
- 
-0.2.11.3.2
+ - reset ExpectStop only when receiving a "PLAYING" state confirm
  - allow "stop" from remote to stop LMS (will not work in the last 5 seconds of playback)
- 
-0.2.11.3.1
  - when fake size HTTP length is required (Sonos), stop the player from trying to re-open the file once it has all been sent
  - on Windows, retry sending on CLI command socket as it fails with ENOTCONN sometimes at first send after opening ...
  - development versions now have an extra digit to enable auto-update

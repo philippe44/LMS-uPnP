@@ -15,7 +15,7 @@ use Slim::Utils::Log;
 my $prefs = preferences('plugin.upnpbridge');
 my $log   = logger('plugin.upnpbridge');
 my @xmlmain = qw(upnp_socket upnp_scan_interval upnp_scan_timeout log_limit);
-my @xmldevice = qw(name mac stream_length accept_nexturi buffer_dir buffer_limit sample_rate codecs L24_format flac_header enabled upnp_remove_count send_metadata volume_on_play max_volume match_endianness raw_audio_format send_coverart seek_after_pause byte_seek send_icy volume_feedback stream_pacing_size server);
+my @xmldevice = qw(name mac stream_length accept_nexturi buffer_dir buffer_limit sample_rate codecs L24_format flac_header enabled upnp_remove_count send_metadata volume_on_play max_volume match_endianness raw_audio_format send_coverart seek_after_pause byte_seek send_icy volume_feedback stream_pacing_size server min_gapless);
 
 sub name { 'PLUGIN_UPNPBRIDGE' }
 
@@ -136,6 +136,7 @@ sub handler {
 			if ($params->{'seldevice'} eq '.common.') {
 			
 				for my $p (@xmldevice) {
+					next if !defined $params->{ $p };
 					if ($params->{ $p } eq '') {
 						delete $xmlconfig->{ common }->{ $p };
 					} else {
@@ -157,6 +158,7 @@ sub handler {
 					my $device = findUDN($params->{'seldevice'}, $params->{'devices'});
 					
 					for my $p (@xmldevice) {
+						next if !defined $params->{ $p };
 						if ($params->{ $p } eq '') {
 							delete $device->{ $p };
 						} else {

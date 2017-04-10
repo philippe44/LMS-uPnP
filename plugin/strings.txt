@@ -174,12 +174,16 @@ PLUGIN_UPNPBRIDGE_PLAYEROPTIONS_DESC
 	EN	UPnP players do not work with that option and require other solutions to set expected length
 	EN	A per-codec HTTP mode can be manually entered using syntax: "default_mode","codec_1":"mode","codec_N":"mode"
 	EN	<br>- Some players don't support gapless playback and thus don't automatically move to next track in playlist. 
+	EN	<br>- Do not try gapless if track is below a minimum (will mostly cause the player to be stuck)
 	
 PLUGIN_UPNPBRIDGE_STREAMLENGTH
 	EN	HTTP mode
 	
 PLUGIN_UPNPBRIDGE_ACCEPTNEXTURI
-	EN	Support gapless 
+	EN	Gapless 
+	
+PLUGIN_UPNPBRIDGE_MINGAPLESS
+	EN	Min gap 
 
 PLUGIN_UPNPBRIDGE_PAUSEMGMT
 	EN	Pause/Resume management
