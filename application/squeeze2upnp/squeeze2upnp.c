@@ -83,7 +83,7 @@ tMRConfig			glMRConfig = {
 							1,
 							true,
 							true,
-							15,			// min_gapless
+							10,			// min_gapless
 							true,
 							true,
 							100,
@@ -304,17 +304,15 @@ static int	uPNPTerminate(void);
 				device->NextURI = strdup(uri);
 				device->NextDuration = p->duration;
 
-				if (!device->Config.AcceptNextURI ||
-					(device->NextDuration < device->Config.MinGapless * 1000) ||
-					(device->Elapsed + device->Config.MinGapless * 1000 > device->Duration) ) {
-					device->ExpectNext = true;
-					LOG_INFO("[%p]: next URI will wait stop %s", device, device->NextURI);
+				if (!device->Config.AcceptNextURI || (device->Elapsed + device->Config.MinGapless * 1000 > device->Duration)) {
+					device->GapExpected = true;
+					LOG_INFO("[%p]: next URI gapped %s", device, device->NextURI);
 
 				} else {
 					AVTSetNextURI(device);
 					sq_free_metadata(&device->MetaData);
-					device->ExpectNext = false;
-					LOG_INFO("[%p]: next URI set using gapless %s", device, device->NextURI);
+					device->GapExpected = false;
+					LOG_INFO("[%p]: next URI gapless %s", device, device->NextURI);
 				}
 			}
 			else {
@@ -442,7 +440,7 @@ void SyncNotifState(char *State, struct sMR* Device)
 
 	if (!strcmp(State, "STOPPED") && Device->State != STOPPED) {
 		if (Device->NextURI) {
-			if (Device->ExpectNext) {
+			if (Device->GapExpected) {
 				// fake a "SETURI" and a "PLAY" request
 				NFREE(Device->CurrentURI);
 				Device->CurrentURI = malloc(strlen(Device->NextURI) + 1);

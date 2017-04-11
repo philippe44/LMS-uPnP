@@ -789,6 +789,15 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 			if (out->file_size == HTTP_BUFFERED) out->file_size = out->write_count_t;
 			out->write_file = NULL;
 
+#ifdef EARLY_STMD
+			if (!ctx->out_ctx[(out->idx + 1) & 0x01].read_file) {
+				ctx->read_ended = true;
+				wake_controller(ctx);
+			} else {
+				LOG_INFO("Still reading, must wait ctx %d", (out->idx + 1) & 0x01);
+			}
+#endif
+
 			UNLOCK_S;
 			buf_flush(ctx->streambuf);
 		}

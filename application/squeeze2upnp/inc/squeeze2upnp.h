@@ -96,7 +96,7 @@ struct sMR {
 	enum eMRstate 	State;
 	char			*CurrentURI;
 	char			*NextURI;
-	bool			ExpectNext;
+	bool			GapExpected;
 	int				NextDuration;
 	char			ProtoInfo[SQ_STR_LENGTH];		// a bit patchy ... used for faulty NEXTURI players
 	sq_metadata_t	MetaData;

@@ -838,7 +838,15 @@ bool sq_close(void *desc)
 		struct thread_ctx_s *ctx = p->owner; 		// for the macro to work ... ugh
 		LOCK_S;LOCK_O;
 		if (p->read_file) fclose(p->read_file);
-		p->read_file = NULL;
+#ifdef EARLY_STMD
+		if (!ctx->out_ctx[(p->idx + 1) & 0x01].write_file) {
+			ctx->read_ended = true;
+			wake_controller(ctx);
+		} else {
+			LOG_INFO("Still writing, must wait ctx %d", (p->idx + 1) & 0x01);
+		}
+#endif
+    	p->read_file = NULL;
 		LOG_INFO("[%p]: read total:%Ld", p->owner, p->read_count_t);
 		p->close_count = p->read_count;
 		p->read_count_t -= p->read_count;
@@ -978,10 +986,13 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 	the connection
 	*/
 	if ((!read_b || ((p->file_size > 0 ) && (p->read_count_t >= p->file_size))) && wait && !p->write_file) {
-		ctx->read_ended = true;
-		// see getinfo comment about lockign context after full read
+
+		// see getinfo comment about locking context after full read
 		p->completed = true;
+#ifndef EARLY_STMD
+		ctx->read_ended = true;
 		wake_controller(ctx);
+#endif
 		LOG_INFO("[%p]: read (end of track) w:%d", ctx, wait);
 	}
 
