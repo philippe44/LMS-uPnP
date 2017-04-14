@@ -304,7 +304,9 @@ static int	uPNPTerminate(void);
 				device->NextURI = strdup(uri);
 				device->NextDuration = p->duration;
 
-				if (!device->Config.AcceptNextURI || (device->Elapsed + device->Config.MinGapless * 1000 > device->Duration)) {
+				if ( !device->Config.AcceptNextURI ||
+					 (device->Elapsed + device->Config.MinGapless * 1000 > device->Duration) ||
+					 (!p->duration && p->remote) ) {
 					device->GapExpected = true;
 					LOG_INFO("[%p]: next URI gapped %s", device, device->NextURI);
 

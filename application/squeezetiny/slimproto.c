@@ -354,7 +354,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 				ctx->track_status = TRACK_STOPPED;
 				ctx->track_new = true;
 				ctx->status.ms_played = ctx->ms_played = 0;
-				ctx->read_to = ctx->read_ended = false;
+				ctx->read_to = ctx->ready_buffering = false;
 			}
 
 			if (rc) {
@@ -722,10 +722,10 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 
 				// last byte from streambuf has been sent, so time to request
 				// another potential "next"
-				if (ctx->read_ended) {
+				if (ctx->ready_buffering) {
 					_sendSTMd = true;
 					ctx->sentSTMd = true;
-					ctx->read_ended = false;
+					ctx->ready_buffering = false;
 				}
 			}
 

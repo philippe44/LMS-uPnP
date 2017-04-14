@@ -791,10 +791,10 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 
 #ifdef EARLY_STMD
 			if (!ctx->out_ctx[(out->idx + 1) & 0x01].read_file) {
-				ctx->read_ended = true;
+				ctx->ready_buffering = true;
 				wake_controller(ctx);
 			} else {
-				LOG_INFO("Still reading, must wait ctx %d", (out->idx + 1) & 0x01);
+				LOG_INFO("[%p]: Still reading, must wait ctx %d", ctx, (out->idx + 1) & 0x01);
 			}
 #endif
 
@@ -866,7 +866,7 @@ void output_flush(struct thread_ctx_s *ctx) {
 			remove(buf);
 		}
 
-		ctx->out_ctx[i].completed = false;
+		ctx->out_ctx[i].read_complete = false;
 
 	}
 	UNLOCK_S;UNLOCK_O;
