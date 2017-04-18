@@ -15,6 +15,7 @@ struct sMR* 	CURL2Device(char *CtrlURL);
 struct sMR* 	UDN2Device(char *SID);
 struct sMR 		*IsDevice(void *Cookie);
 bool 			SetContentType(struct sMR *Device, sq_seturi_t *uri);
+void 			MakeMacUnique(struct sMR *Device);
 
 void			SaveConfig(char *name, void *ref, bool full);
 void		 	*LoadConfig(char *name, tMRConfig *Conf, sq_dev_param_t *sq_conf);

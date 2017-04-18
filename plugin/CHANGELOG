@@ -1,4 +1,7 @@
-0.2.12.0
+0.2.12.1.1
+ - make sure MAC is unique across devices
+
+ 0.2.12.0
  - set UPnP max HTTP/SOAP content *after* stack initialization
  - always gap remote stream to avoid large buffer to be created
  - renaming a few variables for better clarity

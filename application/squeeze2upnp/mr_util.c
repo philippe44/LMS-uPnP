@@ -40,7 +40,7 @@ extern log_level	util_loglevel;
 extern log_level	upnp_loglevel;
 
 extern log_level util_loglevel;
-//static log_level *loglevel = &util_loglevel;
+static log_level *loglevel = &util_loglevel;
 
  /* DLNA.ORG_CI: conversion indicator parameter (integer)
  *     0 not transcoded
@@ -492,6 +492,23 @@ void CheckCodecs(struct sMR *Device)
 	}
 
 	NFREE(buf);
+}
+
+/*----------------------------------------------------------------------------*/
+void MakeMacUnique(struct sMR *Device)
+{
+	int i;
+
+	for (i = 0; i < MAX_RENDERERS; i++) {
+		if (!glMRDevices[i].InUse || Device == &glMRDevices[i]) continue;
+		if (!memcmp(&glMRDevices[i].sq_config.mac, &Device->sq_config.mac, 6)) {
+			u32_t hash = hash32(Device->UDN);
+
+			LOG_INFO("[%p]: duplicated mac ... updating", Device);
+			memset(&Device->sq_config.mac[0], 0xcc, 2);
+			memcpy(&Device->sq_config.mac[0] + 2, &hash, 4);
+		}
+	}
 }
 
 /*----------------------------------------------------------------------------*/

@@ -1300,6 +1300,8 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 		memset(Device->sq_config.mac, 0xbb, 2);
 	}
 
+	MakeMacUnique(Device);
+
 	/* find the different services */
 	for (i = 0; i < NB_SRV; i++) {
 		strcpy(Device->Service[i].Id, "");
