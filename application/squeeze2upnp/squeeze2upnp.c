@@ -811,14 +811,27 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 		case UPNP_EVENT_AUTORENEWAL_FAILED: {
 			struct Upnp_Event_Subscribe *d_Event = (struct Upnp_Event_Subscribe *)Event;
 			struct sMR *p = SID2Device(d_Event->Sid);
+			int i, ret = UPNP_E_INVALID_SID;
 
 			if (!p) break;
 
-			ithread_mutex_lock(&p->Mutex);
-			p->UPnPConnected = false;
-			ithread_mutex_unlock(&p->Mutex);
+			// renew service subscribtion if needed
+			for (i = 0; i < NB_SRV; i++) {
+				struct sService *s = &p->Service[cSearchedSRV[i].idx];
+				if (!strcmp(s->EventURL, d_Event->PublisherUrl)) {
+					ret = UpnpSubscribe(glControlPointHandle, s->EventURL, &s->TimeOut, s->SID);
+					break;
+				}
+			}
 
-			LOG_WARN("[%p]: Auto-renewal failed", p);
+			if (ret != UPNP_E_SUCCESS) {
+				LOG_WARN("[%p]: Auto-renewal failed, cannot re-subscribe", p);
+				ithread_mutex_lock(&p->Mutex);
+				p->UPnPConnected = false;
+				ithread_mutex_unlock(&p->Mutex);
+			} else {
+				LOG_WARN("[%p]: Auto-renewal failed, re-subscribe success", p);
+			}
 
 			break;
 		}
@@ -833,8 +846,10 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 			// renew service subscribtion if needed
 			for (i = 0; i < NB_SRV; i++) {
 				struct sService *s = &p->Service[cSearchedSRV[i].idx];
-				if ((s->TimeOut = cSearchedSRV[i].TimeOut) != 0)
+				if (!strcmp(s->EventURL, d_Event->PublisherUrl) && ((s->TimeOut = cSearchedSRV[i].TimeOut) != 0)) {
 					UpnpSubscribe(glControlPointHandle, s->EventURL, &s->TimeOut, s->SID);
+					break;
+                }
 			}
 
 			LOG_WARN("[%p]: Subscription manually renewal", p);
