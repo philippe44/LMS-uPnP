@@ -815,10 +815,15 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 
 			if (!p) break;
 
+			ithread_mutex_lock(&p->Mutex);
+
+			if (!p->InUse) break;
+
 			// renew service subscribtion if needed
 			for (i = 0; i < NB_SRV; i++) {
 				struct sService *s = &p->Service[cSearchedSRV[i].idx];
 				if (!strcmp(s->EventURL, d_Event->PublisherUrl)) {
+					memset(s->SID, 0, sizeof(s->SID));
 					ret = UpnpSubscribe(glControlPointHandle, s->EventURL, &s->TimeOut, s->SID);
 					break;
 				}
@@ -826,12 +831,12 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 
 			if (ret != UPNP_E_SUCCESS) {
 				LOG_WARN("[%p]: Auto-renewal failed, cannot re-subscribe", p);
-				ithread_mutex_lock(&p->Mutex);
 				p->UPnPConnected = false;
-				ithread_mutex_unlock(&p->Mutex);
 			} else {
 				LOG_WARN("[%p]: Auto-renewal failed, re-subscribe success", p);
 			}
+
+			ithread_mutex_unlock(&p->Mutex);
 
 			break;
 		}

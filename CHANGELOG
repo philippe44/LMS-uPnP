@@ -1,3 +1,9 @@
+0.2.12.1.3
+ - when renewal fail, race condition could occur if player was destroyed 
+ 
+0.2.12.1.2
+ - manually renew subscription when auto-renewal fails
+
 0.2.12.1.1
  - make sure MAC is unique across devices
 
