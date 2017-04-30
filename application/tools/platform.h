@@ -78,7 +78,7 @@ typedef int64_t   s64_t;
 #define last_error() errno
 #define ERROR_WOULDBLOCK EWOULDBLOCK
 
-int SendARP(in_addr_t src, in_addr_t dst, u8_t mac[], u32_t *size);
+int SendARP(in_addr_t src, in_addr_t dst, u8_t mac[], unsigned long *size);
 #define fresize(f,s) ftruncate(fileno(f), s)
 char *strlwr(char *str);
 #define _random(x) random()

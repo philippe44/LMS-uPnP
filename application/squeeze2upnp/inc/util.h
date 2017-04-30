@@ -43,7 +43,7 @@ void 		QueueFlush(tQueue *queue);
 
 char 		*uPNPEvent2String(Upnp_EventType S);
 void 		uPNPUtilInit(log_level level);
-void 		ExtractIP(const char *URL, in_addr_t *IP);
+in_addr_t	ExtractIP(const char *URL);
 s64_t	 	Time2Int(char *Time);
 
 char 	   	*XMLGetChangeItem(IXML_Document *doc, char *Tag, char *SearchAttr, char *SearchVal, char *RetAttr);

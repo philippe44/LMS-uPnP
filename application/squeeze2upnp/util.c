@@ -37,24 +37,19 @@ extern log_level util_loglevel;
 static log_level *loglevel = &util_loglevel;
 static IXML_Node *_getAttributeNode(IXML_Node *node, char *SearchAttr);
 
-/*----------------------------------------------------------------------------*/
-void ExtractIP(const char *URL, in_addr_t *IP)
-{
-	int i;
-	char*p1 = malloc(strlen(URL) + 1);
-	char *p2;
 
-	strcpy(p1, URL);
-	p2 = strtok(p1,"/");
-	p2 = strtok(NULL,"/");
-	strtok(p2, ".");
-	for (i = 0; i < 3; i++) {
-		*((u8_t*) IP + i) = p2 ? atoi(p2) : 0;
-		p2 = strtok(NULL, ".");
-	}
-	strtok(p2, ":");
-	*((u8_t*) IP + 3) = p2 ? atoi(p2) : 0;
-	free(p1);
+/*----------------------------------------------------------------------------*/
+in_addr_t ExtractIP(const char *URL)
+{
+	char *p1, ip[32];
+
+	sscanf(URL, "http://%31s", ip);
+
+	ip[31] = '\0';
+	p1 = strchr(ip, ':');
+	if (p1) *p1 = '\0';
+
+	return inet_addr(ip);;
 }
 
 

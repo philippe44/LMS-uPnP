@@ -823,7 +823,6 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 			for (i = 0; i < NB_SRV; i++) {
 				struct sService *s = &p->Service[cSearchedSRV[i].idx];
 				if (!strcmp(s->EventURL, d_Event->PublisherUrl)) {
-					memset(s->SID, 0, sizeof(s->SID));
 					ret = UpnpSubscribe(glControlPointHandle, s->EventURL, &s->TimeOut, s->SID);
 					break;
 				}
@@ -1258,7 +1257,8 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	char *manufacturer = NULL;
 	int i;
 	pthread_attr_t attr;
-	u32_t mac_size = 6;
+	unsigned long mac_size = 6;
+	in_addr_t ip;
 
 	// read parameters from default then config file
 	memset(Device, 0, sizeof(struct sMR));
@@ -1302,16 +1302,16 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	if (Device->Config.RoonMode) {
 		Device->on = true;
 		Device->sq_config.use_cli = false;
-    }
+	}
 	strcpy(Device->UDN, UDN);
 	strcpy(Device->DescDocURL, location);
 	strcpy(Device->FriendlyName, friendlyName);
 	strcpy(Device->Manufacturer, manufacturer);
 	QueueInit(&Device->ActionQueue);
 
-	ExtractIP(location, &Device->ip);
+	ip = ExtractIP(location);
 	if (!memcmp(Device->sq_config.mac, "\0\0\0\0\0\0", mac_size)) {
-		if (SendARP(*((in_addr_t*) &Device->ip), INADDR_ANY, Device->sq_config.mac, &mac_size)) {
+		if (SendARP(ip, INADDR_ANY, Device->sq_config.mac, &mac_size)) {
 			u32_t hash = hash32(UDN);
 
 			LOG_ERROR("[%p]: cannot get mac %s, creating fake %x", Device, Device->FriendlyName, hash);

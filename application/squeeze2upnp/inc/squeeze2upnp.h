@@ -92,7 +92,6 @@ struct sMR {
 	char FriendlyName	[RESOURCE_LENGTH];
 	char PresURL		[RESOURCE_LENGTH];
 	char Manufacturer	[RESOURCE_LENGTH];
-	in_addr_t 		ip;
 	enum eMRstate 	State;
 	char			*CurrentURI;
 	char			*NextURI;
