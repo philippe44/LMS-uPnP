@@ -832,15 +832,7 @@ bool sq_close(void *desc)
 		struct thread_ctx_s *ctx = p->owner; 		// for the macro to work ... ugh
 		LOCK_S;LOCK_O;
 		if (p->read_file) fclose(p->read_file);
-#ifdef EARLY_STMD
-		if (!ctx->out_ctx[(p->idx + 1) & 0x01].write_file && p->read_complete) {
-			ctx->ready_buffering = true;
-			wake_controller(ctx);
-		} else {
-			LOG_INFO("[%p]: Still writing, must wait ctx %d", ctx, (p->idx + 1) & 0x01);
-		}
-#endif
-    	p->read_file = NULL;
+		p->read_file = NULL;
 		LOG_INFO("[%p]: read total:%Ld", p->owner, p->read_count_t);
 		p->close_count = p->read_count;
 		p->read_count_t -= p->read_count;
@@ -901,7 +893,16 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 		return -1;
 	}
 
-	sq_update_icy(p);
+#ifdef EARLY_STMD
+	if (!p->write_file && !ctx->out_ctx[(p->idx + 1) & 0x01].pending) {
+		LOG_INFO("[%p]: Requesting next track %d", ctx, (p->idx + 1) & 0x01);
+		ctx->out_ctx[(p->idx + 1) & 0x01].pending = true;
+		ctx->ready_buffering = true;
+		wake_controller(ctx);
+	}
+#endif
+
+	sq_update_icy(p);
 
 	switch (ctx->config.max_get_bytes) {
 		case 0:
@@ -986,6 +987,8 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 #ifndef EARLY_STMD
 		ctx->ready_buffering = true;
 		wake_controller(ctx);
+#else
+		p->pending = false;
 #endif
 		LOG_INFO("[%p]: read (end of track) w:%d", ctx, wait);
 	}

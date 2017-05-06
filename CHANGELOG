@@ -1,5 +1,6 @@
 0.2.12.1.5
  - correct some strings
+ - TIDAL does not work when long HTTP streaming pause, use pacing_size only with *live* streams to avoid them (showed more frequently with EARLY_STMD)
 
 0.2.12.1.4
  - clean SendARP

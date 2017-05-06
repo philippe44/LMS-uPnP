@@ -705,7 +705,7 @@ int CallbackActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 					p->CurrentURI = malloc(strlen(r) + 1);
 					strcpy(p->CurrentURI, r);
 					ithread_mutex_unlock(&p->Mutex);
-					sq_notify(p->SqueezeHandle, p, SQ_TRACK_CHANGE, NULL, NULL);
+					sq_notify(p->SqueezeHandle, p, SQ_TRACK_CHANGE, NULL, p->CurrentURI);
 				}
 				else ithread_mutex_unlock(&p->Mutex);
 			}

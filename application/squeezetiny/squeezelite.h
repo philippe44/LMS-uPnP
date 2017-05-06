@@ -276,6 +276,9 @@ typedef struct out_ctx_s {
 	u32_t				close_count;
 	bool				read_complete;
 	mutex_type			mutex;
+#ifdef EARLY_STMD
+	bool				pending;
+#endif
 } out_ctx_t;
 
 struct thread_ctx_s {

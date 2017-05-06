@@ -467,7 +467,7 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 			}
 
 			// LMS will need to wait for the player to consume data ...
-			if (out->remote && ctx->config.stream_pacing_size != -1 && (out->write_count - out->read_count) > (u32_t) ctx->config.stream_pacing_size) {
+			if (out->live && ctx->config.stream_pacing_size != -1 && (out->write_count - out->read_count) > (u32_t) ctx->config.stream_pacing_size) {
 				UNLOCK_S;
 				LOG_DEBUG("[%p] pacing (%u)", ctx, out->write_count - out->read_count);
 				usleep(100000);
@@ -788,16 +788,6 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 			fclose(out->write_file);
 			if (out->file_size == HTTP_BUFFERED) out->file_size = out->write_count_t;
 			out->write_file = NULL;
-
-#ifdef EARLY_STMD
-			if (!ctx->out_ctx[(out->idx + 1) & 0x01].read_file) {
-				ctx->ready_buffering = true;
-				wake_controller(ctx);
-			} else {
-				LOG_INFO("[%p]: Still reading, must wait ctx %d", ctx, (out->idx + 1) & 0x01);
-			}
-#endif
-
 			UNLOCK_S;
 			buf_flush(ctx->streambuf);
 		}
@@ -867,6 +857,9 @@ void output_flush(struct thread_ctx_s *ctx) {
 		}
 
 		ctx->out_ctx[i].read_complete = false;
+#ifdef EARLY_STMD
+		ctx->out_ctx[i].pending = false;
+#endif
 
 	}
 	UNLOCK_S;UNLOCK_O;
