@@ -167,8 +167,6 @@ void _buf_resize(struct buffer *buf, size_t size);
 void buf_init(struct buffer *buf, size_t size);
 void buf_destroy(struct buffer *buf);
 
-#define EARLY_STMD
-
 // slimproto.c
 void slimproto_close(struct thread_ctx_s *ctx);
 void slimproto_reset(struct thread_ctx_s *ctx);
