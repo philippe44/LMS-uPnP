@@ -663,7 +663,7 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "sample_rate")) sq_conf->sample_rate = atol(val);
 	if (!strcmp(name, "L24_format")) sq_conf->L24_format = atol(val);
 	if (!strcmp(name, "flac_header")) sq_conf->flac_header = atol(val);
-	if (!strcmp(name, "flac_header")) sq_conf->early_STMd = atol(val);
+	if (!strcmp(name, "early_STMd")) sq_conf->early_STMd = atol(val);
 	if (!strcmp(name, "keep_buffer_file"))sq_conf->keep_buffer_file = atol(val);
 	if (!strcmp(name, "allow_flac")) Conf->AllowFlac = atol(val);
 	if (!strcmp(name, "upnp_remove_count"))Conf->UPnPRemoveCount = atol(val);

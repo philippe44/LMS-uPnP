@@ -986,7 +986,7 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 		if (!ctx->config.early_STMd) {
 			ctx->ready_buffering = true;
 			wake_controller(ctx);
-		} else 	p->pending = false;
+		} else p->pending = false;
 
 		LOG_INFO("[%p]: read (end of track) w:%d", ctx, wait);
 	}
