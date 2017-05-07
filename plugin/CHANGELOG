@@ -1,3 +1,7 @@
+0.2.12.1.7
+ - When a players sends BYE-BYE, set missing counter to 0 to make sure it will be removed at next search
+ - Update file headers
+ 
 0.2.12.1.6
  - do not try to add flac header when "reserved" bit is set (TIDAL) 
  - early_STMD is now a runtime configuration

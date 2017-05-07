@@ -1,8 +1,7 @@
 /*
  *  Squeeze2upnp - LMS to uPNP gateway
  *
- *  Squeezelite : (c) Adrian Smith 2012-2014, triode1@btinternet.com
- *  Additions & gateway : (c) Philippe 2014, philippe_44@outlook.com
+ *	(c) Philippe 2015-2017, philippe_44@outlook.com
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -801,8 +800,9 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 
 			ithread_mutex_lock(&p->Mutex);
 
-			if (!*d_event->ServiceType && p->UPnPConnected) {
-				p->UPnPConnected = false;
+			if (!*d_event->ServiceType && p->UPnPConnected) {
+				p->UPnPConnected = false;
+				p->UPnPMissingCount = 0;
 				LOG_INFO("[%p]: Player BYE-BYE", p);
 			}
 
