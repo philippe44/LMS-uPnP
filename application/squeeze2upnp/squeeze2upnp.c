@@ -74,24 +74,24 @@ log_level	util_loglevel = lWARN;
 log_level	upnp_loglevel = lINFO;
 
 tMRConfig			glMRConfig = {
-							"-3",      	// stream-length
-							false,
-							false,
-							false,
-							true,
-							"",      	// name
-							1,
-							true,
-							true,
+							"-3",      	// StreamLength
+							false,      // SeekAfterPause
+							false,		// ByteSeek
+							true,		// Enabled
+							"",      	// Name
+							1,          // VolumeOnPlay
+							true,		// VolumeFeedback
+							true,		// AcceptNextURI
 							10,			// min_gapless
-							true,
-							true,
-							100,
-							1,
-							"raw", 		// raw_audio_format
-							1,
-							false,
-							false,
+							true,		// SendMetaData
+							true,		// SendCoverArt
+							100,		// MaxVolume
+							1,			// UPnPRemoveCount
+							"raw", 		// RawAudioFormat
+							true,       // MatchEndianness
+							false,		// AutoPlay
+							false,      // AllowFlac
+							false,      // RoonMode
 					};
 
 static u8_t LMSVolumeMap[101] = {
@@ -109,23 +109,25 @@ static u8_t LMSVolumeMap[101] = {
 
 sq_dev_param_t glDeviceParam = {
 					 // both are multiple of 3*4(2) for buffer alignement on sample
-					(200 * 1024 * (4*3)),
-					(200 * 1024 * (4*3)),
-					-1,         // get can retrun as much as required by UPnP
-					"pcm,flc,mp3",
-					"?",
-					SQ_RATE_48000,
-					L24_PACKED_LPCM,
-					FLAC_NORMAL_HEADER,
-					"?",
-					"",
-					-1L,
-					1024*1024,
-					0,
+					(200 * 1024 * (4*3)), 	// stream_buffer_size
+					(200 * 1024 * (4*3)),	// output_buffer_size
+					-1,         			// max_GET_bytes
+					"pcm,flc,mp3",			// codecs
+					"?",                    // server
+					SQ_RATE_48000,          // sample_rate
+					L24_PACKED_LPCM,        // L24_mode
+					FLAC_NORMAL_HEADER,		// flac_header
+					"?",                    // buffer_dir
+					"",						// name
+					-1L,					// buffer_limit
+					1024*1024,				// pacing_size
+					false,      			// keep_buffer_file
 					{ 0x00,0x00,0x00,0x00,0x00,0x00 },
-					false,
-					true,
-					{ "" },
+					false,  				// send_icy
+					false,					// early_STMDd
+					{ 	true,				// use_cli
+						"",     			// server
+					},
 				} ;
 
 /*----------------------------------------------------------------------------*/
@@ -1301,7 +1303,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	Device->WaitCookie = Device->StartCookie = NULL;
 	if (Device->Config.RoonMode) {
 		Device->on = true;
-		Device->sq_config.use_cli = false;
+		Device->sq_config.dynamic.use_cli = false;
 	}
 	strcpy(Device->UDN, UDN);
 	strcpy(Device->DescDocURL, location);

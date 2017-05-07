@@ -125,7 +125,7 @@
 	[% END %]
 -->	
 	
-	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_PLAYEROPTIONS" desc="PLUGIN_UPNPBRIDGE_PLAYEROPTIONS_DESC" %]
+	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_HTTPOPTIONS" desc="PLUGIN_UPNPBRIDGE_HTTPOPTIONS_DESC" %]
 	
 		<script type="text/javascript">
 		function combo(thelist, theinput) {
@@ -135,14 +135,16 @@
 		}
 		</script>	
 	
-		[% "PLUGIN_UPNPBRIDGE_STREAMLENGTH" | string %]&nbsp
 		<select name="combo_stream_length" id="combo_stream_length" onchange="combo(this, 'stream_length')">
 		[% FOREACH entry IN [ ['',''], ['chunked','-3'], ['chunked (open range)','-2'], ['no size','-1'], ['no size (open range)','-4'], ['fixed large size','1000000000'], ['full buffering','-5'] ] %]
 			<option label="[% entry.0 %]" [% IF entry.1 == stream_length %]selected[% END %] value="[% entry.1 %]">
 		[% END %]
 		</select>
 		<input type="text" id="stream_length" name="stream_length" value="[% stream_length %]">
-		&nbsp[% "PLUGIN_UPNPBRIDGE_ACCEPTNEXTURI" | string %]
+	[% END %]
+	
+	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_GAPLESSOPTIONS" desc="PLUGIN_UPNPBRIDGE_GAPLESSOPTIONS_DESC" %]
+		[% "PLUGIN_UPNPBRIDGE_ACCEPTNEXTURI" | string %]
 		&nbsp<select class="stdedit" name="accept_nexturi" id="accept_nexturi">
 		[% FOREACH entry IN YESNOBOX %] 
 			<option [% IF entry.1 == accept_nexturi %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
@@ -150,6 +152,12 @@
 		</select>
 		&nbsp[% "PLUGIN_UPNPBRIDGE_MINGAPLESS" | string %]
 		<input [% IF accept_nexturi == 0 %] disabled [% END %] class="stdedit" type="text" id="min_gapless" name="min_gapless" value="[% min_gapless %]" size="2">
+		[% "PLUGIN_UPNPBRIDGE_EARLYSTMD" | string %]
+		&nbsp<select class="stdedit" name="early_STMd" id="early_STMd">
+		[% FOREACH entry IN YESNOBOX %] 
+			<option [% IF entry.1 == early_STMd %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+		[% END %]
+		</select>
 	[% END %]
 	
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_PAUSEMGMT" desc="PLUGIN_UPNPBRIDGE_PAUSEMGMT_DESC" %]
@@ -198,7 +206,6 @@
 			<option [% IF entry.1 == L24_format %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
 		[% END %]
 		</select></td></tr>
-		
 		</table>
 	[% END %]
 	

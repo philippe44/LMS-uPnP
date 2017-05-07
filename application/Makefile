@@ -8,7 +8,7 @@ VALGRIND	= $(BASE)/valgrind
 UPNP 		= $(BASE)/libupnp/1.6.19
 FETCHER		= $(BASE)/http_fetcher
 
-DEFINES 	= -D_FILE_OFFSET_BITS=64 -DEARLY_STMD 
+DEFINES 	= -D_FILE_OFFSET_BITS=64
 
 vpath %.c $(TOOLS):$(SRC):$(SQUEEZETINY)
 

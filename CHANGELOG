@@ -1,3 +1,7 @@
+0.2.12.1.6
+ - do not try to add flac header when "reserved" bit is set (TIDAL) 
+ - early_STMD is now a runtime configuration
+
 0.2.12.1.5
  - correct some strings
  - TIDAL does not work when long HTTP streaming pause, use pacing_size only with *live* streams to avoid them (showed more frequently with EARLY_STMD)

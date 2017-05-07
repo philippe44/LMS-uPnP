@@ -48,12 +48,14 @@ u8_t	FLAC_CODED_SAMPLE_SIZE[] = { 0, 8, 12, 0, 16, 20, 24, 0 };
 
 #if SL_LITTLE_ENDIAN
 #define FLAC_TAG	(0xf8ff)	// byte order is reversed because it's treated as a u16
-#define FLAC_GET_FRAME_TAG(n)	((u16_t) ((n) & 0xf8ff))
+#define FLAC_GET_FRAME_TAG(n)	((u16_t) ((n) & 0xfcff))
 #define FLAC_GET_BLOCK_STRATEGY(n) ((u16_t) ((n) & 0x0100))
+#define FLAC_GET_RESERVED(n) ((u16_t) ((n) & 0x0200))
 #else
-#define FLAC_GET_FRAME_TAG(n)	((u16_t) ((n) & 0xfff8))
+#define FLAC_GET_FRAME_TAG(n)	((u16_t) ((n) & 0xfffc))
 #define FLAC_TAG	(0xfff8)	// byte order is reversed because it's treated as a u16
 #define FLAC_GET_BLOCK_STRATEGY(n) ((u16_t) ((n) & 0x0001))
+#define FLAC_GET_RESERVED(n) ((u16_t) ((n) & 0x0002))
 #endif
 
 #define FLAC_GET_BLOCK_SIZE(n)	((u8_t) ((n) >> 4) & 0x0f)
@@ -467,7 +469,9 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 			}
 
 			// LMS will need to wait for the player to consume data ...
-			if (out->live && ctx->config.stream_pacing_size != -1 && (out->write_count - out->read_count) > (u32_t) ctx->config.stream_pacing_size) {
+			if (((out->remote && !ctx->config.early_STMd) || out->live) &&
+				ctx->config.stream_pacing_size != -1 &&
+				(out->write_count - out->read_count) > (u32_t) ctx->config.stream_pacing_size) {
 				UNLOCK_S;
 				LOG_DEBUG("[%p] pacing (%u)", ctx, out->write_count - out->read_count);
 				usleep(100000);
@@ -536,8 +540,10 @@ static void output_thru_thread(struct thread_ctx_s *ctx) {
 							if (FLAC_GET_FRAME_TAG(frame->tag) != FLAC_TAG) {
 								LOG_ERROR("[%p]: no header and not a frame ...", ctx);
 								ready = true;
-							}
-							else {
+							} else if (FLAC_GET_RESERVED(frame->tag)) {
+								LOG_ERROR("[%p]: reserved bit set, cannot add header ...", ctx);
+								ready = true;
+							} else {
 								rate = FLAC_CODED_RATES[FLAC_GET_FRAME_RATE(frame->bsize_rate)];
 								sample_size = FLAC_CODED_SAMPLE_SIZE[FLAC_GET_FRAME_SAMPLE_SIZE(frame->channels_sample_size)];
 								channels = FLAC_CODED_CHANNELS[FLAC_GET_FRAME_CHANNEL(frame->channels_sample_size)];
@@ -857,9 +863,7 @@ void output_flush(struct thread_ctx_s *ctx) {
 		}
 
 		ctx->out_ctx[i].read_complete = false;
-#ifdef EARLY_STMD
-		ctx->out_ctx[i].pending = false;
-#endif
+		if (ctx->config.early_STMd) ctx->out_ctx[i].pending = false;
 
 	}
 	UNLOCK_S;UNLOCK_O;

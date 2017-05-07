@@ -76,8 +76,10 @@ typedef	struct sq_dev_param_s {
 	int			keep_buffer_file;
 	u8_t		mac[6];
 	bool		send_icy;
-	bool		use_cli;
+	bool		early_STMd;
+	// set at runtime, not from config
 	struct {
+		bool		use_cli;
 		char 	server[SQ_STR_LENGTH];
 	} dynamic;
 } sq_dev_param_t;

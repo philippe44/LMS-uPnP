@@ -61,7 +61,6 @@ struct sService {
 typedef struct sMRConfig
 {
 	char		StreamLength[SQ_STR_LENGTH];
-	bool		NoZeroVolume;		// prevent volume to be set at 0 between tracks
 	bool		SeekAfterPause;
 	bool		ByteSeek;
 	bool		Enabled;

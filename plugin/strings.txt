@@ -165,25 +165,31 @@ PLUGIN_UPNPBRIDGE_SCANTIMEOUT
 PLUGIN_UPNPBRIDGE_TEXTDEFAULT
 	EN	The following parameters apply to ALL players - enter "default" (without ") in text boxes to set to default values
 
-PLUGIN_UPNPBRIDGE_PLAYEROPTIONS
-	EN	Player handling options
+PLUGIN_UPNPBRIDGE_HTTPOPTIONS
+	EN	HTTP connection mode
 
-PLUGIN_UPNPBRIDGE_PLAYEROPTIONS_DESC
-	EN	Options for communication with LMS and UPnP player (see user guide)
+PLUGIN_UPNPBRIDGE_HTTPOPTIONS_DESC
+	EN	Options for HTTP connection communication with UPnP player (see user guide)
 	EN	<br>- LMS does not provide the file size to be sent. The best HTTP mode is to use "chunked encoding" but some
 	EN	UPnP players do not work with that option and require other solutions to set expected length
 	EN	A per-codec HTTP mode can be manually entered using syntax: "default_mode","codec_1":"mode","codec_N":"mode"
-	EN	<br>- Some players don't support gapless playback and thus don't automatically move to next track in playlist. 
-	EN	<br>- Do not try gapless if track is below a minimum (will mostly cause the player to be stuck)
 	
-PLUGIN_UPNPBRIDGE_STREAMLENGTH
-	EN	HTTP mode
+PLUGIN_UPNPBRIDGE_GAPLESSOPTIONS
+	EN	Gapless options
+	
+PLUGIN_UPNPBRIDGE_GAPLESSOPTIONS_DESC
+	EN	- Some UPnP players don't support gapless playback and thus don't automatically move to next track in playlist. 
+	EN	<br>- Do not try gapless if track is below a minimum (will mostly cause the player to be stuck)
+	EN	<br>- Fast mode forces early buffering of audio data from LMS, but might has side effect on streaming servuces like Deezer or Tidal 
 	
 PLUGIN_UPNPBRIDGE_ACCEPTNEXTURI
 	EN	Gapless 
 	
 PLUGIN_UPNPBRIDGE_MINGAPLESS
 	EN	Min gap 
+
+PLUGIN_UPNPBRIDGE_EARLYSTMD
+	EN	Fast mode
 
 PLUGIN_UPNPBRIDGE_PAUSEMGMT
 	EN	Pause/Resume management
