@@ -1,28 +1,19 @@
-0.2.12.1.7
+0.2.12.2
+ - Initial server detection should be in slimproto thread, otherwise sq_run_device can block 
+ 
+0.2.12.1
  - When a players sends BYE-BYE, set missing counter to 0 to make sure it will be removed at next search
  - Update file headers
- 
-0.2.12.1.6
  - do not try to add flac header when "reserved" bit is set (TIDAL) 
  - early_STMD is now a runtime configuration
-
-0.2.12.1.5
  - correct some strings
  - TIDAL does not work when long HTTP streaming pause, use pacing_size only with *live* streams to avoid them (showed more frequently with EARLY_STMD)
-
-0.2.12.1.4
  - clean SendARP
-
-0.2.12.1.3
  - when renewal fail, race condition could occur if player was destroyed 
- 
-0.2.12.1.2
  - manually renew subscription when auto-renewal fails
-
-0.2.12.1.1
  - make sure MAC is unique across devices
 
- 0.2.12.0
+0.2.12.0
  - set UPnP max HTTP/SOAP content *after* stack initialization
  - always gap remote stream to avoid large buffer to be created
  - renaming a few variables for better clarity
