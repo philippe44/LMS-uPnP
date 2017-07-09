@@ -1,3 +1,7 @@
+0.2.12.3.1
+ - correct timegaps using gettime_ms() to manage 32 bits rollover
+ - clean settings.pm to make it more readable
+ 
 0.2.12.2
  - Initial server detection should be in slimproto thread, otherwise sq_run_device can block 
  

@@ -23,14 +23,12 @@ sub page { 'plugins/UPnPBridge/settings/basic.html' }
 	
 sub handler {
 	my ($class, $client, $params, $callback, @args) = @_;
-
-	my $update;
+	my $process;
 	
 	require Plugins::UPnPBridge::Squeeze2upnp;
 	require Plugins::UPnPBridge::Plugin;
 			
 	if ($params->{'updateprofiles'}) {			
-	
 		$log->debug("update profile required: ", $params->{'updatefrom'});
 		
 		$prefs->set('profilesURL', $params->{'updatefrom'});		
@@ -40,87 +38,56 @@ sub handler {
 			print $fh $content;
 			close $fh;
 		}
-		
-		#okay, this is hacky, will change in the future, just don't want another indent layer :-(
-		$params->{'saveSettings'} = 0;
-	}
-	
-	if ($params->{ 'delconfig' }) {
-				
+	} elsif ($params->{ 'delconfig' }) {
 		my $conf = Plugins::UPnPBridge::Squeeze2upnp->configFile($class);
 		unlink $conf;							
 		$log->info("deleting configuration $conf");
-		
-		#okay, this is hacky, will change in the future, just don't want another indent layer :-(
-		$params->{'saveSettings'} = 0;
-		
-		$update = 1;
-	}
-		
-	if ($params->{ 'genconfig' }) {
-	
-		Plugins::UPnPBridge::Squeeze2upnp->stop;
-		waitEndHandler(\&genConfig, $class, $client, $params, $callback, 30, @args);
-	
-		return undef;
-	}
-	
-	if ($params->{ 'cleanlog' }) {
-				
+	} elsif ($params->{ 'genconfig' }) {
+		$log->info("generating configuration ", Plugins::UPnPBridge::Squeeze2upnp->configFile($class));
+		$process = { cb => \&genConfig };		
+	} elsif ($params->{ 'cleanlog' }) {
 		my $logfile = Plugins::UPnPBridge::Squeeze2upnp->logFile($class);
 		open my $fh, ">", $logfile;
 		print $fh;
 		close $fh;
-		
-		#okay, this is hacky, will change in the future, just don't want another indent layer :-(
-		$params->{'saveSettings'} = 0;
-	}
-	
-	if ($params->{'saveSettings'}) {
-
-		$log->debug("save settings required");
-		
+	} elsif ($params->{'saveSettings'}) {
 		my @bool  = qw(autorun logging autosave eraselog useLMSsocket);
 		my @other = qw(output bin debugs opts);
-		my $skipxml;
+		my $update;
+
+		$log->debug("save settings required");
 				
 		for my $param (@bool) {
-			
 			my $val = $params->{ $param } ? 1 : 0;
 			
 			if ($val != $prefs->get($param)) {
-					
 				$prefs->set($param, $val);
 				$update = 1;
-					
 			}
 		}
 		
 		# check that the config file name has not changed first
 		for my $param (@other) {
-		
 			if ($params->{ $param } ne $prefs->get($param)) {
-			
 				$prefs->set($param, $params->{ $param });
 				$update = 1;
 			}
 		}
 		
-		if ($params->{ 'configfile' } ne $prefs->get('configfile')) {
-		
-			$prefs->set('configfile', $params->{ 'configfile' });
-			$update = 1;
-			$skipxml = 1;
-		}	
-		
 		my $xmlconfig = readconfig($class, KeyAttr => 'device');
-				
-		# get XML player configuration if current device has changed in the list
-		if ($xmlconfig and !$skipxml and ($params->{'seldevice'} eq $params->{'prevseldevice'})) {
 		
-			$log->info('Writing XML:', $params->{'seldevice'});
+		if ($params->{ 'configfile' } ne $prefs->get('configfile')) {
+			$prefs->set('configfile', $params->{ 'configfile' });
+			if (-e Plugins::UPnPBridge::Squeeze2upnp->configFile($class)) {
+				$update = 0;
+				undef $xmlconfig;
+			} 
+		}					
+		
+		# get XML player configuration if current device has changed in the list
+		if ($xmlconfig && ($params->{'seldevice'} eq $params->{'prevseldevice'})) {
+		
 			for my $p (@xmlmain) {
-				
 				next if !defined $params->{ $p };
 				
 				if ($params->{ $p } eq '') {
@@ -134,7 +101,6 @@ sub handler {
 			
 			#save common parameters
 			if ($params->{'seldevice'} eq '.common.') {
-			
 				for my $p (@xmldevice) {
 					next if !defined $params->{ $p };
 					if ($params->{ $p } eq '') {
@@ -145,7 +111,6 @@ sub handler {
 				}	
 				
 			} else {
-			
 				if ($params->{'deldevice'}) {
 					#delete current device	
 					$log->info(@{$xmlconfig->{'device'}});
@@ -185,24 +150,29 @@ sub handler {
 			
 			$log->info("writing XML config");
 			$log->debug(Dumper($xmlconfig));
-			Plugins::UPnPBridge::Squeeze2upnp->stop;
-			waitEndHandler( sub { XMLout($xmlconfig, RootName => "squeeze2upnp", NoSort => 1, NoAttr => 1, OutputFile => Plugins::UPnPBridge::Squeeze2upnp->configFile($class)); }, 
-							$class, $client, $params, $callback, 30, @args);
+			
 			$update = 1;
+		}	
+		
+		if ($update) {
+			my $writeXML = sub {
+				my $conf = Plugins::UPnPBridge::Squeeze2upnp->configFile($class);
+				
+				$log->debug("write file now");
+				XMLout(	$xmlconfig, RootName => "squeeze2upnp", NoSort => 1, NoAttr => 1, OutputFile => $conf );
+			};
+			
+			$process = { cb => $writeXML, handler => 1 };
 		}	
 	}
 
 	# something has been updated, XML array is up-to-date anyway, but need to write it
-	if ($update) {
-
-		$log->debug("updating");
-				
+	if ($process) {
+		$log->debug("full processing");
 		Plugins::UPnPBridge::Squeeze2upnp->stop;
-		waitEndHandler(undef, $class, $client, $params, $callback, 30, @args);
-		
-	#no update detected or first time looping
+		waitEndHandler($process, $class, $client, $params, $callback, 30, @args);
 	} else {
-
+		# just re-read config file and update page
 		$log->debug("not updating");
 		$class->handler2($client, $params, $callback, @args);		  
 	}
@@ -211,36 +181,38 @@ sub handler {
 }
 
 sub waitEndHandler	{
-	my ($func, $class, $client, $params, $callback, $wait, @args) = @_;
+	my ($process, $class, $client, $params, $callback, $wait, @args) = @_;
+	my $page;
 	
-	if (Plugins::UPnPBridge::Squeeze2upnp->alive()) {
+	if ( Plugins::UPnPBridge::Squeeze2upnp->alive() ) {
 		$log->debug('Waiting for squeeze2upnp to end');
 		$wait--;
 		if ($wait) {
 			Slim::Utils::Timers::setTimer($class, Time::HiRes::time() + 1, sub {
-				waitEndHandler($func, $class, $client, $params, $callback, $wait, @args); });
+				waitEndHandler($process, $class, $client, $params, $callback, $wait, @args); });
 		}		
-
+	} elsif ( defined $process->{cb} ) {
+		$log->debug("helper stopped, processing with callback");
+		$process->{cb}->($class, $client, $params, $callback, @args);
+		$page = $process->{handler};
 	} else {
-		if (defined $func) {
-			$func->($class, $client, $params, $callback, @args);
-		}
-		else {
-			if ($prefs->get('autorun')) {
-				Plugins::UPnPBridge::Squeeze2upnp->start
-			}
+		$page = 1;
+	}
 	
-			$class->handler2($client, $params, $callback, @args);		  
-		}	
+	if ( $page ) {
+		$log->debug("updating page");
+		Plugins::UPnPBridge::Squeeze2upnp->start if $prefs->get('autorun');
+		$class->handler2($client, $params, $callback, @args);		  
 	}
 }
 
 sub genConfig {
 	my ($class, $client, $params, $callback, @args) = @_;
-	
 	my $conf = Plugins::UPnPBridge::Squeeze2upnp->configFile($class);
+	
+	$log->debug("lauching helper to build $conf");
 	Plugins::UPnPBridge::Squeeze2upnp->start( "-i", $conf );
-	waitEndHandler(undef, $class, $client, $params, $callback, 120, @args);
+	waitEndHandler({ cb => undef}, $class, $client, $params, $callback, 120, @args);
 }	
 
 sub handler2 {

@@ -596,7 +596,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 				wake = true;
 			}
 
-			if (ctx->cli_sock > 0 && gettime_ms() > ctx->cli_timestamp + 10000) {
+			if (ctx->cli_sock > 0 && gettime_ms() - ctx->cli_timestamp > 10000) {
 				if (!mutex_trylock(ctx->cli_mutex)) {
 					LOG_INFO("[%p] Closing CLI socket %d", ctx, ctx->cli_sock);
 					closesocket(ctx->cli_sock);
