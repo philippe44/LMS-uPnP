@@ -377,7 +377,7 @@ void sq_update_icy(struct out_ctx_s *p)
 	u32_t now = gettime_ms();
 	struct thread_ctx_s *ctx = p->owner;
 
-	if ((now - p->icy.last < 5000) || !p->icy.interval) return;
+	if (((u64_t) now < (u64_t) p->icy.last + 5000) || !p->icy.interval) return;
 	p->icy.last = now;
 
 	sprintf(cmd, "%s playlist index", ctx->cli_id);
