@@ -1,4 +1,4 @@
-0.2.12.3.1
+0.2.12.3
  - correct timegaps using gettime_ms() to manage 32 bits rollover
  - clean settings.pm to make it more readable
  
