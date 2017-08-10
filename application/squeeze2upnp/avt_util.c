@@ -1,5 +1,5 @@
 /*
- *  Squeeze2upnp - LMS to uPNP gateway
+ *  UPnP control utils
  *
  *	(c) Philippe 2015-2017, philippe_44@outlook.com
  *
@@ -22,12 +22,12 @@
 #include <stdlib.h>
 #include <math.h>
 
+#include "platform.h"
 #include "upnptools.h"
-#include "squeezedefs.h"
-#include "util_common.h"
+#include "upnp.h"
+#include "squeeze2upnp.h"
 #include "util.h"
 #include "avt_util.h"
-#include "squeeze2upnp.h"
 
 /*
 WARNING
@@ -37,7 +37,8 @@ WARNING
 extern log_level	upnp_loglevel;
 static log_level 	*loglevel = &upnp_loglevel;
 
-static char *CreateDIDL(char *URI, char *ProtInfo, struct sq_metadata_s *MetaData, struct sMRConfig *Config);
+static char *CreateDIDL(char *URI, char *ProtInfo, struct metadata_s *MetaData, struct sMRConfig *Config);
+
 
 
 /*----------------------------------------------------------------------------*/
@@ -312,7 +313,7 @@ int GetProtocolInfo(struct sMR *Device, void *Cookie)
 
 
 /*----------------------------------------------------------------------------*/
-char *CreateDIDL(char *URI, char *DLNAOptions, struct sq_metadata_s *MetaData, struct sMRConfig *Config)
+char *CreateDIDL(char *URI, char *DLNAOptions, struct metadata_s *MetaData, struct sMRConfig *Config)
 {
 	char *s;
 
@@ -353,8 +354,11 @@ int GetProtocolInfo(struct sMR *Device, void *Cookie)
 						duration.quot % 60, duration.rem);
 	}
 	else {
-		XMLAddNode(doc, node, "upnp:channelName", MetaData->artist);
-		XMLAddNode(doc, node, "upnp:channelNr", "%d", MetaData->track);
+		if (Config->SendMetaData) {
+			XMLAddNode(doc, node, "upnp:channelName", MetaData->artist);
+			XMLAddNode(doc, node, "upnp:channelNr", "%d", MetaData->track);
+		}
+		
 		XMLAddNode(doc, node, "upnp:class", "object.item.audioItem.audioBroadcast");
 		node = XMLAddNode(doc, node, "res", URI);
 	}

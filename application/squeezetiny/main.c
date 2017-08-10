@@ -336,7 +336,7 @@ bool sq_set_time(sq_dev_handle_t handle, u32_t time)
 }
 
 /*--------------------------------------------------------------------------*/
-static void sq_init_metadata(sq_metadata_t *metadata)
+static void sq_init_metadata(metadata_t *metadata)
 {
 	metadata->artist 	= NULL;
 	metadata->album 	= NULL;
@@ -353,7 +353,7 @@ static void sq_init_metadata(sq_metadata_t *metadata)
 }
 
 /*--------------------------------------------------------------------------*/
-void sq_default_metadata(sq_metadata_t *metadata, bool init)
+void sq_default_metadata(metadata_t *metadata, bool init)
 {
 	if (init) sq_init_metadata(metadata);
 
@@ -377,7 +377,7 @@ void sq_update_icy(struct out_ctx_s *p)
 	u32_t now = gettime_ms();
 	struct thread_ctx_s *ctx = p->owner;
 
-	if (((u64_t) now < (u64_t) p->icy.last + 5000) || !p->icy.interval) return;
+	if ((now - p->icy.last - 5000 > 0x7fffffff) || !p->icy.interval) return;
 	p->icy.last = now;
 
 	sprintf(cmd, "%s playlist index", ctx->cli_id);
@@ -442,7 +442,7 @@ void sq_update_icy(struct out_ctx_s *p)
 
 
 /*--------------------------------------------------------------------------*/
-bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
+bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, bool next)
 {
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
 	char cmd[1024];
@@ -586,7 +586,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 }
 
 /*--------------------------------------------------------------------------*/
-void sq_free_metadata(sq_metadata_t *metadata)
+void sq_free_metadata(metadata_t *metadata)
 {
 	NFREE(metadata->artist);
 	NFREE(metadata->album);

@@ -1,5 +1,5 @@
 /*
- *  Squeeze2upnp - LMS to uPNP gateway
+ *  UPnP Control util
  *
  *	(c) Philippe 2015-2017, philippe_44@outlook.comom
  *
@@ -21,10 +21,8 @@
 #ifndef __AVT_UTIL_H
 #define __AVT_UTIL_H
 
-#include "util_common.h"
-#include "util.h"
+#include "log_util.h"
 
-struct sq_metadata_s;
 struct sMRConfig;
 struct sMR;
 

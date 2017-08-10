@@ -1,4 +1,4 @@
-                   /*
+/*
  *  Squeeze2upnp - LMS to uPNP gateway
  *
  *	(c) Philippe 2015-2017, philippe_44@outlook.com
@@ -18,25 +18,14 @@
  *
  */
 
-#ifndef __MR_UTIL_H
-#define __MR_UTIL_H
+#ifndef __CONFIG_UPNP_H
+#define __CONFIG_UPNP_H
 
 #include "squeeze2upnp.h"
-#include "util_common.h"
 
-void 			FlushMRDevices(void);
-void 			DelMRDevice(struct sMR *p);
-
-struct sMR* 	SID2Device(Upnp_SID Sid);
-struct sMR* 	CURL2Device(char *CtrlURL);
-struct sMR* 	UDN2Device(char *SID);
-
-void 			MakeMacUnique(struct sMR *Device);
-
-bool 			SetContentType(struct sMR *Device, sq_seturi_t *uri);
-void 			ParseProtocolInfo(struct sMR *Device, char *Info);
-void			CheckCodecs(struct sMR *Device);
-int 			Codec2Length(char CodecShort, char *Rule);
-u8_t 			ext2format(char *ext);
+void			SaveConfig(char *name, void *ref, bool full);
+void		 	*LoadConfig(char *name, tMRConfig *Conf, sq_dev_param_t *sq_conf);
+void	 		*FindMRConfig(void *ref, char *UDN);
+void 			*LoadMRConfig(void *ref, char *UDN, tMRConfig *Conf, sq_dev_param_t *sq_conf);
 
 #endif

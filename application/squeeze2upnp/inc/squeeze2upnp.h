@@ -97,7 +97,7 @@ struct sMR {
 	bool			GapExpected;
 	int				NextDuration;
 	char			ProtoInfo[SQ_STR_LENGTH];		// a bit patchy ... used for faulty NEXTURI players
-	sq_metadata_t	MetaData;
+	metadata_t		MetaData;
 	sq_action_t		sqState;
 	s64_t			Elapsed, Duration;
 	bool			ExpectStop;

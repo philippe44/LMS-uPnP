@@ -9,6 +9,7 @@ UPNP 		= $(BASE)/libupnp/1.6.19
 FETCHER		= $(BASE)/http_fetcher
 
 DEFINES 	= -D_FILE_OFFSET_BITS=64
+CFLAGS 		+= -fdata-sections -ffunction-sections 
 
 vpath %.c $(TOOLS):$(SRC):$(SQUEEZETINY)
 
@@ -23,7 +24,7 @@ DEPS	= $(SQUEEZETINY)/squeezedefs.h
 				  
 SOURCES = 	slimproto.c buffer.c stream.c utils.c output_mr.c main.c \
 			util_common.c avt_util.c mr_util.c util.c webserver.c squeeze2upnp.c \
-			log_util.c
+			log_util.c config_upnp.c
 		
 SOURCES_LIBS = 
 		

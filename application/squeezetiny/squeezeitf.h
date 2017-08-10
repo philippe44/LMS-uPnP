@@ -45,7 +45,7 @@ typedef enum { FLAC_NO_HEADER = 0, FLAC_NORMAL_HEADER = 1, FLAC_FULL_HEADER = 2 
 typedef	int	sq_dev_handle_t;
 typedef unsigned sq_rate_t;
 
-typedef struct sq_metadata_s {
+typedef struct metadata_s {
 	char *artist;
 	char *album;
 	char *title;
@@ -58,7 +58,7 @@ typedef struct sq_metadata_s {
 	u32_t file_size;
 	bool  remote;
 	u32_t track_hash;
-} sq_metadata_t;
+} metadata_t;
 
 typedef	struct sq_dev_param_s {
 	unsigned 	stream_buf_size;
@@ -120,9 +120,9 @@ void				sq_release_device(sq_dev_handle_t);
 bool				sq_call(sq_dev_handle_t handle, sq_action_t action, void *param);
 void				sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *cookie, void *param);
 u32_t 				sq_get_time(sq_dev_handle_t handle);
-bool				sq_get_metadata(sq_dev_handle_t handle, struct sq_metadata_s *metadata, bool next);
-void				sq_default_metadata(struct sq_metadata_s *metadata, bool init);
-void 				sq_free_metadata(struct sq_metadata_s *metadata);
+bool				sq_get_metadata(sq_dev_handle_t handle, struct metadata_s *metadata, bool next);
+void				sq_default_metadata(struct metadata_s *metadata, bool init);
+void 				sq_free_metadata(struct metadata_s *metadata);
 bool 				sq_set_time(sq_dev_handle_t handle, u32_t time);
 void*				sq_urn2MR(const char *urn);
 sq_dev_handle_t 	sq_urn2handle(const char *urn);

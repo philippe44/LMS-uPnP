@@ -35,6 +35,7 @@
 #include "util.h"
 #include "avt_util.h"
 #include "mr_util.h"
+#include "config_upnp.h"
 
 /*
 TODO :
@@ -638,9 +639,9 @@ int CallbackActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 				(eg) repositionning where two consecutive status update will
 				give 'playing', the 'stop' in the middle being unseen
 				*/
-				if (Resp && (!strcasecmp(Resp, "StopResponse") ||
-							 !strcasecmp(Resp, "PlayResponse") ||
-							 !strcasecmp(Resp, "PauseResponse"))) {
+				if (Resp && ((!strcasecmp(Resp, "StopResponse") && p->State == STOPPED) ||
+							 (!strcasecmp(Resp, "PlayResponse") && p->State == PLAYING) ||
+							 (!strcasecmp(Resp, "PauseResponse") && p->State == PAUSED))) {
 					p->State = UNKNOWN;
 				}
 
@@ -1145,17 +1146,6 @@ int uPNPInitialize(void)
 	if (!*glIPaddress) strcpy(glIPaddress, UpnpGetServerIpAddress());
 	if (!glPort) glPort = UpnpGetServerPort();
 
-	if (rc != UPNP_E_SUCCESS) {
-		LOG_ERROR("uPNP init failed: %d\n", rc);
-		UpnpFinish();
-		return false;
-	}
-
-	if (!*glIPaddress) strcpy(glIPaddress, UpnpGetServerIpAddress());
-	if (!glPort) glPort = UpnpGetServerPort();
-
-	LOG_INFO("uPNP init success - %s:%u", glIPaddress, glPort);
-
 	rc = UpnpRegisterClient(CallbackEventHandler,
 				&glControlPointHandle, &glControlPointHandle);
 
@@ -1164,10 +1154,7 @@ int uPNPInitialize(void)
 		UpnpFinish();
 		return false;
 	}
-	else {
-		LOG_DEBUG("ControlPoint registered", NULL);
-	}
-
+	
 	rc = UpnpEnableWebserver(true);
 
 	if (rc != UPNP_E_SUCCESS) {
@@ -1175,10 +1162,7 @@ int uPNPInitialize(void)
 		UpnpFinish();
 		return false;
 	}
-	else {
-		LOG_DEBUG("WebServer enabled", NULL);
-	}
-
+	
 	rc = UpnpAddVirtualDir(glBaseVDIR);
 
 	if (rc != UPNP_E_SUCCESS) {
@@ -1186,10 +1170,7 @@ int uPNPInitialize(void)
 		UpnpFinish();
 		return false;
 	}
-	else {
-		LOG_DEBUG("VirtualDir set for Squeezelite", NULL);
-	}
-
+	
 	VirtualDirCallbacks.get_info = WebGetInfo;
 	VirtualDirCallbacks.open = WebOpen;
 	VirtualDirCallbacks.read  = WebRead;
@@ -1203,10 +1184,8 @@ int uPNPInitialize(void)
 		UpnpFinish();
 		return false;
 	}
-	else {
-		LOG_DEBUG("Callbacks registered for VirtualDir", NULL);
-	}
-
+	
+	LOG_INFO("UPnP initialied", NULL);
 	/* start the main thread */
 	ithread_create(&glMainThread, NULL, &MainThread, NULL);
 	return true;

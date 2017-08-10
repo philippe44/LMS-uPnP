@@ -1,3 +1,9 @@
+0.2.12.4.1
+ - another silly mistake in 32 bits timer comparison :-(
+ - clean UPnPinitialize
+ - only send metadata if requested, even for live broadcast
+ - cleanup code to be closer to AirConnect
+
 0.2.12.3
  - correct timegaps using gettime_ms() to manage 32 bits rollover
  - clean settings.pm to make it more readable
