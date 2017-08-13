@@ -3,6 +3,7 @@
  - clean UPnPinitialize
  - only send metadata if requested, even for live broadcast
  - cleanup code to be closer to AirConnect
+ - Reset state to UNKNOWN only when needed, otherwise a fake STOP is detected on slow players
 
 0.2.12.3
  - correct timegaps using gettime_ms() to manage 32 bits rollover
