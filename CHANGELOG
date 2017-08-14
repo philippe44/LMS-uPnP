@@ -1,3 +1,6 @@
+0.2.12.4.2
+ - (P) do not save config file if it does not already exist
+ 
 0.2.12.4.1
  - another silly mistake in 32 bits timer comparison :-(
  - clean UPnPinitialize

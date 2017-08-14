@@ -154,7 +154,7 @@ sub handler {
 			$update = 1;
 		}	
 		
-		if ($update) {
+		if ($xmlconfig && $update) {
 			my $writeXML = sub {
 				my $conf = Plugins::UPnPBridge::Squeeze2upnp->configFile($class);
 				
