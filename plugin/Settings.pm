@@ -154,10 +154,11 @@ sub handler {
 			$update = 1;
 		}	
 		
-		if ($xmlconfig && $update) {
+		if ($update) {
 			my $writeXML = sub {
 				my $conf = Plugins::UPnPBridge::Squeeze2upnp->configFile($class);
 				
+				return if !$xmlconfig;
 				$log->debug("write file now");
 				XMLout(	$xmlconfig, RootName => "squeeze2upnp", NoSort => 1, NoAttr => 1, OutputFile => $conf );
 			};
