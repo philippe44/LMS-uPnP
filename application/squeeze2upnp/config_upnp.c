@@ -99,7 +99,6 @@ void SaveConfig(char *name, void *ref, bool full)
 	XMLUpdateNode(doc, common, false, "sample_rate", "%d", (int) glDeviceParam.sample_rate);
 	XMLUpdateNode(doc, common, false, "L24_format", "%d", (int) glDeviceParam.L24_format);
 	XMLUpdateNode(doc, common, false, "flac_header", "%d", (int) glDeviceParam.flac_header);
-	XMLUpdateNode(doc, common, false, "early_STMd", "%d", (int) glDeviceParam.early_STMd);
 	XMLUpdateNode(doc, common, false, "allow_flac", "%d", (int) glMRConfig.AllowFlac);
 	XMLUpdateNode(doc, common, false, "seek_after_pause", "%d", (int) glMRConfig.SeekAfterPause);
 	XMLUpdateNode(doc, common, false, "byte_seek", "%d", (int) glMRConfig.ByteSeek);
@@ -188,7 +187,6 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "sample_rate")) sq_conf->sample_rate = atol(val);
 	if (!strcmp(name, "L24_format")) sq_conf->L24_format = atol(val);
 	if (!strcmp(name, "flac_header")) sq_conf->flac_header = atol(val);
-	if (!strcmp(name, "early_STMd")) sq_conf->early_STMd = atol(val);
 	if (!strcmp(name, "keep_buffer_file"))sq_conf->keep_buffer_file = atol(val);
 	if (!strcmp(name, "allow_flac")) Conf->AllowFlac = atol(val);
 	if (!strcmp(name, "upnp_remove_count"))Conf->UPnPRemoveCount = atol(val);

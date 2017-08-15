@@ -124,7 +124,6 @@ sq_dev_param_t glDeviceParam = {
 					false,      			// keep_buffer_file
 					{ 0x00,0x00,0x00,0x00,0x00,0x00 },
 					false,  				// send_icy
-					false,					// early_STMDd
 					{ 	true,				// use_cli
 						"",     			// server
 					},

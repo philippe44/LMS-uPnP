@@ -755,7 +755,7 @@ void *sq_open(const char *urn)
 		sprintf(buf, "%s/%s", thread_ctx[i-1].config.buffer_dir, out->buf_name);
 		mutex_lock(out->mutex);
 		out->read_file = fopen(buf, "rb");
-		LOG_INFO("[%p]: open", out->owner);
+		LOG_INFO("[%p]:[%u] open", out->owner, out->idx);
 		if (!out->read_file) out = NULL;
 
 		UNLOCK_S;UNLOCK_O;
@@ -833,7 +833,7 @@ bool sq_close(void *desc)
 		LOCK_S;LOCK_O;
 		if (p->read_file) fclose(p->read_file);
 		p->read_file = NULL;
-		LOG_INFO("[%p]: read total:%Ld", p->owner, p->read_count_t);
+		LOG_INFO("[%p]:[%u] read total:%Ld", p->owner, p->idx, p->read_count_t);
 		p->close_count = p->read_count;
 		p->read_count_t -= p->read_count;
 		p->read_count = 0;
@@ -893,13 +893,6 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 		return -1;
 	}
 
-	if (ctx->config.early_STMd && !p->write_file && !ctx->out_ctx[(p->idx + 1) & 0x01].pending) {
-		LOG_INFO("[%p]: Requesting next track %d", ctx, (p->idx + 1) & 0x01);
-		ctx->out_ctx[(p->idx + 1) & 0x01].pending = true;
-		ctx->ready_buffering = true;
-		wake_controller(ctx);
-	}
-
 	sq_update_icy(p);
 
 	switch (ctx->config.max_get_bytes) {
@@ -927,7 +920,7 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 #endif
 		}
 		UNLOCK_S;LOCK_O;
-		LOG_SDEBUG("[%p] read %u bytes at %d", ctx, read_b, wait);
+		LOG_SDEBUG("[%p]:[%u] read %u bytes at %d", ctx, p->idx, read_b, wait);
 		if (!read_b) usleep(SQ_READ_SLEEP);
 	} while (!read_b && p->write_file && (wait == -1 || wait--) && p->owner);
 
@@ -940,7 +933,7 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 		return 0;
 	}
 
-	LOG_INFO("[%p]: read %d (a:%d r:%d w:%d)", ctx, bytes, req_bytes, read_b, wait);
+	LOG_INFO("[%p]:[%u] read %d (a:%d r:%d w:%d)", ctx, p->idx, bytes, req_bytes, read_b, wait);
 
 	LOCK_S;LOCK_O;
 
@@ -977,24 +970,25 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 	the nextURI buffer and miss the end of the current track
 	Starting 2.5.x with real size, take also into account when player closes
 	the connection
+	If there is a write_file, then we are still filling it, just wait more
+	If there is no read_file, it means that it has already been closed by a stop
+	command but the upnp sack might still data if the connection has not closed
+	yet
 	*/
-	if ((!read_b || ((p->file_size > 0 ) && (p->read_count_t >= p->file_size))) && wait && !p->write_file) {
+	if ((!read_b || ((p->file_size > 0 ) && (p->read_count_t >= p->file_size))) && wait && !p->write_file && p->read_file) {
 
 		// see getinfo comment about locking context after full read
 		p->read_complete = true;
+		ctx->ready_buffering = true;
+		wake_controller(ctx);
 
-		if (!ctx->config.early_STMd) {
-			ctx->ready_buffering = true;
-			wake_controller(ctx);
-		} else p->pending = false;
-
-		LOG_INFO("[%p]: read (end of track) w:%d", ctx, wait);
+		LOG_INFO("[%p]:[%u] read (end of track) w:%d", ctx, p->idx, wait);
 	}
 
 	// exit on timeout and not read enough data ==> underrun
 	if (!wait && !read_b) {
 		ctx->read_to = true;
-		LOG_ERROR("[%p]: underrun read:%d (r:%d)", ctx, read_b, bytes);
+		LOG_ERROR("[%p]:[%u] underrun read:%d (r:%d)", ctx, p->idx, read_b, bytes);
 	}
 	UNLOCK_S;UNLOCK_O;
 
