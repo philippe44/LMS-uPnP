@@ -971,11 +971,12 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 	Starting 2.5.x with real size, take also into account when player closes
 	the connection
 	If there is a write_file, then we are still filling it, just wait more
-	If there is no read_file, it means that it has already been closed by a stop
-	command but the upnp sack might still data if the connection has not closed
-	yet
+	It's necessary to check read_file to avoid setting the ready-to-buffer flag
+	when LMS has stopped playback. But, read_file can be NULL and this is still
+	not a LMS stop request if size was indicated as the closing of the connection
+	is made by the peer, not
 	*/
-	if ((!read_b || ((p->file_size > 0 ) && (p->read_count_t >= p->file_size))) && wait && !p->write_file && p->read_file) {
+	if (((!read_b && p->read_file) || ((p->file_size > 0 ) && (p->read_count_t >= p->file_size))) && wait && !p->write_file) {
 
 		// see getinfo comment about locking context after full read
 		p->read_complete = true;
