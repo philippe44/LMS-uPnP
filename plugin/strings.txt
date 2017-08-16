@@ -180,16 +180,12 @@ PLUGIN_UPNPBRIDGE_GAPLESSOPTIONS
 PLUGIN_UPNPBRIDGE_GAPLESSOPTIONS_DESC
 	EN	- Some UPnP players don't support gapless playback and thus don't automatically move to next track in playlist. 
 	EN	<br>- Do not try gapless if track is below a minimum (will mostly cause the player to be stuck)
-	EN	<br>- Fast mode forces early buffering of audio data from LMS, but might has side effect on streaming servuces like Deezer or Tidal 
-	
+		
 PLUGIN_UPNPBRIDGE_ACCEPTNEXTURI
 	EN	Gapless 
 	
 PLUGIN_UPNPBRIDGE_MINGAPLESS
 	EN	Min gap 
-
-PLUGIN_UPNPBRIDGE_EARLYSTMD
-	EN	Fast mode
 
 PLUGIN_UPNPBRIDGE_PAUSEMGMT
 	EN	Pause/Resume management

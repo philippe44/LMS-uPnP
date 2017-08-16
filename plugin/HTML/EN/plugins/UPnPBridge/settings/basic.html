@@ -152,12 +152,6 @@
 		</select>
 		&nbsp[% "PLUGIN_UPNPBRIDGE_MINGAPLESS" | string %]
 		<input [% IF accept_nexturi == 0 %] disabled [% END %] class="stdedit" type="text" id="min_gapless" name="min_gapless" value="[% min_gapless %]" size="2">
-		[% "PLUGIN_UPNPBRIDGE_EARLYSTMD" | string %]
-		&nbsp<select class="stdedit" name="early_STMd" id="early_STMd">
-		[% FOREACH entry IN YESNOBOX %] 
-			<option [% IF entry.1 == early_STMd %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
-		[% END %]
-		</select>
 	[% END %]
 	
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_PAUSEMGMT" desc="PLUGIN_UPNPBRIDGE_PAUSEMGMT_DESC" %]
