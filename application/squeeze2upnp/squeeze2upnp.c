@@ -541,8 +541,8 @@ bool ProcessQueue(struct sMR *Device)
 		LOG_ERROR("Error in queued UpnpSendActionAsync -- %d", rc);
 	}
 
-	free(Action);
 	ixmlDocument_free(Action->ActionNode);
+	free(Action);
 
 	return (rc == 0);
 }
@@ -747,6 +747,8 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 				break;
 			}
 
+			if (!glMainRunning) break;
+
 			ithread_mutex_lock(&glMRFoundMutex);
 			p = &glMRFoundList;
 			while (*p) {
@@ -762,6 +764,8 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 		}
 		case UPNP_DISCOVERY_SEARCH_TIMEOUT:	{
 			pthread_attr_t attr;
+
+			if (!glMainRunning) break;
 
 			pthread_attr_init(&attr);
 			pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN + 32*1024);
@@ -979,7 +983,7 @@ static void *UpdateMRThread(void *args)
 		return NULL;
 	}
 
-	while (p) {
+	while (p && glMainRunning) {
 		IXML_Document *DescDoc = NULL;
 		char *UDN = NULL, *Manufacturer = NULL;
 		int rc;
@@ -1193,8 +1197,6 @@ int uPNPInitialize(void)
 /*----------------------------------------------------------------------------*/
 int uPNPTerminate(void)
 {
-	LOG_DEBUG("terminate main thread ...", NULL);
-	ithread_join(glMainThread, NULL);
 	LOG_DEBUG("un-register libupnp callbacks ...", NULL);
 	UpnpUnRegisterClient(glControlPointHandle);
 	LOG_DEBUG("disable webserver ...", NULL);
@@ -1365,20 +1367,29 @@ static bool Stop(void)
 {
 	struct sLocList *p, *m;
 
+	LOG_DEBUG("terminate search thread ...", NULL);
+	pthread_join(glUpdateMRThread, NULL);
+
 	LOG_DEBUG("flush renderers ...", NULL);
 	FlushMRDevices();
+
+	LOG_DEBUG("terminate main thread ...", NULL);
+	pthread_join(glMainThread, NULL);
+
 	LOG_DEBUG("terminate libupnp ...", NULL);
 	uPNPTerminate();
 
-	ithread_mutex_lock(&glMRFoundMutex);
+	pthread_mutex_lock(&glMRFoundMutex);
 	m = p = glMRFoundList;
 	glMRFoundList = NULL;
-	ithread_mutex_unlock(&glMRFoundMutex);
+	pthread_mutex_unlock(&glMRFoundMutex);
 	while (p) {
 		m = p->Next;
 		free(p->Location); free(p);
 		p = m;
 	}
+
+	if (glConfigID) ixmlDocument_free(glConfigID);
 
 	return true;
 }
@@ -1654,7 +1665,6 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (glConfigID) ixmlDocument_free(glConfigID);
 	glMainRunning = false;
 	LOG_INFO("stopping squeelite devices ...", NULL);
 	sq_stop();

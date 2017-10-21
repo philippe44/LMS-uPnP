@@ -1,3 +1,6 @@
+0.2.12.5.1
+ - code cleaning
+
 0.2.12.4
  - remove earlySTMD option
  - read_file needed to declare ready_buffering
