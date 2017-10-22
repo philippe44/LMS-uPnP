@@ -763,7 +763,7 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 		case UPNP_DISCOVERY_SEARCH_TIMEOUT:	{
 			pthread_attr_t attr;
 
-			if (!glMainRunning || glDiscoveryRunning == DISCOVERY_STOPPED) break;
+			if (!glMainRunning) break;
 
 			glDiscoveryRunning = DISCOVERY_UPDATING;
 
@@ -1060,7 +1060,7 @@ static void *MainThread(void *args)
 
 		// reset timeout and re-scan devices
 		ScanPoll += elapsed;
-		if (gluPNPScanInterval && ScanPoll > gluPNPScanInterval*1000) {
+		if (gluPNPScanInterval && ScanPoll > gluPNPScanInterval*1000 && glDiscoveryRunning == DISCOVERY_STOPPED) {
 			ScanPoll = 0;
 
 			glDiscoveryRunning = DISCOVERY_PENDING;
