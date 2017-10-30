@@ -1,8 +1,6 @@
-0.2.15.5.2
+0.2.15.5
  - update renderer thread cleaned for better exit
  - memory leaks correction
- 
-0.2.12.5.1
  - code cleaning
 
 0.2.12.4

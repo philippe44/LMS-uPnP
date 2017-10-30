@@ -170,6 +170,7 @@ static struct sLocList {
 	char 			*Location;
 	struct sLocList *Next;
 } *glMRFoundList = NULL;
+static pthread_mutex_t	glEventMutex;
 
 static char usage[] =
 			VERSION "\n"
@@ -738,7 +739,6 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 		break;
 		case UPNP_DISCOVERY_SEARCH_RESULT: {
 			struct Upnp_Discovery *d_event = (struct Upnp_Discovery *) Event;
-			struct sLocList **p, *prev = NULL;
 
 			LOG_DEBUG("Answer to uPNP search %d", d_event->Location);
 			if (d_event->ErrCode != UPNP_E_SUCCESS) {
@@ -746,17 +746,24 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 				break;
 			}
 
-			if (!glMainRunning || glDiscoveryRunning == DISCOVERY_UPDATING) break;
+			// this must *not* bet interrupted by the SEARCH_TIMEOUT event
+			pthread_mutex_lock(&glEventMutex);
 
-			p = &glMRFoundList;
-			while (*p) {
-				prev = *p;
-				p = &((*p)->Next);
+			if (glMainRunning && glDiscoveryRunning != DISCOVERY_UPDATING) {
+				struct sLocList **p, *prev = NULL;
+
+				p = &glMRFoundList;
+				while (*p) {
+					prev = *p;
+					p = &((*p)->Next);
+				}
+				(*p) = (struct sLocList*) malloc(sizeof (struct sLocList));
+				(*p)->Location = strdup(d_event->Location);
+				(*p)->Next = NULL;
+				if (prev) prev->Next = *p;
 			}
-			(*p) = (struct sLocList*) malloc(sizeof (struct sLocList));
-			(*p)->Location = strdup(d_event->Location);
-			(*p)->Next = NULL;
-			if (prev) prev->Next = *p;
+
+			pthread_mutex_unlock(&glEventMutex);
 
 			break;
 		}
@@ -765,7 +772,10 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 
 			if (!glMainRunning) break;
 
+			// in case we are interrupting SEARCH_RESULT
+			pthread_mutex_lock(&glEventMutex);
 			glDiscoveryRunning = DISCOVERY_UPDATING;
+			pthread_mutex_unlock(&glEventMutex);
 
 			pthread_attr_init(&attr);
 			pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN + 32*1024);
@@ -974,13 +984,12 @@ static void *UpdateMRThread(void *args)
 		IXML_Document *DescDoc = NULL;
 		char *UDN = NULL, *Manufacturer = NULL;
 		int rc;
-		void *n = p->Next;
 
 		rc = UpnpDownloadXmlDoc(p->Location, &DescDoc);
 		if (rc != UPNP_E_SUCCESS) {
 			LOG_DEBUG("Error obtaining description %s -- error = %d\n", p->Location, rc);
 			if (DescDoc) ixmlDocument_free(DescDoc);
-			p = n;
+			p = p->Next;
 			continue;
 		}
 
@@ -1013,7 +1022,7 @@ static void *UpdateMRThread(void *args)
 
 		if (DescDoc) ixmlDocument_free(DescDoc);
 		NFREE(UDN);	NFREE(Manufacturer);
-		p = n;
+		p = p->Next;
 	}
 
 	// free the list of discovered location URL's
@@ -1022,7 +1031,6 @@ static void *UpdateMRThread(void *args)
 		free(glMRFoundList->Location); free(glMRFoundList);
 		glMRFoundList = p;
 	}
-	glMRFoundList = NULL;
 
 	// then walk through the list of devices to remove missing ones
 	for (i = 0; i < MAX_RENDERERS; i++) {
@@ -1109,14 +1117,6 @@ int uPNPInitialize(void)
 	int rc;
 	struct UpnpVirtualDirCallbacks VirtualDirCallbacks;
 
-	if (gluPNPScanInterval) {
-		if (gluPNPScanInterval < SCAN_INTERVAL) gluPNPScanInterval = SCAN_INTERVAL;
-		if (gluPNPScanTimeout < SCAN_TIMEOUT) gluPNPScanTimeout = SCAN_TIMEOUT;
-		if (gluPNPScanTimeout > gluPNPScanInterval - SCAN_TIMEOUT) gluPNPScanTimeout = gluPNPScanInterval - SCAN_TIMEOUT;
-	}
-
-	memset(&glMRDevices, 0, sizeof(glMRDevices));
-
 	UpnpSetLogLevel(UPNP_ALL);
 
 	if (!strstr(glUPnPSocket, "?")) sscanf(glUPnPSocket, "%[^:]:%u", glIPaddress, &glPort);
@@ -1175,9 +1175,7 @@ int uPNPInitialize(void)
 	}
 	
 	LOG_INFO("UPnP initialized", NULL);
-	/* start the main thread */
-	ithread_create(&glMainThread, NULL, &MainThread, NULL);
-	return true;
+	return true;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -1344,8 +1342,22 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 /*----------------------------------------------------------------------------*/
 static bool Start(void)
 {
+	memset(&glMRDevices, 0, sizeof(glMRDevices));
+
+	if (gluPNPScanInterval) {
+		if (gluPNPScanInterval < SCAN_INTERVAL) gluPNPScanInterval = SCAN_INTERVAL;
+		if (gluPNPScanTimeout < SCAN_TIMEOUT) gluPNPScanTimeout = SCAN_TIMEOUT;
+		if (gluPNPScanTimeout > gluPNPScanInterval - SCAN_TIMEOUT) gluPNPScanTimeout = gluPNPScanInterval - SCAN_TIMEOUT;
+	}
+
 	if (!uPNPInitialize()) return false;
+
+	// start the main thread
+	pthread_mutex_init(&glEventMutex, 0);
+	pthread_create(&glMainThread, NULL, &MainThread, NULL);
+
 	uPNPSearchMediaRenderer();
+
 	return true;
 }
 
@@ -1361,6 +1373,7 @@ static bool Stop(void)
 
 	LOG_DEBUG("terminate main thread ...", NULL);
 	pthread_join(glMainThread, NULL);
+	pthread_mutex_destroy(&glEventMutex);
 
 	LOG_DEBUG("terminate libupnp ...", NULL);
 	uPNPTerminate();
