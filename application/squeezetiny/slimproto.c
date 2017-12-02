@@ -93,7 +93,7 @@ void send_packet(u8_t *packet, size_t len, sockfd sock) {
 
 /*---------------------------------------------------------------------------*/
 static void sendHELO(bool reconnect, const char *fixed_cap, const char *var_cap, u8_t mac[6], struct thread_ctx_s *ctx) {
-	const char *base_cap = "Model=squeezelite,ModelName=SqueezeLite,AccuratePlayPoints=0,HasDigitalOut=0";
+	const char *base_cap = "Model=squeezelite,ModelName=SqueezeLite,AccuratePlayPoints=0,HasDigitalOut=1";
 	struct HELO_packet pkt;
 
 	memset(&pkt, 0, sizeof(pkt));
@@ -436,7 +436,9 @@ static void process_audg(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 	LOG_DEBUG("[%p] (old) audg gainL: %u gainR: %u", ctx, audg->old_gainL, audg->old_gainR);
 
 	gain = (audg->old_gainL + audg->old_gainL) / 2;
-	ctx_callback(ctx, SQ_VOLUME, NULL, (void*) &gain);
+	if (audg->adjust) {
+		ctx_callback(ctx, SQ_VOLUME, NULL, (void*) &gain);
+    }
 }
 
 /*---------------------------------------------------------------------------*/

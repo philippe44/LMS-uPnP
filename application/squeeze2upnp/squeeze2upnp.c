@@ -1121,8 +1121,7 @@ int uPNPInitialize(void)
 
 	if (!strstr(glUPnPSocket, "?")) sscanf(glUPnPSocket, "%[^:]:%u", glIPaddress, &glPort);
 
-	if (*glIPaddress) rc = UpnpInit(glIPaddress, glPort);
-	else rc = UpnpInit(NULL, glPort);
+	rc = UpnpInit(*glIPaddress ? glIPaddress : NULL, glPort);
 
 	if (rc != UPNP_E_SUCCESS) {
 		LOG_ERROR("UPnP init failed: %d\n", rc);
