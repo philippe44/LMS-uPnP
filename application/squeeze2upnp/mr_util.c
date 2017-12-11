@@ -26,6 +26,7 @@
 #include "mr_util.h"
 #include "util.h"
 #include "util_common.h"
+#include "upnptools.h"
 #include "log_util.h"
 
 extern log_level util_loglevel;
@@ -270,6 +271,57 @@ bool SetContentType(struct sMR *Device, sq_seturi_t *uri)
 	else strcat(uri->proto_info, buf);
 
 	return rc;
+}
+
+
+/*----------------------------------------------------------------------------*/
+bool isMaster(char *UDN, struct sService *Service)
+{
+	IXML_Document *ActionNode = NULL, *Response;
+	char *Coordinator = NULL;
+	bool Master = true;
+
+	if (!*Service->ControlURL) return true;
+
+	ActionNode = UpnpMakeAction("GetZoneGroupState", Service->Type, 0, NULL);
+	UpnpSendAction(glControlPointHandle, Service->ControlURL, Service->Type,
+								 NULL, ActionNode, &Response);
+
+	Coordinator = XMLGetFirstDocumentItem(Response, "ZoneGroupState");
+	if (Response) ixmlDocument_free(Response);
+
+	Response = ixmlParseBuffer(Coordinator);
+	NFREE(Coordinator);
+
+	/* if member but not coordinator, eliminate */
+	if (Response) {
+		char myUUID[RESOURCE_LENGTH] = "";
+		IXML_NodeList *nodeList = ixmlDocument_getElementsByTagName(Response, "ZoneGroupMember");
+
+		// find all ZoneMembers entries
+		if (nodeList) {
+			int i;
+			const char *UUID, *Coordinator;
+
+			sscanf(UDN, "uuid:%s", myUUID);
+
+			// get the UUID and see if it's member of a zone and not the coordinator
+			for (i = 0; i < (int) ixmlNodeList_length(nodeList) && Master; i++) {
+				IXML_Node *Parent, *Node = ixmlNodeList_item(nodeList, i);
+
+				UUID = ixmlElement_getAttribute((IXML_Element*) Node, "UUID");
+				Parent = ixmlNode_getParentNode(Node);
+				Coordinator = ixmlElement_getAttribute((IXML_Element*) Parent, "Coordinator");
+				if (!strcasecmp(UUID, myUUID) && strcasecmp(UUID, Coordinator)) Master = false;
+			}
+
+			ixmlNodeList_free(nodeList);
+		}
+
+		ixmlDocument_free(Response);
+	}
+
+	return Master;
 }
 
 
