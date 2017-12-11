@@ -555,7 +555,10 @@ bool ProcessQueue(struct sMR *Device)
 /*----------------------------------------------------------------------------*/
 void ProcessVolume(char *Volume, struct sMR* Device)
 {
-	u16_t UPnPVolume = atoi(Volume);
+	u16_t UPnPVolume;
+	int GroupVolume = GetGroupVolume(Device);
+
+	UPnPVolume = (GroupVolume > 0) ? GroupVolume : atoi(Volume);
 
 	LOG_SDEBUG("[%p]: Volume %s", Device, Volume);
 
@@ -966,7 +969,7 @@ static bool RefreshTO(char *UDN)
 			glMRDevices[i].UPnPMissingCount = glMRDevices[i].Config.UPnPRemoveCount;
 			glMRDevices[i].ErrorCount = 0;
 
-			if ( !isMaster(UDN, &glMRDevices[i].Service[TOPOLOGY_IDX]) ) {
+			if ( glMRDevices[i].sqState != SQ_PLAY && !isMaster(UDN, &glMRDevices[i].Service[TOPOLOGY_IDX]) ) {
 				glMRDevices[i].UPnPMissingCount = 0;
 				glMRDevices[i].UPnPConnected = false;
 			}
