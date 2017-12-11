@@ -1,5 +1,6 @@
 0.2.14.0
 - detect Sonos groups and do not add slaves
+- add Sonos groups volume
 
 0.2.13.0
  - HasDigitalOut =1 so that volume can be blocked
