@@ -1,3 +1,6 @@
+0.2.14.2
+ - proper elimination of slave Sonos devices (including surroung setup)
+ 
 0.2.14.0
 - detect Sonos groups and do not add slaves
 - add Sonos groups volume
