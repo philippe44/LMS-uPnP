@@ -969,7 +969,7 @@ static bool RefreshTO(char *UDN)
 			glMRDevices[i].UPnPMissingCount = glMRDevices[i].Config.UPnPRemoveCount;
 			glMRDevices[i].ErrorCount = 0;
 
-			if ( glMRDevices[i].sqState != SQ_PLAY && !isMaster(UDN, &glMRDevices[i].Service[TOPOLOGY_IDX]) ) {
+			if ( glMRDevices[i].sqState != SQ_PLAY && !isMaster(UDN, &glMRDevices[i].Service[TOPOLOGY_IDX], NULL) ) {
 				glMRDevices[i].UPnPMissingCount = 0;
 				glMRDevices[i].UPnPConnected = false;
 			}
@@ -1288,7 +1288,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 		NFREE(ControlURL);
 	}
 
-	if ( !isMaster(UDN, &Device->Service[TOPOLOGY_IDX]) ) {
+	if ( !isMaster(UDN, &Device->Service[TOPOLOGY_IDX], &friendlyName) ) {
 		LOG_DEBUG("[%p] skipping Sonos slave %s", Device, friendlyName);
 		NFREE(manufacturer);
 		NFREE(friendlyName);
