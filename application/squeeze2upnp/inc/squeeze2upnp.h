@@ -105,7 +105,8 @@ struct sMR {
 	void			*WaitCookie, *StartCookie;
 	tQueue			ActionQueue;
 	unsigned		TrackPoll, StatePoll;
-	bool			UPnPTimeOut, UPnPConnected;
+	bool			TimeOut;
+	enum 			{EVT_ACTIVE, EVT_FAILED, EVT_BYEBYE} Eventing;
 	int	 			SqueezeHandle;
 	struct sService Service[NB_SRV];
 	struct sAction	*Actions;
@@ -116,7 +117,7 @@ struct sMR {
 	char			*ProtocolCap[MAX_PROTO + 1];
 	bool			ProtocolCapReady;
 	u16_t			ErrorCount;
-	int				UPnPMissingCount;
+	int				MissingCount;
 	bool			Running;
 };
 

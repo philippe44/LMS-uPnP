@@ -50,6 +50,9 @@ sub handler {
 		open my $fh, ">", $logfile;
 		print $fh;
 		close $fh;
+	} elsif ($params->{ 'restart' }) {
+		Plugins::UPnPBridge::Squeeze2upnp->stop;
+		waitEndHandler(undef, $class, $client, $params, $callback, 30, @args);
 	} elsif ($params->{'saveSettings'}) {
 		my @bool  = qw(autorun logging autosave eraselog useLMSsocket);
 		my @other = qw(output bin debugs opts);

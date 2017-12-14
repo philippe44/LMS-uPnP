@@ -1,3 +1,7 @@
+0.2.15.0
+ - (1) add a "restart" button
+ - (1) always remove a player when BYEBYE is received
+
 0.2.14.3
  - default name is zone name for Sonos device
  

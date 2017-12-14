@@ -68,13 +68,9 @@
 		<accept_nexturi>0</accept_nexturi>
 	</profile>
 	<profile name='Revo'>
-		<stream_length>1000000000</stream_length>
-		<accept_nexturi>0</accept_nexturi>
-		<sample_rate>96000</sample_rate>
-		<profile name=''></profile>	
-		<profile name='chunked'>
-			<stream_length>-3</stream_length>
-		</profile>	
+		<send_metadata>1</send_metadata>
+		<send_coverart>0</send_coverart>
+		<send_icy>1</send_icy>
 	</profile>
 	<profile name='Naim Uniti2'>
 		<seek_after_pause>1</seek_after_pause>
@@ -119,6 +115,11 @@
 		<stream_length>1000000000</stream_length>
 		<raw_audio_format>wav,aiff</raw_audio_format>
 		<sample_rate>48000</sample_rate>
+	</profile>
+		<profile name='GGMM E5'>
+		<accept_nexturi>0</accept_nexturi>
+		<send_metadata>0</send_metadata>
+		<send_coverart>0</send_coverart>
 	</profile>
 </squeeze2upnp>
 

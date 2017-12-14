@@ -88,7 +88,7 @@ tMRConfig			glMRConfig = {
 							true,		// SendMetaData
 							true,		// SendCoverArt
 							100,		// MaxVolume
-							1,			// UPnPRemoveCount
+							1,			// RemoveCount
 							"raw", 		// RawAudioFormat
 							true,       // MatchEndianness
 							false,		// AutoPlay
@@ -821,9 +821,8 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 
 			ithread_mutex_lock(&p->Mutex);
 
-			if (!*d_event->ServiceType && p->UPnPConnected) {
-				p->UPnPConnected = false;
-				p->UPnPMissingCount = 0;
+			if (!*d_event->ServiceType) {
+				p->Eventing = EVT_BYEBYE;
 				LOG_INFO("[%p]: Player BYE-BYE", p);
 			}
 
@@ -834,7 +833,7 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 		case UPNP_EVENT_AUTORENEWAL_FAILED: {
 			struct Upnp_Event_Subscribe *d_Event = (struct Upnp_Event_Subscribe *)Event;
 			struct sMR *p = SID2Device(d_Event->Sid);
-			int i, ret = UPNP_E_INVALID_SID;
+			int i, ret = UPNP_E_SUCCESS;
 
 			if (!p) break;
 
@@ -853,7 +852,7 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 
 			if (ret != UPNP_E_SUCCESS) {
 				LOG_WARN("[%p]: Auto-renewal failed, cannot re-subscribe", p);
-				p->UPnPConnected = false;
+				p->Eventing = EVT_FAILED;
 			} else {
 				LOG_WARN("[%p]: Auto-renewal failed, re-subscribe success", p);
 			}
@@ -963,18 +962,28 @@ static bool RefreshTO(char *UDN)
 
 	for (i = 0; i < MAX_RENDERERS; i++) {
 		if (glMRDevices[i].InUse && !strcmp(glMRDevices[i].UDN, UDN)) {
-			ithread_mutex_lock(&glMRDevices[i].Mutex);
+			int j;
 
-			glMRDevices[i].UPnPTimeOut = false;
-			glMRDevices[i].UPnPMissingCount = glMRDevices[i].Config.UPnPRemoveCount;
+			pthread_mutex_lock(&glMRDevices[i].Mutex);
+
+			glMRDevices[i].TimeOut = false;
 			glMRDevices[i].ErrorCount = 0;
+			glMRDevices[i].MissingCount = glMRDevices[i].Config.UPnPRemoveCount;
 
+			// remove device if it became part of a group
 			if ( glMRDevices[i].sqState != SQ_PLAY && !isMaster(UDN, &glMRDevices[i].Service[TOPOLOGY_IDX], NULL) ) {
-				glMRDevices[i].UPnPMissingCount = 0;
-				glMRDevices[i].UPnPConnected = false;
+				glMRDevices[i].Eventing = EVT_BYEBYE;
 			}
 
-			ithread_mutex_unlock(&glMRDevices[i].Mutex);
+			// try to renew subscription if failed
+			for (j = 0; glMRDevices[i].Eventing == EVT_FAILED && j < NB_SRV; j++) {
+				struct sService *s = &glMRDevices[i].Service[j];
+				if (s->TimeOut && UpnpSubscribe(glControlPointHandle, s->EventURL, &s->TimeOut, s->SID) != UPNP_E_SUCCESS) {
+					LOG_INFO("[%p] service re-subscribe success", glMRDevices + i);
+				}
+			}
+
+			pthread_mutex_unlock(&glMRDevices[i].Mutex);
 
 			return true;
 		}
@@ -1050,9 +1059,9 @@ static void *UpdateMRThread(void *args)
 	// then walk through the list of devices to remove missing ones
 	for (i = 0; i < MAX_RENDERERS; i++) {
 		Device = &glMRDevices[i];
-		if (!Device->InUse || !Device->Config.UPnPRemoveCount) continue;
-		if (Device->UPnPTimeOut && Device->UPnPMissingCount) Device->UPnPMissingCount--;
-		if (Device->UPnPConnected || Device->UPnPMissingCount) continue;
+		if (!Device->InUse) continue;
+		if (Device->TimeOut && Device->MissingCount) Device->MissingCount--;
+		if (Device->Eventing != EVT_BYEBYE && (Device->MissingCount || !Device->Config.UPnPRemoveCount)) continue;
 
 		LOG_INFO("[%p]: removing renderer (%s)", Device, Device->FriendlyName);
 		if (Device->SqueezeHandle) sq_delete_device(Device->SqueezeHandle);
@@ -1087,7 +1096,7 @@ static void *MainThread(void *args)
 			ScanPoll = 0;
 
 			glDiscoveryRunning = DISCOVERY_PENDING;
-			for (i = 0; i < MAX_RENDERERS; i++) glMRDevices[i].UPnPTimeOut = true;
+			for (i = 0; i < MAX_RENDERERS; i++) glMRDevices[i].TimeOut = true;
 
 			// launch a new search for Media Render
 			rc = UpnpSearchAsync(glControlPointHandle, gluPNPScanTimeout, MEDIA_RENDERER, NULL);
@@ -1299,9 +1308,9 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 
 	pthread_mutex_init(&Device->Mutex, 0);
 	Device->Magic = MAGIC;
-	Device->UPnPTimeOut = false;
-	Device->UPnPConnected = true;
-	Device->UPnPMissingCount = Device->Config.UPnPRemoveCount;
+	Device->TimeOut = false;
+	Device->Eventing = EVT_ACTIVE;
+	Device->MissingCount = Device->Config.UPnPRemoveCount;
 	Device->Muted = true;	//assume device is muted
 	Device->SqueezeHandle = 0;
 	Device->ErrorCount = 0;

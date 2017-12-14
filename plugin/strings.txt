@@ -28,6 +28,9 @@ PLUGIN_UPNPBRIDGE_USERGUIDELINK
 PLUGIN_UPNPBRIDGE_BINARIES
 	EN	Select Binary
 
+PLUGIN_UPNPBRIDGE_RESTART
+	EN	Restart
+
 PLUGIN_UPNPBRIDGE_BINARIES_DESC
 	EN	Select the Squeeze2upnp binary which best matches your machine's architecture.
 	EN	<br>- on raspi, use only armv6hf version
