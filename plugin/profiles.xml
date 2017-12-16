@@ -116,13 +116,12 @@
 		<raw_audio_format>wav,aiff</raw_audio_format>
 		<sample_rate>48000</sample_rate>
 	</profile>
-		<profile name='GGMM E5'>
+	<profile name='GGMM E5'>
 		<accept_nexturi>0</accept_nexturi>
 		<send_metadata>0</send_metadata>
 		<send_coverart>0</send_coverart>
 	</profile>
-	<profile>
-		<profile name='Denon'>
+	<profile name='Denon'>
 		<send_coverart>1</send_coverart>
 		<sample_rate>192000</sample_rate>
 		<raw_audio_format>wav,raw</raw_audio_format>
