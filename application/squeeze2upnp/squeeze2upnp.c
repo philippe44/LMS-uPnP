@@ -797,22 +797,6 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 		case UPNP_CONTROL_GET_VAR_COMPLETE:
 			LOG_ERROR("Unexpected GetVarComplete", NULL);
 			break;
-		case UPNP_CONTROL_ACTION_COMPLETE: {
-			struct Upnp_Action_Complete *Action = (struct Upnp_Action_Complete *)Event;
-			struct sMR *p;
-			char   *r;
-
-			p = CURL2Device(Action->CtrlUrl);
-			if (!p) break;
-
-			r = XMLGetFirstDocumentItem(Action->ActionResult, "Sink");
-			if (r) {
-				LOG_DEBUG("[%p]: ProtocolInfo %s (cookie %p)", p, r, Cookie);
-				ParseProtocolInfo(p, r);
-			}
-			NFREE(r);
-			break;
-		}
 		case UPNP_DISCOVERY_ADVERTISEMENT_BYEBYE: {
 			struct Upnp_Discovery *d_event = (struct Upnp_Discovery *) Event;
 			struct sMR *p = UDN2Device(d_event->DeviceId);
@@ -890,7 +874,8 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 		case UPNP_CONTROL_ACTION_REQUEST:
 		case UPNP_EVENT_UNSUBSCRIBE_COMPLETE:
 		case UPNP_CONTROL_GET_VAR_REQUEST:
-		break;
+		case UPNP_CONTROL_ACTION_COMPLETE:
+			break;
 	}
 
 	Cookie = Cookie;
@@ -1240,6 +1225,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	char *URLBase = NULL;
 	char *presURL = NULL;
 	char *manufacturer = NULL;
+	char *Sink;
 	int i;
 	pthread_attr_t attr;
 	unsigned long mac_size = 6;
@@ -1306,7 +1292,6 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 
 	LOG_INFO("[%p]: adding renderer (%s)", Device, friendlyName);
 
-	pthread_mutex_init(&Device->Mutex, 0);
 	Device->Magic = MAGIC;
 	Device->TimeOut = false;
 	Device->Eventing = EVT_ACTIVE;
@@ -1314,8 +1299,6 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	Device->Muted = true;	//assume device is muted
 	Device->SqueezeHandle = 0;
 	Device->ErrorCount = 0;
-	Device->Running = true;
-	Device->InUse = true;
 	Device->sqState = SQ_STOP;
 	Device->State = STOPPED;
 	Device->WaitCookie = Device->StartCookie = NULL;
@@ -1342,30 +1325,27 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 
 	MakeMacUnique(Device);
 
-	// send a request for "sink" (will be returned in a callback)
-	Device->ProtocolCapReady = false;
-	GetProtocolInfo(Device, Device->seqN++);
-
 	NFREE(manufacturer);
 	NFREE(friendlyName);
+
+	// get the protocol info
+	if (!(Sink = GetProtocolInfo(Device))) {
+		LOG_WARN("[%p] unable to get protocol info, device not added", Device);
+		return false;
+	}
+
+	ParseProtocolInfo(Device, Sink);
+	free(Sink);
+
+	pthread_mutex_init(&Device->Mutex, 0);
+
+	Device->Running = true;
+	Device->InUse = true;
 
 	pthread_attr_init(&attr);
 	pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN + 32*1024);
 	pthread_create(&Device->Thread, &attr, &MRThread, Device);
 	pthread_attr_destroy(&attr);
-
-	/*
-	Wait for protocol cap to be filled. This is really ugly but safe as this is
-	executed in a different thread than the GetProtocolInfo
-	*/
-	for (i = 0; i < 50 && !Device->ProtocolCapReady; i++) usleep(10000);
-	if (!Device->ProtocolCapReady) {
-		LOG_ERROR("[%p]: timeout waiting ProtocolInfo, cannot adjust codecs", Device);
-	}
-	else {
-		LOG_DEBUG("[%p]: waited %d ms for protocolinfo", Device, i*10);
-		CheckCodecs(Device);
-	}
 
 	return true;
 }

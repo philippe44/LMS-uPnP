@@ -115,7 +115,6 @@ struct sMR {
 	u8_t			Volume;
 	bool			Muted;
 	char			*ProtocolCap[MAX_PROTO + 1];
-	bool			ProtocolCapReady;
 	u16_t			ErrorCount;
 	int				MissingCount;
 	bool			Running;

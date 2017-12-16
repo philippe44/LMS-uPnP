@@ -287,6 +287,8 @@ bool isMaster(char *UDN, struct sService *Service, char **Name)
 	UpnpSendAction(glControlPointHandle, Service->ControlURL, Service->Type,
 								 NULL, ActionNode, &Response);
 
+	if (ActionNode) ixmlDocument_free(ActionNode);
+
 	Body = XMLGetFirstDocumentItem(Response, "ZoneGroupState");
 	if (Response) ixmlDocument_free(Response);
 
@@ -484,8 +486,6 @@ void ParseProtocolInfo(struct sMR *Device, char *Info)
 
 	if (Device->Config.AllowFlac && flac == false && i < MAX_PROTO)
 		Device->ProtocolCap[i] = strdup("http-get:*:audio/flac:");
-
-	Device->ProtocolCapReady = true;
 }
 
 /*----------------------------------------------------------------------------*/
