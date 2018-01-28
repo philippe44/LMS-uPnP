@@ -60,9 +60,6 @@ void sq_stop() {
 			sq_wipe_device(&thread_ctx[i]);
 		}
 	}
-#if WIN
-	winsock_close();
-#endif
 }
 
 /*--------------------------------------------------------------------------*/
@@ -94,6 +91,10 @@ void sq_wipe_device(struct thread_ctx_s *ctx) {
 /*--------------------------------------------------------------------------*/
 void sq_delete_device(sq_dev_handle_t handle) {
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
+
+	if (!handle) return;
+
+	ctx = &thread_ctx[handle - 1];
 	sq_wipe_device(ctx);
 }
 
@@ -218,7 +219,7 @@ bool cli_open_socket(struct thread_ctx_s *ctx) {
 }
 
 #define CLI_SEND_SLEEP (10000)
-#define CLI_SEND_TO (1*1000000)
+#define CLI_SEND_TO (1*500000)
 /*---------------------------------------------------------------------------*/
 char *cli_send_cmd(char *cmd, bool req, bool decode, struct thread_ctx_s *ctx)
 {
@@ -244,14 +245,26 @@ bool cli_open_socket(struct thread_ctx_s *ctx) {
 	send_packet((u8_t*) packet, len, ctx->cli_sock);
 	// first receive the tag and then point to the last '\n'
 	len = 0;
-	while (wait--)	{
+	while (wait)	{
 		int k;
-		usleep(CLI_SEND_SLEEP);
-		k = recv(ctx->cli_sock, packet + len, CLI_LEN-1 - len, 0);
-		if (k < 0) {
-			if (last_error() == ERROR_WOULDBLOCK) continue;
-			else break;
+		fd_set rfds;
+		struct timeval timeout = {0, CLI_SEND_SLEEP};
+
+		FD_ZERO(&rfds);
+		FD_SET(ctx->cli_sock, &rfds);
+
+		k = select(ctx->cli_sock + 1, &rfds, NULL, NULL, &timeout);
+
+		if (!k) {
+			wait--;
+			continue;
 		}
+
+		if (k < 0) break;
+
+		k = recv(ctx->cli_sock, packet + len, CLI_LEN-1 - len, 0);
+		if (k <= 0) break;
+
 		len += k;
 		packet[len] = '\0';
 		if (strchr(packet, '\n') && stristr(packet, cmd)) {
@@ -263,7 +276,7 @@ bool cli_open_socket(struct thread_ctx_s *ctx) {
 	if (!wait) {
 		LOG_WARN("[%p]: Timeout waiting for CLI reponse (%s)", ctx, cmd);
 	}
-	
+
 	LOG_SDEBUG("[%p]: rsp %s", ctx, rsp);
 
 	if (rsp && ((rsp = stristr(rsp, cmd)) != NULL)) {
@@ -1095,9 +1108,6 @@ int sq_read(void *desc, void *dst, unsigned bytes)
 /*---------------------------------------------------------------------------*/
 void sq_init(void)
 {
-#if WIN
-	winsock_init();
-#endif
 }
 
 /*---------------------------------------------------------------------------*/

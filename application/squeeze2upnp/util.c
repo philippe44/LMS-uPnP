@@ -34,7 +34,60 @@
 /*----------------------------------------------------------------------------*/
 extern log_level util_loglevel;
 static log_level *loglevel = &util_loglevel;
+
 static IXML_Node *_getAttributeNode(IXML_Node *node, char *SearchAttr);
+
+#if WIN
+/*----------------------------------------------------------------------------*/
+void winsock_init(void) {
+	WSADATA wsaData;
+	WORD wVersionRequested = MAKEWORD(2, 2);
+	int WSerr = WSAStartup(wVersionRequested, &wsaData);
+	if (WSerr != 0) {
+		LOG_ERROR("Bad winsock version", NULL);
+		exit(1);
+	}
+}
+
+
+/*----------------------------------------------------------------------------*/
+void winsock_close(void) {
+	WSACleanup();
+}
+#endif
+
+
+/*----------------------------------------------------------------------------*/
+int pthread_cond_reltimedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, u32_t msWait)
+{
+	struct timespec ts;
+	u32_t	nsec;
+#if OSX || SUNOS
+	struct timeval tv;
+#endif
+
+#if WIN
+	struct _timeb SysTime;
+
+	_ftime(&SysTime);
+	ts.tv_sec = (long) SysTime.time;
+	ts.tv_nsec = 1000000 * SysTime.millitm;
+#elif LINUX || FREEBSD
+	clock_gettime(CLOCK_REALTIME, &ts);
+#elif OSX || SUNOS
+	gettimeofday(&tv, NULL);
+	ts.tv_sec = (long) tv.tv_sec;
+	ts.tv_nsec = 1000L * tv.tv_usec;
+#endif
+
+	if (!msWait) return pthread_cond_wait(cond, mutex);
+
+	nsec = ts.tv_nsec + (msWait % 1000) * 1000000;
+	ts.tv_sec += msWait / 1000 + (nsec / 1000000000);
+	ts.tv_nsec = nsec % 1000000000;
+
+	return pthread_cond_timedwait(cond, mutex, &ts);
+}
 
 
 /*----------------------------------------------------------------------------*/
@@ -390,6 +443,34 @@ int XMLAddAttribute(IXML_Document *doc, IXML_Node *parent, char *name, char *fmt
 
 
 /*----------------------------------------------------------------------------*/
+bool XMLMatchDocumentItem(IXML_Document *doc, const char *item, const char *s)
+{
+	IXML_NodeList *nodeList = NULL;
+	IXML_Node *textNode = NULL;
+	IXML_Node *tmpNode = NULL;
+	int i;
+	bool ret = false;
+
+	nodeList = ixmlDocument_getElementsByTagName(doc, (char *)item);
+
+	for (i = 0; nodeList && i < (int) ixmlNodeList_length(nodeList); i++) {
+		tmpNode = ixmlNodeList_item(nodeList, i);
+		if (!tmpNode) continue;
+		textNode = ixmlNode_getFirstChild(tmpNode);
+		if (!textNode) continue;
+		if (!strcmp(ixmlNode_getNodeValue(textNode), s)) {
+			ret = true;
+			break;
+		}
+	}
+
+	if (nodeList) ixmlNodeList_free(nodeList);
+
+	return ret;
+}
+
+
+/*----------------------------------------------------------------------------*/
 s64_t Time2Int(char *Time)
 {
 	char *p;
@@ -416,34 +497,63 @@ s64_t Time2Int(char *Time)
 	return ret;
 }
 
+/*----------------------------------------------------------------------------*/
+/* 																			  */
+/* QUEUE management															  */
+/* 																			  */
+/*----------------------------------------------------------------------------*/
 
 /*----------------------------------------------------------------------------*/
-void QueueInit(tQueue *queue)
+void QueueInit(tQueue *queue, bool mutex, void (*cleanup)(void*))
 {
-	queue->item = NULL;
+	queue->cleanup = cleanup;
+	queue->list.item = NULL;
+	if (mutex) {
+		queue->mutex = malloc(sizeof(pthread_mutex_t));
+		pthread_mutex_init(queue->mutex, NULL);
+	}
+	else queue->mutex = NULL;
 }
+
 
 /*----------------------------------------------------------------------------*/
 void QueueInsert(tQueue *queue, void *item)
 {
-	while (queue->item)	queue = queue->next;
-	queue->item = item;
-	queue->next = malloc(sizeof(tQueue));
-	queue->next->item = NULL;
+	struct sQueue_e *list;
+
+	if (queue->mutex) pthread_mutex_lock(queue->mutex);
+	list = &queue->list;
+
+	while (list->item) list = list->next;
+	list->item = item;
+	list->next = malloc(sizeof(struct sQueue_e));
+	list->next->item = NULL;
+
+	if (queue->mutex) pthread_mutex_unlock(queue->mutex);
 }
 
 
 /*----------------------------------------------------------------------------*/
 void *QueueExtract(tQueue *queue)
 {
-	void *item = queue->item;
-	tQueue *next = queue->next;
+	void *item;
+	struct sQueue_e *list;
+
+	if (queue->mutex) pthread_mutex_lock(queue->mutex);
+
+	list = &queue->list;
+	item = list->item;
 
 	if (item) {
-		queue->item = next->item;
-		if (next->item) queue->next = next->next;
+		struct sQueue_e *next = list->next;
+		if (next->item) {
+			list->item = next->item;
+			list->next = next->next;
+		} else list->item = NULL;
 		NFREE(next);
 	}
+
+	if (queue->mutex) pthread_mutex_unlock(queue->mutex);
 
 	return item;
 }
@@ -452,16 +562,23 @@ void *QueueExtract(tQueue *queue)
 /*----------------------------------------------------------------------------*/
 void QueueFlush(tQueue *queue)
 {
-	void *item = queue->item;
-	tQueue *next = queue->next;
+	struct sQueue_e *list;
 
-	queue->item = NULL;
+	if (queue->mutex) pthread_mutex_lock(queue->mutex);
 
-	while (item) {
-		next = queue->next;
-		item = next->item;
-		if (next->item) queue->next = next->next;
+	list = &queue->list;
+
+	while (list->item) {
+		struct sQueue_e *next = list->next;
+		if (queue->cleanup)	(*(queue->cleanup))(list->item);
+		list = list->next;
 		NFREE(next);
+	}
+
+	if (queue->mutex) {
+		pthread_mutex_unlock(queue->mutex);
+		pthread_mutex_destroy(queue->mutex);
+		free(queue->mutex);
 	}
 }
 

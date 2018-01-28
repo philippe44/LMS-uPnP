@@ -31,30 +31,47 @@
 #include "util_common.h"
 #include "log_util.h"
 
-typedef struct sQueue {
-	struct sQueue *next;
-	void *item;
+typedef struct {
+	pthread_mutex_t	*mutex;
+	void (*cleanup)(void*);
+	struct sQueue_e {
+		struct sQueue_e *next;
+		void 			*item;
+	} list;
 } tQueue;
 
-void 		QueueInit(tQueue *queue);
+void 		QueueInit(tQueue *queue, bool mutex, void (*f)(void*));
 void 		QueueInsert(tQueue *queue, void *item);
 void 		*QueueExtract(tQueue *queue);
 void 		QueueFlush(tQueue *queue);
+
+int 		pthread_cond_reltimedwait(pthread_cond_t *cond, pthread_mutex_t *mutex,	u32_t msWait);
 
 char 		*uPNPEvent2String(Upnp_EventType S);
 void 		uPNPUtilInit(log_level level);
 in_addr_t	ExtractIP(const char *URL);
 s64_t	 	Time2Int(char *Time);
 
-char 	   	*XMLGetChangeItem(IXML_Document *doc, char *Tag, char *SearchAttr, char *SearchVal, char *RetAttr);
+char 	   	*XMLGetChangeItem(IXML_Document *doc, char *Tag, char *SearchAttr,
+							  char *SearchVal, char *RetAttr);
 const char 	*XMLGetLocalName(IXML_Document *doc, int Depth);
-IXML_Node  	*XMLAddNode(IXML_Document *doc, IXML_Node *parent, char *name, char *fmt, ...);
-IXML_Node  	*XMLUpdateNode(IXML_Document *doc, IXML_Node *parent, bool refresh, char *name, char *fmt, ...);
-int 	   	XMLAddAttribute(IXML_Document *doc, IXML_Node *parent, char *name, char *fmt, ...);
+IXML_Node  	*XMLAddNode(IXML_Document *doc, IXML_Node *parent, char *name,
+						char *fmt, ...);
+IXML_Node  	*XMLUpdateNode(IXML_Document *doc, IXML_Node *parent, bool refresh,
+						   char *name, char *fmt, ...);
+int 	   	XMLAddAttribute(IXML_Document *doc, IXML_Node *parent, char *name,
+							char *fmt, ...);
 char 	   	*XMLGetFirstDocumentItem(IXML_Document *doc, const char *item);
 int 	   	XMLFindAndParseService(IXML_Document *DescDoc, const char *location,
-							const char *serviceTypeBase, char **serviceId,
-							char **serviceType, char **eventURL, char **controlURL);
+								   const char *serviceTypeBase, char **serviceId,
+								   char **serviceType, char **eventURL, char **controlURL);
+bool 		XMLMatchDocumentItem(IXML_Document *doc, const char *item, const char *s);
 
 void 	   	uPNPLogLevel(log_level level);
+
+#if WIN
+void  		winsock_init(void);
+void		winsock_close(void);
+#endif
+
 #endif

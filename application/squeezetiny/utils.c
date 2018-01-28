@@ -337,20 +337,6 @@ void set_nosigpipe(sockfd s) {
 #endif
 
 #if WIN
-void winsock_init(void) {
-    WSADATA wsaData;
-	WORD wVersionRequested = MAKEWORD(2, 2);
-    int WSerr = WSAStartup(wVersionRequested, &wsaData);
-    if (WSerr != 0) {
-        LOG_ERROR("Bad winsock version", NULL);
-        exit(1);
-    }
-}
-
-void winsock_close(void) {
-	WSACleanup();
-}
-
 void *dlopen(const char *filename, int flag) {
 	SetLastError(0);
 	return LoadLibrary((LPCTSTR)filename);

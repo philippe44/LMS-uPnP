@@ -56,6 +56,7 @@ struct sService {
 	char ControlURL	[RESOURCE_LENGTH];
 	Upnp_SID		SID;
 	s32_t			TimeOut;
+	u32_t			Failed;
 };
 
 typedef struct sMRConfig
@@ -72,7 +73,6 @@ struct sService {
 	bool		SendMetaData;
 	bool		SendCoverArt;
 	int			MaxVolume;
-	int			UPnPRemoveCount;
 	char		RawAudioFormat[SQ_STR_LENGTH];
 	bool		MatchEndianness;
 	bool		AutoPlay;
@@ -82,15 +82,13 @@ struct sService {
 
 struct sMR {
 	u32_t Magic;
-	bool  InUse;
+	bool  Running;
 	tMRConfig Config;
 	sq_dev_param_t	sq_config;
 	bool on;
+	char friendlyName	[RESOURCE_LENGTH];
 	char UDN			[RESOURCE_LENGTH];
 	char DescDocURL		[RESOURCE_LENGTH];
-	char FriendlyName	[RESOURCE_LENGTH];
-	char PresURL		[RESOURCE_LENGTH];
-	char Manufacturer	[RESOURCE_LENGTH];
 	enum eMRstate 	State;
 	char			*CurrentURI;
 	char			*NextURI;
@@ -106,36 +104,33 @@ struct sMR {
 	tQueue			ActionQueue;
 	unsigned		TrackPoll, StatePoll;
 	bool			TimeOut;
-	enum 			{EVT_ACTIVE, EVT_FAILED, EVT_BYEBYE} Eventing;
 	int	 			SqueezeHandle;
 	struct sService Service[NB_SRV];
 	struct sAction	*Actions;
-	ithread_mutex_t Mutex;
-	ithread_t 		Thread;
+	pthread_mutex_t Mutex;
+	pthread_cond_t	Cond;
+	bool			Delete;
+	u32_t			Busy;
+	pthread_t 		Thread;
 	u8_t			Volume;
 	bool			Muted;
 	char			*ProtocolCap[MAX_PROTO + 1];
 	u16_t			ErrorCount;
-	int				MissingCount;
-	bool			Running;
+	u32_t			LastSeen;
 };
 
 extern UpnpClient_Handle   	glControlPointHandle;
-extern unsigned int 		glPort;
-extern char 				glIPaddress[];
 extern char 				glUPnPSocket[];
-extern u8_t		   			glMac[6];
 extern s32_t				glLogLimit;
 extern tMRConfig			glMRConfig;
 extern sq_dev_param_t		glDeviceParam;
-extern u32_t				gluPNPScanInterval;
-extern u32_t				gluPNPScanTimeout;
 extern struct sMR			glMRDevices[MAX_RENDERERS];
+extern pthread_mutex_t 		glMRMutex;
 
 struct sMR 		*mr_File2Device(const char *FileName);
 sq_dev_handle_t	mr_GetSqHandle(struct sMR *Device);
-int 			CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie);
-int 			CallbackActionHandler(Upnp_EventType EventType, void *Event, void *Cookie);
+int 			MasterHandler(Upnp_EventType EventType, void *Event, void *Cookie);
+int 			ActionHandler(Upnp_EventType EventType, void *Event, void *Cookie);
 
 
 #endif

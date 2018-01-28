@@ -27,10 +27,14 @@
 void 			FlushMRDevices(void);
 void 			DelMRDevice(struct sMR *p);
 bool 			isMaster(char *UDN, struct sService *Service, char **Name);
+void 			BusyRaise(struct sMR *Device);
+void 			BusyDrop(struct sMR *Device);
+bool 			CheckAndLock(struct sMR *Device);
 
 struct sMR* 	SID2Device(Upnp_SID Sid);
 struct sMR* 	CURL2Device(char *CtrlURL);
 struct sMR* 	UDN2Device(char *SID);
+struct sService *EventURL2Service(char *URL, struct sService *s);
 
 void 			MakeMacUnique(struct sMR *Device);
 

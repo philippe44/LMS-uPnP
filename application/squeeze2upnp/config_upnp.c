@@ -81,8 +81,6 @@ void SaveConfig(char *name, void *ref, bool full)
 	XMLUpdateNode(doc, root, false, "slimmain_log", level2debug(slimmain_loglevel));
 	XMLUpdateNode(doc, root, false, "upnp_log",level2debug(upnp_loglevel));
 	XMLUpdateNode(doc, root, false, "util_log",level2debug(util_loglevel));
-	XMLUpdateNode(doc, root, false, "upnp_scan_interval", "%d", (u32_t) gluPNPScanInterval);
-	XMLUpdateNode(doc, root, false, "upnp_scan_timeout", "%d", (u32_t) gluPNPScanTimeout);
 	XMLUpdateNode(doc, root, false, "log_limit", "%d", (s32_t) glLogLimit);
 
 	XMLUpdateNode(doc, common, false, "streambuf_size", "%d", (u32_t) glDeviceParam.stream_buf_size);
@@ -110,7 +108,6 @@ void SaveConfig(char *name, void *ref, bool full)
 	XMLUpdateNode(doc, common, false, "max_volume", "%d", glMRConfig.MaxVolume);
 	XMLUpdateNode(doc, common, false, "accept_nexturi", "%d", (int) glMRConfig.AcceptNextURI);
 	XMLUpdateNode(doc, common, false, "min_gapless", "%d", (int) glMRConfig.MinGapless);
-	XMLUpdateNode(doc, common, false, "upnp_remove_count", "%d", (u32_t) glMRConfig.UPnPRemoveCount);
 	XMLUpdateNode(doc, common, false, "raw_audio_format", glMRConfig.RawAudioFormat);
 	XMLUpdateNode(doc, common, false, "match_endianness", "%d", (int) glMRConfig.MatchEndianness);
 	XMLUpdateNode(doc, common, false, "auto_play", "%d", (int) glMRConfig.AutoPlay);
@@ -119,7 +116,7 @@ void SaveConfig(char *name, void *ref, bool full)
 	for (i = 0; i < MAX_RENDERERS; i++) {
 		IXML_Node *dev_node;
 
-		if (!glMRDevices[i].InUse) continue;
+		if (!glMRDevices[i].Running) continue;
 		else p = &glMRDevices[i];
 
 		// existing device, keep param and update "name" if LMS has requested it
@@ -127,7 +124,7 @@ void SaveConfig(char *name, void *ref, bool full)
 			ixmlDocument_importNode(doc, dev_node, true, &dev_node);
 			ixmlNode_appendChild((IXML_Node*) root, dev_node);
 
-			XMLUpdateNode(doc, dev_node, false, "friendly_name", p->FriendlyName);
+			XMLUpdateNode(doc, dev_node, false, "friendly_name", p->friendlyName);
 			XMLUpdateNode(doc, dev_node, true, "name", p->sq_config.name);
 			if (*p->sq_config.dynamic.server) XMLUpdateNode(doc, dev_node, true, "server", p->sq_config.dynamic.server);
 		}
@@ -135,8 +132,8 @@ void SaveConfig(char *name, void *ref, bool full)
 		else {
 			dev_node = XMLAddNode(doc, root, "device", NULL);
 			XMLAddNode(doc, dev_node, "udn", p->UDN);
-			XMLAddNode(doc, dev_node, "name", p->FriendlyName);
-			XMLAddNode(doc, dev_node, "friendly_name", p->FriendlyName);
+			XMLAddNode(doc, dev_node, "name", p->friendlyName);
+			XMLAddNode(doc, dev_node, "friendly_name", p->friendlyName);
 			if (*p->sq_config.dynamic.server) XMLAddNode(doc, dev_node, "server", p->sq_config.dynamic.server);
 			XMLAddNode(doc, dev_node, "mac", "%02x:%02x:%02x:%02x:%02x:%02x", p->sq_config.mac[0],
 						p->sq_config.mac[1], p->sq_config.mac[2], p->sq_config.mac[3], p->sq_config.mac[4], p->sq_config.mac[5]);
@@ -189,7 +186,6 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "flac_header")) sq_conf->flac_header = atol(val);
 	if (!strcmp(name, "keep_buffer_file"))sq_conf->keep_buffer_file = atol(val);
 	if (!strcmp(name, "allow_flac")) Conf->AllowFlac = atol(val);
-	if (!strcmp(name, "upnp_remove_count"))Conf->UPnPRemoveCount = atol(val);
 	if (!strcmp(name, "raw_audio_format")) strcpy(Conf->RawAudioFormat, val);
 	if (!strcmp(name, "match_endianness")) Conf->MatchEndianness = atol(val);
 	if (!strcmp(name, "seek_after_pause")) Conf->SeekAfterPause = atol(val);
@@ -232,8 +228,6 @@ static void LoadGlobalItem(char *name, char *val)
 	if (!strcmp(name, "slimmain_log")) slimmain_loglevel = debug2level(val);
 	if (!strcmp(name, "upnp_log")) upnp_loglevel = debug2level(val);
 	if (!strcmp(name, "util_log")) util_loglevel = debug2level(val);
-	if (!strcmp(name, "upnp_scan_interval")) gluPNPScanInterval = atol(val);
-	if (!strcmp(name, "upnp_scan_timeout")) gluPNPScanTimeout = atol(val);
 	if (!strcmp(name, "log_limit")) glLogLimit = atol(val);
  }
 

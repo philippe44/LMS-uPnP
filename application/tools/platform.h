@@ -146,4 +146,6 @@ u64_t gettime_ms64(void);
 
 #define SL_LITTLE_ENDIAN (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
 
+#define _STR_LEN_	256
+
 #endif     // __PLATFORM

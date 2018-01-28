@@ -128,7 +128,7 @@ PLUGIN_UPNPBRIDGE_CONFIG
 PLUGIN_UPNPBRIDGE_CONFIG_DESC
 	EN	<i>Generate</i> re-scans the network and builds a configuration file including all discovered players while retaining
 	EN	existing parameters and players (this will stop the bridge for ~30s)
-	EN	<br>When autosave is checked, the configuration file will be automatically updated at every network scan (see UPnP scanning options)
+	EN	<br>When autosave is checked, the configuration file will be automatically updated every time a player is discovered
 
 PLUGIN_UPNPBRIDGE_CONFLINK
 	EN	View
@@ -142,12 +142,6 @@ PLUGIN_UPNPBRIDGE_AUTOSAVECONFIG
 PLUGIN_UPNPBRIDGE_DELCONFIG
 	EN	Erase
 	
-PLUGIN_UPNPBRIDGE_UPNPSCAN
-	EN	UPnP device scanning options
-
-PLUGIN_UPNPBRIDGE_UPNPSCAN_DESC
-	EN	How often and for how long the network is scanned for added/removed UPnP players on your network
-
 PLUGIN_UPNPBRIDGE_UPNPSOCKET
 	EN	Network socket to use
 	
@@ -158,12 +152,6 @@ PLUGIN_UPNPBRIDGE_UPNPSOCKET_DESC
 	EN	The socket (IP:port) used by the bridge. This is especially useful if you have a computer with multiple network interfaces.
 	EN	Use "?" (without ") to let the bridge decide or check "use LMS' network interface" to make sure the Bridge uses the same
 	EN	network as LMS
-	
-PLUGIN_UPNPBRIDGE_SCANINTERVAL
-	EN	Scan for UPnP devices every
-	
-PLUGIN_UPNPBRIDGE_SCANTIMEOUT
-	EN	during 	
 	
 PLUGIN_UPNPBRIDGE_TEXTDEFAULT
 	EN	The following parameters apply to ALL players - enter "default" (without ") in text boxes to set to default values
@@ -288,18 +276,11 @@ PLUGIN_UPNPBRIDGE_UPNPMGMT_DESC
 	EN	Misc options
 	EN	<br>- For the default list newly discovered players can be automatically added to LMS 
 	EN	<br>– For individual players a player can be enabled or disabled
-	EN	<br>- Number of UPnP scan cycles a player can be found missing before being removed
 	EN	<br>- Force LMS server (? for auto-discovery)
 
 PLUGIN_UPNPBRIDGE_ENABLEDEFS
 	EN	Player is enabled
 
-PLUGIN_UPNPBRIDGE_UPNPREMOVECOUNT_1
-	EN	but removed after  
-	
-PLUGIN_UPNPBRIDGE_UPNPREMOVECOUNT_2
-	EN	UPnP failed scans
-	
 PLUGIN_UPNPBRIDGE_SENDMETADATA
 	EN	Send LMS metadata to player
 	

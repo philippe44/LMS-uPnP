@@ -75,11 +75,6 @@
 	<input hidden type="text" class="stdedit" name="xmlparams" id="xmlparams" value="1" size="5">
 	<input hidden type="text" class="stdedit" name="prevseldevice" id="prevseldevice" value="[% prevseldevice %]" size="5">
 	
-	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_UPNPSCAN" desc="PLUGIN_UPNPBRIDGE_UPNPSCAN_DESC" %]
-		[% "PLUGIN_UPNPBRIDGE_SCANINTERVAL" | string %]</th>&nbsp<td><input type="text" class="stdedit" name="upnp_scan_interval" id="upnp_scan_interval" value="[% upnp_scan_interval %]" size="2"> (s)
-		[% "PLUGIN_UPNPBRIDGE_SCANTIMEOUT" | string %]&nbsp<input type="text" class="stdedit" name="upnp_scan_timeout" id="upnp_scan_timeout" value="[% upnp_scan_timeout %]" size="2"> (s)
-	[% END %]
-	
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_UPNPSOCKET" desc="PLUGIN_UPNPBRIDGE_UPNPSOCKET_DESC" %]
 		<input [% IF useLMSsocket %] disabled [% END %] type="text" class="stdedit" name="upnp_socket" id="upnp_socket" value="[% upnp_socket %]" size="20">
 		&nbsp<input name="useLMSsocket" type="checkbox" [% IF useLMSsocket %] checked [% END %]>&nbsp[% "PLUGIN_UPNPBRIDGE_USELMSSOCKET" | string %]
@@ -212,7 +207,6 @@
 			<option [% IF entry.1 == enabled %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
 		[% END %]
 		</select>
-		[% "PLUGIN_UPNPBRIDGE_UPNPREMOVECOUNT_1" | string %]<input type="text" class="stdedit" name="upnp_remove_count" id="upnp_remove_count" value="[% upnp_remove_count %]" size="2">&nbsp[% "PLUGIN_UPNPBRIDGE_UPNPREMOVECOUNT_2" | string %]
 	[% END %]
 	
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_VOLUMEMGMT" desc="PLUGIN_UPNPBRIDGE_VOLUMEMGMT_DESC" %]
