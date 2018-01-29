@@ -853,7 +853,7 @@ static void slimproto(struct thread_ctx_s *ctx) {
 		set_nonblock(ctx->sock);
 		set_nosigpipe(ctx->sock);
 
-		if (connect_timeout(ctx->sock, (struct sockaddr *) &ctx->serv_addr, sizeof(ctx->serv_addr), 5) != 0) {
+		if (connect_timeout(ctx->sock, (struct sockaddr *) &ctx->serv_addr, sizeof(ctx->serv_addr), 5*1000) != 0) {
 
 			LOG_WARN("[%p] unable to connect to server %u", ctx, failed_connect);
 			sleep(5);

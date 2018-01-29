@@ -394,7 +394,7 @@ void stream_sock(u32_t ip, u16_t port, const char *header, size_t header_len, un
 	set_nonblock(sock);
 	set_nosigpipe(sock);
 
-	if (connect_timeout(sock, (struct sockaddr *) &addr, sizeof(addr), 10) < 0) {
+	if (connect_timeout(sock, (struct sockaddr *) &addr, sizeof(addr), 10*1000) < 0) {
 		LOG_WARN("[%p] unable to connect to server", ctx);
 		LOCK_S;
 		ctx->stream.state = DISCONNECT;
