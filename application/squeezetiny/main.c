@@ -202,16 +202,10 @@ bool cli_open_socket(struct thread_ctx_s *ctx) {
 	addr.sin_addr.s_addr = ctx->slimproto_ip;
 	addr.sin_port = htons(9090);
 
-	if (connect(ctx->cli_sock, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
-#if !WIN
-		if (last_error() != EINPROGRESS) {
-#else
-		if (last_error() != WSAEWOULDBLOCK) {
-#endif
-			LOG_ERROR("[%p] unable to connect to server with cli", ctx);
-			ctx->cli_sock = -1;
-			return false;
-		}
+	if (connect_timeout(ctx->cli_sock, (struct sockaddr *) &addr, sizeof(addr), 50))  {
+		LOG_ERROR("[%p] unable to connect to server with cli", ctx);
+		ctx->cli_sock = -1;
+		return false;
 	}
 
 	LOG_INFO("[%p]: opened CLI socket %d", ctx, ctx->cli_sock);
@@ -1197,4 +1191,10 @@ bool sq_run_device(sq_dev_handle_t handle, sq_dev_param_t *param)
 	return true;
 }
 
+/*--------------------------------------------------------------------------*/
+void *sq_get_ptr(sq_dev_handle_t handle)
+{
+	if (!handle) return NULL;
+	else return thread_ctx + handle - 1;
+}
 

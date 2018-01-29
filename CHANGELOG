@@ -1,3 +1,10 @@
+0.3.0.0 
+ - new handling of UPnP discovery for on-the-fly player addition / removal (no more discovery time and removal counts)
+ - Review of all mutex-related issue and various risk of unprotected code
+ - review of memory leaks 
+ - add possibility to dump players ('dump' & 'dumpall' commmands)
+ - (2) cli_send_comment uses timeout in connect (for freebsd)
+
 0.2.15.1
  - correct memory leak is isMater and GetGroupVolume
  - no more wait loop for GetProtocolInfo, make it a sync call

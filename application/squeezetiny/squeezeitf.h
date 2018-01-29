@@ -133,6 +133,7 @@ bool				sq_close(void *desc);
 int					sq_read(void *desc, void *dst, unsigned bytes);
 int					sq_seek(void *desc, off_t bytes, int from);
 bool 				sq_is_remote(const char *urn);
+void*				sq_get_ptr(sq_dev_handle_t handle);
 
 #endif
 

@@ -207,7 +207,7 @@ void set_nonblock(sockfd s) {
 #endif
 }
 
-// connect for socket already set to non blocking with timeout in seconds
+// connect for socket already set to non blocking with timeout in seconds or ms
 int connect_timeout(sockfd sock, const struct sockaddr *addr, socklen_t addrlen, int timeout) {
 	fd_set w, e;
 	struct timeval tval;
@@ -225,8 +225,13 @@ int connect_timeout(sockfd sock, const struct sockaddr *addr, socklen_t addrlen,
 	FD_ZERO(&w);
 	FD_SET(sock, &w);
 	e = w;
-	tval.tv_sec = timeout;
-	tval.tv_usec = 0;
+	if (timeout < 10) {
+		tval.tv_sec = timeout;
+		tval.tv_usec = 0;
+	} else {
+		tval.tv_sec = 0;
+		tval.tv_usec = timeout*1000;
+	}
 
 	// only return 0 if w set and sock error is zero, otherwise return error code
 	if (select(sock + 1, NULL, &w, &e, timeout ? &tval : NULL) == 1 && FD_ISSET(sock, &w)) {
@@ -395,7 +400,7 @@ void touch_memory(u8_t *buf, size_t size) {
 }
 #endif
 
-#if LINUX || FREEBSD
+#if LINUX
 int SendARP(in_addr_t src, in_addr_t dst, u8_t mac[], unsigned long *size) {
 	int                 s;
 	struct arpreq       areq;
@@ -473,6 +478,12 @@ int SendARP(in_addr_t src, in_addr_t dst, u8_t mac[], unsigned long *size)
 
 	free(buf);
 	return (found_entry);
+}
+#elif !WIN
+int SendARP(in_addr_t src, in_addr_t dst, u8_t mac[], unsigned long *size)
+{
+	LOG_ERROR("No SendARP build for this platform", NULL);
+	return 1;
 }
 #endif
 
