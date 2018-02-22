@@ -1,8 +1,8 @@
 /*
  *  Squeezelite - lightweight headless squeezebox emulator
  *
- *  (c) Adrian Smith 2012-2014, triode1@btinternet.com
- *	(c) Philippe 2015-2017, philippe_44@outlook.com
+ *  (c) Adrian Smith 2012-2015, triode1@btinternet.com
+ *  (c) Philippe, philippe_44@outlook.com 
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,8 +25,8 @@
 
 #include <fcntl.h>
 
-extern log_level stream_loglevel;
-static log_level *loglevel = &stream_loglevel;
+extern log_level	stream_loglevel;
+static log_level 	*loglevel = &stream_loglevel;
 
 #define LOCK_S   mutex_lock(ctx->streambuf->mutex)
 #define UNLOCK_S mutex_unlock(ctx->streambuf->mutex)
@@ -89,6 +89,15 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 
 		LOCK_S;
 
+		/*
+		It is required to use min with buf_space as it is the full space - 1,
+		otherwise, a write to full would be authorized and the write pointer
+		would wrap to the read pointer, making impossible to know if the buffer
+		is full or empty. This as the consequence, though, that the buffer can
+		never be totally full and can only wrap once the read pointer has moved
+		so it is impossible to count on having a proper multiply of any number
+		of bytes in the buffer
+		*/
 		space = min(_buf_space(ctx->streambuf), _buf_cont_write(ctx->streambuf));
 
 		if (ctx->fd < 0 || !space || ctx->stream.state <= STREAMING_WAIT) {
@@ -252,7 +261,7 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 
 					n = recv(ctx->fd, ctx->streambuf->writep, space, 0);
 					if (n == 0) {
-						LOG_INFO("[%p] end of stream (t:%Ld)", ctx, ctx->stream.bytes);
+						LOG_INFO("[%p] end of stream (t:%lld)", ctx, ctx->stream.bytes);
 						_disconnect(DISCONNECT, DISCONNECT_OK, ctx);
 					}
 					if (n < 0 && last_error() != ERROR_WOULDBLOCK) {
@@ -274,7 +283,7 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 						wake_controller(ctx);
 					}
 
-					LOG_SDEBUG("[%p] streambuf read %d bytes", ctx, n);
+					LOG_DEBUG("[%p] streambuf read %d bytes", ctx, n);
 				}
 			}
 
@@ -291,13 +300,15 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 
 
 /*---------------------------------------------------------------------------*/
-void stream_thread_init(unsigned stream_buf_size, struct thread_ctx_s *ctx) {
+void stream_thread_init(unsigned streambuf_size, struct thread_ctx_s *ctx) {
 
-	LOG_DEBUG("[%p] streambuf size: %u", ctx, stream_buf_size);
+	pthread_attr_t attr;
 
-	stream_buf_size = (stream_buf_size / (4*3)) * (4*3);
+	LOG_DEBUG("[%p] streambuf size: %u", ctx, streambuf_size);
+
 	ctx->streambuf = &ctx->__s_buf;
-	buf_init(ctx->streambuf, stream_buf_size);
+
+	buf_init(ctx->streambuf, ((streambuf_size / (BYTES_PER_FRAME * 3)) * BYTES_PER_FRAME * 3));
 	if (ctx->streambuf->buf == NULL) {
 		LOG_ERROR("[%p] unable to malloc buffer", ctx);
 		exit(0);
@@ -314,16 +325,10 @@ void stream_thread_init(unsigned stream_buf_size, struct thread_ctx_s *ctx) {
 	touch_memory(ctx->streambuf->buf, ctx->streambuf->size);
 #endif
 
-#if LINUX || OSX || FREEBSD
-	pthread_attr_t attr;
 	pthread_attr_init(&attr);
 	pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN + STREAM_THREAD_STACK_SIZE);
 	pthread_create(&ctx->stream_thread, &attr, (void *(*)(void*)) stream_thread, ctx);
 	pthread_attr_destroy(&attr);
-#endif
-#if WIN
-	ctx->stream_thread = CreateThread(NULL, STREAM_THREAD_STACK_SIZE, (LPTHREAD_START_ROUTINE)&stream_thread, ctx, 0, NULL);
-#endif
 }
 
 void stream_close(struct thread_ctx_s *ctx) {
@@ -331,9 +336,7 @@ void stream_close(struct thread_ctx_s *ctx) {
 	LOCK_S;
 	ctx->stream_running = false;
 	UNLOCK_S;
-#if LINUX || OSX || FREEBSD
 	pthread_join(ctx->stream_thread, NULL);
-#endif
 	free(ctx->stream.header);
 	buf_destroy(ctx->streambuf);
 }

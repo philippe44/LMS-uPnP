@@ -65,35 +65,242 @@
 extern log_level 	util_loglevel;
 //static log_level 	*loglevel = &util_loglevel;
 
+/*----------------------------------------------------------------------------*/
+/* 																			  */
+/* CODEC & MIME management													  */
+/* 																			  */
+/*----------------------------------------------------------------------------*/
+
+/*---------------------------------------------------------------------------*/
+char *mimetype2ext(char *mimetype)
+{
+	if (!mimetype) return '\0';
+
+	if (strstr(mimetype, "wav")) return "wav";
+	if (strstr(mimetype, "audio/L")) return "pcm";
+	if (strstr(mimetype, "flac")) return "flac";
+	if (strstr(mimetype, "flc")) return "flc";
+	if (strstr(mimetype, "mp3") || strstr(mimetype, "mpeg")) return "mp3";
+	if (strstr(mimetype, "ogg")) return "ogg";
+	if (strstr(mimetype, "aif")) return "aif";
+	if (strstr(mimetype, "aac")) return "aac";
+	if (strstr(mimetype, "mp4")) return "mp4";
+
+	return "nil";
+
+}
+
+/*---------------------------------------------------------------------------*/
+u8_t mimetype2format(char *mimetype)
+{
+	if (!mimetype) return '\0';
+
+	if (strstr(mimetype, "wav")) return 'w';
+	if (strstr(mimetype, "audio/L")) return 'p';
+	if (strstr(mimetype, "flac") || strstr(mimetype, "flc")) return 'f';
+	if (strstr(mimetype, "mp3") || strstr(mimetype, "mpeg")) return 'm';
+	if (strstr(mimetype, "ogg")) return 'o';
+	if (strstr(mimetype, "aif")) return 'i';
+	if (strstr(mimetype, "aac")) return 'a';
+	if (strstr(mimetype, "mp4")) return 'a';
+
+	return '*';
+}
+
+/*---------------------------------------------------------------------------*/
+static char *_lookup(char *mimetypes[], int n, ...) {
+	char *mimetype, **p;
+	va_list args;
+
+	va_start(args, n);
+
+	while (n--) {
+		mimetype = va_arg(args, char*);
+		p = mimetypes;
+		while (*p) {
+			if (!strcmp(mimetype, *p)) {
+				va_end(args);
+				return strdup(*p);
+			}
+			p++;
+		}
+   }
+
+   va_end(args);
+
+   return NULL;
+}
+
+/*---------------------------------------------------------------------------*/
+char *find_mimetype(char codec, char *mimetypes[], char *out) {
+	switch (codec) {
+	case 'm': return _lookup(mimetypes, 3, "audio/mp3", "audio/mpeg", "audio/mpeg3");
+	case 'f': return _lookup(mimetypes, 2, "audio/x-flac", "audio/flac");
+	case 'w': return _lookup(mimetypes, 2, "audio/x-wma", "audio/wma");
+	case 'o': return _lookup(mimetypes, 2, "audio/ogg", "audio/x-ogg");
+	case 'a': return _lookup(mimetypes, 4, "audio/x-aac", "audio/aac", "audio/m4a", "audio/mp4");
+	case 'l': return _lookup(mimetypes, 1, "audio/m4a");
+	}
+
+   return NULL;
+}
+
+/*---------------------------------------------------------------------------*/
+char* find_pcm_mimetype(u8_t endian, u8_t *sample_size, bool truncable, u32_t sample_rate,
+						u8_t channels, char *mimetypes[], char *options) {
+	char *mimetype, fmt[8];
+	u8_t size = *sample_size;
+
+	while (1) {
+
+		if (sscanf(options, "%[^,]", fmt) <= 0) return NULL;
+
+		while (strstr(fmt, "raw")) {
+			char **p, *s;
+
+			// try the full mime-type
+			p = mimetypes;
+			asprintf(&s, "audio/L%hhu;rate=%u;channels=%hhu", *sample_size, sample_rate, channels);
+			while (*p) {
+				if (!strcmp(s, *p)) return strdup(*p);
+				p++;
+			}
+
+			// no luck, try a simple audio/Lxx w/o channel or rate indication
+			p = mimetypes;
+			sprintf(s, "audio/L%hhu", *sample_size);
+			while (*p) {
+				if (!strcmp(s, *p)) {
+					free(s);
+					asprintf(&s, "%s;rate=%u;channels=%hhu", *p, sample_rate, channels);
+					return s;
+				}
+				p++;
+			}
+
+			free(s);
+
+			if (*sample_size == 24 && truncable) *sample_size = 16;
+			else {
+				*sample_size = size;
+				break;
+			}
+		}
+
+		if (strstr(fmt, "wav")) {
+			mimetype = _lookup(mimetypes, 3, "audio/wav", "audio/x-wav", "audio/wave");
+			if (mimetype) return mimetype;
+		}
+
+		if (strstr(fmt, "aif")) {
+			mimetype = _lookup(mimetypes, 4, "audio/aiff", "audio/x-aiff", "audio/aif", "audio/x-aif");
+			if (mimetype) return mimetype;
+		}
+
+		// try next one
+		options += strlen(fmt);
+		if (*options) options++;
+	}
+}
+
+
+#if 0
+/*---------------------------------------------------------------------------*/
+char* find_pcm_mimetype(u8_t endian, u8_t *sample_size, bool truncable, u32_t sample_rate,
+							  u8_t channels, char *mimetypes[], char *out) {
+	char *mimetype;
+	u8_t size = *sample_size;
+
+	// first try pcm search (preferred format)
+	while (1) {
+		char *mimetype, **p, *s;
+
+		// try the full mime-type
+		p = mimetypes;
+		asprintf(&s, "audio/L%hhu;rate=%u;channels=%hhu", *sample_size, sample_rate, channels);
+		while (*p) {
+			if (!strcmp(s, *p)) return strdup(*p);
+			p++;
+		}
+
+		// no luck, try a simple audio/Lxx w/o channel or rate indication
+		p = mimetypes;
+		sprintf(s, "audio/L%hhu", *sample_size);
+		while (*p) {
+			if (!strcmp(s, *p)) {
+				free(s);
+				asprintf(&s, "%s;rate=%u;channels=%hhu", *p, sample_rate, channels);
+				return s;
+			}
+			p++;
+		}
+		free(s);
+
+		// still no luck, try again with 16 bits if authorize to trunc 24 bits
+		if (*sample_size == 24 && truncable) *sample_size = 16;
+		else break;
+	}
+	*/
+
+	// need to restore sample_size;
+	*sample_size = size;
+
+	// no pcm, try based on endianness
+	if (endian) {
+		mimetype = _lookup(mimetypes, 3, "audio/wav", "audio/x-wav", "audio/wave");
+		if (strcmp(mimetype, "audio/null")) return mimetype;
+		free(mimetype);
+		return _lookup(mimetypes, 2, "audio/aiff", "audio/x-aiff");
+	}
+
+	// this is aiff, try that first and then wav
+	mimetype = _lookup(mimetypes, 2, "audio/aiff", "audio/x-aiff");
+	if (strcmp(mimetype, "audio/null")) return mimetype;
+	free(mimetype);
+	return _lookup(mimetypes, 3, "audio/wav", "audio/x-wav", "audio/wave");
+}
+#endif
+
+
+/*----------------------------------------------------------------------------*/
+/* 																			  */
+/* URL management													  	      */
+/* 																			  */
+/*----------------------------------------------------------------------------*/
+
+/*---------------------------------------------------------------------------*/
 /* Converts a hex character to its integer value */
 static char from_hex(char ch) {
   return isdigit(ch) ? ch - '0' : tolower(ch) - 'a' + 10;
 }
 
+/*---------------------------------------------------------------------------*/
 /* Converts an integer value to its hex character*/
 static char to_hex(char code) {
   static char hex[] = "0123456789abcdef";
   return hex[code & 15];
 }
 
+/*---------------------------------------------------------------------------*/
 /* Returns a url-encoded version of str */
 /* IMPORTANT: be sure to free() the returned string after use */
 char *url_encode(char *str) {
   char *pstr = str, *buf = malloc(strlen(str) * 3 + 1), *pbuf = buf;
   while (*pstr) {
-    if (isalnum(*pstr) || *pstr == '-' || *pstr == '_' || *pstr == '.' || *pstr == '~')
+	if (isalnum(*pstr) || *pstr == '-' || *pstr == '_' || *pstr == '.' || *pstr == '~')
 	  *pbuf++ = *pstr;
 	else if (*pstr == ' ') {
 	  *pbuf++ = '+';
 	}
 	else
 	  *pbuf++ = '%', *pbuf++ = to_hex(*pstr >> 4), *pbuf++ = to_hex(*pstr & 15);
-    pstr++;
+	pstr++;
   }
   *pbuf = '\0';
   return buf;
 }
 
+/*---------------------------------------------------------------------------*/
 /* Returns a url-decoded version of str */
 /* IMPORTANT: be sure to free() the returned string after use */
 char *url_decode(char *str) {
@@ -113,46 +320,6 @@ char *url_decode(char *str) {
   }
   *pbuf = '\0';
   return buf;
-}
-
-#if LINUX || OSX || FREEBSD
-/*---------------------------------------------------------------------------*/
-char *strlwr(char *str)
-{
- char *p = str;
- while (*p) {
-	*p = tolower(*p);
-	p++;
- }
- return str;
-}
-#endif
-
-/*---------------------------------------------------------------------------*/
-u32_t hash32(char *str)
-{
-	u32_t hash = 5381;
-	s32_t c;
-
-	if (!str) return 0;
-
-	while ((c = *str++) != 0)
-		hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
-
-	return hash;
-}
-
-/*---------------------------------------------------------------------------*/
-char *stristr(char *s1, char *s2)
-{
- char *s1_lwr = strlwr(strdup(s1));
- char *s2_lwr = strlwr(strdup(s2));
- char *p = strstr(s1_lwr, s2_lwr);
-
- if (p) p = s1 + (p - s1_lwr);
- free(s1_lwr);
- free(s2_lwr);
- return p;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -199,6 +366,87 @@ char *toxml(char *src)
 	return res;
 }
 
+/*----------------------------------------------------------------------------*/
+/* 																			  */
+/* SYSTEM															  	      */
+/* 																			  */
+/*----------------------------------------------------------------------------*/
+
+#if LINUX || OSX || FREEBSD
+/*---------------------------------------------------------------------------*/
+char *strlwr(char *str)
+{
+ char *p = str;
+ while (*p) {
+	*p = tolower(*p);
+	p++;
+ }
+ return str;
+}
+#endif
+
+
+#if WIN
+/*----------------------------------------------------------------------------*/
+int asprintf(char **strp, const char *fmt, ...)
+{
+	va_list args, cp;
+	int len, ret = 0;
+
+	va_start(args, fmt);
+	len = vsnprintf(NULL, 0, fmt, args);
+	*strp = malloc(len + 1);
+
+	if (*strp) ret = vsprintf(*strp, fmt, args);
+
+	va_end(args);
+
+	return ret;
+}
+#endif
+
+
+/*---------------------------------------------------------------------------*/
+u32_t hash32(char *str)
+{
+	u32_t hash = 5381;
+	s32_t c;
+
+	if (!str) return 0;
+
+	while ((c = *str++) != 0)
+		hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+
+	return hash;
+}
+
+/*---------------------------------------------------------------------------*/
+char *stristr(char *s1, char *s2)
+{
+ char *s1_lwr = strlwr(strdup(s1));
+ char *s2_lwr = strlwr(strdup(s2));
+ char *p = strstr(s1_lwr, s2_lwr);
+
+ if (p) p = s1 + (p - s1_lwr);
+ free(s1_lwr);
+ free(s2_lwr);
+ return p;
+}
+
+/*---------------------------------------------------------------------------*/
+char *strdupn(char *p)
+{
+	if (p) return strdup(p);
+	return NULL;
+}
+
+/*----------------------------------------------------------------------------*/
+/* 																			  */
+/* NETWORK															  	      */
+/* 																			  */
+/*----------------------------------------------------------------------------*/
+
+/*---------------------------------------------------------------------------*/
 #if LINUX || OSX || BSD
 bool get_interface(struct in_addr *addr)
 {
@@ -267,7 +515,6 @@ bool get_interface(struct in_addr *addr)
 	return valid;
 }
 #endif
-
 
 
 /*---------------------------------------------------------------------------*/

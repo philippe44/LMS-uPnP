@@ -25,12 +25,11 @@
 #include "log_util.h"
 
 extern log_level	slimproto_loglevel;
+extern log_level	slimmain_loglevel;
 extern log_level	stream_loglevel;
 extern log_level	decode_loglevel;
 extern log_level	output_loglevel;
-extern log_level	web_loglevel;
 extern log_level	main_loglevel;
-extern log_level	slimmain_loglevel;
 extern log_level	util_loglevel;
 extern log_level	upnp_loglevel;
 
@@ -73,33 +72,27 @@ void SaveConfig(char *name, void *ref, bool full)
 
 	XMLUpdateNode(doc, root, false, "upnp_socket", glUPnPSocket);
 	XMLUpdateNode(doc, root, false, "slimproto_log", level2debug(slimproto_loglevel));
+	XMLUpdateNode(doc, root, false, "slimmain_log", level2debug(slimmain_loglevel));
 	XMLUpdateNode(doc, root, false, "stream_log", level2debug(stream_loglevel));
 	XMLUpdateNode(doc, root, false, "output_log", level2debug(output_loglevel));
 	XMLUpdateNode(doc, root, false, "decode_log", level2debug(decode_loglevel));
-	XMLUpdateNode(doc, root, false, "web_log", level2debug(web_loglevel));
 	XMLUpdateNode(doc, root, false, "main_log",level2debug(main_loglevel));
-	XMLUpdateNode(doc, root, false, "slimmain_log", level2debug(slimmain_loglevel));
 	XMLUpdateNode(doc, root, false, "upnp_log",level2debug(upnp_loglevel));
 	XMLUpdateNode(doc, root, false, "util_log",level2debug(util_loglevel));
 	XMLUpdateNode(doc, root, false, "log_limit", "%d", (s32_t) glLogLimit);
 
 	XMLUpdateNode(doc, common, false, "streambuf_size", "%d", (u32_t) glDeviceParam.stream_buf_size);
 	XMLUpdateNode(doc, common, false, "output_size", "%d", (u32_t) glDeviceParam.output_buf_size);
-	XMLUpdateNode(doc, common, false, "buffer_dir", glDeviceParam.buffer_dir);
-	XMLUpdateNode(doc, common, false, "buffer_limit", "%d", (u32_t) glDeviceParam.buffer_limit);
-	XMLUpdateNode(doc, common, false, "stream_length", glMRConfig.StreamLength);
-	XMLUpdateNode(doc, common, false, "stream_pacing_size", "%d", (int) glDeviceParam.stream_pacing_size);
-	XMLUpdateNode(doc, common, false, "max_GET_bytes", "%d", (s32_t) glDeviceParam.max_get_bytes);
-	XMLUpdateNode(doc, common, false, "keep_buffer_file", "%d", (int) glDeviceParam.keep_buffer_file);
+	XMLUpdateNode(doc, common, false, "stream_length", "%d", (u32_t) glDeviceParam.stream_length);
 	XMLUpdateNode(doc, common, false, "enabled", "%d", (int) glMRConfig.Enabled);
 	XMLUpdateNode(doc, common, false, "roon_mode", "%d", (int) glMRConfig.RoonMode);
 	XMLUpdateNode(doc, common, false, "codecs", glDeviceParam.codecs);
+	XMLUpdateNode(doc, common, false, "raw_audio_format", glDeviceParam.raw_audio_format);
 	XMLUpdateNode(doc, common, false, "sample_rate", "%d", (int) glDeviceParam.sample_rate);
 	XMLUpdateNode(doc, common, false, "L24_format", "%d", (int) glDeviceParam.L24_format);
 	XMLUpdateNode(doc, common, false, "flac_header", "%d", (int) glDeviceParam.flac_header);
-	XMLUpdateNode(doc, common, false, "allow_flac", "%d", (int) glMRConfig.AllowFlac);
+	XMLUpdateNode(doc, common, false, "forced_mimetypes", glMRConfig.ForcedMimeTypes);
 	XMLUpdateNode(doc, common, false, "seek_after_pause", "%d", (int) glMRConfig.SeekAfterPause);
-	XMLUpdateNode(doc, common, false, "byte_seek", "%d", (int) glMRConfig.ByteSeek);
 	XMLUpdateNode(doc, common, false, "send_icy", "%d", (int) glDeviceParam.send_icy);
 	XMLUpdateNode(doc, common, false, "volume_on_play", "%d", (int) glMRConfig.VolumeOnPlay);
 	XMLUpdateNode(doc, common, false, "volume_feedback", "%d", (int) glMRConfig.VolumeFeedback);
@@ -108,8 +101,6 @@ void SaveConfig(char *name, void *ref, bool full)
 	XMLUpdateNode(doc, common, false, "max_volume", "%d", glMRConfig.MaxVolume);
 	XMLUpdateNode(doc, common, false, "accept_nexturi", "%d", (int) glMRConfig.AcceptNextURI);
 	XMLUpdateNode(doc, common, false, "min_gapless", "%d", (int) glMRConfig.MinGapless);
-	XMLUpdateNode(doc, common, false, "raw_audio_format", glMRConfig.RawAudioFormat);
-	XMLUpdateNode(doc, common, false, "match_endianness", "%d", (int) glMRConfig.MatchEndianness);
 	XMLUpdateNode(doc, common, false, "auto_play", "%d", (int) glMRConfig.AutoPlay);
 	XMLUpdateNode(doc, common, false, "server", glDeviceParam.server);
 
@@ -170,26 +161,21 @@ void SaveConfig(char *name, void *ref, bool full)
 /*----------------------------------------------------------------------------*/
 static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name, char *val)
 {
+	if (!val) return;
+
 	if (!strcmp(name, "streambuf_size")) sq_conf->stream_buf_size = atol(val);
 	if (!strcmp(name, "output_size")) sq_conf->output_buf_size = atol(val);
-	if (!strcmp(name, "buffer_dir")) strcpy(sq_conf->buffer_dir, val);
-	if (!strcmp(name, "buffer_limit")) sq_conf->buffer_limit = atol(val);
-	if (!strcmp(name, "stream_length")) strcpy(Conf->StreamLength, val);
-	if (!strcmp(name, "stream_pacing_size")) sq_conf->stream_pacing_size = atol(val);
-	if (!strcmp(name, "max_GET_bytes")) sq_conf->max_get_bytes = atol(val);
+	if (!strcmp(name, "stream_length")) sq_conf->stream_length = atol(val);
 	if (!strcmp(name, "send_icy")) sq_conf->send_icy = atol(val);
 	if (!strcmp(name, "enabled")) Conf->Enabled = atol(val);
 	if (!strcmp(name, "roon_mode")) Conf->RoonMode = atol(val);
 	if (!strcmp(name, "codecs")) strcpy(sq_conf->codecs, val);
+	if (!strcmp(name, "raw_audio_format")) strcpy(sq_conf->raw_audio_format, val);
 	if (!strcmp(name, "sample_rate")) sq_conf->sample_rate = atol(val);
 	if (!strcmp(name, "L24_format")) sq_conf->L24_format = atol(val);
 	if (!strcmp(name, "flac_header")) sq_conf->flac_header = atol(val);
-	if (!strcmp(name, "keep_buffer_file"))sq_conf->keep_buffer_file = atol(val);
-	if (!strcmp(name, "allow_flac")) Conf->AllowFlac = atol(val);
-	if (!strcmp(name, "raw_audio_format")) strcpy(Conf->RawAudioFormat, val);
-	if (!strcmp(name, "match_endianness")) Conf->MatchEndianness = atol(val);
+	if (!strcmp(name, "forced_mimetypes")) strcpy(Conf->ForcedMimeTypes, val);
 	if (!strcmp(name, "seek_after_pause")) Conf->SeekAfterPause = atol(val);
-	if (!strcmp(name, "byte_seek")) Conf->ByteSeek = atol(val);
 	if (!strcmp(name, "volume_on_play")) Conf->VolumeOnPlay = atol(val);
 	if (!strcmp(name, "volume_feedback")) Conf->VolumeFeedback = atol(val);
 	if (!strcmp(name, "max_volume")) Conf->MaxVolume = atol(val);
@@ -220,12 +206,11 @@ static void LoadGlobalItem(char *name, char *val)
 
 	if (!strcmp(name, "upnp_socket")) strcpy(glUPnPSocket, val);
 	if (!strcmp(name, "slimproto_log")) slimproto_loglevel = debug2level(val);
+	if (!strcmp(name, "slimmain_log")) slimmain_loglevel = debug2level(val);
 	if (!strcmp(name, "stream_log")) stream_loglevel = debug2level(val);
 	if (!strcmp(name, "output_log")) output_loglevel = debug2level(val);
 	if (!strcmp(name, "decode_log")) decode_loglevel = debug2level(val);
-	if (!strcmp(name, "web_log")) web_loglevel = debug2level(val);
 	if (!strcmp(name, "main_log")) main_loglevel = debug2level(val);
-	if (!strcmp(name, "slimmain_log")) slimmain_loglevel = debug2level(val);
 	if (!strcmp(name, "upnp_log")) upnp_loglevel = debug2level(val);
 	if (!strcmp(name, "util_log")) util_loglevel = debug2level(val);
 	if (!strcmp(name, "log_limit")) glLogLimit = atol(val);

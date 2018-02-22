@@ -19,8 +19,22 @@
  *
  */
 
+/*
+ This works almost like squeezelite, but with a big difference: the STMd which
+tells LMS to send the next track is only sent once the full current track has
+been accepted by the player (long buffer). This makes a whole difference in term
+of track boundaries management and overlap between decode and output that does
+not exist at all. A decoder runs first, the output starts, then the decoder
+finishes, the output finish and then, only then, another decoder can start. This
+does not cause any real time issue as http players have large buffers but it
+simplifies extremely buffer management. To some extend, the output buffer
+pointers could be reset at the begining every time an output exit because no
+decoder is running at that time
+*/
+
 /* TODO
 - maybe one single CLI socket for all machines
+- move from CLI to COMET
 */
 
 #include "squeezelite.h"
@@ -42,8 +56,10 @@ static log_level *loglevel = &slimproto_loglevel;
 
 #define LOCK_S   mutex_lock(ctx->streambuf->mutex)
 #define UNLOCK_S mutex_unlock(ctx->streambuf->mutex)
-#define LOCK_O
-#define UNLOCK_O
+#define LOCK_O   mutex_lock(ctx->outputbuf->mutex)
+#define UNLOCK_O mutex_unlock(ctx->outputbuf->mutex)
+#define LOCK_D   mutex_lock(ctx->decode.mutex)
+#define UNLOCK_D mutex_unlock(ctx->decode.mutex)
 #define LOCK_P   mutex_lock(ctx->mutex)
 #define UNLOCK_P mutex_unlock(ctx->mutex)
 
@@ -53,7 +69,6 @@ static u32_t 	pcm_sample_rate[] = { 11025, 22050, 32000, 44100, 48000,
 									  176400, 192000, 352800, 384000 };
 static u8_t		pcm_channels[] = { 1, 2 };
 
-
 /*---------------------------------------------------------------------------*/
 bool ctx_callback(struct thread_ctx_s *ctx, sq_action_t action, u8_t *cookie, void *param)
 {
@@ -62,7 +77,6 @@ bool ctx_callback(struct thread_ctx_s *ctx, sq_action_t action, u8_t *cookie, vo
 	if (ctx->callback) rc = ctx->callback(ctx->self, ctx->MR, action, cookie, param);
 	return rc;
 }
-
 
 /*---------------------------------------------------------------------------*/
 void send_packet(u8_t *packet, size_t len, sockfd sock) {
@@ -93,7 +107,7 @@ void send_packet(u8_t *packet, size_t len, sockfd sock) {
 
 /*---------------------------------------------------------------------------*/
 static void sendHELO(bool reconnect, const char *fixed_cap, const char *var_cap, u8_t mac[6], struct thread_ctx_s *ctx) {
-	const char *base_cap = "Model=squeezelite,ModelName=SqueezeLite,AccuratePlayPoints=0,HasDigitalOut=1";
+	const char *base_cap = "Model=squeezelite,ModelName=SqueezeLite,AccuratePlayPoints=1,HasDigitalOut=1";
 	struct HELO_packet pkt;
 
 	memset(&pkt, 0, sizeof(pkt));
@@ -132,19 +146,16 @@ static void sendSTAT(const char *event, u32_t server_timestamp, struct thread_ct
 	packN(&pkt.bytes_received_L, (u64_t)ctx->status.stream_bytes & 0xffffffff);
 	pkt.signal_strength = 0xffff;
 	packN(&pkt.jiffies, now);
-	packN(&pkt.output_buffer_size, 10);
-	packN(&pkt.output_buffer_fullness, 10);
+	packN(&pkt.output_buffer_size, ctx->status.output_size);
+	packN(&pkt.output_buffer_fullness, ctx->status.output_full);
 	packN(&pkt.elapsed_seconds, ctx->status.ms_played / 1000);
 	// voltage;
 	packN(&pkt.elapsed_milliseconds, ctx->status.ms_played);
 	pkt.server_timestamp = server_timestamp; // keep this is server format - don't unpack/pack
 
-	if (strcmp(event, "STMt")) {
+	if (strcmp(event, "STMt") || *loglevel == lDEBUG) {
 		LOG_INFO("[%p]: STAT:[%s] msplayed %d", ctx, event, ctx->status.ms_played);
-    }
-	LOG_DEBUG("[%p] STAT: %s", ctx, event);
-	LOG_SDEBUG("[%p] received bytesL: %u streambuf: %u calc elapsed: %u real elapsed: %u ",
-				   ctx, (u32_t)ctx->status.stream_bytes, ctx->status.stream_full, ctx->status.ms_played, now - ctx->status.stream_start);
+	}
 
 	send_packet((u8_t *)&pkt, sizeof(pkt), ctx->sock);
 }
@@ -158,7 +169,7 @@ static void sendDSCO(disconnect_code disconnect, sockfd sock) {
 	pkt.length = htonl(sizeof(pkt) - 8);
 	pkt.reason = disconnect & 0xFF;
 
-	LOG_DEBUG("DSCO: %d", disconnect);
+	LOG_DEBUG("[%d]: DSCO: %d", sock, disconnect);
 
 	send_packet((u8_t *)&pkt, sizeof(pkt), sock);
 }
@@ -171,7 +182,7 @@ static void sendRESP(const char *header, size_t len, sockfd sock) {
 	memcpy(&pkt_header.opcode, "RESP", 4);
 	pkt_header.length = htonl(sizeof(pkt_header) + len - 8);
 
-	LOG_DEBUG("RESP", NULL);
+	LOG_DEBUG("[%d]: RESP", sock);
 
 	send_packet((u8_t *)&pkt_header, sizeof(pkt_header), sock);
 	send_packet((u8_t *)header, len, sock);
@@ -185,7 +196,7 @@ static void sendMETA(const char *meta, size_t len, sockfd sock) {
 	memcpy(&pkt_header.opcode, "META", 4);
 	pkt_header.length = htonl(sizeof(pkt_header) + len - 8);
 
-	LOG_DEBUG("META", NULL);
+	LOG_DEBUG("[%d]: META", sock);
 
 	send_packet((u8_t *)&pkt_header, sizeof(pkt_header), sock);
 	send_packet((u8_t *)meta, len, sock);
@@ -201,12 +212,11 @@ static void sendSETDName(const char *name, sockfd sock) {
 	pkt_header.id = 0; // id 0 is playername S:P:Squeezebox2
 	pkt_header.length = htonl(sizeof(pkt_header) + strlen(name) + 1 - 8);
 
-	LOG_DEBUG("set playername: %s", name);
+	LOG_DEBUG("[%d]: set playername: %s", sock, name);
 
 	send_packet((u8_t *)&pkt_header, sizeof(pkt_header), sock);
 	send_packet((u8_t *)name, strlen(name) + 1, sock);
 }
-
 
 /*---------------------------------------------------------------------------*/
 static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
@@ -224,166 +234,177 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 		sendSTAT("STMt", strm->replay_gain, ctx); // STMt replay_gain is no longer used to track latency, but support it
 		break;
 	case 'f':
-	case 'q':
+		decode_flush(ctx);
 		output_flush(ctx);
-		ctx->play_running = ctx-> track_ended = false;
-		ctx->track_status = TRACK_STOPPED;
-		ctx->status.ms_played = ctx->ms_played = 0;
-		if (stream_disconnect(ctx))
-			if (strm->command == 'f') sendSTAT("STMf", 0, ctx);
+		stream_disconnect(ctx);
+		ctx->status.ms_played = 0;
+		sendSTAT("STMf", 0, ctx);
 		buf_flush(ctx->streambuf);
-		ctx_callback(ctx, SQ_STOP, NULL, NULL);
+		break;
+	case 'q':
+		decode_flush(ctx);
+		output_flush(ctx);
+		ctx->status.ms_played = 0;
+		if (stream_disconnect(ctx))
+			sendSTAT("STMf", 0, ctx);
+		buf_flush(ctx->streambuf);
+		if (ctx->last_command != 'q') ctx_callback(ctx, SQ_STOP, NULL, NULL);
 		break;
 	case 'p':
 		{
 			unsigned interval = unpackN(&strm->replay_gain);
-
-			ctx->ms_pause = interval;
-			ctx->start_at = (interval) ? gettime_ms() + interval : 0;
-			ctx->track_status = TRACK_PAUSED;
-			ctx_callback(ctx, SQ_PAUSE, NULL, NULL);
+			LOG_INFO("[%p] pause (interval:%u)", ctx, interval);
 			if (!interval) {
+				LOCK_O;
+				ctx->output.state = OUTPUT_WAITING;
+				UNLOCK_O;
+				ctx_callback(ctx, SQ_PAUSE, NULL, NULL);
 				sendSTAT("STMp", 0, ctx);
 			}
-			LOG_INFO("[%p] pause interval: %u", ctx, interval);
 		}
 		break;
 	case 'a':
 		{
 			unsigned interval = unpackN(&strm->replay_gain);
-			ctx_callback(ctx, SQ_SEEK, NULL, &interval);
-			LOG_INFO("[%p]skip ahead interval: %u", ctx, interval);
+			LOG_INFO("[%p]skip ahead interval (ignored): %u", ctx, interval);
 		}
 		break;
 	case 'u':
 		{
 			unsigned jiffies = unpackN(&strm->replay_gain);
-
 			LOG_INFO("[%p] unpause at: %u now: %u", ctx, jiffies, gettime_ms());
-			ctx->start_at = jiffies;
-			if (!jiffies) {
-				// this is an unpause after for an autostart = 0 or 2
-				if (ctx->track_status == TRACK_STOPPED) {
-					ctx->track_new = true;
-					ctx->track_start_time = gettime_ms();
-				}
-				if (ctx->track_status != TRACK_STARTED) ctx_callback(ctx, SQ_UNPAUSE, NULL, NULL);
-				ctx->track_status = TRACK_STARTED;
-			}
+			ctx_callback(ctx, SQ_UNPAUSE, NULL, NULL);
+			LOCK_O;
+			ctx->output.state = OUTPUT_RUNNING;
+			ctx->output.start_at = jiffies;
+			UNLOCK_O;
 			sendSTAT("STMr", 0, ctx);
 		}
 		break;
 	case 's':
 		{
-			sq_seturi_t	uri;
-			unsigned idx;
-			bool rc;
-			char buf[SQ_STR_LENGTH];
-
+			struct track_param info;
+			struct outputstate *out = &ctx->output;
+			char *mimetype;
+			bool sendSTMn = false, next;
 			unsigned header_len = len - sizeof(struct strm_packet);
 			char *header = (char *)(pkt + sizeof(struct strm_packet));
 			in_addr_t ip = (in_addr_t)strm->server_ip; // keep in network byte order
 			u16_t port = strm->server_port; // keep in network byte order
+
 			if (ip == 0) ip = ctx->slimproto_ip;
 
 			LOG_INFO("[%p], strm s autostart: %c transition period: %u transition type: %u codec: %c",
 					  ctx, strm->autostart, strm->transition_period, strm->transition_type - '0', strm->format);
 
 			ctx->autostart = strm->autostart - '0';
+
 			sendSTAT("STMf", 0, ctx);
 			if (header_len > MAX_HEADER -1) {
 				LOG_WARN("[%p] header too long: %u", ctx, header_len);
 				break;
 			}
 
-			 uri.sample_size = (strm->pcm_sample_size != '?') ? pcm_sample_size[strm->pcm_sample_size - '0'] : 0xff;
-			 uri.sample_rate = (strm->pcm_sample_rate != '?') ? pcm_sample_rate[strm->pcm_sample_rate - '0'] : 0xff;
-			 if (uri.sample_rate > ctx->config.sample_rate) {
-				 LOG_WARN("[%p]: Sample rate %u error suspected, forcing to %u", ctx, uri.sample_rate, ctx->config.sample_rate);
-				 uri.sample_rate = ctx->config.sample_rate;
-			 }
-			 uri.channels = (strm->pcm_channels != '?') ? pcm_channels[strm->pcm_channels - '1'] : 0xff;
-			 uri.endianness = (strm->pcm_endianness != '?') ? strm->pcm_endianness - '0' : 0;
-			 uri.codec = strm->format;
+			LOCK_O;
+			// if streaming failed, we never started to play previous index
+			next = (out->state == OUTPUT_RUNNING && out->index == ctx->render.index);
+			UNLOCK_O;
 
-			// stream is proxied and then forwared to the renderer
+			// get metatda - they must be freed by callee whenever he wants
+			sq_get_metadata(ctx->self, &info.metadata, next);
+
+			// start the http server thread
+			output_start(ctx);
+
+			LOCK_O;
+
+			out->replay_gain = unpackN(&strm->replay_gain);
+			out->fade_mode = strm->transition_type - '0';
+			out->fade_secs = strm->transition_period;
+			out->duration = info.metadata.duration;
+			out->remote = info.metadata.remote;
+			out->icy.last = gettime_ms() - ICY_UPDATE_TIME;
+			out->trunc16 = false;
+
+			LOG_DEBUG("[%p]: set fade mode: %u", ctx, ctx->output.fade_mode);
+
+			if (strm->format != '?') {
+				if (strm->format != 'a')
+					out->sample_size = (strm->pcm_sample_size != '?') ? pcm_sample_size[strm->pcm_sample_size - '0'] : 0xff;
+				else
+					out->sample_size = strm->pcm_sample_size;
+
+				out->sample_rate = (strm->pcm_sample_rate != '?') ? pcm_sample_rate[strm->pcm_sample_rate - '0'] : 0xff;
+				if (ctx->output.sample_rate > ctx->config.sample_rate) {
+					 LOG_WARN("[%p]: Sample rate %u error suspected, forcing to %u", ctx, out->sample_rate, ctx->config.sample_rate);
+					 out->sample_rate = ctx->config.sample_rate;
+				}
+
+				out->channels = (strm->pcm_channels != '?') ? pcm_channels[strm->pcm_channels - '1'] : 0xff;
+				out->in_endian = (strm->pcm_endianness != '?') ? strm->pcm_endianness - '0' : 0xff;
+				out->codec = strm->format;
+
+				// build the mime type according to capabilities and source
+				if (out->codec == 'p') {
+					u8_t sample_size = (out->sample_size == 24 && ctx->config.L24_format == L24_TRUNC16) ? 16 : out->sample_size;
+					mimetype = find_pcm_mimetype(out->in_endian, &sample_size,
+											ctx->config.L24_format == L24_TRUNC16_PCM,
+											out->sample_rate, out->channels,
+											ctx->mimetypes, ctx->config.raw_audio_format);
+					out->trunc16 = (sample_size != out->sample_size);
+				} else mimetype = find_mimetype(out->codec, ctx->mimetypes, ctx->config.encode);
+
+				// matching found in player
+				if (mimetype) {
+					strcpy(out->mimetype, mimetype);
+					free(mimetype);
+
+					out->format = mimetype2format(out->mimetype);
+					out->out_endian = (out->format == 'w');
+					out->length = ctx->config.stream_length;
+					if (!strcasecmp(ctx->config.encode, "thru")) {
+						out->thru = true;
+						if (out->codec == 'f') out->codec ='c';
+					} else out->thru = false;
+
+					codec_open(out->codec, out->sample_size, out->sample_rate, out->channels, out->in_endian, ctx);
+
+					strcpy(info.mimetype, out->mimetype);
+					sprintf(info.uri, "http://%s:%hu/" BRIDGE_URL "%d.%s", sq_ip,
+							ctx->output.port, ++ctx->output.index, mimetype2ext(out->mimetype));
+
+					if (!ctx_callback(ctx, SQ_SET_TRACK, NULL, &info)) sendSTMn = true;
+
+					LOG_INFO("[%p]: codec:%c, ch:%d, s:%d, r:%d", ctx, out->codec, out->channels, out->sample_size, out->sample_rate);
+				} else {
+					LOG_ERROR("[%p] no matching codec %c", ctx, out->codec);
+					sendSTMn = true;
+				}
+			} else if (ctx->autostart >= 2) {
+				// extension to slimproto to allow server to detect codec from response header and send back in codc message
+				LOG_INFO("[%p] waiting for codc message", ctx);
+			} else {
+				LOG_ERROR("[%p] unknown codec requires autostart >= 2", ctx);
+				UNLOCK_O;
+				break;
+			}
+
+			UNLOCK_O;
+
 			stream_sock(ip, port, header, header_len, strm->threshold * 1024, ctx->autostart >= 2, ctx);
 
-			LOCK_S;LOCK_O;
-
-			idx = ctx->out_idx = (ctx->out_idx + 1) & 0x01;
-
-			if (mutex_trylock(ctx->out_ctx[idx].mutex)) {
-				LOG_WARN("[%p]: file mutex was locked", ctx);
-			}
-			// we have a locked mutex no matter what
-			mutex_unlock(ctx->out_ctx[idx].mutex);
-
-			if (ctx->out_ctx[idx].read_file) {
-				LOG_WARN("[%p]: read file left open %s", ctx, ctx->out_ctx[idx].buf_name);
-				fclose(ctx->out_ctx[idx].read_file);
-				ctx->out_ctx[idx].read_file = NULL;
-			}
-			ctx->out_ctx[idx].read_count = ctx->out_ctx[idx].read_count_t =
-										   ctx->out_ctx[idx].close_count = 0;
-
-			if (ctx->out_ctx[idx].write_file) {
-				LOG_WARN("[%p]: write file left open %s", ctx, ctx->out_ctx[idx].buf_name);
-				fclose(ctx->out_ctx[idx].write_file);
-			}
-
-			// open the write_file here as some players react very fast
-			sprintf(buf, "%s/%s", ctx->config.buffer_dir, ctx->out_ctx[idx].buf_name);
-			ctx->out_ctx[idx].write_file = fopen(buf, "wb");
-			ctx->out_ctx[idx].write_count = ctx->out_ctx[idx].write_count_t = 0;
-
-			ctx->out_ctx[idx].sample_size = uri.sample_size;
-			ctx->out_ctx[idx].sample_rate = uri.sample_rate;
-			ctx->out_ctx[idx].endianness = uri.endianness;
-			ctx->out_ctx[idx].channels = uri.channels;
-			ctx->out_ctx[idx].codec = uri.codec;
-			ctx->out_ctx[idx].replay_gain = unpackN(&strm->replay_gain);
-			strcpy(uri.name, ctx->out_ctx[idx].buf_name);
-
-			if (ctx->play_running || ctx->track_status != TRACK_STOPPED) {
-				rc = ctx_callback(ctx, SQ_SETNEXTURI, NULL, &uri);
-			}
-			else {
-				rc = ctx_callback(ctx, SQ_SETURI, NULL, &uri);
-				ctx->track_ended = false;
-				ctx->track_status = TRACK_STOPPED;
-				ctx->track_new = true;
-				ctx->status.ms_played = ctx->ms_played = 0;
-				ctx->read_to = ctx->ready_buffering = false;
-			}
-
-			if (rc) {
-				strcpy(ctx->out_ctx[idx].content_type, uri.content_type);
-				strcpy(ctx->out_ctx[idx].proto_info, uri.proto_info);
-				strcpy(ctx->out_ctx[idx].ext, uri.ext);
-				ctx->out_ctx[idx].file_size = uri.file_size;
-				ctx->out_ctx[idx].duration = uri.duration;
-				ctx->out_ctx[idx].src_format = uri.src_format;
-				ctx->out_ctx[idx].remote = uri.remote;
-				ctx->out_ctx[idx].live = uri.remote && (uri.duration == 0);
-				ctx->out_ctx[idx].track_hash = uri.track_hash;
-				sq_set_sizes(ctx->out_ctx + idx);
-			}
-			else {
-				sendSTAT("STMn", 0, ctx);
-				stream_disconnect(ctx);
-			}
-
-			UNLOCK_S;UNLOCK_O;
-
 			sendSTAT("STMc", 0, ctx);
-			ctx->sentSTMu = ctx->sentSTMo = ctx->sentSTMl = ctx->sentSTMd = false;
+			ctx->sentSTMs = ctx->sentSTMu = ctx->sentSTMo = ctx->sentSTMl = ctx->sentSTMd = false;
+
+			if (sendSTMn) sendSTAT("STMn", 0, ctx);
 		}
 		break;
 	default:
 		LOG_WARN("[%p] unhandled strm %c", ctx, strm->command);
 		break;
 	}
+
+	ctx->last_command = strm->command;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -409,8 +430,57 @@ static void process_cont(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 /*---------------------------------------------------------------------------*/
 static void process_codc(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 	struct codc_packet *codc = (struct codc_packet *)pkt;
+	struct outputstate *out = &ctx->output;
+	struct track_param info;
+	char *mimetype;
 
-	LOG_WARN("[%p] can't proceed codc: %c", ctx, codc->format);
+	LOCK_O;
+
+	if (codc->format != 'a')
+		out->sample_size = (codc->pcm_sample_size != '?') ? pcm_sample_size[codc->pcm_sample_size - '0'] : 0xff;
+	else
+		out->sample_size = codc->pcm_sample_size;
+	out->sample_rate = (codc->pcm_sample_rate != '?') ? pcm_sample_rate[codc->pcm_sample_rate - '0'] : 0xff;
+	out->channels = (codc->pcm_channels != '?') ? pcm_channels[codc->pcm_channels - '1'] : 0xff;
+	out->in_endian = (codc->pcm_endianness != '?') ? codc->pcm_channels - '0' : 0xff;
+	out->codec = codc->format;
+
+	if (out->codec == 'p') {
+		u8_t sample_size = (out->sample_size == 24 && ctx->config.L24_format == L24_TRUNC16) ? 16 : out->sample_size;
+		mimetype = find_pcm_mimetype(out->in_endian, &sample_size, ctx->config.L24_format == L24_TRUNC16_PCM,
+									out->sample_rate, out->channels, ctx->mimetypes, ctx->config.raw_audio_format);
+		out->trunc16 = (sample_size != out->sample_size);
+	} else mimetype = find_mimetype(out->codec, ctx->mimetypes,  ctx->config.encode);
+
+	// matching found in player
+	if (mimetype) {
+		strcpy(out->mimetype, mimetype);
+		strcpy(info.mimetype, out->mimetype);
+		free(mimetype);
+
+		out->format = mimetype2format(out->mimetype);
+		out->out_endian = (out->format == 'w');
+		out->length = ctx->config.stream_length;
+		if (!strcasecmp(ctx->config.encode, "thru")) {
+			out->thru = true;
+			if (out->codec == 'f') out->codec ='c';
+		}
+		else out->thru = false;
+
+		codec_open(out->codec, out->sample_size, out->sample_rate, out->channels, out->in_endian, ctx);
+
+		sprintf(info.uri, "http://%s:%hu/" BRIDGE_URL "%d.%s", sq_ip,
+							ctx->output.port, ++ctx->output.index, mimetype2ext(out->mimetype));
+
+		if (!ctx_callback(ctx, SQ_SET_TRACK, NULL, &info)) sendSTAT("STMn", 0, ctx);
+	} else {
+		sendSTAT("STMn", 0, ctx);
+		LOG_ERROR("[%p] no matching codec %c", ctx, out->codec);
+    }
+
+	 UNLOCK_O;
+
+	LOG_DEBUG("[%p] codc: %c", ctx, codc->format);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -452,8 +522,8 @@ static void process_setd(u8_t *pkt, int len,struct thread_ctx_s *ctx) {
 				sendSETDName(ctx->config.name, ctx->sock);
 			}
 		} else if (len > 5) {
-			strncpy(ctx->config.name, setd->data, SQ_STR_LENGTH);
-			ctx->config.name[SQ_STR_LENGTH - 1] = '\0';
+			strncpy(ctx->config.name, setd->data, _STR_LEN_);
+			ctx->config.name[_STR_LEN_ - 1] = '\0';
 			LOG_DEBUG("[%p] set name: %s", ctx, setd->data);
 			// confirm change to server
 			sendSETDName(setd->data, ctx->sock);
@@ -619,6 +689,30 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 		// update playback state when woken or every 100ms
 		now = gettime_ms();
 
+		// check for metadata update (LOCK_O not really necessary here)
+		if (ctx->output.state == OUTPUT_RUNNING && ctx->config.send_icy && 
+			ctx->output.icy.interval && ctx->output.icy.last + ICY_UPDATE_TIME- now > 0x7fffffff) {
+			struct metadata_s metadata;
+			u32_t hash;
+
+			sq_get_metadata(ctx->self, &metadata, false);
+			ctx->output.icy.last = now;
+
+			hash = hash32(metadata.artist) ^ hash32(metadata.title) ^ hash32(metadata.artwork);
+			if (hash != ctx->output.icy.hash) {
+				LOCK_O;
+				ctx->output.icy.updated = true;
+				ctx->output.icy.hash = hash;
+				output_free_icy(ctx);
+				ctx->output.icy.artist = strdupn(metadata.artist);
+				ctx->output.icy.title = strdupn(metadata.title);
+				ctx->output.icy.artwork = strdupn(metadata.artwork);
+				UNLOCK_O;
+			}
+
+			sq_free_metadata(&metadata);
+		}
+
 		if (wake || now - ctx->slim_run.last > 100 || ctx->slim_run.last > now) {
 			bool _sendSTMs = false;
 			bool _sendDSCO = false;
@@ -636,11 +730,15 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			ctx->slim_run.last = now;
 
 			LOCK_S;
+
 			ctx->status.stream_full = _buf_used(ctx->streambuf);
 			ctx->status.stream_size = ctx->streambuf->size;
 			ctx->status.stream_bytes = ctx->stream.bytes;
 			ctx->status.stream_state = ctx->stream.state;
-			ctx->status.ms_played = ctx->ms_played;
+			if (!ctx->render.ms_played && ctx->render.index != -1) {
+				ctx->status.ms_played = now - ctx->render.track_start_time - ctx->render.ms_paused;
+				if (ctx->render.state == RD_PAUSED) ctx->status.ms_played -= now - ctx->render.track_pause_time;
+            } else ctx->status.ms_played = ctx->render.ms_played;
 
 			if (ctx->stream.state == DISCONNECT) {
 				disconnect_code = ctx->stream.disconnect;
@@ -649,7 +747,8 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			}
 
 			if (!ctx->stream.sent_headers &&
-				(ctx->stream.state == STREAMING_HTTP || ctx->stream.state == STREAMING_WAIT || ctx->stream.state == STREAMING_BUFFERING)) {
+				(ctx->stream.state == STREAMING_HTTP || ctx->stream.state == STREAMING_WAIT ||
+				 ctx->stream.state == STREAMING_BUFFERING)) {
 				header_len = ctx->stream.header_len;
 				memcpy(ctx->slim_run.header, ctx->stream.header, header_len);
 				_sendRESP = true;
@@ -661,75 +760,80 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 				_sendMETA = true;
 				ctx->stream.meta_send = false;
 			}
+
 			UNLOCK_S;
 
-			if (ctx->start_at && now > ctx->start_at) {
-				LOG_INFO("[%p] start time elapsed %d %d", ctx, ctx->start_at, now);
-				ctx->start_at = 0;
-				if (ctx->track_status != TRACK_PAUSED) ctx->track_new = true;
-				ctx->track_status = TRACK_STARTED;
-				ctx_callback(ctx, SQ_PLAY, NULL, NULL);
+			LOCK_O;
+			ctx->status.output_full = ctx->sentSTMu ? 0 : ctx->outputbuf->size / 2;
+			ctx->status.output_size = ctx->outputbuf->size;
+			ctx->status.current_sample_rate = ctx->output.current_sample_rate;
+			ctx->status.output_running = ctx->output_running;
+
+			if (ctx->output.track_started) {
+				_sendSTMs = true;
+				ctx->sentSTMs = true;
+				ctx->output.track_started = false;
 			}
 
-			// end of streaming
-			if (!ctx->sentSTMu && ctx->status.stream_state <= DISCONNECT && ctx->track_ended) {
+			if (ctx->output.state == OUTPUT_RUNNING && !ctx->sentSTMu &&
+				ctx->status.output_running == THREAD_EXITED && ctx->status.stream_state <= DISCONNECT &&
+				ctx->render.state == RD_STOPPED && ctx->sentSTMs == true) {
 				_sendSTMu = true;
 				ctx->sentSTMu = true;
-				// not normal end can be error or user, can't know that
-				if (!ctx->sentSTMd) {
-					_sendSTMn = true;
-					LOG_WARN("[%p]: unwanted stop, reporting error", ctx);
-				}
-				ctx->track_ended = false;
+				ctx->status.output_full = 0;
 			}
 
-			// should not happen in SQ_PROXY
-			if (!ctx->sentSTMo && ctx->status.stream_state == STREAMING_HTTP && ctx->read_to) {
+			// if there is still data to be sent, try an overrun
+			if (ctx->output.state == OUTPUT_RUNNING && !ctx->sentSTMo &&
+				ctx->status.output_running == THREAD_RUNNING && ctx->status.stream_state == STREAMING_HTTP &&
+				ctx->render.state == RD_STOPPED  && ctx->sentSTMs) {
 				_sendSTMo = true;
 				ctx->sentSTMo = true;
-				_stream_disconnect = true;
 			}
 
-			if ((ctx->status.stream_state == STREAMING_HTTP || ctx->status.stream_state == STREAMING_FILE) && !ctx->sentSTMl) {
-				// autostart 2 and 3 require cont to be received first
+			UNLOCK_O;
+
+			LOCK_D;
+
+			if (ctx->decode.state == DECODE_RUNNING && now - ctx->status.last > 1000) {
+				_sendSTMt = true;
+				ctx->status.last = now;
+			}
+
+			if ((ctx->status.stream_state == STREAMING_HTTP || ctx->status.stream_state == STREAMING_FILE ||
+				(ctx->status.stream_state == DISCONNECT && ctx->stream.disconnect == DISCONNECT_OK)) &&
+				!ctx->sentSTMl && ctx->decode.state == DECODE_READY) {
 				if (ctx->autostart == 0) {
+					ctx->decode.state = DECODE_RUNNING;
 					_sendSTMl = true;
 					ctx->sentSTMl = true;
-				 }
-				 else if (ctx->track_status == TRACK_STOPPED) {
-					 ctx_callback(ctx, SQ_PLAY, NULL, NULL);
-					 LOCK_S;
-					 ctx->track_status = TRACK_STARTED;
-					 ctx->track_new = true;
-					 ctx->track_start_time = now;
-					 UNLOCK_S;
-				 }
+				} else if (ctx->autostart == 1) {
+					ctx->decode.state = DECODE_RUNNING;
+					LOCK_O;
+					// release output thread now that we are decoding
+					ctx->output.state = OUTPUT_RUNNING;
+					UNLOCK_O;
+				}
+				ctx_callback(ctx, SQ_PLAY, NULL, NULL);
+				// autostart 2 and 3 require cont to be received first
 			}
 
-			// few thing need to wait for the running to be confirmed by player
-			if (ctx->play_running) {
-
-				// either 1st track or end of track detected by the player
-				if (ctx->track_new) {
-					_sendSTMs = true;
-					ctx->track_new = false;
-					ctx->status.stream_start = ctx->track_start_time;
-				}
-
-				// send regular status update
-				if (now - ctx->status.last > 1000) {
-					_sendSTMt = true;
-					ctx->status.last = now;
-				}
-
-				// last byte from streambuf has been sent, so time to request
-				// another potential "next"
-				if (ctx->ready_buffering) {
-					_sendSTMd = true;
-					ctx->sentSTMd = true;
-					ctx->ready_buffering = false;
+			/*
+			 wait for all output to be sent to the player before asking for next
+			 track. We need both THREAD_EXITED and STMs sent to be sure, as for
+			 short tracks the thread might exit before playback has started and
+			 we don't want to send STMd before STMs
+			*/
+			if ((ctx->decode.state == DECODE_COMPLETE && ctx->status.output_running == THREAD_EXITED && ctx->sentSTMs) ||
+				 ctx->decode.state == DECODE_ERROR) {
+				if (ctx->decode.state == DECODE_COMPLETE) _sendSTMd = true;
+				if (ctx->decode.state == DECODE_ERROR)    _sendSTMn = true;
+				ctx->decode.state = DECODE_STOPPED;
+				if (ctx->status.stream_state == STREAMING_HTTP || ctx->status.stream_state == STREAMING_FILE) {
+					_stream_disconnect = true;
 				}
 			}
+			UNLOCK_D;
 
 			if (_stream_disconnect) stream_disconnect(ctx);
 
@@ -813,9 +917,6 @@ void discover_server(struct thread_ctx_s *ctx) {
 	} while (s.sin_addr.s_addr == 0 && ctx->running);
 
 	closesocket(disc_sock);
-
-	if ((strstr(ctx->server_version, "7.7")) || strstr(ctx->server_version, "7.8")) ctx->aiff_header = true;
-	else ctx->aiff_header = false;
 
 	ctx->slimproto_ip =  s.sin_addr.s_addr;
 	ctx->slimproto_port = ntohs(s.sin_port);
@@ -907,21 +1008,19 @@ void slimproto_close(struct thread_ctx_s *ctx) {
 	LOG_INFO("[%p] slimproto stop for %s", ctx, ctx->config.name);
   	ctx->running = false;
 	wake_controller(ctx);
-#if LINUX || OSX || FREEBSD
 	pthread_detach(ctx->thread);
-#endif
 }
 
 
 /*---------------------------------------------------------------------------*/
 void slimproto_thread_init(struct thread_ctx_s *ctx) {
+
 	wake_create(ctx->wake_e);
 
 	ctx->running = true;
 	ctx->slimproto_ip = 0;
 	ctx->slimproto_port = PORT;
 	ctx->sock = -1;
-
 
 	if (strcmp(ctx->config.server, "?")) {
 		server_addr(ctx->config.server, &ctx->slimproto_ip, &ctx->slimproto_port);
@@ -936,19 +1035,7 @@ void slimproto_thread_init(struct thread_ctx_s *ctx) {
 
 	memcpy(ctx->mac, ctx->config.mac, 6);
 
-	ctx->play_running = ctx-> track_ended = false;
-	ctx->track_status = TRACK_STOPPED;
-
-#if LINUX || OSX || FREEBSD
-	pthread_attr_t attr;
-	pthread_attr_init(&attr);
-	pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN + SLIMPROTO_THREAD_STACK_SIZE);
-	pthread_create(&ctx->thread, &attr, (void *(*)(void*)) slimproto, ctx);
-	pthread_attr_destroy(&attr);
-#endif
-#if WIN
-	ctx->thread = CreateThread(NULL, SLIMPROTO_THREAD_STACK_SIZE, (LPTHREAD_START_ROUTINE)&slimproto, ctx, 0, NULL);
-#endif
+	pthread_create(&ctx->thread, NULL, (void *(*)(void*)) slimproto, ctx);
 }
 
 

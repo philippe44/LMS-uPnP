@@ -88,12 +88,6 @@ PLUGIN_UPNPBRIDGE_UPNP
 PLUGIN_UPNPBRIDGE_UTIL
 	EN	Utilities debugging
 
-PLUGIN_UPNPBRIDGE_SLIMMAIN
-	EN	Slim Main function debugging
-
-PLUGIN_UPNPBRIDGE_WEB
-	EN	Webserver debugging
-
 PLUGIN_UPNPBRIDGE_MAIN
 	EN	Main application debugging
 
@@ -156,65 +150,27 @@ PLUGIN_UPNPBRIDGE_UPNPSOCKET_DESC
 PLUGIN_UPNPBRIDGE_TEXTDEFAULT
 	EN	The following parameters apply to ALL players - enter "default" (without ") in text boxes to set to default values
 
-PLUGIN_UPNPBRIDGE_HTTPOPTIONS
-	EN	HTTP connection mode
+PLUGIN_UPNPBRIDGE_STREAMOPTIONS
+	EN	Streaming options
 
-PLUGIN_UPNPBRIDGE_HTTPOPTIONS_DESC
-	EN	Options for HTTP connection communication with UPnP player (see user guide)
+PLUGIN_UPNPBRIDGE_STREAMOPTIONS_DESC
+	EN	Options for streaming to UPnP player (see user guide)
 	EN	<br>- LMS does not provide the file size to be sent. The best HTTP mode is to use "chunked encoding" but some
-	EN	UPnP players do not work with that option and require other solutions to set expected length
-	EN	A per-codec HTTP mode can be manually entered using syntax: "default_mode","codec_1":"mode","codec_N":"mode"
-	
-PLUGIN_UPNPBRIDGE_GAPLESSOPTIONS
-	EN	Gapless options
-	
-PLUGIN_UPNPBRIDGE_GAPLESSOPTIONS_DESC
-	EN	- Some UPnP players don't support gapless playback and thus don't automatically move to next track in playlist. 
-	EN	<br>- Do not try gapless if track is below a minimum (will mostly cause the player to be stuck)
+	EN	UPnP players require no-length to be used.
+	EN	<br>- Some players support gapless playback and thus automatically move to next track in playlist. This is automatically
+	EN	detected, but you can force it disabled
+	EN	<br>- UPnP players can use different methods to restart from paused position. If your player does not pause or resume, 
+	EN	use this tp force LMS to restart from paused position
+	EN	<br>see User Guide for more details (really). 
 		
+PLUGIN_UPNPBRIDGE_HTTPMODE
+	EN	HTTP mode 
+
 PLUGIN_UPNPBRIDGE_ACCEPTNEXTURI
 	EN	Gapless 
 	
-PLUGIN_UPNPBRIDGE_MINGAPLESS
-	EN	Min gap 
-
-PLUGIN_UPNPBRIDGE_PAUSEMGMT
-	EN	Pause/Resume management
-
 PLUGIN_UPNPBRIDGE_SEEKAFTERPAUSE
-	EN	Force reposition on resume
-	
-PLUGIN_UPNPBRIDGE_BYTESEEK
-	EN	Accept byte seek
-	
-PLUGIN_UPNPBRIDGE_PAUSEMGMT_DESC
-	EN	UPnP players can use different methods to restart from paused position. Best if to have NONE of these checked
-	EN	but if your player does not pause or resume, try in order
-	EN	<br>- 'Force repositon' stops the player and seek to memorized position
-	EN	<br>- 'Byte seek' accepts player's request to re-open track and skip bytes
-	EN	<br>see User Guide for more details (really). 
-		
-PLUGIN_UPNPBRIDGE_SEEKAFTERPAUSE_DESC
-	EN	Some UPnP players do not resume properly after pause. CHECK to have LMS handle the resume on behalf of the player 
-	EN	(this will create a small change in position). This <b>CANNOT</b> work if you have set a password for LMS command access	
-
-PLUGIN_UPNPBRIDGE_BUFFERS
-	EN	Audio file buffers
-
-PLUGIN_UPNPBRIDGE_BUFFERS_DESC
-	EN	Audio streams are buffered locally while sending to the UPnP player. 
-	EN	<br>- Enter ? to let the system decide which directory to use
-	EN	<br>- "Max Size" sets the size a single file can take before it is shrunk. Set to -1 for unlimited
-	EN	<br>- "Pacing Size" set size of write ahead to prevent buffering spike for remote streams. Set to -1 for unlimited (see user guide)
-
-PLUGIN_UPNPBRIDGE_BUFFERDIR
-	EN	Directory
-
-PLUGIN_UPNPBRIDGE_BUFFERLIMIT
-	EN	Max Size
-	
-PLUGIN_UPNPBRIDGE_STREAMPACINGSIZE
-	EN	Pacing size
+	EN	Seek on resume
 
 PLUGIN_UPNPBRIDGE_CODECSPARAM
 	EN	Audio codec parameters
@@ -225,11 +181,11 @@ PLUGIN_UPNPBRIDGE_CODECSPARAM_DESC
 	EN	For example, to only support (in order of preference) PCM then FLAC and then MP3 , enter "pcm,flc,mp3" (without "")
 	EN	(<b>aac and alc are untested</b>. 
 	EN	<br><b>NB: if a codec listed here is NOT supported by the player, it will be removed from the list sent to LMS</b>
-	EN	<br>- <i> FLAC header:</i> a FLAC header is required by some players.
+	EN	<br>- <i>Forced MimeTypes:</i> Force some codecs/types if they are not auto-detected (see user's guide)
+	EN	<br>- <i>FLAC header:</i> a FLAC header is required by some players.
 	EN	<br>- <i>Uncompressed format:</i> comma-separated list (<b>ordered</b>) of supported uncompressed audio formats (amongst wav, aiff, raw)
-	EN	<br>- <i>Match byte order:</i> let the bridge choose which supported uncompressed format avoids byte re-ordering (so as to reduces CPU) 
 	EN	<br>- <i>24 bits PCM:</i> 24 bits sample tweaking, including possibility to shrink them to 16 bits
-	
+		
 PLUGIN_UPNPBRIDGE_SAMPLERATE
 	EN	Max Sample Rate
 
@@ -243,10 +199,10 @@ PLUGIN_UPNPBRIDGE_L24FORMAT
 	EN	24 bits PCM
 	
 PLUGIN_UPNPBRIDGE_RAWAUDIOFORMAT
-	EN	Uncompressed format
+	EN	PCM format
 
-PLUGIN_UPNPBRIDGE_MATCHENDIANNESS
-	EN	Match byte order
+PLUGIN_UPNPBRIDGE_FORCEDMIMETYPES
+	EN	Extra MimeTypes
 
 PLUGIN_UPNPBRIDGE_SERVER
 	EN	LMS Server

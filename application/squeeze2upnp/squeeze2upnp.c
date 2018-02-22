@@ -30,7 +30,6 @@
 #include "squeeze2upnp.h"
 #include "upnpdebug.h"
 #include "upnptools.h"
-#include "webserver.h"
 #include "util_common.h"
 #include "util.h"
 #include "avt_util.h"
@@ -46,10 +45,13 @@
 #define DISCOVERY_TIME 		20
 #define PRESENCE_TIMEOUT	(DISCOVERY_TIME * 6)
 
+#define TRACK_POLL  (1000)
+#define STATE_POLL  (500)
+#define MAX_ACTION_ERRORS (5)
+
 /*----------------------------------------------------------------------------*/
 /* globals initialized */
 /*----------------------------------------------------------------------------*/
-char				glBaseVDIR[] = "LMS2UPNP";
 s32_t				glLogLimit = -1;
 char				glUPnPSocket[128] = "?";
 struct sMR			glMRDevices[MAX_RENDERERS];
@@ -57,17 +59,15 @@ pthread_mutex_t 	glMRMutex;
 UpnpClient_Handle 	glControlPointHandle;
 
 log_level	slimproto_loglevel = lINFO;
+log_level	slimmain_loglevel = lWARN;
 log_level	stream_loglevel = lWARN;
 log_level	decode_loglevel = lWARN;
-log_level	output_loglevel = lWARN;
-log_level	web_loglevel = lWARN;
+log_level	output_loglevel = lINFO;
 log_level	main_loglevel = lINFO;
-log_level	slimmain_loglevel = lINFO;
 log_level	util_loglevel = lWARN;
 log_level	upnp_loglevel = lINFO;
 
 tMRConfig			glMRConfig = {
-							"-3",      	// StreamLength
 							false,      // SeekAfterPause
 							false,		// ByteSeek
 							true,		// Enabled
@@ -79,10 +79,8 @@ tMRConfig			glMRConfig = {
 							true,		// SendMetaData
 							true,		// SendCoverArt
 							100,		// MaxVolume
-							"raw", 		// RawAudioFormat
-							true,       // MatchEndianness
 							false,		// AutoPlay
-							false,      // AllowFlac
+							"",      	// ForcedMimeTypes
 							false,      // RoonMode
 					};
 
@@ -100,22 +98,20 @@ static u8_t LMSVolumeMap[101] = {
 			};
 
 sq_dev_param_t glDeviceParam = {
+					HTTP_CHUNKED, 	 		// stream_length
 					 // both are multiple of 3*4(2) for buffer alignement on sample
 					(200 * 1024 * (4*3)), 	// stream_buffer_size
-					(200 * 1024 * (4*3)),	// output_buffer_size
-					-1,         			// max_GET_bytes
+					(16 * 1024 * (4*3)),	// output_buffer_size
 					"pcm,flc,mp3",			// codecs
+					"thru",					// encode
+					"raw,wav,aif",			// raw_audio_format
 					"?",                    // server
 					SQ_RATE_48000,          // sample_rate
 					L24_PACKED_LPCM,        // L24_mode
 					FLAC_NORMAL_HEADER,		// flac_header
-					"?",                    // buffer_dir
 					"",						// name
-					-1L,					// buffer_limit
-					1024*1024,				// pacing_size
-					false,      			// keep_buffer_file
 					{ 0x00,0x00,0x00,0x00,0x00,0x00 },
-					false,  				// send_icy
+					true,	  				// send_icy
 					{ 	true,				// use_cli
 						"",     			// server
 					},
@@ -168,7 +164,7 @@ static bool				glDiscovery;
 static unsigned int 	glPort;
 static char 			glIPaddress[128] = "";
 static void				*glConfigID = NULL;
-static char				glConfigName[SQ_STR_LENGTH] = "./config.xml";
+static char				glConfigName[_STR_LEN_] = "./config.xml";
 static char				*glExcluded = "Squeezebox";
 
 static char usage[] =
@@ -182,7 +178,7 @@ static char usage[] =
 		   "  -I \t\t\tauto save config at every network scan\n"
 		   "  -f <logfile>\t\tWrite debug to logfile\n"
 		   "  -p <pid file>\t\twrite PID in file\n"
-		   "  -d <log>=<level>\tSet logging level, logs: all|slimproto|stream|decode|output|web|main|util|upnp, level: error|warn|info|debug|sdebug\n"
+		   "  -d <log>=<level>\tSet logging level, logs: all|slimproto|slimmain|stream|decode|output|web|main|util|upnp, level: error|warn|info|debug|sdebug\n"
 
 #if LINUX || FREEBSD
 		   "  -z \t\t\tDaemonize\n"
@@ -233,9 +229,8 @@ static char license[] =
 /*----------------------------------------------------------------------------*/
 static void 	*MRThread(void *args);
 static 	void*	UpdateThread(void *args);
-static bool 	AddMRDevice(struct sMR *Device, char * UDN, IXML_Document *DescDoc,	const char *location);
+static bool 	AddMRDevice(struct sMR *Device, char * UDN, IXML_Document *DescDoc,	const char *location, char **ProtoInfo);
 static bool		isExcluded(char *Model);
-static int		uPNPTerminate(void);
 
 // functions with _ prefix means that the device mutex is expected to be locked
 static bool 	_ProcessQueue(struct sMR *Device);
@@ -243,11 +238,182 @@ static void 	_SyncNotifState(char *State, struct sMR* Device);
 static void 	_ProcessVolume(char *Volume, struct sMR* Device);
 
 /*----------------------------------------------------------------------------*/
-#define TRACK_POLL  (1000)
-#define STATE_POLL  (500)
-#define VOLUME_POLL (10000)
-#define METADATA_POLL (10000)
-#define MAX_ACTION_ERRORS (5)
+bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t *cookie, void *param)
+{
+	struct sMR *Device = caller;
+	bool rc = true;
+
+	// this is async, so need to check context validity
+	if (!CheckAndLock(Device)) return false;
+
+	if (action == SQ_ONOFF) {
+		Device->on = *((bool*) param);
+
+		// this is probably now safe against inter-domains deadlock, but a watch
+		// item if such issue occur - could also use busyraise/drop as this uses
+		// cli so it might take a while
+		if (Device->on && Device->Config.AutoPlay)
+			sq_notify(Device->SqueezeHandle, Device, SQ_PLAY, NULL, &Device->on);
+
+		LOG_DEBUG("[%p]: device set on/off %d", caller, Device->on);
+	}
+
+	if (!Device->on && action != SQ_SETNAME && action != SQ_SETSERVER) {
+		LOG_DEBUG("[%p]: device off or not controlled by LMS", caller);
+		pthread_mutex_unlock(&Device->Mutex);
+		return false;
+	}
+
+	LOG_SDEBUG("callback for %s", Device->friendlyName);
+
+	switch (action) {
+
+		case SQ_SET_TRACK: {
+			struct track_param *p = (struct track_param*) param;
+			/*
+			Even if this request comes too late and the player has already
+			stopped, we should use NextURI if LMS thinks it's playing. Otherwise
+			there is a race condition that will force a false 'forced stopped'
+			*/
+			bool Next = Device->sqState != SQ_STOP;
+			char *ProtoInfo, *uri;
+
+			// when this is received the next track has been processed
+			NFREE(Device->NextURI);
+			NFREE(Device->NextProtoInfo);
+			sq_free_metadata(&Device->NextMetaData);
+			if (!Device->Config.SendCoverArt) NFREE(p->metadata.artwork);
+
+			LOG_INFO("[%p]:\n\tartist:%s\n\talbum:%s\n\ttitle:%s\n\tgenre:%s\n\tduration:%d.%03d\n\tsize:%d\n\tcover:%s", Device,
+				p->metadata.artist, p->metadata.album, p->metadata.title,
+				p->metadata.genre, div(p->metadata.duration, 1000).quot,
+				div(p->metadata.duration,1000).rem, p->metadata.file_size,
+				p->metadata.artwork ? p->metadata.artwork : "");
+
+			ProtoInfo = MakeProtocolInfo(p->mimetype, p->metadata.duration);
+
+			// when it's a Sonos playing a live mp3 or aac stream, add special prefix
+			if (!p->metadata.duration && (*Device->Service[TOPOLOGY_IDX].ControlURL) &&
+				(mimetype2format(p->mimetype) == 'm' || mimetype2format(p->mimetype) == 'a')) {
+				asprintf(&uri, "x-rincon-mp3radio://%s", p->uri);
+				LOG_INFO("[%p]: Sonos live stream", Device);
+			} else uri = strdup(p->uri);
+
+			if (Next) {
+				if (!Device->Config.AcceptNextURI || !p->metadata.duration) {
+					LOG_INFO("[%p]: next URI gapped %s", Device, uri);
+					Device->NextURI = uri;
+					Device->NextProtoInfo = ProtoInfo;
+					// this is a structure copy, pointers remains valid
+					Device->NextMetaData = p->metadata;
+				} else {
+					LOG_INFO("[%p]: next URI gapless %s", Device, uri);
+					AVTSetNextURI(Device, uri, &p->metadata, ProtoInfo);
+					free(ProtoInfo);
+					free(uri);
+					sq_free_metadata(&p->metadata);
+				}
+			}
+			else {
+				LOG_INFO("[%p]: current URI set %s", Device, uri);
+				AVTSetURI(Device, uri, &p->metadata, ProtoInfo);
+				free(ProtoInfo);
+				free(uri);
+				sq_free_metadata(&p->metadata);
+			}
+			break;
+		}
+		case SQ_UNPAUSE:
+			// should not be in stopped mode at this point unless it's a short track
+			if (Device->sqState == SQ_PLAY) break;
+
+			if (Device->Config.SeekAfterPause) {
+				sq_set_time(Device->SqueezeHandle, "-0.01");
+				break;
+			}
+
+			if (Device->Muted && Device->Config.VolumeOnPlay != -1) {
+				CtrlSetMute(Device, false, Device->seqN++);
+				Device->Muted = false;
+			}
+
+			AVTPlay(Device);
+			Device->sqState = SQ_PLAY;
+			break;
+		case SQ_PLAY:
+			// should not be in stopped mode at this point unless it's a short track
+			if (Device->sqState == SQ_PLAY) break;
+
+			AVTSetPlayMode(Device);
+			AVTPlay(Device);
+			Device->sqState = SQ_PLAY;
+
+			if (Device->Muted && Device->Config.VolumeOnPlay != -1) {
+				CtrlSetMute(Device, false, Device->seqN++);
+				Device->Muted = false;
+			}
+
+			if (Device->Config.VolumeOnPlay == 1)
+				CtrlSetVolume(Device, Device->Volume, Device->seqN++);
+			break;
+		case SQ_STOP:
+			AVTStop(Device);
+			NFREE(Device->NextURI);
+			NFREE(Device->NextProtoInfo);
+			sq_free_metadata(&Device->NextMetaData);
+			Device->sqState = action;
+			break;
+		case SQ_PAUSE:
+			AVTBasic(Device, "Pause");
+			Device->sqState = action;
+			break;
+		case SQ_NEXT:
+			AVTBasic(Device, "Next");
+			break;
+		case SQ_SEEK:
+			break;
+		case SQ_VOLUME: {
+			u32_t Volume = *(u16_t*)param;
+			int i;
+
+			// calculate volume and check for change
+			for (i = 100; Volume < LMSVolumeMap[i] && i; i--);
+			Volume = (i * Device->Config.MaxVolume) / 100;
+			if (Device->Volume == Volume) break;
+			Device->Volume = Volume;
+
+			// memorise but do not transmit so that we can compare
+			if (Device->Config.VolumeOnPlay == -1) break;
+
+			// only transmit while playing
+			if (!Device->Config.VolumeOnPlay || Device->sqState == SQ_PLAY) {
+				if (Device->Volume) {
+					if (Device->Muted) CtrlSetMute(Device, false, Device->seqN++);
+					CtrlSetVolume(Device, Device->Volume, Device->seqN++);
+				}
+				else CtrlSetMute(Device, true, Device->seqN++);
+				Device->Muted = (Device->Volume == 0);
+			}
+
+			break;
+		}
+		case SQ_SETNAME:
+			strcpy(Device->sq_config.name, param);
+			break;
+		case SQ_SETSERVER:
+			strcpy(Device->sq_config.dynamic.server, inet_ntoa(*(struct in_addr*) param));
+			break;
+		default:
+			break;
+	}
+
+	pthread_mutex_unlock(&Device->Mutex);
+
+	return rc;
+}
+
+
+/*----------------------------------------------------------------------------*/
 static void *MRThread(void *args)
 {
 	int elapsed;
@@ -279,13 +445,12 @@ static void *MRThread(void *args)
 		// get track position & CurrentURI
 		if (p->TrackPoll > TRACK_POLL) {
 			p->TrackPoll = 0;
-			if (p->State != STOPPED && p->State != PAUSED) {
+			if (p->sqState != SQ_STOP && p->sqState != SQ_PAUSE) {
 				AVTCallAction(p, "GetPositionInfo", p->seqN++);
 			}
 		}
 
 		// do polling as event is broken in many uPNP devices
-
 		if (p->StatePoll > STATE_POLL) {
 			p->StatePoll = 0;
 			AVTCallAction(p, "GetTransportInfo", p->seqN++);
@@ -300,191 +465,6 @@ static void *MRThread(void *args)
 
 
 /*----------------------------------------------------------------------------*/
-bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t *cookie, void *param)
-{
-	struct sMR *device = caller;
-	char *p = (char*) param;
-	bool rc = true;
-
-	// this is async, so need to check context validity
-	if (!CheckAndLock(device)) return false;
-
-	if (action == SQ_ONOFF) {
-		device->on = *((bool*) param);
-
-		// this is probably now safe against inter-domains deadlock, but a watch
-		// item if such issue occur - could also use busyraise/drop as this uses
-		// cli so it might take a while
-		if (device->on && device->Config.AutoPlay)
-			sq_notify(device->SqueezeHandle, device, SQ_PLAY, NULL, &device->on);
-
-		LOG_DEBUG("[%p]: device set on/off %d", caller, device->on);
-	}
-
-	if (!device->on && action != SQ_SETNAME && action != SQ_SETSERVER) {
-		LOG_DEBUG("[%p]: device off or not controlled by LMS", caller);
-		pthread_mutex_unlock(&device->Mutex);
-		return false;
-	}
-
-	LOG_SDEBUG("callback for %s", device->friendlyName);
-
-	switch (action) {
-
-		case SQ_SETURI:
-		case SQ_SETNEXTURI: {
-			sq_seturi_t *p = (sq_seturi_t*) param;
-			char uri[SQ_STR_LENGTH];
-
-			LOG_INFO("[%p]: codec:%c, ch:%d, s:%d, r:%d", device, p->codec,
-										p->channels, p->sample_size, p->sample_rate);
-
-			sq_get_metadata(device->SqueezeHandle, &device->MetaData, (action == SQ_SETURI) ? false : true);
-			p->file_size = device->MetaData.file_size ?
-						   device->MetaData.file_size :
-						   Codec2Length(p->codec, device->Config.StreamLength);
-
-			p->duration 	= device->MetaData.duration;
-			p->src_format 	= ext2format(device->MetaData.path);
-			p->remote 		= device->MetaData.remote;
-			p->track_hash	= device->MetaData.track_hash;
-			if (!device->Config.SendCoverArt) NFREE(device->MetaData.artwork);
-
-			// must be done *after* duration has been set
-			if (!SetContentType(device, p)) {
-				LOG_ERROR("[%p]: no matching codec in player", caller);
-				sq_free_metadata(&device->MetaData);
-				rc = false;
-				break;
-			}
-
-			sprintf(uri, "http://%s:%d/%s/%s.%s", glIPaddress, glPort, glBaseVDIR, p->name, p->ext);
-
-			// to detect properly transition
-			NFREE(device->NextURI);
-			strcpy(device->ProtoInfo, p->proto_info);
-
-			if (action == SQ_SETNEXTURI) {
-				device->NextURI = strdup(uri);
-				device->NextDuration = p->duration;
-
-				if ( !device->Config.AcceptNextURI ||
-					 (device->Elapsed + device->Config.MinGapless * 1000 > device->Duration) ||
-					 (!p->duration && p->remote) ) {
-					device->GapExpected = true;
-					LOG_INFO("[%p]: next URI gapped %s", device, device->NextURI);
-
-				} else {
-					AVTSetNextURI(device);
-					sq_free_metadata(&device->MetaData);
-					device->GapExpected = false;
-					LOG_INFO("[%p]: next URI gapless %s", device, device->NextURI);
-				}
-			}
-			else {
-				NFREE(device->CurrentURI);
-				device->CurrentURI = strdup(uri);
-				device->Duration = p->duration;
-
-				AVTSetURI(device);
-				sq_free_metadata(&device->MetaData);
-
-				LOG_INFO("[%p]: current URI set %s", device, device->CurrentURI);
-			}
-
-			break;
-		}
-		case SQ_UNPAUSE:
-			if (device->Config.SeekAfterPause) {
-				u32_t PausedTime = sq_get_time(device->SqueezeHandle);
-				sq_set_time(device->SqueezeHandle, PausedTime);
-				break;
-			}
-			if (device->CurrentURI) {
-				if (device->Muted && device->Config.VolumeOnPlay != -1) {
-					CtrlSetMute(device, false, device->seqN++);
-					device->Muted = false;
-				}
-
-				AVTPlay(device);
-				device->sqState = SQ_PLAY;
-			}
-			break;
-		case SQ_PLAY:
-			if (device->CurrentURI) {
-				AVTSetPlayMode(device);
-				AVTPlay(device);
-				device->sqState = SQ_PLAY;
-
-				if (device->Muted && device->Config.VolumeOnPlay != -1) {
-					CtrlSetMute(device, false, device->seqN++);
-					device->Muted = false;
-				}
-
-				if (device->Config.VolumeOnPlay == 1)
-					CtrlSetVolume(device, device->Volume, device->seqN++);
-			}
-			else rc = false;
-			break;
-		case SQ_STOP:
-			AVTStop(device);
-			NFREE(device->CurrentURI);
-			NFREE(device->NextURI);
-			sq_free_metadata(&device->MetaData);
-			device->sqState = action;
-			device->ExpectStop = true;
-			break;
-		case SQ_PAUSE:
-			AVTBasic(device, "Pause");
-			device->sqState = action;
-			break;
-		case SQ_NEXT:
-			AVTBasic(device, "Next");
-			break;
-		case SQ_SEEK:
-			break;
-		case SQ_VOLUME: {
-			u32_t Volume = *(u16_t*)p;
-			int i;
-
-			// calculate volume and check for change
-			for (i = 100; Volume < LMSVolumeMap[i] && i; i--);
-			Volume = (i * device->Config.MaxVolume) / 100;
-			if (device->Volume == Volume) break;
-			device->Volume = Volume;
-
-			// memorise but do not transmit so that we can compare
-			if (device->Config.VolumeOnPlay == -1) break;
-
-			// only transmit while playing
-			if (!device->Config.VolumeOnPlay || device->sqState == SQ_PLAY) {
-				if (device->Volume) {
-					if (device->Muted) CtrlSetMute(device, false, device->seqN++);
-					CtrlSetVolume(device, device->Volume, device->seqN++);
-				}
-				else CtrlSetMute(device, true, device->seqN++);
-				device->Muted = (device->Volume == 0);
-			}
-
-			break;
-		}
-		case SQ_SETNAME:
-			strcpy(device->sq_config.name, param);
-			break;
-		case SQ_SETSERVER:
-			strcpy(device->sq_config.dynamic.server, inet_ntoa(*(struct in_addr*) param));
-			break;
-		default:
-			break;
-	}
-
-	pthread_mutex_unlock(&device->Mutex);
-
-	return rc;
-}
-
-
-/*----------------------------------------------------------------------------*/
 static void _SyncNotifState(char *State, struct sMR* Device)
 {
 	sq_event_t Event = SQ_NONE;
@@ -495,47 +475,33 @@ static void _SyncNotifState(char *State, struct sMR* Device)
 	*/
 
 	// in transitioning mode, do nothing, just wait
-	if (!strcmp(State, "TRANSITIONING")) {
-		if (Device->State != TRANSITIONING) {
-			LOG_INFO("%s: uPNP transition", Device->friendlyName);
-		}
+	if (!strcmp(State, "TRANSITIONING") && Device->State != TRANSITIONING) {
+		LOG_INFO("[%p]: uPNP transition", Device);
+		Event = SQ_TRANSITION;
 		Device->State = TRANSITIONING;
-		return;
 	}
 
 	if (!strcmp(State, "STOPPED") && Device->State != STOPPED) {
-		if (Device->NextURI) {
-			if (Device->GapExpected) {
-				// fake a "SETURI" and a "PLAY" request
-				NFREE(Device->CurrentURI);
-				Device->CurrentURI = malloc(strlen(Device->NextURI) + 1);
-				strcpy(Device->CurrentURI, Device->NextURI);
-				NFREE(Device->NextURI);
-				Device->Duration = Device->NextDuration;
-				Device->NextDuration = 0;
-
-				AVTSetURI(Device);
-				sq_free_metadata(&Device->MetaData);
-				AVTPlay(Device);
-
-				Event = SQ_TRACK_CHANGE;
-				LOG_INFO("[%p]: no gapless %s", Device, Device->CurrentURI);
-			}
-			else  {
-				/*
-				This should not happen, but if SetNextURI has been sent too late
-				and	the device did not have time to buffer next track data. In
-				this case, give it a nudge
-				*/
-				AVTBasic(Device, "Next");
-				LOG_WARN("[%p]: nudge next track required %s", Device, Device->NextURI);
-			}
-		}
-		// This is an end of track and nothing else to play or a LMS stop
-		else {
-			LOG_INFO("%s: uPNP stop", Device->friendlyName);
-			if (Device->State == PAUSED || !Device->ExpectStop) Param = true;
+		if (Device->sqState == SQ_PAUSE) {
+			// this is a remote forced stop: a pause then a stop
+			Param = true;
 			Event = SQ_STOP;
+		} else if (!Device->NextURI) {
+			// could generate an overrun event or an underrun
+			Event = SQ_STOP;
+			LOG_INFO("[%p]: uPNP stop", Device);
+		} else if (Device->NextProtoInfo) {
+			// non-gapless player, manually set next track
+			LOG_INFO("[%p]: gapped transition %s", Device, Device->NextURI);
+			AVTSetURI(Device, Device->NextURI, &Device->NextMetaData, Device->NextProtoInfo);
+			NFREE(Device->NextProtoInfo);
+			NFREE(Device->NextURI);
+			sq_free_metadata(&Device->NextMetaData);
+			AVTPlay(Device);
+		} else {
+			// gapless player but something went wrong, try to nudge it
+			AVTBasic(Device, "Next");
+			LOG_INFO("[%p]: guessing missed nextURI %s ", Device, Device->NextURI);
 		}
 
 		Device->State = STOPPED;
@@ -560,17 +526,13 @@ static void _SyncNotifState(char *State, struct sMR* Device)
 
 		LOG_INFO("%s: uPNP playing", Device->friendlyName);
 		Device->State = PLAYING;
-		Device->ExpectStop = false;
-		// avoid double play (causes a restart) in case of unsollicited play
 	}
 
 	if (!strcmp(State, "PAUSED_PLAYBACK") && Device->State != PAUSED) {
 		// detect unsollicited pause, but do not confuse it with a fast pause/play
-		if (Device->sqState != SQ_PAUSE) {
-			Event = SQ_PAUSE;
-			Param = true;
-		}
+		if (Device->sqState != SQ_PAUSE) Param = true;
 		LOG_INFO("%s: uPNP pause", Device->friendlyName);
+		Event = SQ_PAUSE;
 		Device->State = PAUSED;
 	}
 
@@ -708,7 +670,8 @@ int ActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 				*/
 				if (Resp && ((!strcasecmp(Resp, "StopResponse") && p->State == STOPPED) ||
 							 (!strcasecmp(Resp, "PlayResponse") && p->State == PLAYING) ||
-							 (!strcasecmp(Resp, "PauseResponse") && p->State == PAUSED))) {
+							 (!strcasecmp(Resp, "PauseResponse") && p->State == PAUSED) ||
+					 		 (!strcasecmp(Resp, "NextResponse") && p->State == STOPPED))) {
 					p->State = UNKNOWN;
 				}
 
@@ -725,21 +688,19 @@ int ActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 
 			// When not playing, position is not reliable
 			if (p->State == PLAYING) {
-				// Get position in current track
+				u32_t Elapsed;
 				r = XMLGetFirstDocumentItem(Action->ActionResult, "RelTime");
-				if (r) {
-					p->Elapsed = 1000L * Time2Int(r);
-					if (!p->NextURI && p->Duration && (p->Elapsed + 5000 > p->Duration)) p->ExpectStop = true;
-					LOG_SDEBUG("[%p]: position %d (cookie %p)", p, p->Elapsed, Cookie);
-					// discard any time info unless we are confirmed playing
-					sq_notify(p->SqueezeHandle, p, SQ_TIME, NULL, &p->Elapsed);
+				Elapsed = Time2Int(r) * 1000;
+				if (Elapsed) {
+					LOG_DEBUG("[%p]: position %d (cookie %p)", p, Elapsed, Cookie);
+					sq_notify(p->SqueezeHandle, p, SQ_TIME, NULL, &Elapsed);
 				}
-				NFREE(r);
 			}
+			NFREE(r);
 
 			// URI detection response
 			r = XMLGetFirstDocumentItem(Action->ActionResult, "TrackURI");
-			if (r && (*r == '\0' || !strstr(r, "-idx-"))) {
+			if (r && (*r == '\0' || !strstr(r, BRIDGE_URL))) {
 				char *s;
 				IXML_Document *doc;
 				IXML_Node *node;
@@ -757,23 +718,7 @@ int ActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 				if (doc) ixmlDocument_free(doc);
 			}
 
-			if (r && p->CurrentURI) {
-				/*
-				an URI change detection is only valid if there is a nextURI
-				pending, otherwise this is false alarm due to de-sync between
-				the two players
-				*/
-				if (strcmp(r, p->CurrentURI) && (p->State == PLAYING) && p->NextURI && strstr(r, "-idx-")) {
-					LOG_INFO("Detected URI change %s %s", p->CurrentURI, r);
-					NFREE(p->CurrentURI);
-					NFREE(p->NextURI);
-					p->Duration = p->NextDuration;
-					p->CurrentURI = malloc(strlen(r) + 1);
-					strcpy(p->CurrentURI, r);
-					sq_notify(p->SqueezeHandle, p, SQ_TRACK_CHANGE, NULL, p->CurrentURI);
-				}
-				else pthread_mutex_unlock(&p->Mutex);
-			}
+			if (r) sq_notify(p->SqueezeHandle, p, SQ_TRACK_INFO, NULL, r);
 			NFREE(r);
 
 			LOG_SDEBUG("Action complete : %i (cookie %p)", EventType, Cookie);
@@ -859,7 +804,8 @@ int MasterHandler(Upnp_EventType EventType, void *_Event, void *Cookie)
 			// this is async, so need to check context's validity
 			if (!CheckAndLock(Device)) break;
 
-			if ((s = EventURL2Service(Event->PublisherUrl, Device->Service)) != NULL) {
+			s = EventURL2Service(Event->PublisherUrl, Device->Service);
+			if (s != NULL) {
 				UpnpSubscribeAsync(glControlPointHandle, s->EventURL, s->TimeOut,
 								   MasterHandler, (void*) strdup(Device->UDN));
 				LOG_INFO("[%p]: Auto-renewal failed, re-subscribing", Device);
@@ -880,15 +826,20 @@ int MasterHandler(Upnp_EventType EventType, void *_Event, void *Cookie)
 			// this is async, so need to check context's validity
 			if (!CheckAndLock(Device)) break;
 
-			if ((s = EventURL2Service(Event->PublisherUrl, Device->Service)) != NULL &&
-				 Event->ErrCode == UPNP_E_SUCCESS) {
-				s->Failed = 0;
-				strcpy(s->SID, Event->Sid);
-				s->TimeOut = Event->TimeOut;
-				LOG_INFO("[%p]: subscribe success", Device);
-			} else {
-				s->Failed++;
-				LOG_WARN("[%p]: subscribe fail, volume feedback will not work", Device);
+			s = EventURL2Service(Event->PublisherUrl, Device->Service);
+			if (s != NULL) {
+				if (Event->ErrCode == UPNP_E_SUCCESS) {
+					s->Failed = 0;
+					strcpy(s->SID, Event->Sid);
+					s->TimeOut = Event->TimeOut;
+					LOG_INFO("[%p]: subscribe success", Device);
+				} else if (s->Failed++ < 3) {
+					LOG_INFO("[%p]: subscribe fail, re-trying %u", Device, s->Failed);
+					UpnpSubscribeAsync(glControlPointHandle, s->EventURL, s->TimeOut,
+									   MasterHandler, (void*) strdup(Device->UDN));
+				} else {
+					LOG_WARN("[%p]: subscribe fail, volume feedback will not work", Device);
+				}
 			}
 
 			pthread_mutex_unlock(&Device->Mutex);
@@ -968,9 +919,8 @@ static void *UpdateThread(void *args)
 
 			// device keepalive or search response
 			} else if (Update->Type == DISCOVERY) {
-				bool Refresh = false;
 				IXML_Document *DescDoc = NULL;
-				char *UDN = NULL, *ModelName = NULL;
+				char *UDN = NULL, *ModelName = NULL, *ProtoInfo = NULL;
 				int i, rc;
 
 				// it's a Sonos group announce, just do a targeted search and exit
@@ -987,10 +937,7 @@ static void *UpdateThread(void *args)
 				for (i = 0; i < MAX_RENDERERS; i++) {
 					Device = glMRDevices + i;
 					if (Device->Running && !strcmp(Device->DescDocURL, Update->Data)) {
-						Device->LastSeen = now;
-						LOG_DEBUG("[%p] UPnP keep alive: %s", Device, Device->friendlyName);
-						Refresh = true;
-						// special case for Sonos
+						// special case for Sonos: remove non-master players
 						if (!isMaster(Device->UDN, &Device->Service[TOPOLOGY_IDX], NULL)) {
 							pthread_mutex_lock(&Device->Mutex);
 							LOG_INFO("[%p]: remove Sonos slave: %s", Device, Device->Config.Name);
@@ -999,13 +946,10 @@ static void *UpdateThread(void *args)
 						} else {
 							Device->LastSeen = now;
 							LOG_DEBUG("[%p] UPnP keep alive: %s", Device, Device->Config.Name);
-							Refresh = true;
 						}
-						break;
+						goto cleanup;
 					}
 				}
-
-				if (Refresh) continue;
 
 				// this can take a very long time, too bad for the queue...
 				if ((rc = UpnpDownloadXmlDoc(Update->Data, &DescDoc)) != UPNP_E_SUCCESS) {
@@ -1038,9 +982,10 @@ static void *UpdateThread(void *args)
 
 				Device = &glMRDevices[i];
 
-				if (AddMRDevice(Device, UDN, DescDoc, Update->Data) && !glDiscovery) {
+				if (AddMRDevice(Device, UDN, DescDoc, Update->Data, &ProtoInfo) && !glDiscovery) {
+					char **MimeTypes = ParseProtocolInfo(ProtoInfo, Device->Config.ForcedMimeTypes);
 					// create a new slimdevice
-					Device->SqueezeHandle = sq_reserve_device(Device, Device->on, &sq_callback);
+					Device->SqueezeHandle = sq_reserve_device(Device, Device->on, MimeTypes, &sq_callback);
 					if (!*(Device->sq_config.name)) strcpy(Device->sq_config.name, Device->friendlyName);
 					if (!Device->SqueezeHandle || !sq_run_device(Device->SqueezeHandle, &Device->sq_config)) {
 						sq_release_device(Device->SqueezeHandle);
@@ -1048,13 +993,16 @@ static void *UpdateThread(void *args)
 						LOG_ERROR("[%p]: cannot create squeezelite instance (%s)", Device, Device->friendlyName);
 						DelMRDevice(Device);
 					}
+					for (i = 0; MimeTypes[i]; i++) free(MimeTypes[i]);
+					free(MimeTypes);
 				}
-
-				if (glAutoSaveConfigFile || glDiscovery) {
+
+				if (glAutoSaveConfigFile || glDiscovery) {
 					LOG_DEBUG("Updating configuration %s", glConfigName);
 					SaveConfig(glConfigName, glConfigID, false);
 				}
 cleanup:
+				NFREE(ProtoInfo);
 				NFREE(UDN);
 				NFREE(ModelName);
 				if (DescDoc) ixmlDocument_free(DescDoc);
@@ -1105,14 +1053,12 @@ static void *MainThread(void *args)
 
 
 /*----------------------------------------------------------------------------*/
-static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, const char *location)
+static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, const char *location, char **Sink)
 {
 	char *friendlyName = NULL;
-	char *manufacturer = NULL;
-	char *Sink;
-	int i;
 	unsigned long mac_size = 6;
 	in_addr_t ip;
+	int i;
 
 	// read parameters from default then config file
 	memcpy(&Device->Config, &glMRConfig, sizeof(tMRConfig));
@@ -1124,11 +1070,9 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	// Read key elements from description document
 	friendlyName = XMLGetFirstDocumentItem(DescDoc, "friendlyName");
 	if (!friendlyName || !*friendlyName) friendlyName = strdup(UDN);
-	manufacturer = XMLGetFirstDocumentItem(DescDoc, "manufacturer");
 
 	LOG_SDEBUG("UDN:\t%s\nFriendlyName:\t%s", UDN, friendlyName);
 
-	Device->TimeOut 		= false;
 	Device->SqueezeHandle 	= 0;
 	Device->ErrorCount 		= 0;
 	Device->Magic 			= MAGIC;
@@ -1140,11 +1084,8 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	Device->TrackPoll 		= Device->StatePoll = 0;
 	Device->Volume 			= 0;
 	Device->Actions 		= NULL;
-	Device->CurrentURI 		= Device->NextURI = NULL;
+	Device->NextURI 		= Device->NextProtoInfo = NULL;
 	Device->TrackPoll 		= Device->StatePoll = 0;
-	Device->GapExpected		= false;
-	Device->NextDuration	= 0;
-	Device->Elapsed			= Device->Duration = 0;
 	Device->LastSeen		= gettime_ms() / 1000;
 	Device->Delete			= false;
 	Device->Busy			= 0;
@@ -1157,17 +1098,17 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	strcpy(Device->UDN, UDN);
 	strcpy(Device->DescDocURL, location);
 
-	memset(&Device->ProtocolCap, 0, sizeof(char*) * (MAX_PROTO + 1));
-	memset(&Device->MetaData, 0, sizeof(metadata_t));
+	memset(&Device->NextMetaData, 0, sizeof(metadata_t));
 	memset(&Device->Service, 0, sizeof(struct sService) * NB_SRV);
 
 	/* find the different services */
 	for (i = 0; i < NB_SRV; i++) {
 		char *ServiceId = NULL, *ServiceType = NULL;
 		char *EventURL = NULL, *ControlURL = NULL;
+		char *ServiceURL = NULL;
 
 		strcpy(Device->Service[i].Id, "");
-		if (XMLFindAndParseService(DescDoc, location, cSearchedSRV[i].name, &ServiceType, &ServiceId, &EventURL, &ControlURL)) {
+		if (XMLFindAndParseService(DescDoc, location, cSearchedSRV[i].name, &ServiceType, &ServiceId, &EventURL, &ControlURL, &ServiceURL)) {
 			struct sService *s = &Device->Service[cSearchedSRV[i].idx];
 			LOG_SDEBUG("\tservice [%s] %s %s, %s, %s", cSearchedSRV[i].name, ServiceType, ServiceId, EventURL, ControlURL);
 
@@ -1182,11 +1123,15 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 		NFREE(ServiceType);
 		NFREE(EventURL);
 		NFREE(ControlURL);
+
+		if (cSearchedSRV[i].idx == AVT_SRV_IDX && !XMLFindAction(location, ServiceURL, "SetNextAVTransportURI"))
+			Device->Config.AcceptNextURI = false;
+
+		NFREE(ServiceURL);
 	}
 
 	if (!isMaster(UDN, &Device->Service[TOPOLOGY_IDX], &friendlyName) ) {
 		LOG_DEBUG("[%p] skipping Sonos slave %s", Device, friendlyName);
-		NFREE(manufacturer);
 		NFREE(friendlyName);
 		return false;
 	}
@@ -1209,17 +1154,15 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	}
 
 	// get the protocol info
-	if ((Sink = GetProtocolInfo(Device)) == NULL) {
+	if ((*Sink = GetProtocolInfo(Device)) == NULL) {
 		LOG_WARN("[%p] unable to get protocol info, device not added", Device);
 		return false;
 	}
 
-	ParseProtocolInfo(Device, Sink);
-	free(Sink);
+	CheckCodecs(Device->sq_config.codecs, *Sink);
 
-	MakeMacUnique(Device);
+	MakeMacUnique(Device);
 
-	NFREE(manufacturer);
 	NFREE(friendlyName);
 
 	pthread_cond_init(&Device->Cond, 0);
@@ -1254,16 +1197,23 @@ static bool isExcluded(char *Model)
 
 
 /*----------------------------------------------------------------------------*/
-int uPNPInitialize(void)
+static bool Start(void)
 {
-	int rc;
-	struct UpnpVirtualDirCallbacks VirtualDirCallbacks;
+	int i, rc;
+
+	// device mutexes are always initialized
+	memset(&glMRDevices, 0, sizeof(glMRDevices));
+	for (i = 0; i < MAX_RENDERERS; i++) {
+		pthread_mutex_init(&glMRDevices[i].Mutex, 0);
+		pthread_cond_init(&glMRDevices[i].Cond, 0);
+	}
 
 	UpnpSetLogLevel(UPNP_ALL);
 
 	if (!strstr(glUPnPSocket, "?")) sscanf(glUPnPSocket, "%[^:]:%u", glIPaddress, &glPort);
 
-	rc = UpnpInit(*glIPaddress ? glIPaddress : NULL, glPort);
+	if (*glIPaddress) rc = UpnpInit(glIPaddress, glPort);
+	else rc = UpnpInit(NULL, glPort);
 
 	if (rc != UPNP_E_SUCCESS) {
 		LOG_ERROR("UPnP init failed: %d\n", rc);
@@ -1276,6 +1226,8 @@ int uPNPInitialize(void)
 	if (!*glIPaddress) strcpy(glIPaddress, UpnpGetServerIpAddress());
 	if (!glPort) glPort = UpnpGetServerPort();
 
+	sq_init(glIPaddress, glPort);
+
 	rc = UpnpRegisterClient(MasterHandler, NULL, &glControlPointHandle);
 
 	if (rc != UPNP_E_SUCCESS) {
@@ -1283,76 +1235,16 @@ int uPNPInitialize(void)
 		UpnpFinish();
 		return false;
 	}
-	
-	rc = UpnpEnableWebserver(true);
 
-	if (rc != UPNP_E_SUCCESS) {
-		LOG_ERROR("Error initalizing WebServer: %d", rc);
-		UpnpFinish();
-		return false;
-	}
-	
-	rc = UpnpAddVirtualDir(glBaseVDIR);
+	LOG_INFO("Binding to %s:%d", glIPaddress, glPort);
 
-	if (rc != UPNP_E_SUCCESS) {
-		LOG_ERROR("Error setting VirtualDir: %d", rc);
-		UpnpFinish();
-		return false;
-	}
-
-	VirtualDirCallbacks.get_info = WebGetInfo;
-	VirtualDirCallbacks.open = WebOpen;
-	VirtualDirCallbacks.read  = WebRead;
-	VirtualDirCallbacks.seek = WebSeek;
-	VirtualDirCallbacks.close = WebClose;
-	VirtualDirCallbacks.write = WebWrite;
-	rc = UpnpSetVirtualDirCallbacks(&VirtualDirCallbacks);
-
-	if (rc != UPNP_E_SUCCESS) {
-		LOG_ERROR("Error registering VirtualDir callbacks: %d", rc);
-		UpnpFinish();
-		return false;
-	}
-
-	LOG_INFO("UPnP initialized", NULL);
-	return true;
-}
-
-/*----------------------------------------------------------------------------*/
-int uPNPTerminate(void)
-{
-	LOG_DEBUG("un-register libupnp callbacks ...", NULL);
-	UpnpUnRegisterClient(glControlPointHandle);
-	LOG_DEBUG("disable webserver ...", NULL);
-	UpnpRemoveVirtualDir(glBaseVDIR);
-	UpnpEnableWebserver(false);
-	LOG_DEBUG("end libupnp ...", NULL);
-	UpnpFinish();
-
-	return true;
-}
-
-
-/*----------------------------------------------------------------------------*/
-static bool Start(void)
-{
-	int i;
-
-	// device mutexes are always initialized
-	memset(&glMRDevices, 0, sizeof(glMRDevices));
-
+	// init mutex & cond no matter what
 	pthread_mutex_init(&glMainMutex, 0);
 	pthread_cond_init(&glMainCond, 0);
 	pthread_mutex_init(&glUpdateMutex, 0);
 	pthread_cond_init(&glUpdateCond, 0);
-	for (i = 0; i < MAX_RENDERERS; i++)	{
-		pthread_mutex_init(&glMRDevices[i].Mutex, 0);
-		pthread_cond_init(&glMRDevices[i].Cond, 0);
-	}
 
 	QueueInit(&glUpdateQueue, true, FreeUpdate);
-
-	if (!uPNPInitialize()) return false;
 
 	// start the main thread
 	pthread_create(&glMainThread, NULL, &MainThread, NULL);
@@ -1367,6 +1259,9 @@ static bool Stop(void)
 {
 	int i;
 
+	LOG_INFO("stopping squeezelite devices ...", NULL);
+	sq_stop();
+
 	// once main is finished, no risk to have new players created
 	LOG_INFO("terminate update thread ...", NULL);
 	pthread_cond_signal(&glUpdateCond);
@@ -1377,11 +1272,13 @@ static bool Stop(void)
 	pthread_cond_signal(&glMainCond);
 	pthread_join(glMainThread, NULL);
 
-	LOG_INFO("flush renderers ...", NULL);
+	LOG_INFO("stopping UPnP devices ...", NULL);
 	FlushMRDevices();
 
-	LOG_INFO("terminate libupnp ...", NULL);
-	uPNPTerminate();
+	LOG_DEBUG("un-register libupnp callbacks ...", NULL);
+	UpnpUnRegisterClient(glControlPointHandle);
+	LOG_DEBUG("end libupnp ...", NULL);
+	UpnpFinish();
 
 	// wait for UPnP to terminate to not have callbacks issues
 	pthread_mutex_destroy(&glUpdateMutex);
@@ -1498,14 +1395,13 @@ bool ParseArgs(int argc, char **argv) {
 					if (!strcmp(v, "debug"))  new = lDEBUG;
 					if (!strcmp(v, "sdebug")) new = lSDEBUG;
 					if (!strcmp(l, "all") || !strcmp(l, "slimproto"))	slimproto_loglevel = new;
+					if (!strcmp(l, "all") || !strcmp(l, "slimmain"))	slimmain_loglevel = new;
 					if (!strcmp(l, "all") || !strcmp(l, "stream"))    	stream_loglevel = new;
 					if (!strcmp(l, "all") || !strcmp(l, "decode"))    	decode_loglevel = new;
 					if (!strcmp(l, "all") || !strcmp(l, "output"))    	output_loglevel = new;
-					if (!strcmp(l, "all") || !strcmp(l, "web")) 	  	web_loglevel = new;
 					if (!strcmp(l, "all") || !strcmp(l, "main"))     	main_loglevel = new;
 					if (!strcmp(l, "all") || !strcmp(l, "util"))    	util_loglevel = new;
 					if (!strcmp(l, "all") || !strcmp(l, "upnp"))    	upnp_loglevel = new;
-					if (!strcmp(l, "all") || !strcmp(l, "slimmain"))    slimmain_loglevel = new;
 				}
 				else {
 					printf("%s", usage);
@@ -1605,10 +1501,8 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	sq_init();
-
 	if (!Start()) {
-		LOG_ERROR("Cannot start UPnP", NULL);
+		LOG_ERROR("Cannot start UPnP", NULL);
 		strcpy(resp, "exit");
 	}
 
@@ -1647,22 +1541,16 @@ int main(int argc, char *argv[])
 			slimproto_loglevel = debug2level(level);
 		}
 
-		if (!strcmp(resp, "webdbg"))	{
+		if (!strcmp(resp, "slimmaindbg"))	{
 			char level[20];
 			i = scanf("%s", level);
-			web_loglevel = debug2level(level);
+			slimmain_loglevel = debug2level(level);
 		}
 
 		if (!strcmp(resp, "maindbg"))	{
 			char level[20];
 			i = scanf("%s", level);
 			main_loglevel = debug2level(level);
-		}
-
-		if (!strcmp(resp, "slimmainqdbg"))	{
-			char level[20];
-			i = scanf("%s", level);
-			slimmain_loglevel = debug2level(level);
 		}
 
 		if (!strcmp(resp, "utildbg"))	{
@@ -1705,9 +1593,6 @@ int main(int argc, char *argv[])
 	// must be protected in case this interrupts a UPnPEventProcessing
 	glMainRunning = false;
 
-	LOG_INFO("stopping squeelite devices ...", NULL);
-	sq_stop();
-	LOG_INFO("stopping UPnP devices ...", NULL);
 	Stop();
 	LOG_INFO("all done", NULL);
 

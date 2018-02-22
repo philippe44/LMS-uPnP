@@ -36,15 +36,9 @@
 /* typedefs */
 /*----------------------------------------------------------------------------*/
 
-#define MAX_PROTO		128
 #define MAX_RENDERERS	32
 #define MAGIC			0xAABBCCDD
 #define RESOURCE_LENGTH	250
-#define	SCAN_TIMEOUT 	15
-#define SCAN_INTERVAL	30
-
-#define	HTTP_DEFAULT_MODE	-3
-
 
 enum 	eMRstate { UNKNOWN, STOPPED, PLAYING, PAUSED, TRANSITIONING };
 enum 	{ AVT_SRV_IDX = 0, REND_SRV_IDX, CNX_MGR_IDX, TOPOLOGY_IDX, GRP_REND_SRV_IDX, NB_SRV };
@@ -61,11 +55,10 @@ struct sService {
 
 typedef struct sMRConfig
 {
-	char		StreamLength[SQ_STR_LENGTH];
 	bool		SeekAfterPause;
 	bool		ByteSeek;
 	bool		Enabled;
-	char		Name[SQ_STR_LENGTH];
+	char		Name[_STR_LEN_];
 	int 		VolumeOnPlay;		// change only volume when playing has started or disable volume commands
 	bool		VolumeFeedback;
 	bool		AcceptNextURI;
@@ -73,10 +66,8 @@ struct sService {
 	bool		SendMetaData;
 	bool		SendCoverArt;
 	int			MaxVolume;
-	char		RawAudioFormat[SQ_STR_LENGTH];
-	bool		MatchEndianness;
 	bool		AutoPlay;
-	bool 		AllowFlac;
+	char		ForcedMimeTypes[_STR_LEN_];
 	bool		RoonMode;
 } tMRConfig;
 
@@ -90,20 +81,15 @@ struct sMR {
 	char UDN			[RESOURCE_LENGTH];
 	char DescDocURL		[RESOURCE_LENGTH];
 	enum eMRstate 	State;
-	char			*CurrentURI;
+	// all the items for next track if any
 	char			*NextURI;
-	bool			GapExpected;
-	int				NextDuration;
-	char			ProtoInfo[SQ_STR_LENGTH];		// a bit patchy ... used for faulty NEXTURI players
-	metadata_t		MetaData;
+	char			*NextProtoInfo;
+	metadata_t		NextMetaData;
 	sq_action_t		sqState;
-	s64_t			Elapsed, Duration;
-	bool			ExpectStop;
 	u8_t			*seqN;
 	void			*WaitCookie, *StartCookie;
 	tQueue			ActionQueue;
 	unsigned		TrackPoll, StatePoll;
-	bool			TimeOut;
 	int	 			SqueezeHandle;
 	struct sService Service[NB_SRV];
 	struct sAction	*Actions;
@@ -114,7 +100,6 @@ struct sMR {
 	pthread_t 		Thread;
 	u8_t			Volume;
 	bool			Muted;
-	char			*ProtocolCap[MAX_PROTO + 1];
 	u16_t			ErrorCount;
 	u32_t			LastSeen;
 };
@@ -127,10 +112,7 @@ extern sq_dev_param_t		glDeviceParam;
 extern struct sMR			glMRDevices[MAX_RENDERERS];
 extern pthread_mutex_t 		glMRMutex;
 
-struct sMR 		*mr_File2Device(const char *FileName);
-sq_dev_handle_t	mr_GetSqHandle(struct sMR *Device);
 int 			MasterHandler(Upnp_EventType EventType, void *Event, void *Cookie);
 int 			ActionHandler(Upnp_EventType EventType, void *Event, void *Cookie);
-
 
 #endif

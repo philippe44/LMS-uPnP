@@ -1,7 +1,6 @@
 [% PROCESS settings/header.html %]
 
 	[% YESNOBOX = [['',''], ['yes','1'], ['no','0']] %]
-
 		
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_AUTORUN" desc="PLUGIN_UPNPBRIDGE_AUTORUN_DESC" %]
 		<input name="autorun" type="checkbox" [% IF autorun %] checked [% END %]> [% "PLUGIN_UPNPBRIDGE_RUNNING_$running" | string %] [% IF binary %] ([% binary %]) [% END %]
@@ -23,21 +22,12 @@
 		[% END %]
 	[% END %]
 		
-<!--	
-	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_OUTPUT" desc="PLUGIN_UPNPBRIDGE_OUTPUT_DESC" %]
-		<select class="stdedit" name="output" id="output">
-		[% FOREACH entry IN devices %]
-			<option [% IF entry.name == output %]selected[% END %] value="[% entry.name %]">[% entry.desc %][% IF entry.name %] - [% entry.name %][% END %]</option>
-		[% END %]
-		</select>
-	[% END %]
--->	
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_OPTIONS" desc="PLUGIN_UPNPBRIDGE_OPTIONS_DESC" %]
 		<input type="text" class="stdedit" name="opts" id="opts" value="[% opts %]" size="100">
 	[% END %]
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_DEBUG" desc="PLUGIN_UPNPBRIDGE_DEBUG_DESC" %]
 		<select class="stdedit" name="debugs" id="debugs">
-		[% FOREACH entry IN [ '', 'all', 'output', 'stream', 'slimproto', 'decode', 'slimmain', 'upnp', 'util', 'web', 'main'] %]
+		[% FOREACH entry IN [ '', 'all', 'output', 'stream', 'slimproto', 'slimmain', 'decode', 'upnp', 'util', 'main'] %]
 			<option [% IF entry == debugs %]selected[% END %] value="[% entry %]">[% "PLUGIN_UPNPBRIDGE_$entry" | string %]</option>
 		[% END %]
 		</select>
@@ -60,12 +50,6 @@
 		&nbsp<input name="delconfig" type="submit" value=[% "PLUGIN_UPNPBRIDGE_DELCONFIG" | string %]>
 	[% END %]
 	
-<!--
-	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_LOC" desc="PLUGIN_UPNPBRIDGE_LOC_DESC" %]
-		<input name="loc" type="checkbox" [% IF loc %] checked [% END %]>
-	[% END %]
--->
-
 	[% IF !xmlparams %]
 		[% WRAPPER settingSection %]
 			<b><font color=red>[% "PLUGIN_UPNPBRIDGE_NOCONFIG" | string %]</font></b>
@@ -115,88 +99,55 @@
 			<th>[% "PLUGIN_UPNPBRIDGE_DELETEPLAYER" | string %]</th>
 		[% END %]
 	[% END %]		
-<!--
-	[% WRAPPER setting %]
-		<div><b><i>[% "PLUGIN_UPNPBRIDGE_TEXTDEFAULT" | string %]</i></b></div>
-	[% END %]
--->	
 	
-	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_HTTPOPTIONS" desc="PLUGIN_UPNPBRIDGE_HTTPOPTIONS_DESC" %]
-	
-		<script type="text/javascript">
-		function combo(thelist, theinput) {
-			theinput = document.getElementById(theinput);
-			var idx = thelist.selectedIndex;
-			theinput.value = thelist.options[idx].value;
-		}
-		</script>	
-	
-		<select name="combo_stream_length" id="combo_stream_length" onchange="combo(this, 'stream_length')">
-		[% FOREACH entry IN [ ['',''], ['chunked','-3'], ['chunked (open range)','-2'], ['no size','-1'], ['no size (open range)','-4'], ['fixed large size','1000000000'], ['full buffering','-5'] ] %]
+	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_STREAMOPTIONS" desc="PLUGIN_UPNPBRIDGE_STREAMOPTIONS_DESC" %]
+		[% "PLUGIN_UPNPBRIDGE_HTTPMODE" | string %]
+		<select class="stdedit" id="stream_length" name="stream_length">
+		[% FOREACH entry IN [ ['',''], ['chunked','-3'], ['no length','-1'] ] %]
 			<option label="[% entry.0 %]" [% IF entry.1 == stream_length %]selected[% END %] value="[% entry.1 %]">
 		[% END %]
 		</select>
-		<input type="text" id="stream_length" name="stream_length" value="[% stream_length %]">
-	[% END %]
-	
-	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_GAPLESSOPTIONS" desc="PLUGIN_UPNPBRIDGE_GAPLESSOPTIONS_DESC" %]
 		[% "PLUGIN_UPNPBRIDGE_ACCEPTNEXTURI" | string %]
 		&nbsp<select class="stdedit" name="accept_nexturi" id="accept_nexturi">
 		[% FOREACH entry IN YESNOBOX %] 
 			<option [% IF entry.1 == accept_nexturi %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
 		[% END %]
 		</select>
-		&nbsp[% "PLUGIN_UPNPBRIDGE_MINGAPLESS" | string %]
-		<input [% IF accept_nexturi == 0 %] disabled [% END %] class="stdedit" type="text" id="min_gapless" name="min_gapless" value="[% min_gapless %]" size="2">
-	[% END %]
-	
-	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_PAUSEMGMT" desc="PLUGIN_UPNPBRIDGE_PAUSEMGMT_DESC" %]
 		[% "PLUGIN_UPNPBRIDGE_SEEKAFTERPAUSE" | string %]&nbsp
 		<select class="stdedit" name="seek_after_pause" id="seek_after_pause">
 		[% FOREACH entry IN YESNOBOX %] 
 			<option [% IF entry.1 == seek_after_pause %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
 		[% END %]
 		</select>
-		&nbsp&nbsp[% "PLUGIN_UPNPBRIDGE_BYTESEEK" | string %]&nbsp
-		<select class="stdedit" name="byte_seek" id="byte_seek">
-		[% FOREACH entry IN YESNOBOX %] 
-			<option [% IF entry.1 == byte_seek %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
-		[% END %]
-		</select>
-	[% END %]
-	
-	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_BUFFERS" desc="PLUGIN_UPNPBRIDGE_BUFFERS_DESC" %]
-		[% "PLUGIN_UPNPBRIDGE_BUFFERDIR" | string %]&nbsp<input type="text" class="stdedit" name="buffer_dir" id="buffer_dir" value="[% buffer_dir %]" size="20">
-		[% "PLUGIN_UPNPBRIDGE_BUFFERLIMIT" | string %]&nbsp<input type="text" class="stdedit" name="buffer_limit" id="buffer_limit" value="[% buffer_limit %]" size="5">
-		[% "PLUGIN_UPNPBRIDGE_STREAMPACINGSIZE" | string %]&nbsp<input type="text" class="stdedit" name="stream_pacing_size" id="stream_pacing_size" value="[% stream_pacing_size %]" size="4">
 	[% END %]
 	
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_CODECSPARAM" desc="PLUGIN_UPNPBRIDGE_CODECSPARAM_DESC" %]
-		<table><tr>
-		<th><font color=blue>[% "PLUGIN_UPNPBRIDGE_CODECS" | string %]</font></th><td>&nbsp<input type="text" class="stdedit" name="codecs" id="codecs" value="[% codecs %]" size="10">&nbsp</td>
-		<td><font color=blue>[% "PLUGIN_UPNPBRIDGE_SAMPLERATE" | string %]</font></td><td><select class="stdedit" name="sample_rate" id="sample_rate">
+		<table style="border-spacing:0">
+		<tr><td style="padding: 0 10px 2px 0">[% "PLUGIN_UPNPBRIDGE_CODECS" | string %]&nbsp
+		<input type="text" class="stdedit" name="codecs" id="codecs" value="[% codecs %]" size="10"></td>
+		<td style="padding: 0 10px 2px 0">[% "PLUGIN_UPNPBRIDGE_SAMPLERATE" | string %]&nbsp
+		<select class="stdedit" name="sample_rate" id="sample_rate">
 		[% FOREACH entry IN [ '', '44100', '48000', '96000', '192000' ] %]
 			<option [% IF entry == sample_rate %]selected[% END %] value="[% entry %]">[% entry %]</option>
 		[% END %]
 		</select></td>
-		<th>[% "PLUGIN_UPNPBRIDGE_FLACHEADER" | string %]</th><td><select class="stdedit" name="flac_header" id="flac_header">
+		<td style="padding: 0 10px 2px 0">[% "PLUGIN_UPNPBRIDGE_FLACHEADER" | string %]&nbsp
+		<select class="stdedit" name="flac_header" id="flac_header">
 		[% FOREACH entry IN [ ['',''], ['none','0'], ['normal','1'], ['fixed size','2'] ] %]
 			<option [% IF entry.1 == flac_header %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
 		[% END %]
 		</select></td></tr>
-		
-		<tr><th>[% "PLUGIN_UPNPBRIDGE_RAWAUDIOFORMAT" | string %]</th><td>&nbsp<input type="text" class="stdedit" name="raw_audio_format" id="raw_audio_format" value="[% raw_audio_format %]" size="10">&nbsp</td>		
-		<th>[% "PLUGIN_UPNPBRIDGE_MATCHENDIANNESS" | string %]</th><td><select class="stdedit" name="match_endianness" id="match_endianness">
-		[% FOREACH entry IN YESNOBOX %] 
-			<option [% IF entry.1 == match_endianness %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
-		[% END %]
-		</select></td>
-		<th>[% "PLUGIN_UPNPBRIDGE_L24FORMAT" | string %]</th><td><select class="stdedit" name="L24_format" id="L24_format">
+		<tr><td style="padding: 0 10px 2px 0">
+		[% "PLUGIN_UPNPBRIDGE_FORCEDMIMETYPES" | string %]&nbsp
+		<input type="text" class="stdedit" name="forced_mimetypes" id="forced_mimetypes" value="[% forced_mimetypes %]" size="10"></td>
+		<td style="padding: 0 10px 2px 0">[% "PLUGIN_UPNPBRIDGE_RAWAUDIOFORMAT" | string %]&nbsp
+		<input type="text" class="stdedit" name="raw_audio_format" id="raw_audio_format" value="[% raw_audio_format %]" size="10"></td>
+		<td style="padding: 0 10px 2px 0">[% "PLUGIN_UPNPBRIDGE_L24FORMAT" | string %]&nbsp
+		<select class="stdedit" name="L24_format" id="L24_format">
 		[% FOREACH entry IN [ ['',''], ['plain 24 bits','0'], ['packed type 1','1'] ['16 bits always','2'] ['16 bits raw only', '3'] ] %]
 			<option [% IF entry.1 == L24_format %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
 		[% END %]
-		</select></td></tr>
-		</table>
+		</select></td></tr></table>
 	[% END %]
 	
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_UPNPMGMT" desc="PLUGIN_UPNPBRIDGE_UPNPMGMT_DESC" %]
@@ -256,12 +207,5 @@
 	</table>
 	
 	[% END %]
-
-	<!--
-	<hr>
-	[% WRAPPER settingSection %]
-		<div>[% "PLUGIN_UPNPBRIDGE_INFO_$arch" | string %]</div>
-	[% END %]
-	-->
 		
 [% PROCESS settings/footer.html %]

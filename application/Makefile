@@ -22,8 +22,9 @@ INCLUDE = -I. \
 		  		  
 DEPS	= $(SQUEEZETINY)/squeezedefs.h
 				  
-SOURCES = 	slimproto.c buffer.c stream.c utils.c output_mr.c main.c \
-			util_common.c avt_util.c mr_util.c util.c webserver.c squeeze2upnp.c \
+SOURCES = 	slimproto.c buffer.c utils.c output.c output_http.c main.c \
+			stream.c decode.c pcm.c flac_thru.c thru.c \
+			util_common.c avt_util.c mr_util.c util.c squeeze2upnp.c \
 			log_util.c config_upnp.c
 		
 SOURCES_LIBS = 

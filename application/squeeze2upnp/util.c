@@ -171,6 +171,39 @@ char *XMLGetFirstElementItem(IXML_Element *element, const char *item)
 }
 
 /*----------------------------------------------------------------------------*/
+bool XMLFindAction(const char *base, char *service, char *action) {
+	char *url = malloc(strlen(base) + strlen(service) + 1);
+	IXML_Document *AVTDoc = NULL;
+	bool res = false;
+
+	UpnpResolveURL(base, service, url);
+
+	if (UpnpDownloadXmlDoc(url, &AVTDoc) == UPNP_E_SUCCESS) {
+		IXML_Element *actions = ixmlDocument_getElementById(AVTDoc, "actionList");
+		IXML_NodeList *actionList = ixmlDocument_getElementsByTagName((IXML_Document*) actions, "action");
+		int i;
+
+		for (i = 0; actionList && i < (int) ixmlNodeList_length(actionList); i++) {
+			IXML_Node *node = ixmlNodeList_item(actionList, i);
+			const char *name;
+			node = (IXML_Node*) ixmlDocument_getElementById((IXML_Document*) node, "name");
+			node = ixmlNode_getFirstChild(node);
+			name = ixmlNode_getNodeValue(node);
+			if (name && !strcasecmp(name, action)) {
+				res = true;
+				break;
+			}
+		}
+		ixmlNodeList_free(actionList);
+	}
+
+	free(url);
+	ixmlDocument_free(AVTDoc);
+
+	return res;
+}
+
+/*----------------------------------------------------------------------------*/
 static IXML_NodeList *XMLGetNthServiceList(IXML_Document *doc, unsigned int n, bool *contd)
 {
 	IXML_NodeList *ServiceList = NULL;
@@ -212,7 +245,7 @@ static IXML_NodeList *XMLGetNthServiceList(IXML_Document *doc, unsigned int n, b
 
 /*----------------------------------------------------------------------------*/
 int XMLFindAndParseService(IXML_Document *DescDoc, const char *location,
-	const char *serviceTypeBase, char **serviceType, char **serviceId, char **eventURL, char **controlURL)
+	const char *serviceTypeBase, char **serviceType, char **serviceId, char **eventURL, char **controlURL, char **serviceURL)
 {
 	unsigned int i;
 	unsigned long length;
@@ -248,6 +281,8 @@ int XMLFindAndParseService(IXML_Document *DescDoc, const char *location,
 			// remove version from service type
 			*strrchr(tempServiceType, ':') = '\0';
 			if (tempServiceType && strcmp(tempServiceType, serviceTypeBase) == 0) {
+				NFREE(*serviceURL);
+				*serviceURL = XMLGetFirstElementItem((IXML_Element *)service, "SCPDURL");
 				NFREE(*serviceType);
 				*serviceType = XMLGetFirstElementItem((IXML_Element *)service, "serviceType");
 				NFREE(*serviceId);
@@ -475,6 +510,8 @@ s64_t Time2Int(char *Time)
 {
 	char *p;
 	s64_t ret;
+
+	if (!Time) return 0;
 
 	p = strrchr(Time, ':');
 

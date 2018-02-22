@@ -90,191 +90,37 @@ typedef enum {
 
 #define DLNA_ORG_OP (DLNA_ORG_OPERATION_RANGE)
 // GNU pre-processor seems to be confused if this is multiline ...
-#define DLNA_ORG_FLAG ( DLNA_ORG_FLAG_STREAMING_TRANSFERT_MODE | DLNA_ORG_FLAG_BACKGROUND_TRANSFERT_MODE | DLNA_ORG_FLAG_CONNECTION_STALL |	DLNA_ORG_FLAG_DLNA_V15 )
-
-/*
-static char DLNA_OPT[] = ";DLNA.ORG_OP=01;DLNA.ORG_FLAGS=01700000000000000000000000000000";
+#define DLNA_ORG_FLAG ( DLNA_ORG_FLAG_S0_INCREASE | DLNA_ORG_FLAG_STREAMING_TRANSFERT_MODE | DLNA_ORG_FLAG_BACKGROUND_TRANSFERT_MODE | DLNA_ORG_FLAG_CONNECTION_STALL | DLNA_ORG_FLAG_DLNA_V15 )
+/*
+static char DLNA_OPT[] = ";DLNA.ORG_OP=01;DLNA.ORG_FLAGS=01700000000000000000000000000000";
 */
 
 int 	_voidHandler(Upnp_EventType EventType, void *_Event, void *Cookie) { return 0; }
 
-/*---------------------------------------------------------------------------*/
-static char *format2ext(u8_t format)
-{
-	switch(format) {
-		case 'p': return "pcm";
-		case 'm': return "mp3";
-		case 'f': return "flac";
-		case 'w': return "wma";
-		case 'o': return "ogg";
-		case 'a':
-		case 'l': return "m4a";
-		default: return "xxx";
-	}
-}
-
-/*---------------------------------------------------------------------------*/
-u8_t ext2format(char *ext)
-{
-	if (!ext) return ' ';
-
-	if (strstr(ext, "wav")) return 'w';
-	if (strstr(ext, "flac") || strstr(ext, "flc")) return 'f';
-	if (strstr(ext, "mp3")) return 'm';
-	if (strstr(ext, "wma")) return 'a';
-	if (strstr(ext, "ogg")) return 'o';
-	if (strstr(ext, "m4a")) return '4';
-	if (strstr(ext, "mp4")) return '4';
-	if (strstr(ext, "aif")) return 'i';
-
-	return ' ';
-}
-
-
-/*----------------------------------------------------------------------------*/
-bool _SetContentType(char *Cap[], sq_seturi_t *uri, int n, ...)
-{
-	int i;
-	char *fmt, **p = NULL;
-	char channels[SQ_STR_LENGTH], rate[SQ_STR_LENGTH];
-	va_list args;
-
-	va_start(args, n);
-
-	for (i = 0; i < n; i++) {
-		fmt = va_arg(args, char*);
-
-		// see if we have the complicated case of PCM
-		if (strstr(fmt, "audio/L")) {
-			sprintf(channels, "channels=%d", uri->channels);
-			sprintf(rate, "rate=%d", uri->sample_rate);
-		}
-
-		// find the corresponding line in the device's protocol info
-		for (p = Cap; *p; p++) {
-			if (!strstr(*p, fmt)) continue;
-			// if not PCM, just copy the found format
-			if (!strstr(*p, "audio/L")) {
-				strcpy(uri->proto_info, *p);
-				// force audio/aac for m4a - alac is still unknown ...
-				if (uri->codec == 'a') strcpy(uri->content_type, "audio/aac");
-				else strcpy(uri->content_type, fmt);
-				// special case of wave and aiff, need to change file extension
-				if (strstr(*p, "wav")) strcpy(uri->ext, "wav");
-				if (strstr(*p, "aiff")) strcpy(uri->ext, "aif");
-				break;
-			}
-			// re-set file extension
-			strcpy(uri->ext, "pcm");
-			// if the proposed format accepts any rate & channel, give it a try
-			if (!strstr(*p, "channels") && !strstr(*p, "rate")) {
-				int size = strstr(*p, fmt) - *p;
-
-				sprintf(uri->content_type, "%s;channels=%d;rate=%d", fmt, uri->channels, uri->sample_rate);
-				strncpy(uri->proto_info, *p, size);
-				*(uri->proto_info + size) = '\0';
-				strcat(uri->proto_info, uri->content_type);
-				if (*(*p + size + strlen(fmt))) strcat(uri->proto_info, *p + size + strlen(fmt));
-				break;
-			}
-			// if PCM, try to find an exact match
-			if (strstr(*p, channels) && strstr(*p, rate)) {
-				sprintf(uri->content_type, "%s;channels=%d;rate=%d", fmt, uri->channels, uri->sample_rate);
-				strcpy(uri->proto_info, *p);
-				break;
-			}
-		}
-		if (*p) break;
-	}
-
-	va_end(args);
-
-	if (!*p) {
-		strcpy(uri->proto_info, "audio/unknown");
-		strcpy(uri->content_type, "audio/unknown");
-		return false;
-	}
-
-	return true;
- }
-
-
- /*----------------------------------------------------------------------------*/
-static bool SetContentTypeRawAudio(struct sMR *Device, sq_seturi_t *uri, bool MatchEndianness)
-{
-	bool ret = false;
-	char *p, *buf;
-
-	p = buf = strdup(Device->Config.RawAudioFormat);
-
-	while (!ret && p && *p) {
-		u8_t order = 0xff;
-		char *q = strchr(p, ',');
-
-		if (q) *q = '\0';
-
-		if (strstr(p, "pcm") || strstr(p,"raw")) {
-			char fmt[SQ_STR_LENGTH];
-
-			sprintf(fmt, "audio/L%d", (Device->sq_config.L24_format == L24_TRUNC_16 && uri->sample_size == 24) ? 16 : uri->sample_size);
-			ret = _SetContentType(Device->ProtocolCap, uri, 1, fmt);
-			if (!ret && Device->sq_config.L24_format == L24_TRUNC_16_PCM && uri->sample_size == 24) {
-				ret = _SetContentType(Device->ProtocolCap, uri, 1, "audio/L16");
-			}
-			order = 0;
-		}
-		if (strstr(p, "wav")) { ret = _SetContentType(Device->ProtocolCap, uri, 3, "audio/wav", "audio/x-wav", "audio/wave"); order = 1;}
-		if (strstr(p, "aif")) { ret = _SetContentType(Device->ProtocolCap, uri, 2, "audio/aiff", "audio/x-aiff"); order = 0;}
-
-		if (MatchEndianness && (order != uri->endianness)) ret = false;
-
-		p = (q) ? q + 1 : NULL;
-	}
-
-	if (!ret && MatchEndianness) ret = SetContentTypeRawAudio(Device, uri, false);
-
-	NFREE(buf);
-	return ret;
-}
-
 
 /*----------------------------------------------------------------------------*/
-bool SetContentType(struct sMR *Device, sq_seturi_t *uri)
+char *MakeProtocolInfo(char *MimeType, u32_t duration)
 {
-	char buf[SQ_STR_LENGTH];
-	char *DLNAOrg;
-	bool rc;
+	char *buf;
+	char *DLNAOrgPN;
 
-	strcpy(uri->ext, format2ext(uri->codec));
-
-	switch (uri->codec) {
-	case 'm': rc = _SetContentType(Device->ProtocolCap, uri, 3, "audio/mp3", "audio/mpeg", "audio/mpeg3"); break;
-	case 'f': rc = _SetContentType(Device->ProtocolCap, uri, 2, "audio/x-flac", "audio/flac");break;
-	case 'w': rc = _SetContentType(Device->ProtocolCap, uri, 2, "audio/x-wma", "audio/wma");break;
-	case 'o': rc = _SetContentType(Device->ProtocolCap, uri, 1, "audio/ogg");break;
-	case 'a': rc = _SetContentType(Device->ProtocolCap, uri, 4, "audio/x-aac", "audio/aac", "audio/m4a", "audio/mp4");break;
-	case 'l': rc = _SetContentType(Device->ProtocolCap, uri, 1, "audio/m4a");break;
-	case 'p': rc = SetContentTypeRawAudio(Device, uri, Device->Config.MatchEndianness);break;
+	switch (mimetype2format(MimeType)) {
+	case 'm':
+		DLNAOrgPN = "DLNA.ORG_PN=MP3;";
+		break;
+	case 'p':
+		DLNAOrgPN = "DLNA.ORG_PN=LPCM;";
+		break;
 	default:
-		strcpy(uri->content_type, "unknown");
-		strcpy(uri->proto_info, "");
-		return false;
+		DLNAOrgPN = "";
 	}
 
-	if (Device->Config.ByteSeek) DLNAOrg = ";DLNA.ORG_OP=01;DLNA.ORG_CI=0";
-	else DLNAOrg = ";DLNA.ORG_CI=0";
-
-	sprintf(buf, "%s;DLNA.ORG_FLAGS=%08x000000000000000000000000",
-				  DLNAOrg, DLNA_ORG_FLAG | ((uri->duration) ? 0 : DLNA_ORG_FLAG_SN_INCREASE));
-
-
-	if (uri->proto_info[strlen(uri->proto_info) - 1] == ':') strcat(uri->proto_info, buf + 1);
-	else strcat(uri->proto_info, buf);
-
-	return rc;
+	asprintf(&buf, "http-get:*:%s:%sDLNA.ORG_CI=0;DLNA.ORG_FLAGS=%08x000000000000000000000000",
+				  MimeType, DLNAOrgPN, DLNA_ORG_FLAG | (duration ? 0 : DLNA_ORG_FLAG_SN_INCREASE));
+	return buf;
 }
 
-
+
 /*----------------------------------------------------------------------------*/
 bool isMaster(char *UDN, struct sService *Service, char **Name)
 {
@@ -369,18 +215,15 @@ void DelMRDevice(struct sMR *p)
 	}
 
 	p->Running = false;
+	sq_free_metadata(&p->NextMetaData);
 
 	pthread_mutex_unlock(&p->Mutex);
 	pthread_join(p->Thread, NULL);
 
 	AVTActionFlush(&p->ActionQueue);
-	sq_free_metadata(&p->MetaData);
-	NFREE(p->CurrentURI);
-	NFREE(p->NextURI);
 
-	for (i = 0; p->ProtocolCap[i] && i < MAX_PROTO; i++) {
-		NFREE(p->ProtocolCap[i]);
-	}
+	NFREE(p->NextProtoInfo);
+	NFREE(p->NextURI);
 }
 
 
@@ -491,65 +334,40 @@ void BusyDrop(struct sMR *Device)
 
 
 /*----------------------------------------------------------------------------*/
-int Codec2Length(char CodecShort, char *Rule)
+char** ParseProtocolInfo(char *Info, char *Forced)
 {
-	char *buf = strdup(Rule);
-	char *p = buf;
-	char *end = p + strlen(p);
-	char *Codec = format2ext(CodecShort);
-	int mode = HTTP_DEFAULT_MODE;
-
-	mode = atol(p);
-
-	// strtok is not re-entrant
-	while (p < end && (p = strtok(p, ",")) != NULL) {
-		if (stristr(p, Codec)) {
-			p = strchr(p, ':') + 1;
-			mode = atol(p);
-			break;
-		}
-		p += strlen(p) + 1;
-	}
-
-	free(buf);
-
-	if (!mode || (mode > 0 && mode < 100000000L)) mode = HTTP_DEFAULT_MODE;
-
-	return mode;
-}
-
-/*----------------------------------------------------------------------------*/
-void ParseProtocolInfo(struct sMR *Device, char *Info)
-{
-	char *p = Info;
+	char *p = Info, **MimeTypes = calloc(MAX_MIMETYPES + 1, sizeof(char*));
 	int n = 0, i = 0;
 	int size = strlen(Info);
-	bool flac = false;
+	char MimeType[_STR_LEN_];
 
-	// strtok is no re-entrant
-	memset(Device->ProtocolCap, 0, sizeof(char*) * (MAX_PROTO + 1));
+	// strtok is not re-entrant
 	do {
 		p = strtok(p, ",");
 		n += strlen(p) + 1;
-		if (strstr(p, "http-get") && strstr(p, "audio")) {
-			Device->ProtocolCap[i] = malloc(strlen(p) + 1);
-			strcpy(Device->ProtocolCap[i], p);
-			if (strstr(p, "flac")) flac = true;
+		if (sscanf(p, "http-get:*:%[^:]", MimeType) && strstr(MimeType, "audio")) {
+			MimeTypes[i] = strdup(MimeType);
 			i++;
 		}
 		p += strlen(p) + 1;
-	} while (i < MAX_PROTO && n < size);
+	} while (i < MAX_MIMETYPES && n < size);
 
-	// remove trailing "*" as we WILL add DLNA-related info, so some options to come
-	for (i = 0; (p = Device->ProtocolCap[i]) != NULL; i++)
-		if (p[strlen(p) - 1] == '*') p[strlen(p) - 1] = '\0';
+	p = Forced;
+	size = strlen(Forced);
+	while (i < MAX_MIMETYPES && *p) {
+		strtok(p, ",");
+		MimeTypes[i] = strdup(p);
+		p += strlen(p);
+		if (*p) p++;
+		i++;
+	}
 
-	if (Device->Config.AllowFlac && flac == false && i < MAX_PROTO)
-		Device->ProtocolCap[i] = strdup("http-get:*:audio/flac:");
+	return MimeTypes;
 }
 
+
 /*----------------------------------------------------------------------------*/
-static void _CheckCodecs(struct sMR *Device, char *codec, int n, ...)
+static void _CheckCodecs(char *Codecs, char *Sink, char *Codec, int n, ...)
 {
 	int i;
 	va_list args;
@@ -557,20 +375,15 @@ static void _CheckCodecs(struct sMR *Device, char *codec, int n, ...)
 	va_start(args, n);
 
 	for (i = 0; i < n; i++) {
-		char **p, *lookup = va_arg(args, char*);
+		char *lookup = va_arg(args, char*);
 
-		p = Device->ProtocolCap;
-		// there is always a last "ProtocolCap" that is NULL
-		while (*p) {
-			if (strstr(*p, lookup)) {
-				if (strlen(Device->sq_config.codecs)) {
-					strcat(Device->sq_config.codecs, ",");
-					strcat(Device->sq_config.codecs, codec);
-				}
-				else strcpy(Device->sq_config.codecs, codec);
-				return;
+		if (strstr(Sink, lookup)) {
+			if (strlen(Codecs)) {
+				strcat(Codecs, ",");
+				strcat(Codecs, Codec);
 			}
-			p++;
+			else strcpy(Codecs, Codec);
+			return;
 		}
 	}
 
@@ -578,25 +391,25 @@ static void _CheckCodecs(struct sMR *Device, char *codec, int n, ...)
 }
 
 /*----------------------------------------------------------------------------*/
-void CheckCodecs(struct sMR *Device)
+void CheckCodecs(char *Codecs, char *Sink)
 {
 	char *p, *buf;
 
-	p = buf = strdup(Device->sq_config.codecs);
-	*Device->sq_config.codecs = '\0';
+	p = buf = strdup(Codecs);
+	*Codecs = '\0';
 
 	while (p && *p) {
 		char *q = strchr(p, ',');
 		if (q) *q = '\0';
 
-		if (strstr(p,"mp3")) _CheckCodecs(Device, "mp3", 2, "mp3", "mpeg");
-		if (strstr(p,"flc")) _CheckCodecs(Device, "flc", 1, "flac");
-		if (strstr(p,"wma")) _CheckCodecs(Device, "wma", 1, "wma");
-		if (strstr(p,"ogg")) _CheckCodecs(Device, "ogg", 1, "ogg");
-		if (strstr(p,"aac")) _CheckCodecs(Device, "aac", 3, "aac", "m4a", "mp4");
-		if (strstr(p,"alc")) _CheckCodecs(Device, "alc", 1, "m4a");
-		if (strstr(p,"pcm")) _CheckCodecs(Device, "pcm", 2, "wav", "audio/L");
-		if (strstr(p,"aif")) _CheckCodecs(Device, "aif", 3, "aif", "wav", "audio/L");
+		if (strstr(p,"mp3")) _CheckCodecs(Codecs, Sink, "mp3", 2, "mp3", "mpeg");
+		if (strstr(p,"flc")) _CheckCodecs(Codecs, Sink, "flc", 1, "flac");
+		if (strstr(p,"wma")) _CheckCodecs(Codecs, Sink, "wma", 1, "wma");
+		if (strstr(p,"ogg")) _CheckCodecs(Codecs, Sink, "ogg", 1, "ogg");
+		if (strstr(p,"aac")) _CheckCodecs(Codecs, Sink, "aac", 3, "aac", "m4a", "mp4");
+		if (strstr(p,"alc")) _CheckCodecs(Codecs, Sink, "alc", 1, "m4a");
+		if (strstr(p,"pcm")) _CheckCodecs(Codecs, Sink, "pcm", 2, "wav", "audio/L");
+		if (strstr(p,"aif")) _CheckCodecs(Codecs, Sink, "aif", 3, "aif", "wav", "audio/L");
 
 		p = (q) ? q + 1 : NULL;
 	}

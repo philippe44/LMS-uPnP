@@ -38,10 +38,9 @@ struct sService *EventURL2Service(char *URL, struct sService *s);
 
 void 			MakeMacUnique(struct sMR *Device);
 
-bool 			SetContentType(struct sMR *Device, sq_seturi_t *uri);
-void 			ParseProtocolInfo(struct sMR *Device, char *Info);
-void			CheckCodecs(struct sMR *Device);
-int 			Codec2Length(char CodecShort, char *Rule);
-u8_t 			ext2format(char *ext);
+char*			MakeProtocolInfo(char *MimeType, u32_t duration);
+char** 			ParseProtocolInfo(char *Info, char* Forced);
+void 			CheckCodecs(char *Codecs, char *Sink);
+
 
 #endif
