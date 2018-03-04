@@ -306,7 +306,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 			}
 
 			LOCK_O;
-			// if streaming failed, we never started to play previous index
+			// if streaming failed, we might never start to play previous index
 			next = (out->state == OUTPUT_RUNNING && out->index == ctx->render.index);
 			UNLOCK_O;
 

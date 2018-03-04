@@ -187,8 +187,7 @@ static void output_thread(struct thread_ctx_s *ctx) {
 			if (tpos < bytes) {
 				space = min(bytes - tpos, MAX_BLOCK);
 				LOG_DEBUG("[%p]: read from tail %zd ", ctx, space);
-			}
-			else space = min(_output_cont_bytes(ctx), MAX_BLOCK);
+			} else space = min(_output_cont_bytes(ctx), MAX_BLOCK);
 
 			// if chunked mode start by sending the header
 			if (chunk_count) space = min(space, chunk_count);

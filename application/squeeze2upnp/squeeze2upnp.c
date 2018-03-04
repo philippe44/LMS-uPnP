@@ -313,8 +313,7 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 					free(uri);
 					sq_free_metadata(&p->metadata);
 				}
-			}
-			else {
+			} else {
 				LOG_INFO("[%p]: current URI set %s", Device, uri);
 				AVTSetURI(Device, uri, &p->metadata, ProtoInfo);
 				free(ProtoInfo);
@@ -390,8 +389,7 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 				if (Device->Volume) {
 					if (Device->Muted) CtrlSetMute(Device, false, Device->seqN++);
 					CtrlSetVolume(Device, Device->Volume, Device->seqN++);
-				}
-				else CtrlSetMute(Device, true, Device->seqN++);
+				} else CtrlSetMute(Device, true, Device->seqN++);
 				Device->Muted = (Device->Volume == 0);
 			}
 
@@ -726,8 +724,7 @@ int ActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 			if (Action->ErrCode != UPNP_E_SUCCESS) {
 				p->ErrorCount++;
 				LOG_ERROR("Error in action callback -- %d (cookie %p)",	Action->ErrCode, Cookie);
-			}
-			else p->ErrorCount = 0;
+			} else p->ErrorCount = 0;
 
 			break;
 		}
@@ -756,6 +753,8 @@ int MasterHandler(Upnp_EventType EventType, void *_Event, void *Cookie)
 
 	switch ( EventType ) {
 		case UPNP_DISCOVERY_ADVERTISEMENT_ALIVE:
+			// probably not needed now as the search happens often enough and alive comes from many other devices
+			break;
 		case UPNP_DISCOVERY_SEARCH_RESULT: {
 			struct Upnp_Discovery *Event = (struct Upnp_Discovery *) _Event;
 			tUpdate *Update = malloc(sizeof(tUpdate));
@@ -1317,7 +1316,6 @@ static void sighandler(int signum) {
 		exit(EXIT_SUCCESS);
 	}
 
-	sq_stop();
 	Stop();
 	exit(EXIT_SUCCESS);
 }
@@ -1345,8 +1343,7 @@ bool ParseArgs(int argc, char **argv) {
 		} else if (strstr("tzZIk", opt)) {
 			optarg = NULL;
 			optind += 1;
-		}
-		else {
+		} else {
 			printf("%s", usage);
 			return false;
 		}
@@ -1402,8 +1399,7 @@ bool ParseArgs(int argc, char **argv) {
 					if (!strcmp(l, "all") || !strcmp(l, "main"))     	main_loglevel = new;
 					if (!strcmp(l, "all") || !strcmp(l, "util"))    	util_loglevel = new;
 					if (!strcmp(l, "all") || !strcmp(l, "upnp"))    	upnp_loglevel = new;
-				}
-				else {
+				} else {
 					printf("%s", usage);
 					return false;
 				}
@@ -1495,8 +1491,7 @@ int main(int argc, char *argv[])
 		if (pid_file) {
 			fprintf(pid_file, "%d", getpid());
 			fclose(pid_file);
-		}
-		else {
+		} else {
 			LOG_ERROR("Cannot open PID file %s", glPidFile);
 		}
 	}
@@ -1511,8 +1506,7 @@ int main(int argc, char *argv[])
 #if LINUX || FREEBSD
 		if (!glDaemonize && glInteractive)
 			i = scanf("%s", resp);
-		else
-			pause();
+		else pause();
 #else
 		if (glInteractive)
 			i = scanf("%s", resp);
