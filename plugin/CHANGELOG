@@ -4,14 +4,13 @@
 		- own HTTP server for fine control (only -1 and -3 mode now)
 		- streaming moved to modified squeezelite part of code
 		- remove temporary file buffering		
-		- 
  - add <forced_mimetypes> to allow format that are not normally authorized by player (i.e flac or aac)		
  - use proprietary Sonos format when streaming froma  mp3/aac radio ==> icy works
  - new handling of UPnP discovery for on-the-fly player addition / removal (no more discovery time and removal counts)
  - Review of all mutex-related issue and various risk of unprotected code
  - review of memory leaks 
  - add possibility to dump players ('dump' & 'dumpall' commmands)
- - (2) cli_send_comment uses timeout in connect (for freebsd)
+ - cli_send_comment uses timeout in connect (for freebsd)
 
 0.2.15.1
  - correct memory leak is isMater and GetGroupVolume

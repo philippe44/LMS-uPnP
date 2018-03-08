@@ -286,7 +286,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 			struct track_param info;
 			struct outputstate *out = &ctx->output;
 			char *mimetype;
-			bool sendSTMn = false, next;
+			bool sendSTMn = false;
 			unsigned header_len = len - sizeof(struct strm_packet);
 			char *header = (char *)(pkt + sizeof(struct strm_packet));
 			in_addr_t ip = (in_addr_t)strm->server_ip; // keep in network byte order
@@ -307,11 +307,11 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 
 			LOCK_O;
 			// if streaming failed, we might never start to play previous index
-			next = (out->state == OUTPUT_RUNNING && out->index == ctx->render.index);
+			info.next = (out->state == OUTPUT_RUNNING && out->index == ctx->render.index);
 			UNLOCK_O;
 
 			// get metatda - they must be freed by callee whenever he wants
-			sq_get_metadata(ctx->self, &info.metadata, next);
+			sq_get_metadata(ctx->self, &info.metadata, info.next);
 
 			// start the http server thread
 			output_start(ctx);
@@ -394,7 +394,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 			stream_sock(ip, port, header, header_len, strm->threshold * 1024, ctx->autostart >= 2, ctx);
 
 			sendSTAT("STMc", 0, ctx);
-			ctx->sentSTMs = ctx->sentSTMu = ctx->sentSTMo = ctx->sentSTMl = ctx->sentSTMd = false;
+			ctx->canSTMdu = ctx->sentSTMu = ctx->sentSTMo = ctx->sentSTMl = ctx->sentSTMd = false;
 
 			if (sendSTMn) sendSTAT("STMn", 0, ctx);
 		}
@@ -771,13 +771,19 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 
 			if (ctx->output.track_started) {
 				_sendSTMs = true;
-				ctx->sentSTMs = true;
+				ctx->canSTMdu = true;
 				ctx->output.track_started = false;
+			}
+
+			// streaming ended with no bytes, let STMd/u be sent to move on
+			if 	(ctx->status.stream_bytes == 0 && ctx->status.output_running == THREAD_EXITED) {
+				LOG_WARN("[%p]: nothing received", ctx);
+				ctx->canSTMdu = true;
 			}
 
 			if (ctx->output.state == OUTPUT_RUNNING && !ctx->sentSTMu &&
 				ctx->status.output_running == THREAD_EXITED && ctx->status.stream_state <= DISCONNECT &&
-				ctx->render.state == RD_STOPPED && ctx->sentSTMs == true) {
+				ctx->render.state == RD_STOPPED && ctx->canSTMdu == true) {
 				_sendSTMu = true;
 				ctx->sentSTMu = true;
 				ctx->status.output_full = 0;
@@ -786,7 +792,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			// if there is still data to be sent, try an overrun
 			if (ctx->output.state == OUTPUT_RUNNING && !ctx->sentSTMo &&
 				ctx->status.output_running == THREAD_RUNNING && ctx->status.stream_state == STREAMING_HTTP &&
-				ctx->render.state == RD_STOPPED  && ctx->sentSTMs) {
+				ctx->render.state == RD_STOPPED  && ctx->canSTMdu) {
 				_sendSTMo = true;
 				ctx->sentSTMo = true;
 			}
@@ -824,7 +830,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			 short tracks the thread might exit before playback has started and
 			 we don't want to send STMd before STMs
 			*/
-			if ((ctx->decode.state == DECODE_COMPLETE && ctx->status.output_running == THREAD_EXITED && ctx->sentSTMs) ||
+			if ((ctx->decode.state == DECODE_COMPLETE && ctx->status.output_running == THREAD_EXITED && ctx->canSTMdu) ||
 				 ctx->decode.state == DECODE_ERROR) {
 				if (ctx->decode.state == DECODE_COMPLETE) _sendSTMd = true;
 				if (ctx->decode.state == DECODE_ERROR)    _sendSTMn = true;

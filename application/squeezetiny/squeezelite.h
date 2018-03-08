@@ -410,7 +410,7 @@ struct thread_ctx_s {
 	sq_dev_param_t	config;
 	char 		*mimetypes[MAX_MIMETYPES + 1];
 	mutex_type 	mutex;
-	bool 		sentSTMu, sentSTMo, sentSTMl, sentSTMd, sentSTMs;
+	bool 		sentSTMu, sentSTMo, sentSTMl, sentSTMd, canSTMdu;
 	u32_t 		new_server;
 	char 		*new_server_cap;
 	char		fixed_cap[128], var_cap[128];

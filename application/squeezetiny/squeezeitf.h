@@ -86,6 +86,7 @@ typedef	struct sq_dev_param_s {
 
 struct track_param
 {
+	bool 		next;
 	metadata_t	metadata;
 	char		uri[_STR_LEN_];
 	char		mimetype[_STR_LEN_];

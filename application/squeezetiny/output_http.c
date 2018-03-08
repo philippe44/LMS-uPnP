@@ -193,7 +193,7 @@ static void output_thread(struct thread_ctx_s *ctx) {
 			if (chunk_count) space = min(space, chunk_count);
 			else if (ctx->output.chunked) {
 				chunk_count = min(space, MAX_CHUNK_SIZE);
-				sprintf(chunk_frame_buf, "%x\r\n", chunk_count);
+				sprintf(chunk_frame_buf, "%zx\r\n", chunk_count);
 				chunk_frame = chunk_frame_buf;
 				UNLOCK_O;
 				continue;

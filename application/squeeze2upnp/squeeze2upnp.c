@@ -270,12 +270,6 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 
 		case SQ_SET_TRACK: {
 			struct track_param *p = (struct track_param*) param;
-			/*
-			Even if this request comes too late and the player has already
-			stopped, we should use NextURI if LMS thinks it's playing. Otherwise
-			there is a race condition that will force a false 'forced stopped'
-			*/
-			bool Next = Device->sqState != SQ_STOP;
 			char *ProtoInfo, *uri;
 
 			// when this is received the next track has been processed
@@ -299,7 +293,7 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 				LOG_INFO("[%p]: Sonos live stream", Device);
 			} else uri = strdup(p->uri);
 
-			if (Next) {
+			if (p->next) {
 				if (!Device->Config.AcceptNextURI || !p->metadata.duration) {
 					LOG_INFO("[%p]: next URI gapped %s", Device, uri);
 					Device->NextURI = uri;
