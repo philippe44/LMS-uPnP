@@ -379,6 +379,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 				} else {
 					LOG_ERROR("[%p] no matching codec %c", ctx, out->codec);
 					sendSTMn = true;
+					out->thru = true;
 				}
 			} else if (ctx->autostart >= 2) {
 				// extension to slimproto to allow server to detect codec from response header and send back in codc message
@@ -735,10 +736,6 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			ctx->status.stream_size = ctx->streambuf->size;
 			ctx->status.stream_bytes = ctx->stream.bytes;
 			ctx->status.stream_state = ctx->stream.state;
-			if (!ctx->render.ms_played && ctx->render.index != -1) {
-				ctx->status.ms_played = now - ctx->render.track_start_time - ctx->render.ms_paused;
-				if (ctx->render.state == RD_PAUSED) ctx->status.ms_played -= now - ctx->render.track_pause_time;
-            } else ctx->status.ms_played = ctx->render.ms_played;
 
 			if (ctx->stream.state == DISCONNECT) {
 				disconnect_code = ctx->stream.disconnect;
@@ -768,6 +765,11 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			ctx->status.output_size = ctx->outputbuf->size;
 			ctx->status.current_sample_rate = ctx->output.current_sample_rate;
 			ctx->status.output_running = ctx->output_running;
+			ctx->status.duration = ctx->render.duration;
+			if (!ctx->render.ms_played && ctx->render.index != -1) {
+				ctx->status.ms_played = now - ctx->render.track_start_time - ctx->render.ms_paused;
+				if (ctx->render.state == RD_PAUSED) ctx->status.ms_played -= now - ctx->render.track_pause_time;
+			} else ctx->status.ms_played = ctx->render.ms_played;
 
 			if (ctx->output.track_started) {
 				_sendSTMs = true;
@@ -829,9 +831,14 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			 track. We need both THREAD_EXITED and STMs sent to be sure, as for
 			 short tracks the thread might exit before playback has started and
 			 we don't want to send STMd before STMs
+			 also, if STMd is sent early, streaming of next track will start but
+			 then will stall for a long time while current track is finishing and
+			 services like Deezer close the connection before all has been sent,
+			 so need to wait a bit before sending STMd ... grr
 			*/
-			if ((ctx->decode.state == DECODE_COMPLETE && ctx->status.output_running == THREAD_EXITED && ctx->canSTMdu) ||
-				 ctx->decode.state == DECODE_ERROR) {
+			if ((ctx->decode.state == DECODE_COMPLETE && ctx->status.output_running == THREAD_EXITED &&
+				 ctx->canSTMdu && ctx->status.duration - ctx->status.ms_played < STREAM_DELAY) ||
+				ctx->decode.state == DECODE_ERROR) {
 				if (ctx->decode.state == DECODE_COMPLETE) _sendSTMd = true;
 				if (ctx->decode.state == DECODE_ERROR)    _sendSTMn = true;
 				ctx->decode.state = DECODE_STOPPED;
