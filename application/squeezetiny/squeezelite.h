@@ -115,7 +115,7 @@ typedef struct {
 	char *data;
 } key_data_t;
 
-bool 		http_parse(int sock, char **request, key_data_t *rkd, char **body, int *len);char*		http_send(int sock, char *method, key_data_t *rkd);
+int 		http_parse(int sock, char **request, key_data_t *rkd, char **body, int *len);char*		http_send(int sock, char *method, key_data_t *rkd);
 int 		read_line(int fd, char *line, int maxlen, int timeout);
 int 		send_response(int sock, char *response);
 

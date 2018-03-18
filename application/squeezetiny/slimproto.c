@@ -837,7 +837,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			 so need to wait a bit before sending STMd ... grr
 			*/
 			if ((ctx->decode.state == DECODE_COMPLETE && ctx->status.output_running == THREAD_EXITED &&
-				 ctx->canSTMdu && ctx->status.duration - ctx->status.ms_played < STREAM_DELAY) ||
+				 ctx->canSTMdu && (!ctx->status.duration || ctx->status.duration - ctx->status.ms_played < STREAM_DELAY)) ||
 				ctx->decode.state == DECODE_ERROR) {
 				if (ctx->decode.state == DECODE_COMPLETE) _sendSTMd = true;
 				if (ctx->decode.state == DECODE_ERROR)    _sendSTMn = true;

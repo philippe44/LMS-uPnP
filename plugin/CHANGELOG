@@ -14,6 +14,7 @@
  - (5) when missing codec, thru flag must be set otherwise output.c tries to use the encodebuf
  - (5) duration and ms_played status acquisition was protected by wrong mutex-related
  - (5) in main.c, LOCK_O/UNLOCK_O was empty
+ - (6) while streaming, HTTP server shall not close connection if socket read ready but no data is received 
 
 0.2.15.1
  - correct memory leak is isMater and GetGroupVolume

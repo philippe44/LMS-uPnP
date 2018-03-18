@@ -35,7 +35,7 @@
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_LOGGING" desc="PLUGIN_UPNPBRIDGE_LOGGING_DESC" %]
 		<input name="logging" type="checkbox" [% IF logging %] checked [% END %]>&nbsp[% "PLUGIN_UPNPBRIDGE_LOGENABLE" | string %]
 		&nbsp<a href="[% webroot %]upnpbridge-log.log" target="log">[% "PLUGIN_UPNPBRIDGE_LOGLINK" | string %]</a>
-		&nbsp[% "PLUGIN_UPNPBRIDGE_LOGSIZE" | string %]&nbsp<input type="text" class="stdedit" name="log_limit" id="log_limit" value="[% log_limit %]" size="2"> 
+		&nbsp[% "PLUGIN_UPNPBRIDGE_LOGSIZE" | string %]&nbsp<input [% IF !xmlparams %] disabled [% END %] type="text" class="stdedit" name="log_limit" id="log_limit" value="[% log_limit %]" size="2"> 
 		&nbsp<input name="eraselog" type="checkbox" [% IF eraselog %] checked [% END %]>&nbsp[% "PLUGIN_UPNPBRIDGE_ERASELOG" | string %]
 		&nbsp<input name="cleanlog" type="submit" value=[% "PLUGIN_UPNPBRIDGE_CLEANLOG" | string %]> 
 	[% END %]
@@ -50,6 +50,12 @@
 		&nbsp<input name="delconfig" type="submit" value=[% "PLUGIN_UPNPBRIDGE_DELCONFIG" | string %]>
 	[% END %]
 	
+	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_UPNPSOCKET" desc="PLUGIN_UPNPBRIDGE_UPNPSOCKET_DESC" %]
+		<input [% IF useLMSsocket || !xmlparams %] disabled [% END %] type="text" class="stdedit" name="upnp_socket" id="upnp_socket" value="[% upnp_socket %]" size="20">
+		&nbsp<input name="useLMSsocket" type="checkbox" [% IF useLMSsocket %] checked [% END %]>&nbsp[% "PLUGIN_UPNPBRIDGE_USELMSSOCKET" | string %]
+	[% END %]
+	
+	
 	[% IF !xmlparams %]
 		[% WRAPPER settingSection %]
 			<b><font color=red>[% "PLUGIN_UPNPBRIDGE_NOCONFIG" | string %]</font></b>
@@ -58,12 +64,7 @@
 	
 	<input hidden type="text" class="stdedit" name="xmlparams" id="xmlparams" value="1" size="5">
 	<input hidden type="text" class="stdedit" name="prevseldevice" id="prevseldevice" value="[% prevseldevice %]" size="5">
-	
-	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_UPNPSOCKET" desc="PLUGIN_UPNPBRIDGE_UPNPSOCKET_DESC" %]
-		<input [% IF useLMSsocket %] disabled [% END %] type="text" class="stdedit" name="upnp_socket" id="upnp_socket" value="[% upnp_socket %]" size="20">
-		&nbsp<input name="useLMSsocket" type="checkbox" [% IF useLMSsocket %] checked [% END %]>&nbsp[% "PLUGIN_UPNPBRIDGE_USELMSSOCKET" | string %]
-	[% END %]
-	
+
 	<hr>
 
 	[% WRAPPER settingSection %]
