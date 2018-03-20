@@ -586,7 +586,7 @@ char *rtrim(char *s)
 }
 
 /*----------------------------------------------------------------------------*/
-int http_parse(int sock, char **request, key_data_t *rkd, char **body, int *len)
+bool http_parse(int sock, char **request, key_data_t *rkd, char **body, int *len)
 {
 	char line[256], *dp;
 	unsigned j;
@@ -594,13 +594,14 @@ int http_parse(int sock, char **request, key_data_t *rkd, char **body, int *len)
 
 	rkd[0].key = NULL;
 
-	i = read_line(sock, line, sizeof(line), timeout);
-	if (request) *request = strdup(line);
+	if ((i = read_line(sock, line, sizeof(line), timeout)) <= 0) {
+		if (i < 0) {
+			LOG_ERROR("cannot read method", NULL);
+		}
+		return false;
+	}
 
-	if (i < 0) {
-		LOG_ERROR("cannot read method", NULL);
-		return -1;
-    } else if (!i) return 0;
+	if (request) *request = strdup(line);
 
 	i = *len = 0;
 
@@ -619,7 +620,7 @@ int http_parse(int sock, char **request, key_data_t *rkd, char **body, int *len)
 		if (!dp){
 			LOG_ERROR("Request failed, bad header", NULL);
 			kd_free(rkd);
-			return -1;
+			return false;
 		}
 
 		*dp = 0;
@@ -649,7 +650,7 @@ int http_parse(int sock, char **request, key_data_t *rkd, char **body, int *len)
 		}
 	}
 
-	return 1;
+	return true;
 }
 
 

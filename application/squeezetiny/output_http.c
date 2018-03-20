@@ -110,11 +110,6 @@ static void output_thread(struct thread_ctx_s *ctx) {
 		// should be the HTTP headers (works with non-blocking socket)
 		if (n > 0 && FD_ISSET(sock, &rfds)) {
 			ssize_t offset = handle_http(ctx, sock, mimetype, bytes, &tbuf, hsize);
-
-			// strange ... got a HTTP request but it's empty, just continue
-			if (offset == -1) continue;
-
-			// only proceed if we have something to handle
 			http_ready = res = (offset >= 0 && offset <= bytes + 1);
 
 			// reset chunking and head/tails properly at every new connection
@@ -358,11 +353,6 @@ chunking or not and that's it. All this works very well with player that simply
 suspend the connection using TCP, but if they close it and want to resume (i.e.
 they request a range, we'll restart from where we were and mostly it will not be
 acceptable by the player, so then use the option seek_after_pause
-This returns
-	-2	: error or HEAD, do not respond with body
-	-1	: nothing in request
-	0 	: normal reponse, just send data from the begining
-	>0	: returned value is start offset +1
 */
 static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, char *mimetype,
 						   size_t bytes, u8_t **tbuf, size_t hsize)
@@ -370,19 +360,13 @@ static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, char *mimetype,
 	char *body = NULL, *request = NULL, *str = NULL;
 	key_data_t headers[64], resp[16] = { { NULL, NULL } };
 	char *head = "HTTP/1.1 200 OK";
-	int len, index, parse;
+	int len, index;
 	ssize_t res = 0;
 	bool chunked = true, Sonos = false;
 	char format;
 
-	parse = http_parse(sock, &request, headers, &body, &len);
-
-	if (parse < 0) {
+	if (!http_parse(sock, &request, headers, &body, &len)) {
 		LOG_WARN("[%p]: http parsing error %s", ctx, request);
-		res = -2;
-		goto cleanup;
-	} else if (!parse) {
-		LOG_WARN("[%p]: http parsing empty %s", ctx, request);
 		res = -1;
 		goto cleanup;
 	}
@@ -427,12 +411,12 @@ static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, char *mimetype,
 	if (index != ctx->output.index) {
 		LOG_WARN("wrong file requested, refusing %u %d", index, ctx->output.index);
 		head = "HTTP/1.1 410 Gone";
-		res = -2;
+		res = -1;
 	} else {
 		kd_add(resp, "Content-Type", mimetype);
-		kd_add(resp, "Accept-Ranges", "none");
+		//kd_add(resp, "Accept-Ranges", "none");
 		if (ctx->output.length > 0) {
-			asprintf(&str, "%u", ctx->output.length);
+			asprintf(&str, "%zu", ctx->output.length);
 			kd_add(resp, "Content-Length", str);
 			free(str);
 		}
@@ -464,7 +448,7 @@ static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, char *mimetype,
 	} else ctx->output.chunked = false;
 
 	// do not send body if request is HEAD
-	if (strstr(request, "HEAD")) res = -2;
+	if (strstr(request, "HEAD")) res = -1;
 
 	str = http_send(sock, head, resp);
 
