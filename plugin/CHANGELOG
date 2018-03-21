@@ -16,7 +16,7 @@
  - (5) in main.c, LOCK_O/UNLOCK_O was empty
  - (6) while streaming, HTTP server shall not close connection if socket read ready but no data is received 
  - (7) roll back to (5)
- - (7) do not send "no range" for
+ - (7) do not add HTTP header "Accept-Range: none"
 
 0.2.15.1
  - correct memory leak is isMater and GetGroupVolume
