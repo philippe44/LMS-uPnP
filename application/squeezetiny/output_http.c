@@ -433,7 +433,7 @@ static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, char *mimetype,
 			}
 		} else if (bytes && Sonos) {
 			// Sonos client re-opening the connection, so make it believe we
-			// have a 1G length - thus it will sent a range-request
+			// have a 2G length - thus it will sent a range-request
 			asprintf(&str, "%zu", hsize);
 			if (ctx->output.length < 0) kd_add(resp, "Content-Length", "2048000000");
 			NFREE(str);
