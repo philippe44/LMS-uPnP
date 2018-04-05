@@ -1,3 +1,10 @@
+0.3.0.1
+ - foced_mimetypes parameter should use "%s" format string as it can be empty
+ - (P) Misc correction in help strings
+ - ProtocolInfo parsing was crashing if sink was ending by a serie of ','
+ - More liberal parsing of raw PCM (audio/Lxx)
+ - Need to respond to getContentFeatures.dlna.org (pretty ugly patch)
+
 0.3.0.0 
  - rewrite of most of the core code: 
 		- no use of libupnp webserver anymore

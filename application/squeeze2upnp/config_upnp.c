@@ -91,7 +91,7 @@ void SaveConfig(char *name, void *ref, bool full)
 	XMLUpdateNode(doc, common, false, "sample_rate", "%d", (int) glDeviceParam.sample_rate);
 	XMLUpdateNode(doc, common, false, "L24_format", "%d", (int) glDeviceParam.L24_format);
 	XMLUpdateNode(doc, common, false, "flac_header", "%d", (int) glDeviceParam.flac_header);
-	XMLUpdateNode(doc, common, false, "forced_mimetypes", glMRConfig.ForcedMimeTypes);
+	XMLUpdateNode(doc, common, false, "forced_mimetypes", "%s", glMRConfig.ForcedMimeTypes);
 	XMLUpdateNode(doc, common, false, "seek_after_pause", "%d", (int) glMRConfig.SeekAfterPause);
 	XMLUpdateNode(doc, common, false, "send_icy", "%d", (int) glDeviceParam.send_icy);
 	XMLUpdateNode(doc, common, false, "volume_on_play", "%d", (int) glMRConfig.VolumeOnPlay);

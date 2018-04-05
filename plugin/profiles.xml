@@ -9,8 +9,6 @@
 	<raw_audio_format>raw</raw_audio_format>
 	<L24_format>2</L24_format>
 	<max_volume>100</max_volume>
-	<match_endianness>0</match_endianness>
-	<max_read_wait>1200</max_read_wait>
 	<profile name=''></profile>
 	<profile name='_safe mode'>
 	<stream_length>1000000000</stream_length>
@@ -26,8 +24,7 @@
 	<seek_after_pause>0</seek_after_pause>
 	<codecs>flc,mp3,pcm,aif</codecs>
 	<sample_rate>48000</sample_rate>
-	<raw_audio_format>wave,raw</raw_audio_format>
-	<match_endianness>1</match_endianness>
+	<raw_audio_format>wav,raw</raw_audio_format>
 	</profile>
 	<profile name='Jongo S3x'>
 		<stream_length>1000000000</stream_length>
@@ -36,7 +33,6 @@
 	</profile>	
 	<profile name='foobar 2000'></profile>
 	<profile name='Sonos'>
-		<stream_length>1000000000</stream_length>
 		<raw_audio_format>wav,aiff</raw_audio_format>
 	</profile>
 	<profile name='Marantz'>
@@ -48,7 +44,6 @@
 		</profile>	
 		<profile name='CR603'>
 			<codecs>aac,pcm,flc,mp3</codecs>
-			<accept_nexturi>0</accept_nexturi>
 			<raw_audio_format>wav</raw_audio_format>
 		</profile>	
 	</profile>
@@ -65,7 +60,6 @@
 	</profile>
 	<profile name='ROCKI'>
 		<stream_length>-1</stream_length>
-		<accept_nexturi>0</accept_nexturi>
 	</profile>
 	<profile name='Revo'>
 		<send_metadata>1</send_metadata>
@@ -76,7 +70,6 @@
 		<seek_after_pause>1</seek_after_pause>
 		<codecs>aac,pcm,flc,mp3</codecs>
 		<sample_rate>192000</sample_rate>
-		<max_read_wait>300</max_read_wait>
 	</profile>
 	<profile name='XBox'>
 		<stream_length>-2</stream_length>
@@ -84,7 +77,6 @@
 		<sample_rate>48000</sample_rate>
 	</profile>
 	<profile name='Raumfeld'>
-		<accept_nexturi>0</accept_nexturi>
 		<codecs>pcm,flc,mp3</codecs>
 	</profile>	<profile name='Roku SoundBridge'>		<stream_length>-1</stream_length>		<codecs>pcm,mp3</codecs>		<raw_audio_format>raw,wav,aiff</raw_audio_format>	</profile>
 	<profile name='Pioneer'>
@@ -92,7 +84,6 @@
 		<raw_audio_format>raw,wav,aiff</raw_audio_format>
 		<profile name='N30'></profile>	
 		<profile name='XW-SMA'>
-			<accept_nexturi>0</accept_nexturi>
 			<sample_rate>48000</sample_rate>
 		</profile>
 	</profile>
@@ -106,9 +97,6 @@
 		<sample_rate>96000</sample_rate>
 		<stream_length>-2</stream_length>
 		<L24_format>1</L24_format>
-		<profile name='CR-N755'>
-			<accept_nexturi>0</accept_nexturi>
-		</profile>
 	</profile>
 	<profile name='PURE One Flow'>
 		<codecs>aac,pcm,flc,mp3</codecs>
@@ -117,7 +105,6 @@
 		<sample_rate>48000</sample_rate>
 	</profile>
 	<profile name='GGMM E5'>
-		<accept_nexturi>0</accept_nexturi>
 		<send_metadata>0</send_metadata>
 		<send_coverart>0</send_coverart>
 	</profile>

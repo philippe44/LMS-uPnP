@@ -421,7 +421,11 @@ static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, char *mimetype,
 			free(str);
 		}
 
+		// not pretty ...
 		mirror_header(headers, resp, "TransferMode.DLNA.ORG");
+		if (kd_lookup(headers, "getcontentFeatures.dlna.org")) {
+			kd_add(resp, "contentFeatures.dlna.org", ctx->output.dlna_features);
+		}
 
 		// a range request - might happen even when we said NO RANGE !!!
 		if ((str = kd_lookup(headers, "Range")) != NULL) {

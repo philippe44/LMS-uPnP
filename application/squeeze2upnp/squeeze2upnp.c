@@ -284,7 +284,8 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 				div(p->metadata.duration,1000).rem, p->metadata.file_size,
 				p->metadata.artwork ? p->metadata.artwork : "");
 
-			ProtoInfo = MakeProtocolInfo(p->mimetype, p->metadata.duration);
+			// passing DLNAfeatures back is really ugly
+			ProtoInfo = MakeProtoInfo(p->mimetype, p->dlna_features, p->metadata.duration);
 
 			// when it's a Sonos playing a live mp3 or aac stream, add special prefix
 			if (!p->metadata.duration && (*Device->Service[TOPOLOGY_IDX].ControlURL) &&

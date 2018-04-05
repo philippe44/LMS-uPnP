@@ -99,7 +99,7 @@ int 	_voidHandler(Upnp_EventType EventType, void *_Event, void *Cookie) { return
 
 
 /*----------------------------------------------------------------------------*/
-char *MakeProtocolInfo(char *MimeType, u32_t duration)
+char *MakeProtoInfo(char *MimeType, char *DLNAfeatures, u32_t duration)
 {
 	char *buf;
 	char *DLNAOrgPN;
@@ -115,8 +115,11 @@ int 	_voidHandler(Upnp_EventType EventType, void *_Event, void *Cookie) { return
 		DLNAOrgPN = "";
 	}
 
-	asprintf(&buf, "http-get:*:%s:%sDLNA.ORG_CI=0;DLNA.ORG_FLAGS=%08x000000000000000000000000",
-				  MimeType, DLNAOrgPN, DLNA_ORG_FLAG | (duration ? 0 : DLNA_ORG_FLAG_SN_INCREASE));
+	sprintf(DLNAfeatures, "%sDLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=%08x000000000000000000000000",
+						   DLNAOrgPN, DLNA_ORG_FLAG | (duration ? 0 : DLNA_ORG_FLAG_SN_INCREASE));
+
+	asprintf(&buf, "http-get:*:%s:%s", MimeType, DLNAfeatures);
+
 	return buf;
 }
 
@@ -344,6 +347,8 @@ char** ParseProtocolInfo(char *Info, char *Forced)
 	// strtok is not re-entrant
 	do {
 		p = strtok(p, ",");
+		// in case Info finishes by a serie of ','
+		if (!p) break;
 		n += strlen(p) + 1;
 		if (sscanf(p, "http-get:*:%[^:]", MimeType) && strstr(MimeType, "audio")) {
 			MimeTypes[i] = strdup(MimeType);

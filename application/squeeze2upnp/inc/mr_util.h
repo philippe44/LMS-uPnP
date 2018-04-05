@@ -38,7 +38,7 @@ struct sService *EventURL2Service(char *URL, struct sService *s);
 
 void 			MakeMacUnique(struct sMR *Device);
 
-char*			MakeProtocolInfo(char *MimeType, u32_t duration);
+char*			MakeProtoInfo(char *MimeType, char *DLNAfeatures, u32_t duration);
 char** 			ParseProtocolInfo(char *Info, char* Forced);
 void 			CheckCodecs(char *Codecs, char *Sink);
 

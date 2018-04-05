@@ -156,29 +156,21 @@ char* find_pcm_mimetype(u8_t endian, u8_t *sample_size, bool truncable, u32_t sa
 		if (sscanf(options, "%[^,]", fmt) <= 0) return NULL;
 
 		while (strstr(fmt, "raw")) {
-			char **p, *s;
+			char **p, a[16], r[16], c[16];
 
-			// try the full mime-type
+			// find audio/Lxx
 			p = mimetypes;
-			asprintf(&s, "audio/L%hhu;rate=%u;channels=%hhu", *sample_size, sample_rate, channels);
+			sprintf(a, "audio/L%hhu", *sample_size);
+			sprintf(r, "rate=%u", sample_rate);
+			sprintf(c, "channels=%hhu", channels);
 			while (*p) {
-				if (!strcmp(s, *p)) return strdup(*p);
-				p++;
-			}
-
-			// no luck, try a simple audio/Lxx w/o channel or rate indication
-			p = mimetypes;
-			sprintf(s, "audio/L%hhu", *sample_size);
-			while (*p) {
-				if (!strcmp(s, *p)) {
-					free(s);
-					asprintf(&s, "%s;rate=%u;channels=%hhu", *p, sample_rate, channels);
-					return s;
+				if (strstr(*p, a) &&
+				   (!strstr(*p, "rate=") || strstr(*p, r)) &&
+				   (!strstr(*p, "channels=") || strstr(*p, c))) {
+					return strdup(*p);
 				}
 				p++;
 			}
-
-			free(s);
 
 			if (*sample_size == 24 && truncable) *sample_size = 16;
 			else {

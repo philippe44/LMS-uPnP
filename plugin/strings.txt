@@ -177,11 +177,11 @@ PLUGIN_UPNPBRIDGE_CODECSPARAM
 
 PLUGIN_UPNPBRIDGE_CODECSPARAM_DESC
 	EN	Several codecs are supported by the UPnP player. They will be reported to LMS to decide when to do transcoding. 
-	EN	<br><i>- Supported Codecs</i> is an ordered, comma-separated, list made of mp3, flc, aif, pcm, aac and alc
+	EN	<br><i>- Supported Codecs:</i>  Tells LMS supported codecs. Comma-separated, list made of mp3, flc, aif, pcm, aac and alc
 	EN	For example, to only support (in order of preference) PCM then FLAC and then MP3 , enter "pcm,flc,mp3" (without "")
 	EN	(<b>aac and alc are untested</b>. 
-	EN	<br><b>NB: if a codec listed here is NOT supported by the player, it will be removed from the list sent to LMS</b>
-	EN	<br>- <i>Forced MimeTypes:</i> Force some codecs/types if they are not auto-detected (see user's guide)
+	EN	<br><b>NB: if a codec listed here is detected to NOT be supported by the player, it will be ignored</b>
+	EN	<br>- <i>Forced MimeTypes:</i> Force UPnP player's support of some MIME types if they are not auto-detected (see user's guide)
 	EN	<br>- <i>FLAC header:</i> a FLAC header is required by some players.
 	EN	<br>- <i>Uncompressed format:</i> comma-separated list (<b>ordered</b>) of supported uncompressed audio formats (amongst wav, aiff, raw)
 	EN	<br>- <i>24 bits PCM:</i> 24 bits sample tweaking, including possibility to shrink them to 16 bits
