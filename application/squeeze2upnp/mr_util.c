@@ -32,93 +32,17 @@
 extern log_level util_loglevel;
 static log_level *loglevel = &util_loglevel;
 
- /* DLNA.ORG_CI: conversion indicator parameter (integer)
- *     0 not transcoded
- *     1 transcoded
- */
-typedef enum {
-  DLNA_ORG_CONVERSION_NONE = 0,
-  DLNA_ORG_CONVERSION_TRANSCODED = 1,
-} dlna_org_conversion_t;
-
-/* DLNA.ORG_OP: operations parameter (string)
- *     "00" (or "0") neither time seek range nor range supported
- *     "01" range supported
- *     "10" time seek range supported
- *     "11" both time seek range and range supported
- */
-typedef enum {
-  DLNA_ORG_OPERATION_NONE                  = 0x00,
-  DLNA_ORG_OPERATION_RANGE                 = 0x01,
-  DLNA_ORG_OPERATION_TIMESEEK              = 0x10,
-} dlna_org_operation_t;
-
-/* DLNA.ORG_FLAGS, padded with 24 trailing 0s
- *     8000 0000  31  senderPaced
- *     4000 0000  30  lsopTimeBasedSeekSupported
- *     2000 0000  29  lsopByteBasedSeekSupported
- *     1000 0000  28  playcontainerSupported
- *      800 0000  27  s0IncreasingSupported
- *      400 0000  26  sNIncreasingSupported
- *      200 0000  25  rtspPauseSupported
- *      100 0000  24  streamingTransferModeSupported
- *       80 0000  23  interactiveTransferModeSupported
- *       40 0000  22  backgroundTransferModeSupported
- *       20 0000  21  connectionStallingSupported
- *       10 0000  20  dlnaVersion15Supported
- *
- *     Example: (1 << 24) | (1 << 22) | (1 << 21) | (1 << 20)
- *       DLNA.ORG_FLAGS=0170 0000[0000 0000 0000 0000 0000 0000] // [] show padding
- */
-typedef enum {
-  DLNA_ORG_FLAG_SENDER_PACED               = (1 << 31),
-  DLNA_ORG_FLAG_TIME_BASED_SEEK            = (1 << 30),
-  DLNA_ORG_FLAG_BYTE_BASED_SEEK            = (1 << 29),
-  DLNA_ORG_FLAG_PLAY_CONTAINER             = (1 << 28),
-
-  DLNA_ORG_FLAG_S0_INCREASE                = (1 << 27),
-  DLNA_ORG_FLAG_SN_INCREASE                = (1 << 26),
-  DLNA_ORG_FLAG_RTSP_PAUSE                 = (1 << 25),
-  DLNA_ORG_FLAG_STREAMING_TRANSFERT_MODE    = (1 << 24),
-
-  DLNA_ORG_FLAG_INTERACTIVE_TRANSFERT_MODE = (1 << 23),
-  DLNA_ORG_FLAG_BACKGROUND_TRANSFERT_MODE  = (1 << 22),
-  DLNA_ORG_FLAG_CONNECTION_STALL           = (1 << 21),
-  DLNA_ORG_FLAG_DLNA_V15                   = (1 << 20),
-} dlna_org_flags_t;
-
-
-#define DLNA_ORG_OP (DLNA_ORG_OPERATION_RANGE)
-// GNU pre-processor seems to be confused if this is multiline ...
-#define DLNA_ORG_FLAG ( DLNA_ORG_FLAG_S0_INCREASE | DLNA_ORG_FLAG_STREAMING_TRANSFERT_MODE | DLNA_ORG_FLAG_BACKGROUND_TRANSFERT_MODE | DLNA_ORG_FLAG_CONNECTION_STALL | DLNA_ORG_FLAG_DLNA_V15 )
-/*
-static char DLNA_OPT[] = ";DLNA.ORG_OP=01;DLNA.ORG_FLAGS=01700000000000000000000000000000";
-*/
-
 int 	_voidHandler(Upnp_EventType EventType, void *_Event, void *Cookie) { return 0; }
 
 
 /*----------------------------------------------------------------------------*/
-char *MakeProtoInfo(char *MimeType, char *DLNAfeatures, u32_t duration)
+char *MakeProtoInfo(char *MimeType, u32_t duration)
 {
-	char *buf;
-	char *DLNAOrgPN;
+	char *buf, *DLNAfeatures;
 
-	switch (mimetype2format(MimeType)) {
-	case 'm':
-		DLNAOrgPN = "DLNA.ORG_PN=MP3;";
-		break;
-	case 'p':
-		DLNAOrgPN = "DLNA.ORG_PN=LPCM;";
-		break;
-	default:
-		DLNAOrgPN = "";
-	}
-
-	sprintf(DLNAfeatures, "%sDLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=%08x000000000000000000000000",
-						   DLNAOrgPN, DLNA_ORG_FLAG | (duration ? 0 : DLNA_ORG_FLAG_SN_INCREASE));
-
+	DLNAfeatures = make_dlna_content(MimeType, duration);
 	asprintf(&buf, "http-get:*:%s:%s", MimeType, DLNAfeatures);
+	free(DLNAfeatures);
 
 	return buf;
 }

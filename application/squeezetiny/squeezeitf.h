@@ -90,7 +90,6 @@ struct track_param
 	metadata_t	metadata;
 	char		uri[_STR_LEN_];
 	char		mimetype[_STR_LEN_];
-	char 		dlna_features[_STR_LEN_];
 };
 
 typedef bool (*sq_callback_t)(sq_dev_handle_t handle, void *caller_id, sq_action_t action, u8_t *cookie, void *param);

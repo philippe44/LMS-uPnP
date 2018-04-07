@@ -38,6 +38,7 @@ u32_t 		hash32(char *str);
 bool 		get_interface(struct in_addr *addr);
 in_addr_t 	get_localhost(char **name);
 
+char*		make_dlna_content(char *mimetype, u32_t duration);
 char*		mimetype2ext(char *mimetype);
 u8_t 		mimetype2format(char *mimetype);
 char*		find_mimetype(char codec, char *mimetypes[], char *out);

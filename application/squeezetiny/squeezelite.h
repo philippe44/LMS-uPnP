@@ -346,7 +346,6 @@ struct outputstate {
 	ssize_t length;			// HTTP content-length (-1:no chunked, -3 chunked if possible, >0 fake length)
 	bool 	chunked;		// chunked mode
 	char 	mimetype[_STR_LEN_];	// content-type to send to player
-	char 	dlna_features[_STR_LEN_];	// dlna_features - this is really unelegant
 	bool  	track_started;	// track has started to be streamed (trigger, not state)
 	u8_t  	*track_start;   // pointer where track starts in buffer, just for legacy compatibility
 	unsigned current_sample_rate;	// current in sample rate

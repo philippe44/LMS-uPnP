@@ -375,9 +375,6 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 
 					if (!ctx_callback(ctx, SQ_SET_TRACK, NULL, &info)) sendSTMn = true;
 
-					// this is not pretty
-					strcpy(out->dlna_features, info.dlna_features);
-
 					LOG_INFO("[%p]: codec:%c, ch:%d, s:%d, r:%d", ctx, out->codec, out->channels, out->sample_size, out->sample_rate);
 				} else {
 					LOG_ERROR("[%p] no matching codec %c", ctx, out->codec);
@@ -477,9 +474,6 @@ static void process_codc(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 							ctx->output.port, ++ctx->output.index, mimetype2ext(out->mimetype));
 
 		if (!ctx_callback(ctx, SQ_SET_TRACK, NULL, &info)) sendSTAT("STMn", 0, ctx);
-
-		// grrr ... need to find a better solution
-		strcpy(out->dlna_features, info.dlna_features);
 	} else {
 		sendSTAT("STMn", 0, ctx);
 		LOG_ERROR("[%p] no matching codec %c", ctx, out->codec);

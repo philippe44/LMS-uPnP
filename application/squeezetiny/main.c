@@ -57,8 +57,10 @@ static log_level	*loglevel = &slimmain_loglevel;
 void sq_wipe_device(struct thread_ctx_s *ctx) {
 	int i;
 
+	mutex_lock(ctx->cli_mutex);
 	ctx->callback = NULL;
 	ctx->in_use = false;
+	mutex_unlock(ctx->cli_mutex);
 
 	slimproto_close(ctx);
 	output_close(ctx);

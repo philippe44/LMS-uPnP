@@ -1,3 +1,8 @@
+0.3.0.2
+ - mimetype delayed acquisition in output_http is a boolean, relying now on out->mimetype
+ - dlan features is a function call instead of a fiend in output structure (a bit cleaner)
+ - when destroying device that was stuck in cli_send_cmd called by sq_notify, then when the sq_wipe was called, cli_mutex was already destroyed when releasing it
+ 
 0.3.0.1
  - foced_mimetypes parameter should use "%s" format string as it can be empty
  - (P) Misc correction in help strings

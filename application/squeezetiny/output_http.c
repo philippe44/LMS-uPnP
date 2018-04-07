@@ -35,15 +35,15 @@ static log_level 	*loglevel = &output_loglevel;
 #define HEAD_SIZE		65536
 #define ICY_INTERVAL	32000
 
-static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, char *content_type,
-						   size_t bytes, u8_t **tbuf, size_t hsize);
+static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, size_t bytes, u8_t **tbuf, size_t hsize);
 static void mirror_header(key_data_t *src, key_data_t *rsp, char *key);
 
 /*---------------------------------------------------------------------------*/
 static void output_thread(struct thread_ctx_s *ctx) {
 	bool http_ready, done = false;
 	int sock = -1;
-	char *mimetype = NULL, chunk_frame_buf[16] = "", *chunk_frame = chunk_frame_buf;
+	char chunk_frame_buf[16] = "", *chunk_frame = chunk_frame_buf;
+	bool mimetype = false;
 	size_t hpos, bytes = 0, hsize = 0, tpos = 0;
 	ssize_t chunk_count;
 	u8_t *tbuf = NULL;
@@ -103,13 +103,13 @@ static void output_thread(struct thread_ctx_s *ctx) {
 				usleep(50*1000);
 				continue;
 			}
-			mimetype = strdup(ctx->output.mimetype);
+			mimetype = true;
 			UNLOCK_D;
 		}
 
 		// should be the HTTP headers (works with non-blocking socket)
 		if (n > 0 && FD_ISSET(sock, &rfds)) {
-			ssize_t offset = handle_http(ctx, sock, mimetype, bytes, &tbuf, hsize);
+			ssize_t offset = handle_http(ctx, sock, bytes, &tbuf, hsize);
 			http_ready = res = (offset >= 0 && offset <= bytes + 1);
 
 			// reset chunking and head/tails properly at every new connection
@@ -267,7 +267,6 @@ static void output_thread(struct thread_ctx_s *ctx) {
 	if (ctx->output_running == THREAD_RUNNING) ctx->output_running = THREAD_EXITED;
 	UNLOCK_O;
 
-	NFREE(mimetype);
 	NFREE(tbuf);
 	NFREE(hbuf);
 
@@ -354,8 +353,7 @@ suspend the connection using TCP, but if they close it and want to resume (i.e.
 they request a range, we'll restart from where we were and mostly it will not be
 acceptable by the player, so then use the option seek_after_pause
 */
-static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, char *mimetype,
-						   size_t bytes, u8_t **tbuf, size_t hsize)
+static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, size_t bytes, u8_t **tbuf, size_t hsize)
 {
 	char *body = NULL, *request = NULL, *str = NULL;
 	key_data_t headers[64], resp[16] = { { NULL, NULL } };
@@ -413,7 +411,7 @@ static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, char *mimetype,
 		head = "HTTP/1.1 410 Gone";
 		res = -1;
 	} else {
-		kd_add(resp, "Content-Type", mimetype);
+		kd_add(resp, "Content-Type", ctx->output.mimetype);
 		//kd_add(resp, "Accept-Ranges", "none");
 		if (ctx->output.length > 0) {
 			asprintf(&str, "%zu", ctx->output.length);
@@ -423,8 +421,11 @@ static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, char *mimetype,
 
 		// not pretty ...
 		mirror_header(headers, resp, "TransferMode.DLNA.ORG");
+
 		if (kd_lookup(headers, "getcontentFeatures.dlna.org")) {
-			kd_add(resp, "contentFeatures.dlna.org", ctx->output.dlna_features);
+			char *dlna_features = make_dlna_content(ctx->output.mimetype, ctx->output.duration);
+			kd_add(resp, "contentFeatures.dlna.org", dlna_features);
+			free(dlna_features);
 		}
 
 		// a range request - might happen even when we said NO RANGE !!!
