@@ -419,7 +419,6 @@ static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, size_t bytes, u8_
 			free(str);
 		}
 
-		// not pretty ...
 		mirror_header(headers, resp, "TransferMode.DLNA.ORG");
 
 		if (kd_lookup(headers, "getcontentFeatures.dlna.org")) {

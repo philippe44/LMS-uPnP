@@ -590,7 +590,7 @@ bool http_parse(int sock, char **request, key_data_t *rkd, char **body, int *len
 {
 	char line[256], *dp;
 	unsigned j;
-	int i, timeout = 100;
+	int i, timeout = 200;
 
 	rkd[0].key = NULL;
 
@@ -766,7 +766,7 @@ char *kd_dump(key_data_t *kd)
 	int pos = 0, size = 0;
 	char *str = NULL;
 
-	if (!kd) return strdup("\r\n");
+	if (!kd || !kd[0].key) return strdup("\r\n");
 
 	while (kd && kd[i].key) {
 		char *buf;
