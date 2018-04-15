@@ -1,3 +1,7 @@
+0.3.0.3
+ - device with no ServiceURL caused a NULL access while searching fro NextTRansportInfo
+ - when ProtocolInfo was not found, friendlyName memory was not released
+ 
 0.3.0.2
  - mimetype delayed acquisition in output_http is a boolean, relying now on out->mimetype
  - dlna features is a function call instead of a field in output structure (a bit cleaner)

@@ -1118,7 +1118,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 		NFREE(EventURL);
 		NFREE(ControlURL);
 
-		if (cSearchedSRV[i].idx == AVT_SRV_IDX && !XMLFindAction(location, ServiceURL, "SetNextAVTransportURI"))
+		if (ServiceURL && cSearchedSRV[i].idx == AVT_SRV_IDX && !XMLFindAction(location, ServiceURL, "SetNextAVTransportURI"))
 			Device->Config.AcceptNextURI = false;
 
 		NFREE(ServiceURL);
@@ -1135,6 +1135,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	// set remaining items now that we are sure
 	Device->Running 	= true;
 	strcpy(Device->friendlyName, friendlyName);
+	NFREE(friendlyName);
 
 	ip = ExtractIP(location);
 	if (!memcmp(Device->sq_config.mac, "\0\0\0\0\0\0", mac_size)) {
@@ -1156,8 +1157,6 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	CheckCodecs(Device->sq_config.codecs, *Sink);
 
 	MakeMacUnique(Device);
-
-	NFREE(friendlyName);
 
 	pthread_cond_init(&Device->Cond, 0);
 	pthread_create(&Device->Thread, NULL, &MRThread, Device);
