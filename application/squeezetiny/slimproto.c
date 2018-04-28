@@ -479,7 +479,7 @@ static void process_codc(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 		LOG_ERROR("[%p] no matching codec %c", ctx, out->codec);
     }
 
-	 UNLOCK_O;
+	UNLOCK_O;
 
 	LOG_DEBUG("[%p] codc: %c", ctx, codc->format);
 }
@@ -833,11 +833,11 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			 we don't want to send STMd before STMs
 			 also, if STMd is sent early, streaming of next track will start but
 			 then will stall for a long time while current track is finishing and
-			 services like Deezer close the connection before all has been sent,
-			 so need to wait a bit before sending STMd ... grr
+			 services like Deezer or RP plugin close the connection before all
+			 has been sent, so need to wait a bit before sending STMd ... grr
 			*/
-			if ((ctx->decode.state == DECODE_COMPLETE && ctx->status.output_running == THREAD_EXITED &&
-				 ctx->canSTMdu && (!ctx->status.duration || ctx->status.duration - ctx->status.ms_played < STREAM_DELAY)) ||
+			if ((ctx->decode.state == DECODE_COMPLETE && ctx->status.output_running == THREAD_EXITED &&	ctx->canSTMdu &&
+				(!ctx->output.remote || (ctx->status.duration && ctx->status.duration - ctx->status.ms_played < STREAM_DELAY))) ||
 				ctx->decode.state == DECODE_ERROR) {
 				if (ctx->decode.state == DECODE_COMPLETE) _sendSTMd = true;
 				if (ctx->decode.state == DECODE_ERROR)    _sendSTMn = true;
@@ -1021,7 +1021,7 @@ void slimproto_close(struct thread_ctx_s *ctx) {
 	LOG_INFO("[%p] slimproto stop for %s", ctx, ctx->config.name);
   	ctx->running = false;
 	wake_controller(ctx);
-	pthread_detach(ctx->thread);
+	pthread_join(ctx->thread, NULL);
 }
 
 

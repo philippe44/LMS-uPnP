@@ -1017,7 +1017,7 @@ static void *MainThread(void *args)
 		pthread_cond_reltimedwait(&glMainCond, &glMainMutex, 30*1000);
 		pthread_mutex_unlock(&glMainMutex);
 
-		if (glLogFile && glLogLimit != - 1) {
+		if (glLogFile && glLogLimit != -1) {
 			u32_t size = ftell(stderr);
 
 			if (size > glLogLimit*1024*1024) {

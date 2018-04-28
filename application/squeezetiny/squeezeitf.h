@@ -51,7 +51,6 @@ typedef struct metadata_s {
 	char *album;
 	char *title;
 	char *genre;
-	char *path;
 	char *artwork;
 	char *remote_title;
 	u32_t index;
@@ -59,7 +58,6 @@ typedef struct metadata_s {
 	u32_t duration;
 	u32_t file_size;
 	bool  remote;
-	u32_t track_hash;
 } metadata_t;
 
 typedef	struct sq_dev_param_s {

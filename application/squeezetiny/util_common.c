@@ -121,11 +121,15 @@ typedef enum {
 } dlna_org_flags_t;
 
 
-#define DLNA_ORG_OP (DLNA_ORG_OPERATION_RANGE)
-// GNU pre-processor seems to be confused if this is multiline ...
-#define DLNA_ORG_FLAG ( DLNA_ORG_FLAG_S0_INCREASE | DLNA_ORG_FLAG_STREAMING_TRANSFERT_MODE | DLNA_ORG_FLAG_BACKGROUND_TRANSFERT_MODE | DLNA_ORG_FLAG_CONNECTION_STALL | DLNA_ORG_FLAG_DLNA_V15 )
 
-/*----------------------------------------------------------------------------*/
+#define DLNA_ORG_OP (DLNA_ORG_OPERATION_RANGE)
+
+// GNU pre-processor seems to be confused if this is multiline ...
+
+#define DLNA_ORG_FLAG ( DLNA_ORG_FLAG_S0_INCREASE | DLNA_ORG_FLAG_STREAMING_TRANSFERT_MODE | DLNA_ORG_FLAG_BACKGROUND_TRANSFERT_MODE | DLNA_ORG_FLAG_CONNECTION_STALL | DLNA_ORG_FLAG_DLNA_V15 )
+
+
+/*----------------------------------------------------------------------------*/
 /* 																			  */
 /* CODEC & MIME management													  */
 /* 																			  */

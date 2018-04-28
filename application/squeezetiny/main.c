@@ -319,7 +319,6 @@ static void sq_init_metadata(metadata_t *metadata)
 	metadata->album 	= NULL;
 	metadata->title 	= NULL;
 	metadata->genre 	= NULL;
-	metadata->path 		= NULL;
 	metadata->artwork 	= NULL;
 	metadata->remote_title = NULL;
 
@@ -342,13 +341,13 @@ void sq_default_metadata(metadata_t *metadata, bool init)
 	if (!metadata->remote_title) metadata->remote_title	= strdup("[no remote]");
 }
 
+
 /*--------------------------------------------------------------------------*/
 bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, bool next)
 {
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
 	char cmd[1024];
 	char *rsp, *p;
-	u16_t idx;
 
 	if (!handle || !ctx->in_use || !ctx->config.dynamic.use_cli) {
 		if (ctx->config.dynamic.use_cli) {
@@ -358,107 +357,71 @@ bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, bool next)
 		return false;
 	}
 
-	sprintf(cmd, "%s playlist index", ctx->cli_id);
-	rsp = cli_send_cmd(cmd, true, true, ctx);
-
-	if (!rsp || (rsp && !*rsp)) {
-		LOG_ERROR("[%p]: missing index", ctx);
-		NFREE(rsp);
-		sq_default_metadata(metadata, true);
-		return false;
-	}
-
 	sq_init_metadata(metadata);
 
-	idx = atol(rsp);
-	NFREE(rsp);
-	metadata->index = idx;
-
-	if (next) {
-		sprintf(cmd, "%s playlist tracks", ctx->cli_id);
-		rsp = cli_send_cmd(cmd, true, true, ctx);
-		if (rsp && atol(rsp)) idx = (idx + 1) % atol(rsp);
-		else idx = 0;
-		NFREE(rsp);
-	}
-
-	sprintf(cmd, "%s playlist remote %d", ctx->cli_id, idx);
-	rsp  = cli_send_cmd(cmd, true, true, ctx);
-	if (rsp && *rsp == '1') metadata->remote = true;
-	else metadata->remote = false;
-	NFREE(rsp)
-
-	sprintf(cmd, "%s playlist path %d", ctx->cli_id, idx);
-	rsp = cli_send_cmd(cmd, true, true, ctx);
-	if (rsp && *rsp) {
-		metadata->path = rsp;
-		metadata->track_hash = hash32(metadata->path);
-		sprintf(cmd, "%s songinfo 0 10 url:%s tags:cfldatgrKN", ctx->cli_id, metadata->path);
-		rsp = cli_send_cmd(cmd, false, false, ctx);
-	}
+	sprintf(cmd, "%s status - 2 tags:xcfldatgrKN", ctx->cli_id);
+	rsp = cli_send_cmd(cmd, false, false, ctx);
 
 	if (rsp && *rsp) {
-		metadata->title = cli_find_tag(rsp, "title");
-		metadata->artist = cli_find_tag(rsp, "artist");
-		metadata->album = cli_find_tag(rsp, "album");
-		metadata->genre = cli_find_tag(rsp, "genre");
-		metadata->remote_title = cli_find_tag(rsp, "remote_title");
+		char *cur;
 
-		if ((p = cli_find_tag(rsp, "duration")) != NULL) {
-			metadata->duration = 1000 * atof(p);
+		// find the current index
+		if ((p = cli_find_tag(rsp, "playlist_cur_index")) != NULL) {
+			metadata->index = atoi(p);
+			if (next) metadata->index++;
 			free(p);
 		}
 
-		if ((p = cli_find_tag(rsp, "filesize")) != NULL) {
-			metadata->file_size = atol(p);
+		// need to make sure we rollover if end of list
+		if ((p = cli_find_tag(rsp, "playlist_tracks")) != NULL) {
+			metadata->index %= atoi(p);
+		}
+
+		sprintf(cmd, "playlist%%20index%%3a%d ", metadata->index);
+
+		if ((cur = stristr(rsp, cmd)) != NULL) {
+			metadata->title = cli_find_tag(cur, "title");
+			metadata->artist = cli_find_tag(cur, "artist");
+			metadata->album = cli_find_tag(cur, "album");
+			metadata->genre = cli_find_tag(cur, "genre");
+			metadata->remote_title = cli_find_tag(cur, "remote_title");
+
+			if ((p = cli_find_tag(cur, "duration")) != NULL) {
+				metadata->duration = 1000 * atof(p);
+				free(p);
+			}
+
 			/*
 			at this point, LMS sends the original filesize, not the transcoded
 			so it simply does not work
-			*/
-			metadata->file_size = 0;
-			free(p);
-		}
-
-		if ((p = cli_find_tag(rsp, "tracknum")) != NULL) {
-			metadata->track = atol(p);
-			free(p);
-		}
-
-		metadata->artwork = cli_find_tag(rsp, "artwork_url");
-		if (!metadata->artwork || !strlen(metadata->artwork)) {
-			NFREE(metadata->artwork);
-			if ((p = cli_find_tag(rsp, "coverid")) != NULL) {
-				metadata->artwork = malloc(_STR_LEN_);
-				snprintf(metadata->artwork, _STR_LEN_, "http://%s:%s/music/%s/cover.jpg", ctx->server_ip, ctx->server_port, p);
+			if ((p = cli_find_tag(rsp, "filesize")) != NULL) {
+				metadata->file_size = atol(p);
 				free(p);
+			}
+			*/
+
+			if ((p = cli_find_tag(cur, "tracknum")) != NULL) {
+				metadata->track = atol(p);
+				free(p);
+			}
+
+			if ((p = cli_find_tag(cur, "remote")) != NULL) {
+				metadata->remote = (atoi(p) == 1);
+				free(p);
+			}
+
+			metadata->artwork = cli_find_tag(cur, "artwork_url");
+			if (!metadata->artwork || !strlen(metadata->artwork)) {
+				NFREE(metadata->artwork);
+				if ((p = cli_find_tag(cur, "coverid")) != NULL) {
+					metadata->artwork = malloc(_STR_LEN_);
+					snprintf(metadata->artwork, _STR_LEN_, "http://%s:%s/music/%s/cover.jpg", ctx->server_ip, ctx->server_port, p);
+					free(p);
+				}
 			}
 		}
 	}
-	else {
-		LOG_INFO("[%p]: no metadata using songinfo", ctx, idx);
-		NFREE(rsp);
 
-		sprintf(cmd, "%s playlist title %d", ctx->cli_id, idx);
-		metadata->title = cli_send_cmd(cmd, true, true, ctx);
-
-		sprintf(cmd, "%s playlist album %d", ctx->cli_id, idx);
-		metadata->album = cli_send_cmd(cmd, true, true, ctx);
-
-		sprintf(cmd, "%s playlist artist %d", ctx->cli_id, idx);
-		metadata->artist = cli_send_cmd(cmd, true, true, ctx);
-
-		sprintf(cmd, "%s playlist genre %d", ctx->cli_id, idx);
-		metadata->genre = cli_send_cmd(cmd, true, true, ctx);
-
-		sprintf(cmd, "%s status %d 1 tags:K", ctx->cli_id, idx);
-		rsp = cli_send_cmd(cmd, false, false, ctx);
-		if (rsp && *rsp) metadata->artwork = cli_find_tag(rsp, "artwork_url");
-		NFREE(rsp);
-
-		sprintf(cmd, "%s playlist duration %d", ctx->cli_id, idx);
-		rsp = cli_send_cmd(cmd, true, true, ctx);
-		if (rsp) metadata->duration = 1000 * atof(rsp);
-	}
 	NFREE(rsp);
 
 	if (!next && metadata->duration) {
@@ -480,7 +443,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, bool next)
 
 	sq_default_metadata(metadata, false);
 
-	LOG_DEBUG("[%p]: idx %d\n\tartist:%s\n\talbum:%s\n\ttitle:%s\n\tgenre:%s\n\tduration:%d.%03d\n\tsize:%d\n\tcover:%s", ctx, idx,
+	LOG_DEBUG("[%p]: idx %d\n\tartist:%s\n\talbum:%s\n\ttitle:%s\n\tgenre:%s\n\tduration:%d.%03d\n\tsize:%d\n\tcover:%s", ctx, metadata->index,
 				metadata->artist, metadata->album, metadata->title,
 				metadata->genre, div(metadata->duration, 1000).quot,
 				div(metadata->duration,1000).rem, metadata->file_size,
@@ -489,6 +452,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, bool next)
 	return true;
 }
 
+
 /*--------------------------------------------------------------------------*/
 void sq_free_metadata(metadata_t *metadata)
 {
@@ -496,7 +460,6 @@ void sq_free_metadata(metadata_t *metadata)
 	NFREE(metadata->album);
 	NFREE(metadata->title);
 	NFREE(metadata->genre);
-	NFREE(metadata->path);
 	NFREE(metadata->artwork);
 	NFREE(metadata->remote_title);
 }
