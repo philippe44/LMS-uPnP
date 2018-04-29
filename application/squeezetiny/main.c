@@ -347,7 +347,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, bool next)
 {
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
 	char cmd[1024];
-	char *rsp, *p;
+	char *rsp, *p, *cur;
 
 	if (!handle || !ctx->in_use || !ctx->config.dynamic.use_cli) {
 		if (ctx->config.dynamic.use_cli) {
@@ -362,84 +362,84 @@ bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, bool next)
 	sprintf(cmd, "%s status - 2 tags:xcfldatgrKN", ctx->cli_id);
 	rsp = cli_send_cmd(cmd, false, false, ctx);
 
-	if (rsp && *rsp) {
-		char *cur;
+	if (!rsp || !*rsp) {
+		sq_default_metadata(metadata, false);
+		LOG_WARN("[%p]: cannot get metadata", ctx);
+		return true;
+	}
 
-		// find the current index
-		if ((p = cli_find_tag(rsp, "playlist_cur_index")) != NULL) {
-			metadata->index = atoi(p);
-			if (next) metadata->index++;
+	// find the current index
+	if ((p = cli_find_tag(rsp, "playlist_cur_index")) != NULL) {
+		metadata->index = atoi(p);
+		if (next) metadata->index++;
+		free(p);
+	}
+
+	// need to make sure we rollover if end of list
+	if ((p = cli_find_tag(rsp, "playlist_tracks")) != NULL) {
+		metadata->index %= atoi(p);
+	}
+
+	sprintf(cmd, "playlist%%20index%%3a%d ", metadata->index);
+
+	if ((cur = stristr(rsp, cmd)) != NULL) {
+		metadata->title = cli_find_tag(cur, "title");
+		metadata->artist = cli_find_tag(cur, "artist");
+		metadata->album = cli_find_tag(cur, "album");
+		metadata->genre = cli_find_tag(cur, "genre");
+		metadata->remote_title = cli_find_tag(cur, "remote_title");
+
+		if ((p = cli_find_tag(cur, "duration")) != NULL) {
+			metadata->duration = 1000 * atof(p);
 			free(p);
 		}
 
-		// need to make sure we rollover if end of list
-		if ((p = cli_find_tag(rsp, "playlist_tracks")) != NULL) {
-			metadata->index %= atoi(p);
+		/*
+		at this point, LMS sends the original filesize, not the transcoded
+		so it simply does not work
+		if ((p = cli_find_tag(rsp, "filesize")) != NULL) {
+			metadata->file_size = atol(p);
+			free(p);
+		}
+		*/
+
+		if ((p = cli_find_tag(cur, "tracknum")) != NULL) {
+			metadata->track = atol(p);
+			free(p);
 		}
 
-		sprintf(cmd, "playlist%%20index%%3a%d ", metadata->index);
+		if ((p = cli_find_tag(cur, "remote")) != NULL) {
+			metadata->remote = (atoi(p) == 1);
+			free(p);
+		}
 
-		if ((cur = stristr(rsp, cmd)) != NULL) {
-			metadata->title = cli_find_tag(cur, "title");
-			metadata->artist = cli_find_tag(cur, "artist");
-			metadata->album = cli_find_tag(cur, "album");
-			metadata->genre = cli_find_tag(cur, "genre");
-			metadata->remote_title = cli_find_tag(cur, "remote_title");
-
-			if ((p = cli_find_tag(cur, "duration")) != NULL) {
-				metadata->duration = 1000 * atof(p);
+		metadata->artwork = cli_find_tag(cur, "artwork_url");
+		if (!metadata->artwork || !strlen(metadata->artwork)) {
+			NFREE(metadata->artwork);
+			if ((p = cli_find_tag(cur, "coverid")) != NULL) {
+				metadata->artwork = malloc(_STR_LEN_);
+				snprintf(metadata->artwork, _STR_LEN_, "http://%s:%s/music/%s/cover.jpg", ctx->server_ip, ctx->server_port, p);
 				free(p);
-			}
-
-			/*
-			at this point, LMS sends the original filesize, not the transcoded
-			so it simply does not work
-			if ((p = cli_find_tag(rsp, "filesize")) != NULL) {
-				metadata->file_size = atol(p);
-				free(p);
-			}
-			*/
-
-			if ((p = cli_find_tag(cur, "tracknum")) != NULL) {
-				metadata->track = atol(p);
-				free(p);
-			}
-
-			if ((p = cli_find_tag(cur, "remote")) != NULL) {
-				metadata->remote = (atoi(p) == 1);
-				free(p);
-			}
-
-			metadata->artwork = cli_find_tag(cur, "artwork_url");
-			if (!metadata->artwork || !strlen(metadata->artwork)) {
-				NFREE(metadata->artwork);
-				if ((p = cli_find_tag(cur, "coverid")) != NULL) {
-					metadata->artwork = malloc(_STR_LEN_);
-					snprintf(metadata->artwork, _STR_LEN_, "http://%s:%s/music/%s/cover.jpg", ctx->server_ip, ctx->server_port, p);
-					free(p);
-				}
 			}
 		}
+
+		if (metadata->artwork && !strncmp(metadata->artwork, IMAGEPROXY, strlen(IMAGEPROXY))) {
+			char *artwork = malloc(_STR_LEN_);
+
+			snprintf(artwork, _STR_LEN_, "http://%s:%s%s", ctx->server_ip, ctx->server_port, metadata->artwork);
+			// why the f... does LMS use .png extension in image proxy, where IT IS jpeg?
+			if ((p = strstr(artwork, ".png")) != NULL) strcpy(p, ".jpg");
+    		free(metadata->artwork);
+			metadata->artwork = artwork;
+		}
+	}
+
+	if (!next && metadata->duration && ((p = cli_find_tag(rsp, "time")) != NULL)) {
+		metadata->duration -= (u32_t) (atof(p) * 1000);
+		free(p);
 	}
 
 	NFREE(rsp);
-
-	if (!next && metadata->duration) {
-		sprintf(cmd, "%s time", ctx->cli_id);
-		rsp = cli_send_cmd(cmd, true, true, ctx);
-		if (rsp && *rsp) metadata->duration -= (u32_t) (atof(rsp) * 1000);
-		NFREE(rsp);
-	}
-
-	if (metadata->artwork && !strncmp(metadata->artwork, IMAGEPROXY, strlen(IMAGEPROXY))) {
-		char *artwork = malloc(_STR_LEN_), *p;
-
-		snprintf(artwork, _STR_LEN_, "http://%s:%s%s", ctx->server_ip, ctx->server_port, metadata->artwork);
-		// why the f... does LMS use .png extension in image proxy, where IT IS jpeg?
-		if ((p = strstr(artwork, ".png")) != NULL) strcpy(p, ".jpg");
-		free(metadata->artwork);
-		metadata->artwork = artwork;
-	}
 
 	sq_default_metadata(metadata, false);
 
