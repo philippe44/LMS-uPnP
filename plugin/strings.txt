@@ -78,6 +78,9 @@ PLUGIN_UPNPBRIDGE_STREAM
 
 PLUGIN_UPNPBRIDGE_SLIMPROTO
 	EN	Control protocol debugging (slimproto)
+	
+PLUGIN_UPNPBRIDGE_SLIMMAIN
+	EN	Slim Main function debugging
 
 PLUGIN_UPNPBRIDGE_DECODE
 	EN	Decode debugging
