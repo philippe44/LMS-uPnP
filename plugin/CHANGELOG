@@ -1,3 +1,6 @@
+0.3.0.5
+ - add aarch64 version
+ 
 0.3.0.4
  - (1) slimproto_close must join thread, not detach it otherwise other _close function might destroy buffer mutexes
  - (1) move to "status" cmd query to have only a single query for all metadata
