@@ -464,6 +464,27 @@ void sq_free_metadata(metadata_t *metadata)
 	NFREE(metadata->remote_title);
 }
 
+
+/*--------------------------------------------------------------------------*/
+u32_t sq_self_time(sq_dev_handle_t handle)
+{
+	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
+	u32_t time;
+	u32_t now = gettime_ms();
+
+	LOCK_O;
+
+	if (ctx->render.index != -1 && ctx->render.state != RD_STOPPED) {
+		time = now - ctx->render.track_start_time - ctx->render.ms_paused;
+		if (ctx->render.state == RD_PAUSED) time -= now - ctx->render.track_pause_time;
+	} else time = 0;
+
+	UNLOCK_O;
+
+	return time;
+}
+
+
 /*---------------------------------------------------------------------------*/
 void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *cookie, void *param)
 {

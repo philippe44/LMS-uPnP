@@ -1,3 +1,6 @@
+0.3.0.7
+ - set AccuratePlayPoints to false
+
 0.3.0.6
  - 32 bits comparaison correction (volume could be stuck)
 
