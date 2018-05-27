@@ -887,7 +887,7 @@ static void *UpdateThread(void *args)
 				for (i = 0; i < MAX_RENDERERS; i++) {
 					Device = glMRDevices + i;
 					if (Device->Running &&
-						(Device->LastSeen + PRESENCE_TIMEOUT - now > 0x7fffffff	||
+						((Device->LastSeen + PRESENCE_TIMEOUT) - now > PRESENCE_TIMEOUT	||
 						Device->ErrorCount > MAX_ACTION_ERRORS)) {
 
 						pthread_mutex_lock(&Device->Mutex);

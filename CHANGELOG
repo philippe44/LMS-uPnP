@@ -1,3 +1,6 @@
+0.3.0.6
+ - 32 bits comparaison correction (volume could be stuck)
+
 0.3.0.5
  - add aarch64 version
  

@@ -669,7 +669,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 				wake = true;
 			}
 
-			if (ctx->cli_sock > 0 && (ctx->cli_timestamp + 10000 - gettime_ms() > 0x7fffffff)) {
+			if (ctx->cli_sock > 0 && ((ctx->cli_timestamp + 10000) - gettime_ms() > 10000)) {
 				if (!mutex_trylock(ctx->cli_mutex)) {
 					LOG_INFO("[%p] Closing CLI socket %d", ctx, ctx->cli_sock);
 					closesocket(ctx->cli_sock);
@@ -692,7 +692,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 
 		// check for metadata update (LOCK_O not really necessary here)
 		if (ctx->output.state == OUTPUT_RUNNING && ctx->config.send_icy && 
-			ctx->output.icy.interval && ctx->output.icy.last + ICY_UPDATE_TIME- now > 0x7fffffff) {
+			ctx->output.icy.interval && (ctx->output.icy.last + ICY_UPDATE_TIME) - now > ICY_UPDATE_TIME) {
 			struct metadata_s metadata;
 			u32_t hash;
 
