@@ -766,7 +766,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			ctx->status.current_sample_rate = ctx->output.current_sample_rate;
 			ctx->status.output_running = ctx->output_running;
 			ctx->status.duration = ctx->render.duration;
-			if (!ctx->render.ms_played && ctx->render.index != -1) {
+			if (!ctx->render.ms_played && ctx->render.index != -1 && ctx->render.state != RD_STOPPED) {
 				ctx->status.ms_played = now - ctx->render.track_start_time - ctx->render.ms_paused;
 				if (ctx->render.state == RD_PAUSED) ctx->status.ms_played -= now - ctx->render.track_pause_time;
 			} else ctx->status.ms_played = ctx->render.ms_played;
