@@ -1,3 +1,7 @@
+0.3.0.8
+ - set STREAM_DELAY to 15s
+ - fix 24 bits replay gain 
+ 
 0.3.0.7
  - set AccuratePlayPoints to false
 

@@ -426,7 +426,7 @@ void lpcm_pack(u8_t *dst, u8_t *src, size_t bytes, u8_t channels, int endian) {
 
 #define MAX_VAL8  0x7fffffLL
 #define MAX_VAL16 0x7fffffffLL
-#define MAX_VAL24 0x7fffffffffLL
+#define MAX_VAL24 0x7fffffffffffLL	// same as VAL32 as the 24 bits samples are loaded in the 3 upper bytes
 #define MAX_VAL32 0x7fffffffffffLL
 // this probably does not work for little-endian CPU
 /*---------------------------------------------------------------------------*/
@@ -468,11 +468,11 @@ void apply_gain(void *p, u32_t gain, size_t bytes, u8_t size, int endian) {
 		if (size == 24) {
 			u8_t *buf = p;
 			while (i--) {
-				// for 24 bits samples, first put the sample in the 3 upper bytes
+				// put the 24 bits sample in the 3 upper bytes to keep sign bit
 				sample = (s32_t) ((((u32_t) *buf) << 8) | ((u32_t) *(buf+1) << 16) | ((u32_t) *(buf+2) << 24)) * (s64_t) gain;
 				if (sample > MAX_VAL24) sample = MAX_VAL24;
 				else if (sample < -MAX_VAL24) sample = -MAX_VAL24;
-				sample >>= 16;
+				sample >>= 16 + 8;
 				*buf++ = sample;
 				*buf++ = sample >> 8;
 				*buf++ = sample >> 16;
@@ -508,10 +508,11 @@ void apply_gain(void *p, u32_t gain, size_t bytes, u8_t size, int endian) {
 		if (size == 24) {
 			u8_t *buf = p;
 			while (i--) {
+				// put the 24 bits sample in the 3 upper bytes to keep sign bit
 				sample = (s32_t) ((((u32_t) *buf) << 24) | ((u32_t) *(buf+1) << 16) | ((u32_t) *(buf+2) << 8)) * (s64_t) gain;
 				if (sample > MAX_VAL24) sample = MAX_VAL24;
 				else if (sample < -MAX_VAL24) sample = -MAX_VAL24;
-				sample >>= 16;
+				sample >>= 16 + 8;
 				*buf++ = sample >> 16;
 				*buf++ = sample >> 8;
 				*buf++ = sample;

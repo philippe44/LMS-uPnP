@@ -201,7 +201,7 @@ typedef enum { STOPPED = 0, DISCONNECT, STREAMING_WAIT,
 			   STREAMING_BUFFERING, STREAMING_FILE, STREAMING_HTTP, SEND_HEADERS, RECV_HEADERS } stream_state;
 typedef enum { DISCONNECT_OK = 0, LOCAL_DISCONNECT = 1, REMOTE_DISCONNECT = 2, UNREACHABLE = 3, TIMEOUT = 4 } disconnect_code;
 
-#define STREAM_DELAY 30000
+#define STREAM_DELAY 15000
 
 struct streamstate {
 	stream_state state;
