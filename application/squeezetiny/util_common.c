@@ -254,7 +254,10 @@ char* find_pcm_mimetype(u8_t endian, u8_t *sample_size, bool truncable, u32_t sa
 				if (strstr(*p, a) &&
 				   (!strstr(*p, "rate=") || strstr(*p, r)) &&
 				   (!strstr(*p, "channels=") || strstr(*p, c))) {
-					return strdup(*p);
+					char *rsp;
+
+					asprintf(&rsp, "%s;%s;%s", a, r, c);
+					return rsp;
 				}
 				p++;
 			}

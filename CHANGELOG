@@ -1,3 +1,6 @@
+0.3.0.9
+ - pcm format was not inserting rate & channel when it was missing in ProtocolInfo
+ 
 0.3.0.8
  - set STREAM_DELAY to 15s
  - fix 24 bits replay gain 
