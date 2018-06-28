@@ -55,11 +55,8 @@ decode_state thru_decode(struct thread_ctx_s *ctx) {
 
 	if (ctx->decode.new_stream) {
 		LOG_INFO("[%p]: setting track_start", ctx);
-
-		//FIXME: not in use for now, sample rate always same how to know starting rate when resamplign will be used
 		ctx->output.current_sample_rate = decode_newstream(p->sample_rate, ctx->output.supported_rates, ctx);
 		ctx->output.track_start = ctx->outputbuf->writep;
-		if (ctx->output.fade_mode) _checkfade(true, ctx);
 		ctx->decode.new_stream = false;
 	}
 

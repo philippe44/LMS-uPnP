@@ -49,12 +49,15 @@ static void output_thread(struct thread_ctx_s *ctx) {
 	u8_t *tbuf = NULL;
 	u8_t *hbuf = malloc(HEAD_SIZE);
 	fd_set rfds, wfds;
+	struct buffer __obuf, *obuf = &__obuf;
 
 	/*
 	This function is higly non-linear and painful to read at first, I agree
 	but it's also much easier, at the end, than a series of intricated if/else.
 	Read it carefully, and then it's pretty simple
 	*/
+
+	buf_init(obuf, 128*1024);
 
 	while (ctx->output_running) {
 		struct timeval timeout = {0, 50*1000};
@@ -79,7 +82,7 @@ static void output_thread(struct thread_ctx_s *ctx) {
 			} else {
 				// if streaming fails, must exit for slimproto
 				LOCK_D; LOCK_O;
-				if (!_output_bytes(ctx) && ctx->decode.state == DECODE_COMPLETE) {
+				if (!_buf_used(obuf) && ctx->decode.state == DECODE_COMPLETE) {
 					UNLOCK_O; UNLOCK_D;
 					break;
 				}
@@ -173,8 +176,11 @@ static void output_thread(struct thread_ctx_s *ctx) {
 			continue;
 		}
 
+		// get some data ready to send
+		_output_fill(obuf, ctx);
+
 		// now are surely running - socket is non blocking, so this is fast
-		if (_output_bytes(ctx) || tpos < bytes) {
+		if (_buf_used(obuf) || tpos < bytes) {
 			ssize_t	space;
 
 			// we cannot write, so don't bother
@@ -187,7 +193,7 @@ static void output_thread(struct thread_ctx_s *ctx) {
 			if (tpos < bytes) {
 				space = min(bytes - tpos, MAX_BLOCK);
 				LOG_DEBUG("[%p]: read from tail %zd ", ctx, space);
-			} else space = min(_output_cont_bytes(ctx), MAX_BLOCK);
+			} else space = min(_buf_cont_read(obuf), MAX_BLOCK);
 
 			// if chunked mode start by sending the header
 			if (chunk_count) space = min(space, chunk_count);
@@ -205,7 +211,7 @@ static void output_thread(struct thread_ctx_s *ctx) {
 				space = min(space, TAIL_SIZE - i);
 				space = send(sock, tbuf + i, space, 0);
 				LOG_DEBUG("[%p]: send from tail %zd ", ctx, space);
-			} else space = send(sock, (void*) _output_readp(ctx), space, 0);
+			} else space = send(sock, (void*) _buf_readp(obuf), space, 0);
 
 			if (space > 0) {
 
@@ -213,7 +219,7 @@ static void output_thread(struct thread_ctx_s *ctx) {
 				if (!bytes) _output_boot(ctx);
 
 				if (bytes < HEAD_SIZE) {
-					memcpy(hbuf + bytes, _output_readp(ctx), min(space, HEAD_SIZE - bytes));
+					memcpy(hbuf + bytes, _buf_readp(obuf), min(space, HEAD_SIZE - bytes));
 					hsize += min(space, HEAD_SIZE - bytes);
 				}
 
@@ -231,11 +237,11 @@ static void output_thread(struct thread_ctx_s *ctx) {
 					if (tbuf) {
 						size_t i = tpos % TAIL_SIZE;
 						ssize_t n = min(space, TAIL_SIZE - i);
-						memcpy(tbuf + i, _output_readp(ctx), n);
-						memcpy(tbuf, _output_readp(ctx), space - n);
+						memcpy(tbuf + i, _buf_readp(obuf), n);
+						memcpy(tbuf, (u8_t*) _buf_readp(obuf) + n, space - n);
 					}
 					tpos = bytes += space;
-					_output_inc_readp(ctx, space);
+					_buf_inc_readp(obuf, space);
 				} else tpos += space;
 
 				LOG_SDEBUG("[%p] sent %u bytes (total: %u)", ctx, space, bytes);
@@ -269,6 +275,7 @@ static void output_thread(struct thread_ctx_s *ctx) {
 
 	NFREE(tbuf);
 	NFREE(hbuf);
+	buf_destroy(obuf);
 
 	// in chunked mode, a full chunk might not have been sent (due to TCP)
 	if (sock != -1) shutdown_socket(sock);
@@ -336,6 +343,8 @@ void output_flush(struct thread_ctx_s *ctx) {
 	LOCK_O;
 	ctx->output.track_started = false;
 	ctx->output.track_start = NULL;
+	NFREE(ctx->output.header.buffer);
+	ctx->output.header.count = 0;
 	ctx->render.index = -1;
 	UNLOCK_O;
 

@@ -126,18 +126,16 @@ void decode_init(void) {
 	if (!strstr(exclude_codecs, "alac") && (!include_codecs || strstr(include_codecs, "alac")))  codecs[i++] = register_ff("alc");
 	if (!strstr(exclude_codecs, "wma")  && (!include_codecs || strstr(include_codecs, "wma")))   codecs[i++] = register_ff("wma");
 #endif
-	codecs[i++] = register_pcm();
-	codecs[i++] = register_mad();
-	codecs[i++] = register_mpg();
-	codecs[i++] = register_flac();
-	codecs[i++] = register_faad();
-	codecs[i++] = register_vorbis();
 #if RESAMPLE
 	register_soxr();
 #endif
 #else
+	codecs[i++] = register_mad();
+	codecs[i++] = register_faad();
+	codecs[i++] = register_vorbis();
 	codecs[i++] = register_pcm();
 	codecs[i++] = register_flac();
+	codecs[i++] = register_flac_thru();
 	codecs[i++] = register_thru();
 #endif
 }
@@ -146,18 +144,16 @@ void decode_init(void) {
 /*---------------------------------------------------------------------------*/
 void decode_end(void) {
 #if DECODE
-	deregister_pcm();
-	deregister_mpg();
-	deregister_mad();
-	deregister_flac();
-	deregister_faad();
-	deregister_vorbis();
 #if RESAMPLE
 	deregister_soxr();
 #endif
 #else
+	deregister_vorbis();
+	deregister_faad();
+	deregister_mad();
 	deregister_pcm();
 	deregister_flac();
+	deregister_flac_thru();
 	deregister_thru();
 #endif
 }
@@ -233,7 +229,7 @@ unsigned decode_newstream(unsigned sample_rate, unsigned supported_rates[], stru
 }
 
 /*---------------------------------------------------------------------------*/
-void codec_open(u8_t codec, u8_t sample_size, u32_t sample_rate, u8_t channels, u8_t endianness, struct thread_ctx_s *ctx) {
+bool codec_open(u8_t codec, u8_t sample_size, u32_t sample_rate, u8_t channels, u8_t endianness, struct thread_ctx_s *ctx) {
 	int i;
 
 	LOG_DEBUG("codec open: '%c'", codec);
@@ -250,7 +246,7 @@ void codec_open(u8_t codec, u8_t sample_size, u32_t sample_rate, u8_t channels, 
 	// find the required codec
 	for (i = 0; i < MAX_CODECS; ++i) {
 
-		if (codecs[i] && (codecs[i]->id == codec || codecs[i]->id == '*')) {
+		if (codecs[i] && codecs[i]->id == codec) {
 
 			if (ctx->codec && ctx->codec != codecs[i]) {
 				LOG_DEBUG("closing codec: '%c'", ctx->codec->id);
@@ -262,12 +258,14 @@ void codec_open(u8_t codec, u8_t sample_size, u32_t sample_rate, u8_t channels, 
 			ctx->decode.state = DECODE_READY;
 
 			UNLOCK_D;
-			return;
+			return true;
 		}
 	}
 
 	UNLOCK_D;
 
 	LOG_ERROR("codec not found", NULL);
+
+	return false;
 }
 

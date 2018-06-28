@@ -40,6 +40,92 @@
 #define WINEVENT  1
 #endif
 
+#if defined(RESAMPLE) || defined(RESAMPLE_MP)
+#undef  RESAMPLE
+#define RESAMPLE  1 // resampling
+#define PROCESS   1 // any sample processing (only resampling at present)
+#else
+#define RESAMPLE  0
+#define PROCESS   0
+#endif
+#if defined(RESAMPLE_MP)
+#undef RESAMPLE_MP
+#define RESAMPLE_MP 1
+#else
+#define RESAMPLE_MP 0
+#endif
+
+#if defined(FFMPEG)
+#undef FFMPEG
+#define FFMPEG    1
+#else
+#define FFMPEG    0
+#endif
+
+#if defined(LINKALL)
+#undef LINKALL
+#define LINKALL   1 // link all libraries at build time - requires all to be available at run time
+#else
+#define LINKALL   0
+#endif
+
+#if !LINKALL
+
+// dynamically loaded libraries at run time
+
+#if LINUX
+#define LIBFLAC "libFLAC.so.8"
+#define LIBMAD  "libmad.so.0"
+#define LIBMPG "libmpg123.so.0"
+#define LIBVORBIS "libvorbisfile.so.3"
+#define LIBTREMOR "libvorbisidec.so.1"
+#define LIBFAAD "libfaad.so.2"
+#define LIBAVUTIL   "libavutil.so.%d"
+#define LIBAVCODEC  "libavcodec.so.%d"
+#define LIBAVFORMAT "libavformat.so.%d"
+#define LIBSOXR "libsoxr.so.0"
+#endif
+
+#if OSX
+#define LIBFLAC "libFLAC.8.dylib"
+#define LIBMAD  "libmad.0.dylib"
+#define LIBMPG "libmpg123.0.dylib"
+#define LIBVORBIS "libvorbisfile.3.dylib"
+#define LIBTREMOR "libvorbisidec.1.dylib"
+#define LIBFAAD "libfaad.2.dylib"
+#define LIBAVUTIL   "libavutil.%d.dylib"
+#define LIBAVCODEC  "libavcodec.%d.dylib"
+#define LIBAVFORMAT "libavformat.%d.dylib"
+#define LIBSOXR "libsoxr.0.dylib"
+#endif
+
+#if WIN
+#define LIBFLAC "libFLAC.dll"
+#define LIBMAD  "libmad-0.dll"
+#define LIBMPG "libmpg123-0.dll"
+#define LIBVORBIS "libvorbisfile.dll"
+#define LIBTREMOR "libvorbisidec.dll"
+#define LIBFAAD "libfaad2.dll"
+#define LIBAVUTIL   "avutil-%d.dll"
+#define LIBAVCODEC  "avcodec-%d.dll"
+#define LIBAVFORMAT "avformat-%d.dll"
+#define LIBSOXR "libsoxr.dll"
+#endif
+
+#if FREEBSD
+#define LIBFLAC "libFLAC.so.11"
+#define LIBMAD  "libmad.so.2"
+#define LIBMPG "libmpg123.so.0"
+#define LIBVORBIS "libvorbisfile.so.6"
+#define LIBTREMOR "libvorbisidec.so.1"
+#define LIBFAAD "libfaad.so.2"
+#define LIBAVUTIL   "libavutil.so.%d"
+#define LIBAVCODEC  "libavcodec.so.%d"
+#define LIBAVFORMAT "libavformat.so.%d"
+#endif
+
+#endif // !LINKALL
+
 #define MAX_HEADER 4096 // do not reduce as icy-meta max is 4080
 
 #include <stdio.h>
@@ -105,7 +191,8 @@ struct wake {
 #error can not support u64_t
 #endif
 
-#define BYTES_PER_FRAME 4
+// this is for decoded frames buffers (32 bits * 2 channels)
+#define BYTES_PER_FRAME 8
 
 typedef enum { THREAD_KILLED = 0, THREAD_RUNNING, THREAD_EXITED } thread_state;
 
@@ -151,6 +238,7 @@ void set_nosigpipe(sockfd s);
 void 		winsock_init(void);
 void 		winsock_close(void);
 void*		dlopen(const char *filename, int flag);
+void 		dlclose(void *handle);
 void*		dlsym(void *handle, const char *symbol);
 char*		dlerror(void);
 int 		poll(struct pollfd *fds, unsigned long numfds, int timeout);
@@ -270,7 +358,7 @@ void 		decode_close(struct thread_ctx_s *ctx);
 void 		decode_flush(struct thread_ctx_s *ctx);
 unsigned 	decode_newstream(unsigned sample_rate, unsigned supported_rates[],
 							 struct thread_ctx_s *ctx);
-void 		codec_open(u8_t codec, u8_t sample_size, u32_t sample_rate,
+bool 		codec_open(u8_t codec, u8_t sample_size, u32_t sample_rate,
 					   u8_t	channels, u8_t endianness, struct thread_ctx_s *ctx);
 
 #if PROCESS
@@ -307,21 +395,21 @@ typedef enum { FADE_INACTIVE = 0, FADE_DUE, FADE_ACTIVE } fade_state;
 typedef enum { FADE_UP = 1, FADE_DOWN, FADE_CROSS } fade_dir;
 typedef enum { FADE_NONE = 0, FADE_CROSSFADE, FADE_IN, FADE_OUT, FADE_INOUT } fade_mode;
 
+typedef enum { ENCODE_THRU, ENCODE_PCM, ENCODE_FLAC, ENCODE_MP3 } encode_mode;
+
 // function starting with _ must be called with mutex locked
 void 		output_init(unsigned output_buf_size, struct thread_ctx_s *ctx);
 void 		output_close(struct thread_ctx_s *ctx);
-size_t		output_pcm_header(void **header, size_t *hsize, struct thread_ctx_s *ctx );
 void 		output_free_icy(struct thread_ctx_s *ctx);
 void 		swap(u8_t *src, u8_t *dst, size_t bytes, u8_t size);
 void 		truncate16(u8_t *src, u8_t *dst, size_t bytes, int in_endian, int out_endian);
 void 		lpcm_pack(u8_t *dst, u8_t *src, size_t bytes, u8_t channels, int endian);
 void 		apply_gain(void *p, u32_t gain, size_t bytes, u8_t size, int endian);
 
-unsigned	_output_bytes(struct thread_ctx_s *ctx);
-unsigned	_output_cont_bytes(struct thread_ctx_s *ctx);
-void* 		_output_readp(struct thread_ctx_s *ctx);
-void 		_output_inc_readp(struct thread_ctx_s *ctx, unsigned by);
 void 		_output_boot(struct thread_ctx_s *ctx);
+void		_output_fill(struct buffer *buf, struct thread_ctx_s *ctx);
+void 		_output_new_stream(struct thread_ctx_s *ctx);
+size_t		_output_pcm_header(struct thread_ctx_s *ctx );
 void 		_checkfade(bool, struct thread_ctx_s *ctx);
 
 // output_http.c
@@ -333,7 +421,7 @@ void 		wake_output(struct thread_ctx_s *ctx);
 struct outputstate {
 	output_state state;		// license to stream or not
 	char	format;			// data sent format (p=pcm, w=wav, i=aif, f=flac)
-	bool	thru;			// thru mode, just pass data to player
+	encode_mode	encode;		// how shall audio be re-encoded
 	int     index;			// track index served by output thread
 	int		http;			// listening socket of http server
 	u16_t	port;           // listening port of http server
@@ -352,13 +440,19 @@ struct outputstate {
 	unsigned supported_rates[2];	// moot for now
 	// for icy data
 	struct {
-		u32_t interval, remain;
-		u16_t size, count;
+		size_t interval, remain;
+		size_t size, count;
 		char buffer[ICY_LEN_MAX];
 		char *artist, *title, *artwork;
 		u32_t hash, last;
 		bool  updated;
 	} icy;
+	// for format that requires headers
+	struct {
+		size_t size, count;
+		char *buffer;
+	} header;
+
 	// only useful with decode mode
 	fade_state fade;		// fading state
 	u8_t	   *fade_start;	// pointer to fading start in output buffer
@@ -428,10 +522,8 @@ struct thread_ctx_s {
 	struct codec		*codec;
 	struct buffer		__s_buf;
 	struct buffer		__o_buf;
-	struct buffer		__e_buf;
 	struct buffer		*streambuf;
 	struct buffer		*outputbuf;
-	struct buffer		*encodebuf;
 	in_addr_t 	slimproto_ip;
 	unsigned 	slimproto_port;
 	char		server_version[SERVER_VERSION_LEN + 1];
@@ -472,8 +564,16 @@ struct codec*	register_thru(void);
 void		 	deregister_thru(void);
 struct codec*	register_flac(void);
 void		 	deregister_flac(void);
+struct codec*	register_flac_thru(void);
+void		 	deregister_flac_thru(void);
 struct codec*	register_pcm(void);
 void		 	deregister_pcm(void);
+struct codec*	register_vorbis(void);
+void		 	deregister_vorbis(void);
+struct codec*	register_faad(void);
+void		 	deregister_faad(void);
+struct codec*	register_mad(void);
+void		 	deregister_mad(void);
 
 #if RESAMPLE
 bool register_soxr(void);

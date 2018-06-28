@@ -87,6 +87,7 @@ void SaveConfig(char *name, void *ref, bool full)
 	XMLUpdateNode(doc, common, false, "enabled", "%d", (int) glMRConfig.Enabled);
 	XMLUpdateNode(doc, common, false, "roon_mode", "%d", (int) glMRConfig.RoonMode);
 	XMLUpdateNode(doc, common, false, "codecs", glDeviceParam.codecs);
+	XMLUpdateNode(doc, common, false, "encode", glDeviceParam.encode);
 	XMLUpdateNode(doc, common, false, "raw_audio_format", glDeviceParam.raw_audio_format);
 	XMLUpdateNode(doc, common, false, "sample_rate", "%d", (int) glDeviceParam.sample_rate);
 	XMLUpdateNode(doc, common, false, "L24_format", "%d", (int) glDeviceParam.L24_format);
@@ -170,6 +171,7 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "enabled")) Conf->Enabled = atol(val);
 	if (!strcmp(name, "roon_mode")) Conf->RoonMode = atol(val);
 	if (!strcmp(name, "codecs")) strcpy(sq_conf->codecs, val);
+	if (!strcmp(name, "encode")) strcpy(sq_conf->encode, val);
 	if (!strcmp(name, "raw_audio_format")) strcpy(sq_conf->raw_audio_format, val);
 	if (!strcmp(name, "sample_rate")) sq_conf->sample_rate = atol(val);
 	if (!strcmp(name, "L24_format")) sq_conf->L24_format = atol(val);

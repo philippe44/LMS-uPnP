@@ -359,6 +359,10 @@ void *dlopen(const char *filename, int flag) {
 	return LoadLibrary((LPCTSTR)filename);
 }
 
+void dlclose(void *handle) {
+	FreeLibrary(handle);
+}
+
 void *dlsym(void *handle, const char *symbol) {
 	SetLastError(0);
 	return (void *)GetProcAddress(handle, symbol);

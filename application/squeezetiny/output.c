@@ -32,6 +32,8 @@ static log_level 	*loglevel = &output_loglevel;
 #define BYTE_3(n)	((u8_t) (n >> 8))
 #define BYTE_4(n)	((u8_t) (n))
 
+static void rescale(void *dst, u32_t *src, size_t bytes, size_t sample_size, bool swap);
+
 /*---------------------------------- WAVE ------------------------------------*/
 static struct wave_header_s {
 	u8_t 	chunk_id[4];
@@ -105,66 +107,149 @@ static void little32(void *dst, u32_t src);
 static void big16(void *dst, u16_t src);
 static void big32(void *dst, u32_t src);
 
-/*---------------------------------------------------------------------------*/
-unsigned _output_bytes(struct thread_ctx_s *ctx) {
-	return ctx->output.thru ? _buf_used(ctx->outputbuf) : _buf_used(ctx->encodebuf);
-}
 
 /*---------------------------------------------------------------------------*/
-unsigned _output_cont_bytes(struct thread_ctx_s *ctx) {
-	if (ctx->output.icy.count) return ctx->output.icy.count;
-	else {
-		unsigned bytes = ctx->output.thru ? _buf_cont_read(ctx->outputbuf) :_buf_cont_read(ctx->encodebuf);
-		if (ctx->output.icy.interval) return min(bytes, ctx->output.icy.remain);
-		else return bytes;
+void _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
+	size_t bytes = _buf_space(buf);
+	struct outputstate *p;
+
+	/*
+	The outputbuf contains FRAMES of 32 bits samples and 2 channels. The buf is
+	what will be sent to client, so it can be any thing from header, ICY data,
+	passthru audio, uncompressed audio in 8,16,24,32 and 1 or 2 channels or
+	re-compressed audio.
+	The gain, truncation, L24 pack, swap, fade-in/out is applied *from* the
+	outputbuf and copied *to* this buf so it really has no specific alignement
+	but for simplicity we won't process anything until it has free space for the
+	largest block of audio which is BYTES_PER_FRAME
+	*/
+	if (bytes < BYTES_PER_FRAME) return;
+
+	//just to make code more readable
+	p = &ctx->output;
+
+	// write header pending data and exit
+	if (p->header.buffer) {
+		bytes = min(p->header.count, _buf_cont_write(buf));
+		memcpy(buf->writep, p->header.buffer + p->header.size - p->header.count, bytes);
+		_buf_inc_writep(buf, bytes);
+		p->header.count -= bytes;
+
+		if (!p->header.count) {
+			LOG_INFO("[%p] PCM header sent (%u bytes)", ctx, p->header.size);
+			NFREE(p->header.buffer);
+		}
+		return;
 	}
-}
 
-/*---------------------------------------------------------------------------*/
-void* _output_readp(struct thread_ctx_s *ctx) {
-	if (ctx->output.icy.count)
-		return ctx->output.icy.buffer + ctx->output.icy.size - ctx->output.icy.count;
-	else
-		return ctx->output.thru ? ctx->outputbuf->readp : ctx->encodebuf->readp;
-}
+	// might be overloaded if there is some ICY or header to be sent
+	bytes = min(bytes, _buf_cont_read(ctx->outputbuf));
 
-/*---------------------------------------------------------------------------*/
-void _output_inc_readp(struct thread_ctx_s *ctx, unsigned by) {
-	if (ctx->output.icy.count) ctx->output.icy.count -= by;
-	else {
-		if (ctx->output.thru) _buf_inc_readp(ctx->outputbuf, by);
-		else _buf_inc_readp(ctx->encodebuf, by);
-
-		// check if time to insert ICY metadata
-		if (!ctx->output.icy.interval) return;
-
-		ctx->output.icy.remain -= by;
-		if (!ctx->output.icy.remain) {
-			struct outputstate *out = &ctx->output;
+	// check if ICY sending is active
+	if (p->icy.interval && !p->icy.count) {
+		if (!p->icy.remain) {
 			int len_16 = 0;
 
-			if (ctx->output.icy.updated) {
+			LOG_SDEBUG("[%p]: ICY checking", ctx);
+
+			if (p->icy.updated) {
 				// there is room for 1 extra byte at the beginning for length
 #if ICY_ARTWORK
-				len_16 = sprintf(out->icy.buffer, "NStreamTitle='%s - %s';StreamURL='%s';",
-								 out->icy.artist, out->icy.title, out->icy.artwork) - 1;
-
-				LOG_INFO("[%p]: ICY update\n\t%s\n\t%s\n\t%s", ctx, out->icy.artist, out->icy.title, out->icy.artwork);
+				len_16 = sprintf(p->icy.buffer, "NStreamTitle='%s - %s';StreamURL='%s';",
+								 p->icy.artist, p->icy.title, p->icy.artwork) - 1;
+				LOG_INFO("[%p]: ICY update\n\t%s\n\t%s\n\t%s", ctx, p->icy.artist, p->icy.title, p->icy.artwork);
 #else
-				len_16 = sprintf(out->icy.buffer, "NStreamTitle='%s - %s'",
-								 out->icy.artist, out->icy.title) - 1;
-
-				LOG_INFO("[%p]: ICY update\n\t%s\n\t%s", ctx, out->icy.artist, out->icy.title);
+				len_16 = sprintf(p->icy.buffer, "NStreamTitle='%s - %s'", p->icy.artist, p->icy.title) - 1;
+				LOG_INFO("[%p]: ICY update\n\t%s\n\t%s", ctx, p->icy.artist, p->icy.title);
 #endif
-
 				len_16 = (len_16 + 15) / 16;
 			}
 
-			out->icy.buffer[0] = len_16;
-			out->icy.size = out->icy.count = len_16 * 16 + 1;
-			out->icy.remain = out->icy.interval;
-			out->icy.updated = false;
+			p->icy.buffer[0] = len_16;
+			p->icy.size = p->icy.count = len_16 * 16 + 1;
+			p->icy.remain = p->icy.interval;
+			p->icy.updated = false;
+		} else {
+			// do not go over icy interval
+			bytes = min(bytes, p->icy.remain);
 		}
+	}
+
+	// write ICY pending data and exit
+	if (p->icy.count) {
+		bytes = min(p->icy.count, _buf_cont_write(buf));
+		memcpy(buf->writep, p->icy.buffer + p->icy.size - p->icy.count, bytes);
+		_buf_inc_writep(buf, bytes);
+		p->icy.count -= bytes;
+		return;
+	}
+
+	// see how audio data shall be processed
+	if (p->encode == ENCODE_THRU) {
+		//	simple encoded audio, nothing to process, just forward outputbut
+		bytes = min(bytes, _buf_cont_write(buf));
+		memcpy(buf->writep, ctx->outputbuf->readp, bytes);
+		_buf_inc_writep(buf, bytes);
+		_buf_inc_readp(ctx->outputbuf, bytes);
+		if (p->icy.interval) p->icy.remain -= bytes;
+	} else if (p->encode == ENCODE_PCM) {
+		// uncompressed audio to be processed
+		u8_t *iptr, *optr, ibuf[BYTES_PER_FRAME], obuf[BYTES_PER_FRAME];
+		size_t in, out, frames, bytes_per_frame = (p->sample_size / 8) * p->channels;
+
+		in = _buf_used(ctx->outputbuf);
+
+		// need enough room in outputbuf and buf
+		if (in < BYTES_PER_FRAME || out < bytes_per_frame) return;
+
+		in = min(in, _buf_cont_read(ctx->outputbuf));
+
+		// no enough cont'd place in input, just process one frame
+		if (in < BYTES_PER_FRAME) {
+			memcpy(ibuf, ctx->outputbuf->readp, in);
+			memcpy(ibuf + in, ctx->outputbuf->buf, BYTES_PER_FRAME - in);
+			iptr = ibuf;
+			in = BYTES_PER_FRAME;
+		} else iptr = ctx->outputbuf->readp;
+
+		// space is less than cont_write when buffer is empty!
+		out = min(_buf_space(buf), _buf_cont_write(buf));
+
+		// not enough cont'd place in output, just process one frame
+		if (out < bytes_per_frame) {
+			optr = obuf;
+			out = bytes_per_frame;
+		} else optr = buf->writep;
+
+		frames = in / BYTES_PER_FRAME;
+		frames = min(frames, out / bytes_per_frame);
+
+		// apply gain if any (before truncation or packing)
+
+		//apply_gain(optr, iptr, out->replay_gain, bytes, out->sample_size, out->in_endian);
+
+		/*
+		// truncate or swap
+		if (out->sample_size == 24 && out->trunc16) {
+			truncate16(optr, iptr, bytes, out->in_endian, out->out_endian);
+			obytes = (obytes * 2) / 3;
+		} else if (out->sample_size == 24 && ctx->config.L24_format == L24_PACKED_LPCM) {
+			lpcm_pack(optr, iptr, bytes, out->channels, out->in_endian);
+		} else if (out->in_endian != out->out_endian) {
+			swap(optr, iptr, bytes, out->sample_size);
+		} else memcpy(optr, iptr, bytes);
+		*/
+		rescale(optr, (u32_t*) iptr, frames * bytes_per_frame, p->sample_size, p->in_endian != p->out_endian);
+
+		// take the data from temporary buffer if needed
+		if (optr == obuf) {
+			size_t out = _buf_cont_write(buf);
+			memcpy(buf->writep, optr, out);
+			memcpy(buf->buf, optr + out, bytes_per_frame - out);
+		}
+
+		_buf_inc_readp(ctx->outputbuf, frames * BYTES_PER_FRAME);
+		_buf_inc_writep(buf, frames * bytes_per_frame);
 	}
 }
 
@@ -181,22 +266,13 @@ void _output_boot(struct thread_ctx_s *ctx) {
 void output_init(unsigned outputbuf_size, struct thread_ctx_s *ctx) {
 	LOG_DEBUG("[%p] init output media renderer", ctx);
 
+	outputbuf_size = max(outputbuf_size, 256*1024);
 	ctx->outputbuf = &ctx->__o_buf;
 	buf_init(ctx->outputbuf, outputbuf_size);
 
 	if (!ctx->outputbuf->buf) {
 		LOG_ERROR("[%p]: unable to malloc output buffer", ctx);
 		exit(0);
-	}
-
-	if (strcasecmp(ctx->config.encode, "thru")) {
-		ctx->encodebuf = &ctx->__e_buf;
-		buf_init(ctx->encodebuf, outputbuf_size);
-
-		if (!ctx->encodebuf->buf) {
-			LOG_ERROR("[%p]: unable to malloc output buffer", ctx);
-			exit(0);
-		}
 	}
 
 	ctx->output.track_started = false;
@@ -223,9 +299,9 @@ void output_close(struct thread_ctx_s *ctx) {
 	if (running) pthread_join(ctx->output_thread, NULL);
 
 	output_free_icy(ctx);
+	NFREE(ctx->output.header.buffer);
 
 	buf_destroy(ctx->outputbuf);
-	if (ctx->encodebuf) buf_destroy(ctx->encodebuf);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -235,12 +311,56 @@ void output_free_icy(struct thread_ctx_s *ctx) {
 	NFREE(ctx->output.icy.artwork);
 }
 
-/*---------------------------------------------------------------------------*/
-void _checkfade(bool fade, struct thread_ctx_s *ctx) {
-}
 
 /*---------------------------------------------------------------------------*/
-size_t output_pcm_header(void **header, size_t *hsize, struct thread_ctx_s *ctx ) {
+
+void _checkfade(bool start, struct thread_ctx_s *ctx) {
+	frames_t bytes;
+
+	return;
+
+	LOG_INFO("[%p]: fade mode: %u duration: %u %s", ctx, ctx->output.fade_mode, ctx->output.fade_secs, start ? "track-start" : "track-end");
+
+	bytes = ctx->output.current_sample_rate * BYTES_PER_FRAME * ctx->output.fade_secs;
+	if (ctx->output.fade_mode == FADE_INOUT) {
+		bytes /= 2;
+	}
+
+	if (start && (ctx->output.fade_mode == FADE_IN || (ctx->output.fade_mode == FADE_INOUT && _buf_used(ctx->outputbuf) == 0))) {
+		bytes = min(bytes, ctx->outputbuf->size - BYTES_PER_FRAME); // shorter than full buffer otherwise start and end align
+		LOG_INFO("[%p]: fade IN: %u frames", ctx, bytes / BYTES_PER_FRAME);
+		ctx->output.fade = FADE_DUE;
+		ctx->output.fade_dir = FADE_UP;
+		ctx->output.fade_start = ctx->outputbuf->writep;
+		ctx->output.fade_end = ctx->output.fade_start + bytes;
+		if (ctx->output.fade_end >= ctx->outputbuf->wrap) {
+			ctx->output.fade_end -= ctx->outputbuf->size;
+		}
+	}
+
+	if (!start && (ctx->output.fade_mode == FADE_OUT || ctx->output.fade_mode == FADE_INOUT)) {
+		bytes = min(_buf_used(ctx->outputbuf), bytes);
+		LOG_INFO("[%p]: fade %s: %u frames", ctx, ctx->output.fade_mode == FADE_INOUT ? "IN-OUT" : "OUT", bytes / BYTES_PER_FRAME);
+		ctx->output.fade = FADE_DUE;
+		ctx->output.fade_dir = FADE_DOWN;
+		ctx->output.fade_start = ctx->outputbuf->writep - bytes;
+		if (ctx->output.fade_start < ctx->outputbuf->buf) {
+			ctx->output.fade_start += ctx->outputbuf->size;
+		}
+		ctx->output.fade_end = ctx->outputbuf->writep;
+	}
+}
+
+
+/*---------------------------------------------------------------------------*/
+
+void _output_new_stream(struct thread_ctx_s *ctx) {
+	_output_pcm_header(ctx);
+}
+
+
+/*---------------------------------------------------------------------------*/
+size_t _output_pcm_header(struct thread_ctx_s *ctx ) {
 	struct outputstate *out = &ctx->output;
 	u8_t sample_size;
 	size_t length;
@@ -273,8 +393,8 @@ size_t output_pcm_header(void **header, size_t *hsize, struct thread_ctx_s *ctx 
 		little32(&h->subchunk2_size, length);
 		little32(&h->chunk_size, 36 + length);
 		length += 36 + 8;
-		*header = h;
-		*hsize = sizeof(struct wave_header_s);
+		out->header.buffer = (u8_t*) h;
+		out->header.size = out->header.count = sizeof(struct wave_header_s);
 	   }
 	   break;
    case 'i': {
@@ -288,15 +408,14 @@ size_t output_pcm_header(void **header, size_t *hsize, struct thread_ctx_s *ctx 
 		big32(&h->chunk_size, (length+8+8) + (18+8) + 4);
 		big32(&h->frames, length / (out->channels * (sample_size / 8)));
 		length += (8+8) + (18+8) + 4 + 8;
-		*header = h;
-		// can't count on structure due to alignment
-		*hsize = 54;
+		out->header.buffer = (u8_t*) h;
+		out->header.size = out->header.count = 54; // can't count on structure due to alignment
 		}
 		break;
    case 'p':
    default:
-		*header = NULL;
-		*hsize = 0;
+		out->header.buffer = NULL;
+		out->header.size = out->header.count = 0;
 		break;
 	}
 
@@ -423,6 +542,41 @@ void lpcm_pack(u8_t *dst, u8_t *src, size_t bytes, u8_t channels, int endian) {
 	}
 }
 
+/*---------------------------------------------------------------------------*/
+void rescale(void *dst, u32_t *src, size_t bytes, size_t sample_size, bool swap) {
+	size_t samples = bytes / (sample_size / 8);
+
+	if (sample_size == 8) {
+		u8_t *optr = (u8_t*) dst;
+		while (samples--) *optr++ = *src++ >> 24;
+	} else if (sample_size == 16) {
+		u16_t *optr = (u16_t*) dst;
+		if (!swap) while (samples--) *optr++ = *src++ >> 16;
+		else while (samples--) {
+			*optr++ = ((*src >> 24) & 0xff) | ((*src >> 8) & 0xff00);
+			src++;
+		}
+	} else if (sample_size == 24) {
+		u8_t *optr = (u8_t*) dst;
+		if (!swap) while (samples--) {
+			*optr++ = *src >> 8;
+			*optr++ = *src >> 16;
+			*optr++ = *src++ >> 24;
+		} else while (samples--) {
+			*optr++ = *src >> 24;
+			*optr++ = *src >> 16;
+			*optr++ = *src++ >> 8;
+		}
+	} else if (sample_size == 32) {
+		u32_t *optr = (u32_t*) dst;
+		if (swap) memcpy(dst, src, samples);
+		else while (samples--) {
+			*optr++ = ((*src >> 24) & 0xff)     | ((*src >> 8)  & 0xff00) |
+					  ((*src << 8)  & 0xff0000) | ((*src << 24) & 0xff000000);
+			src++;
+		}
+	}
+}
 
 #define MAX_VAL8  0x7fffffLL
 #define MAX_VAL16 0x7fffffffLL

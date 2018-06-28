@@ -219,14 +219,36 @@ static char *_lookup(char *mimetypes[], int n, ...) {
 }
 
 /*---------------------------------------------------------------------------*/
-char *find_mimetype(char codec, char *mimetypes[], char *out) {
+char *find_mimetype(char codec, char *mimetypes[], char *options) {
 	switch (codec) {
-	case 'm': return _lookup(mimetypes, 3, "audio/mp3", "audio/mpeg", "audio/mpeg3");
-	case 'f': return _lookup(mimetypes, 2, "audio/x-flac", "audio/flac");
-	case 'w': return _lookup(mimetypes, 2, "audio/x-wma", "audio/wma");
-	case 'o': return _lookup(mimetypes, 2, "audio/ogg", "audio/x-ogg");
-	case 'a': return _lookup(mimetypes, 4, "audio/x-aac", "audio/aac", "audio/m4a", "audio/mp4");
-	case 'l': return _lookup(mimetypes, 1, "audio/m4a");
+		case 'm': return _lookup(mimetypes, 3, "audio/mp3", "audio/mpeg", "audio/mpeg3");
+		case 'c':
+		case 'f': return _lookup(mimetypes, 2, "audio/x-flac", "audio/flac");
+		case 'w': return _lookup(mimetypes, 2, "audio/x-wma", "audio/wma");
+		case 'o': return _lookup(mimetypes, 2, "audio/ogg", "audio/x-ogg");
+		case 'a': return _lookup(mimetypes, 4, "audio/x-aac", "audio/aac", "audio/m4a", "audio/mp4");
+		case 'l': return _lookup(mimetypes, 1, "audio/m4a");
+		case 'p': {
+			char fmt[8];
+			char *mimetype;
+
+			while (1) {
+				if (sscanf(options, "%[^,]", fmt) <= 0) return NULL;
+
+				if (strstr(fmt, "wav")) {
+					mimetype = _lookup(mimetypes, 3, "audio/wav", "audio/x-wav", "audio/wave");
+					if (mimetype) return mimetype;
+				}
+
+				if (strstr(fmt, "aif")) {
+					mimetype = _lookup(mimetypes, 4, "audio/aiff", "audio/x-aiff", "audio/aif", "audio/x-aif");
+					if (mimetype) return mimetype;
+				}
+
+				options += strlen(fmt);
+				if (*options) options++;
+			}
+		}
 	}
 
    return NULL;
@@ -254,10 +276,10 @@ char* find_pcm_mimetype(u8_t endian, u8_t *sample_size, bool truncable, u32_t sa
 				if (strstr(*p, a) &&
 				   (!strstr(*p, "rate=") || strstr(*p, r)) &&
 				   (!strstr(*p, "channels=") || strstr(*p, c))) {
-					char *rsp;
+				   char *rsp;
 
-					asprintf(&rsp, "%s;%s;%s", a, r, c);
-					return rsp;
+				   asprintf(&rsp, "%s;%s;%s", a, r, c);
+				   return rsp;
 				}
 				p++;
 			}

@@ -344,15 +344,36 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 				out->in_endian = (strm->pcm_endianness != '?') ? strm->pcm_endianness - '0' : 0xff;
 				out->codec = strm->format;
 
-				// build the mime type according to capabilities and source
-				if (out->codec == 'p') {
-					u8_t sample_size = (out->sample_size == 24 && ctx->config.L24_format == L24_TRUNC16) ? 16 : out->sample_size;
-					mimetype = find_pcm_mimetype(out->in_endian, &sample_size,
-											ctx->config.L24_format == L24_TRUNC16_PCM,
-											out->sample_rate, out->channels,
-											ctx->mimetypes, ctx->config.raw_audio_format);
-					out->trunc16 = (sample_size != out->sample_size);
-				} else mimetype = find_mimetype(out->codec, ctx->mimetypes, ctx->config.encode);
+				// check if re-encoding is needed
+				if (!strcasecmp(ctx->config.encode, "thru") ||
+					(!strcasecmp(ctx->config.encode, "pcm") && out->codec == 'p')) {
+					if (out->codec == 'p') {
+						u8_t sample_size = (out->sample_size == 24 && ctx->config.L24_format == L24_TRUNC16) ? 16 : out->sample_size;
+						mimetype = find_pcm_mimetype(out->in_endian, &sample_size,
+												ctx->config.L24_format == L24_TRUNC16_PCM,
+												out->sample_rate, out->channels,
+												ctx->mimetypes, ctx->config.raw_audio_format);
+						out->trunc16 = (sample_size != out->sample_size);
+						out->encode = ENCODE_PCM;
+					} else {
+						mimetype = find_mimetype(out->codec, ctx->mimetypes, NULL);
+						if (out->codec == 'f') out->codec ='c';
+						else out->codec = '*';
+						out->encode = ENCODE_THRU;
+					}
+				} else if (!strcasecmp(ctx->config.encode, "pcm")) {
+					char format[16] = "";
+
+					// cannot do raw PCM as channel, sample rate & size are unknown at this time
+					if (stristr(ctx->config.raw_audio_format, "wav")) strcat(format, "wav");
+					if (stristr(ctx->config.raw_audio_format, "aif")) strcat(format, "aif");
+					mimetype = find_mimetype('p', ctx->mimetypes, format);
+					out->trunc16 = (ctx->config.L24_format == L24_TRUNC16);
+					out->in_endian = 1;
+					out->encode = ENCODE_PCM;
+
+				} else {
+				}
 
 				// matching found in player
 				if (mimetype) {
@@ -362,25 +383,17 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 					out->format = mimetype2format(out->mimetype);
 					out->out_endian = (out->format == 'w');
 					out->length = ctx->config.stream_length;
-					if (!strcasecmp(ctx->config.encode, "thru")) {
-						out->thru = true;
-						if (out->codec == 'f') out->codec ='c';
-					} else out->thru = false;
 
-					codec_open(out->codec, out->sample_size, out->sample_rate, out->channels, out->in_endian, ctx);
+					if (codec_open(out->codec, out->sample_size, out->sample_rate, out->channels, out->in_endian, ctx) ) {
+						strcpy(info.mimetype, out->mimetype);
+						sprintf(info.uri, "http://%s:%hu/" BRIDGE_URL "%d.%s", sq_ip,
+								ctx->output.port, ++ctx->output.index, mimetype2ext(out->mimetype));
 
-					strcpy(info.mimetype, out->mimetype);
-					sprintf(info.uri, "http://%s:%hu/" BRIDGE_URL "%d.%s", sq_ip,
-							ctx->output.port, ++ctx->output.index, mimetype2ext(out->mimetype));
+						if (!ctx_callback(ctx, SQ_SET_TRACK, NULL, &info)) sendSTMn = true;
 
-					if (!ctx_callback(ctx, SQ_SET_TRACK, NULL, &info)) sendSTMn = true;
-
-					LOG_INFO("[%p]: codec:%c, ch:%d, s:%d, r:%d", ctx, out->codec, out->channels, out->sample_size, out->sample_rate);
-				} else {
-					LOG_ERROR("[%p] no matching codec %c", ctx, out->codec);
-					sendSTMn = true;
-					out->thru = true;
-				}
+						LOG_INFO("[%p]: codec:%c, ch:%d, s:%d, r:%d", ctx, out->codec, out->channels, out->sample_size, out->sample_rate);
+					} else sendSTMn = true;
+				} else sendSTMn = true;
 			} else if (ctx->autostart >= 2) {
 				// extension to slimproto to allow server to detect codec from response header and send back in codc message
 				LOG_INFO("[%p] waiting for codc message", ctx);
@@ -397,7 +410,11 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 			sendSTAT("STMc", 0, ctx);
 			ctx->canSTMdu = ctx->sentSTMu = ctx->sentSTMo = ctx->sentSTMl = ctx->sentSTMd = false;
 
-			if (sendSTMn) sendSTAT("STMn", 0, ctx);
+			// codec error
+			if (sendSTMn) {
+				LOG_ERROR("[%p] no matching codec %c", ctx, out->codec);
+				 sendSTAT("STMn", 0, ctx);
+			}
 		}
 		break;
 	default:
@@ -428,6 +445,7 @@ static void process_cont(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 	}
 }
 
+// FIXME: need to port all strms here
 /*---------------------------------------------------------------------------*/
 static void process_codc(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 	struct codc_packet *codc = (struct codc_packet *)pkt;
@@ -463,10 +481,10 @@ static void process_codc(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 		out->out_endian = (out->format == 'w');
 		out->length = ctx->config.stream_length;
 		if (!strcasecmp(ctx->config.encode, "thru")) {
-			out->thru = true;
+			out->encode = ENCODE_THRU;
 			if (out->codec == 'f') out->codec ='c';
 		}
-		else out->thru = false;
+		else out->encode = ENCODE_THRU;
 
 		codec_open(out->codec, out->sample_size, out->sample_rate, out->channels, out->in_endian, ctx);
 

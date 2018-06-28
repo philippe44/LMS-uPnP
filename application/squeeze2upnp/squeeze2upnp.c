@@ -101,7 +101,7 @@ sq_dev_param_t glDeviceParam = {
 					HTTP_CHUNKED, 	 		// stream_length
 					 // both are multiple of 3*4(2) for buffer alignement on sample
 					(200 * 1024 * (4*3)), 	// stream_buffer_size
-					(16 * 1024 * (4*3)),	// output_buffer_size
+					(128 * 1024 * (4*3)),	// output_buffer_size
 					"flc,aif,pcm,mp3",		// codecs
 					"thru",					// encode
 					"raw,wav,aif",			// raw_audio_format
