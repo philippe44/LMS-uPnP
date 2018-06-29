@@ -314,6 +314,38 @@ void 		stream_file(const char *header, size_t header_len, unsigned threshold, st
 void 		stream_sock(u32_t ip, u16_t port, const char *header, size_t header_len, unsigned threshold, bool cont_wait, struct thread_ctx_s *ctx);
 bool 		stream_disconnect(struct thread_ctx_s *ctx);
 
+// shared info between decoder and output
+
+typedef enum { FADE_INACTIVE = 0, FADE_DUE, FADE_ACTIVE, FADE_PENDING } fade_state;
+typedef enum { FADE_UP = 1, FADE_DOWN, FADE_CROSS } fade_dir;
+typedef enum { FADE_NONE = 0, FADE_CROSSFADE, FADE_IN, FADE_OUT, FADE_INOUT } fade_mode;
+
+typedef enum { ENCODE_THRU, ENCODE_PCM, ENCODE_FLAC, ENCODE_MP3 } encode_mode;
+
+struct outputproperties {
+	char	format;			// data sent format (p=pcm, w=wav, i=aif, f=flac)
+	encode_mode	encode;		// how shall audio be re-encoded
+	u8_t 	sample_size, channels, codec; // as name, original stream values
+	u32_t 	sample_rate;	// as name, original stream values
+	bool	trunc16;		 // true if 24 bits samples must be truncated to 16
+	int 	in_endian, out_endian;	// 1 = little (MSFT/INTL), 0 = big (PCM/AAPL)
+	u32_t 	duration;       // duration of track in ms, 0 if unknown
+	bool  	remote;			// local track or not (if duration == 0 => live)
+	char 	mimetype[_STR_LEN_];	// content-type to send to player
+	ssize_t length;			// HTTP content-length (-1:no chunked, -3 chunked if possible, >0 fake length)
+	unsigned current_sample_rate;	// current in sample rate
+	unsigned supported_rates[2];	// moot for now
+	// only useful with decode mode
+	fade_state fade;		// fading state
+	u8_t	   *fade_start;	// pointer to fading start in output buffer
+	u8_t 	   *fade_end;	// pointer to fading end in output buffer
+	fade_dir   fade_dir;	// fading direction
+	fade_mode  fade_mode;  // fading mode
+	unsigned   fade_secs;  // set by slimproto
+	// only used with pcm or decode mode
+	u32_t 		replay_gain;
+};
+
 // decode.c
 typedef enum { DECODE_STOPPED = 0, DECODE_READY, DECODE_RUNNING, DECODE_COMPLETE, DECODE_ERROR } decode_state;
 
@@ -322,6 +354,7 @@ struct decodestate {
 	bool new_stream;
 	mutex_type mutex;
 	void *handle;
+	struct outputproperties *props;
 #if PROCESS
 	void *process_handle;
 	bool direct;
@@ -391,20 +424,10 @@ void 		resample_end(struct thread_ctx_s *ctx);
 typedef enum { OUTPUT_OFF = -1, OUTPUT_STOPPED = 0, OUTPUT_WAITING,
 			   OUTPUT_RUNNING } output_state;
 
-typedef enum { FADE_INACTIVE = 0, FADE_DUE, FADE_ACTIVE } fade_state;
-typedef enum { FADE_UP = 1, FADE_DOWN, FADE_CROSS } fade_dir;
-typedef enum { FADE_NONE = 0, FADE_CROSSFADE, FADE_IN, FADE_OUT, FADE_INOUT } fade_mode;
-
-typedef enum { ENCODE_THRU, ENCODE_PCM, ENCODE_FLAC, ENCODE_MP3 } encode_mode;
-
 // function starting with _ must be called with mutex locked
 void 		output_init(unsigned output_buf_size, struct thread_ctx_s *ctx);
 void 		output_close(struct thread_ctx_s *ctx);
 void 		output_free_icy(struct thread_ctx_s *ctx);
-void 		swap(u8_t *src, u8_t *dst, size_t bytes, u8_t size);
-void 		truncate16(u8_t *src, u8_t *dst, size_t bytes, int in_endian, int out_endian);
-void 		lpcm_pack(u8_t *dst, u8_t *src, size_t bytes, u8_t channels, int endian);
-void 		apply_gain(void *p, u32_t gain, size_t bytes, u8_t size, int endian);
 
 void 		_output_boot(struct thread_ctx_s *ctx);
 void		_output_fill(struct buffer *buf, struct thread_ctx_s *ctx);
@@ -419,6 +442,7 @@ void 		wake_output(struct thread_ctx_s *ctx);
 
 // info for the track being sent to the http renderer (not played)
 struct outputstate {
+	struct outputproperties *props;
 	output_state state;		// license to stream or not
 	char	format;			// data sent format (p=pcm, w=wav, i=aif, f=flac)
 	encode_mode	encode;		// how shall audio be re-encoded

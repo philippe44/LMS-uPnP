@@ -32,7 +32,11 @@ static log_level 	*loglevel = &output_loglevel;
 #define BYTE_3(n)	((u8_t) (n >> 8))
 #define BYTE_4(n)	((u8_t) (n))
 
-static void rescale(void *dst, u32_t *src, size_t bytes, size_t sample_size, bool swap);
+static void 	lpcm_pack(u8_t *dst, u8_t *src, size_t bytes, u8_t channels, int endian);
+static void*	apply_gain(s32_t *p, u32_t gain, size_t frames);
+size_t 			fade_gain(u32_t *gain, struct thread_ctx_s *ctx);
+static void 	scale_and_pack(void *dst, u32_t *src, size_t frames, u8_t channels,
+							   u8_t sample_size, int endian);
 
 /*---------------------------------- WAVE ------------------------------------*/
 static struct wave_header_s {
@@ -195,7 +199,10 @@ void _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
 	} else if (p->encode == ENCODE_PCM) {
 		// uncompressed audio to be processed
 		u8_t *iptr, *optr, ibuf[BYTES_PER_FRAME], obuf[BYTES_PER_FRAME];
-		size_t in, out, frames, bytes_per_frame = (p->sample_size / 8) * p->channels;
+		u8_t sample_size = p->trunc16 ? 16 : p->sample_size;
+		size_t in, out, frames, bytes_per_frame = (sample_size / 8) * p->channels;
+		u32_t gain = 65536L;
+		void *scratch;
 
 		in = _buf_used(ctx->outputbuf);
 
@@ -221,7 +228,9 @@ void _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
 			out = bytes_per_frame;
 		} else optr = buf->writep;
 
-		frames = in / BYTES_PER_FRAME;
+		//FIXME: check that this works even with in < BYTES_PER_FRAME
+		frames = fade_gain(&gain, ctx);
+		frames = min(frames, in / BYTES_PER_FRAME);
 		frames = min(frames, out / bytes_per_frame);
 
 		// apply gain if any (before truncation or packing)
@@ -239,16 +248,33 @@ void _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
 			swap(optr, iptr, bytes, out->sample_size);
 		} else memcpy(optr, iptr, bytes);
 		*/
-		rescale(optr, (u32_t*) iptr, frames * bytes_per_frame, p->sample_size, p->in_endian != p->out_endian);
+		/* to be applied
+			- gain
+			- fade
+			- truncation
+			- 24 bits packing
+		*/
 
-		// take the data from temporary buffer if needed
-		if (optr == obuf) {
-			size_t out = _buf_cont_write(buf);
-			memcpy(buf->writep, optr, out);
-			memcpy(buf->buf, optr + out, bytes_per_frame - out);
+		if (p->replay_gain) gain = ((u64_t) gain * p->replay_gain) >> 16;
+		scratch = apply_gain((s32_t*) iptr, gain, frames);
+
+		if (scratch) {
+			scale_and_pack(optr, scratch, frames, p->channels, sample_size, p->out_endian);
+
+			free(scratch);
+
+			// take the data from temporary buffer if needed
+			if (optr == obuf) {
+				size_t out = _buf_cont_write(buf);
+				memcpy(buf->writep, optr, out);
+				memcpy(buf->buf, optr + out, bytes_per_frame - out);
+			}
+
+			_buf_inc_readp(ctx->outputbuf, frames * BYTES_PER_FRAME);
 		}
 
-		_buf_inc_readp(ctx->outputbuf, frames * BYTES_PER_FRAME);
+		LOG_SDEBUG("[%p]: processed %u frames", ctx, frames);
+
 		_buf_inc_writep(buf, frames * bytes_per_frame);
 	}
 }
@@ -313,49 +339,12 @@ void output_free_icy(struct thread_ctx_s *ctx) {
 
 
 /*---------------------------------------------------------------------------*/
-
-void _checkfade(bool start, struct thread_ctx_s *ctx) {
-	frames_t bytes;
-
-	return;
-
-	LOG_INFO("[%p]: fade mode: %u duration: %u %s", ctx, ctx->output.fade_mode, ctx->output.fade_secs, start ? "track-start" : "track-end");
-
-	bytes = ctx->output.current_sample_rate * BYTES_PER_FRAME * ctx->output.fade_secs;
-	if (ctx->output.fade_mode == FADE_INOUT) {
-		bytes /= 2;
-	}
-
-	if (start && (ctx->output.fade_mode == FADE_IN || (ctx->output.fade_mode == FADE_INOUT && _buf_used(ctx->outputbuf) == 0))) {
-		bytes = min(bytes, ctx->outputbuf->size - BYTES_PER_FRAME); // shorter than full buffer otherwise start and end align
-		LOG_INFO("[%p]: fade IN: %u frames", ctx, bytes / BYTES_PER_FRAME);
-		ctx->output.fade = FADE_DUE;
-		ctx->output.fade_dir = FADE_UP;
-		ctx->output.fade_start = ctx->outputbuf->writep;
-		ctx->output.fade_end = ctx->output.fade_start + bytes;
-		if (ctx->output.fade_end >= ctx->outputbuf->wrap) {
-			ctx->output.fade_end -= ctx->outputbuf->size;
-		}
-	}
-
-	if (!start && (ctx->output.fade_mode == FADE_OUT || ctx->output.fade_mode == FADE_INOUT)) {
-		bytes = min(_buf_used(ctx->outputbuf), bytes);
-		LOG_INFO("[%p]: fade %s: %u frames", ctx, ctx->output.fade_mode == FADE_INOUT ? "IN-OUT" : "OUT", bytes / BYTES_PER_FRAME);
-		ctx->output.fade = FADE_DUE;
-		ctx->output.fade_dir = FADE_DOWN;
-		ctx->output.fade_start = ctx->outputbuf->writep - bytes;
-		if (ctx->output.fade_start < ctx->outputbuf->buf) {
-			ctx->output.fade_start += ctx->outputbuf->size;
-		}
-		ctx->output.fade_end = ctx->outputbuf->writep;
-	}
-}
-
-
-/*---------------------------------------------------------------------------*/
-
 void _output_new_stream(struct thread_ctx_s *ctx) {
-	_output_pcm_header(ctx);
+	size_t length;
+
+	length = _output_pcm_header(ctx);
+	if (ctx->config.stream_length > 0 && length) ctx->output.length = length;
+	//FIXME if (length) ctx->output.length = length;
 }
 
 
@@ -416,79 +405,12 @@ size_t _output_pcm_header(struct thread_ctx_s *ctx ) {
    default:
 		out->header.buffer = NULL;
 		out->header.size = out->header.count = 0;
+		length = 0;
 		break;
 	}
 
 	return length;
 }
-
-
-/*---------------------------------------------------------------------------*/
-void swap(u8_t *dst, u8_t *src, size_t bytes, u8_t size)
-{
-	switch (size) {
-	case 8:
-		memcpy(src, dst, bytes);
-		break;
-	case 16:
-		bytes /= 2;
-		src += 1;
-		while (bytes--) {
-			*dst++ = *src--;
-			*dst++ = *src;
-			src += 3;
-		}
-		break;
-	case 24:
-		bytes /= 3;
-		src += 2;
-		while (bytes--) {
-			*dst++ = *src--;
-			*dst++ = *src--;
-			*dst++ = *src;
-			src += 5;
-		}
-		break;
-	 case 32:
-		bytes /= 4;
-		src += 3;
-		while (bytes--) {
-			*dst++ = *src--;
-			*dst++ = *src--;
-			*dst++ = *src--;
-			*dst++ = *src;
-			src += 7;
-		}
-		break;
-	}
-}
-
-
-/*---------------------------------------------------------------------------*/
-void truncate16(u8_t *dst, u8_t *src, size_t bytes, int in_endian, int out_endian)
-{
-	bool swap = (in_endian != out_endian);
-
-	bytes /= 3;
-	if (out_endian) src++;
-
-	if (swap) {
-		if (!out_endian) src += 2;
-		while (bytes--) {
-			*dst++ = *src--;
-			*dst++ = *src;
-			src += 4;
-		}
-	}
-	else {
-		while (bytes--) {
-			*dst++ = *src++;
-			*dst++ = *src++;
-			src++;
-		}
-	}
-}
-
 
 /*---------------------------------------------------------------------------*/
 void lpcm_pack(u8_t *dst, u8_t *src, size_t bytes, u8_t channels, int endian) {
@@ -543,148 +465,218 @@ void lpcm_pack(u8_t *dst, u8_t *src, size_t bytes, u8_t channels, int endian) {
 }
 
 /*---------------------------------------------------------------------------*/
-void rescale(void *dst, u32_t *src, size_t bytes, size_t sample_size, bool swap) {
-	size_t samples = bytes / (sample_size / 8);
+void scale_and_pack(void *dst, u32_t *src, size_t frames, u8_t channels, u8_t sample_size, int endian) {
+	size_t count = frames * channels;
 
-	if (sample_size == 8) {
-		u8_t *optr = (u8_t*) dst;
-		while (samples--) *optr++ = *src++ >> 24;
-	} else if (sample_size == 16) {
-		u16_t *optr = (u16_t*) dst;
-		if (!swap) while (samples--) *optr++ = *src++ >> 16;
-		else while (samples--) {
-			*optr++ = ((*src >> 24) & 0xff) | ((*src >> 8) & 0xff00);
-			src++;
+	if (channels == 2) {
+		if (sample_size == 8) {
+			u8_t *optr = (u8_t*) dst;
+			if (endian) while (count--) *optr++ = (*src++ >> 24) ^ 0x80;
+			else while (count--) *optr++ = *optr++ = *src++ >> 24;
+		} else if (sample_size == 16) {
+			u16_t *optr = (u16_t*) dst;
+			if (endian) while (count--) *optr++ = *src++ >> 16;
+			else while (count--) {
+				*optr++ = ((*src >> 24) & 0xff) | ((*src >> 8) & 0xff00);
+				src++;
+			}
+		} else if (sample_size == 24) {
+			u8_t *optr = (u8_t*) dst;
+			if (endian) while (count--) {
+				*optr++ = *src >> 8;
+				*optr++ = *src >> 16;
+				*optr++ = *src++ >> 24;
+			} else while (count--) {
+				*optr++ = *src >> 24;
+				*optr++ = *src >> 16;
+				*optr++ = *src++ >> 8;
+			}
+		} else if (sample_size == 32) {
+			u32_t *optr = (u32_t*) dst;
+			if (endian) memcpy(dst, src, count * 4);
+			else while (count--) {
+				*optr++ = ((*src >> 24) & 0xff)     | ((*src >> 8)  & 0xff00) |
+						  ((*src << 8)  & 0xff0000) | ((*src << 24) & 0xff000000);
+				src++;
+			}
 		}
-	} else if (sample_size == 24) {
-		u8_t *optr = (u8_t*) dst;
-		if (!swap) while (samples--) {
-			*optr++ = *src >> 8;
-			*optr++ = *src >> 16;
-			*optr++ = *src++ >> 24;
-		} else while (samples--) {
-			*optr++ = *src >> 24;
-			*optr++ = *src >> 16;
-			*optr++ = *src++ >> 8;
-		}
-	} else if (sample_size == 32) {
-		u32_t *optr = (u32_t*) dst;
-		if (swap) memcpy(dst, src, samples);
-		else while (samples--) {
-			*optr++ = ((*src >> 24) & 0xff)     | ((*src >> 8)  & 0xff00) |
-					  ((*src << 8)  & 0xff0000) | ((*src << 24) & 0xff000000);
-			src++;
+
+	} else if (channels == 1) {
+		if (sample_size == 8) {
+			u8_t *optr = (u8_t*) dst;
+			if (endian) while (count--) {
+				*optr++ = (*src >> 24) ^ 0x80;
+				src += 2;
+			} else while (count--) {
+				*optr++ = *src >> 24;
+				src += 2;
+			}
+		} else if (sample_size == 16) {
+			u16_t *optr = (u16_t*) dst;
+			if (endian) while (count--) {
+				*optr++ = *src >> 16;
+				src += 2;
+			}
+			else while (count--) {
+				*optr++ = ((*src >> 24) & 0xff) | ((*src >> 8) & 0xff00);
+				src += 2;
+			}
+		} else if (sample_size == 24) {
+			u8_t *optr = (u8_t*) dst;
+			if (endian) while (count--) {
+				*optr++ = *src >> 8;
+				*optr++ = *src >> 16;
+				*optr++ = *src >> 24;
+				src += 2;
+			} else while (count--) {
+				*optr++ = *src >> 24;
+				*optr++ = *src >> 16;
+				*optr++ = *src++ >> 8;
+				src += 2;
+			}
+		} else if (sample_size == 32) {
+			u32_t *optr = (u32_t*) dst;
+			if (endian) while (count--) {
+				*optr++ = *src;
+				src += 2;
+			} else while (count--) {
+				*optr++ = ((*src >> 24) & 0xff)     | ((*src >> 8)  & 0xff00) |
+						  ((*src << 8)  & 0xff0000) | ((*src << 24) & 0xff000000);
+				src += 2;
+			}
 		}
 	}
 }
 
-#define MAX_VAL8  0x7fffffLL
-#define MAX_VAL16 0x7fffffffLL
-#define MAX_VAL24 0x7fffffffffffLL	// same as VAL32 as the 24 bits samples are loaded in the 3 upper bytes
 #define MAX_VAL32 0x7fffffffffffLL
-// this probably does not work for little-endian CPU
 /*---------------------------------------------------------------------------*/
-void apply_gain(void *p, u32_t gain, size_t bytes, u8_t size, int endian) {
-	size_t i = bytes / (size / 8);
+void *apply_gain(s32_t *p, u32_t gain, size_t frames) {
+	s32_t *buf = malloc(frames * BYTES_PER_FRAME);
+	size_t count = frames * 2;
 	s64_t sample;
 
-	if (!gain || gain == 65536) return;
+	if (!buf) return NULL;
 
-#if !SL_LITTLE_ENDIAN
-	endian = !endian;
-#endif
-
-	if (size == 8) {
-		u8_t *buf = p;
-		while (i--) {
-			sample = *buf * (s64_t) gain;
-			if (sample > MAX_VAL8) sample = MAX_VAL8;
-			else if (sample < -MAX_VAL8) sample = -MAX_VAL8;
-			*buf++ = sample >> 16;
-		}
-		return;
-	}
-
-	// big endian target on big endian CPU or the opposite
-	if (endian) {
-
-		if (size == 16) {
-			s16_t *buf = p;
-			while (i--) {
-				sample = *buf * (s64_t) gain;
-				if (sample > MAX_VAL16) sample = MAX_VAL16;
-				else if (sample < -MAX_VAL16) sample = -MAX_VAL16;
-				*buf++ = sample >> 16;
-		   }
-		   return;
-		}
-
-		if (size == 24) {
-			u8_t *buf = p;
-			while (i--) {
-				// put the 24 bits sample in the 3 upper bytes to keep sign bit
-				sample = (s32_t) ((((u32_t) *buf) << 8) | ((u32_t) *(buf+1) << 16) | ((u32_t) *(buf+2) << 24)) * (s64_t) gain;
-				if (sample > MAX_VAL24) sample = MAX_VAL24;
-				else if (sample < -MAX_VAL24) sample = -MAX_VAL24;
-				sample >>= 16 + 8;
-				*buf++ = sample;
-				*buf++ = sample >> 8;
-				*buf++ = sample >> 16;
-			}
-			return;
-		}
-
-		if (size == 32) {
-			s32_t *buf = p;
-			while (i--) {
-				sample = *buf * (s64_t) gain;
-				if (sample > MAX_VAL32) sample = MAX_VAL32;
-				else if (sample < -MAX_VAL32) sample = -MAX_VAL32;
-				*buf++ = sample >> 16;
-			}
-			return;
-		}
-
+	if (gain == 65536) {
+		memcpy(buf, p, frames * BYTES_PER_FRAME);
 	} else {
+		s32_t *iptr = buf;
 
-		if (size == 16) {
-			s16_t *buf = p;
-			while (i--) {
-				sample = (s16_t) (((*buf << 8) & 0xff00) | ((*buf >> 8) & 0xff)) * (s64_t) gain;
-				if (sample > MAX_VAL16) sample = MAX_VAL16;
-				else if (sample < -MAX_VAL16) sample = -MAX_VAL16;
-				sample >>= 16;
-				*buf++ = ((sample >> 8) & 0xff) | ((sample << 8) & 0xff00);
-			}
-			return;
-		}
-
-		if (size == 24) {
-			u8_t *buf = p;
-			while (i--) {
-				// put the 24 bits sample in the 3 upper bytes to keep sign bit
-				sample = (s32_t) ((((u32_t) *buf) << 24) | ((u32_t) *(buf+1) << 16) | ((u32_t) *(buf+2) << 8)) * (s64_t) gain;
-				if (sample > MAX_VAL24) sample = MAX_VAL24;
-				else if (sample < -MAX_VAL24) sample = -MAX_VAL24;
-				sample >>= 16 + 8;
-				*buf++ = sample >> 16;
-				*buf++ = sample >> 8;
-				*buf++ = sample;
-		   }
-		   return;
-		}
-
-		if (size == 32) {
-			s32_t *buf = p;
-			while (i--) {
-				sample = *buf * (s64_t) gain;
-				if (sample > MAX_VAL32) sample = MAX_VAL32;
-				else if (sample < -MAX_VAL32) sample = -MAX_VAL32;
-				*buf++ = sample >> 16;
-			}
-			return;
+		while (count--) {
+			sample = *p++ * (s64_t) gain;
+			if (sample > MAX_VAL32) sample = MAX_VAL32;
+			else if (sample < -MAX_VAL32) sample = -MAX_VAL32;
+			*iptr++ = sample >> 16;
 		}
 	}
+
+	return buf;
+}
+
+/*---------------------------------------------------------------------------*/
+void _checkfade(bool start, struct thread_ctx_s *ctx) {
+	frames_t bytes;
+
+	LOG_INFO("[%p]: fade mode: %u duration: %u %s", ctx, ctx->output.fade_mode, ctx->output.fade_secs, start ? "track-start" : "track-end");
+
+	bytes = ctx->output.current_sample_rate * BYTES_PER_FRAME * ctx->output.fade_secs;
+	if (ctx->output.fade_mode == FADE_INOUT) {
+		bytes /= 2;
+	}
+
+	if (start && (ctx->output.fade_mode == FADE_IN || (ctx->output.fade_mode == FADE_INOUT && _buf_used(ctx->outputbuf) == 0))) {
+		bytes = min(bytes, ctx->outputbuf->size - BYTES_PER_FRAME); // shorter than full buffer otherwise start and end align
+		LOG_INFO("[%p]: fade IN: %u frames", ctx, bytes / BYTES_PER_FRAME);
+		ctx->output.fade = FADE_DUE;
+		ctx->output.fade_dir = FADE_UP;
+		ctx->output.fade_start = ctx->outputbuf->writep;
+		ctx->output.fade_end = ctx->output.fade_start + bytes;
+		if (ctx->output.fade_end >= ctx->outputbuf->wrap) {
+			ctx->output.fade_end -= ctx->outputbuf->size;
+		}
+	}
+
+	if (!start && (ctx->output.fade_mode == FADE_OUT || ctx->output.fade_mode == FADE_INOUT)) {
+		if (!ctx->output.fade) {
+			bytes = min(_buf_used(ctx->outputbuf), bytes);
+			LOG_INFO("[%p]: fade %s: %u frames", ctx, ctx->output.fade_mode == FADE_INOUT ? "IN-OUT" : "OUT", bytes / BYTES_PER_FRAME);
+			ctx->output.fade = FADE_DUE;
+			ctx->output.fade_dir = FADE_DOWN;
+			ctx->output.fade_start = ctx->outputbuf->writep - bytes;
+			if (ctx->output.fade_start < ctx->outputbuf->buf) {
+				ctx->output.fade_start += ctx->outputbuf->size;
+			}
+			ctx->output.fade_end = ctx->outputbuf->writep;
+		} else {
+			// optionally, writep should be memorized for when continuous streaming is available
+			ctx->output.fade = FADE_PENDING;
+			LOG_INFO("[%p]: fade OUT delayed as IN still processing", ctx);
+		}
+	}
+}
+
+/*---------------------------------------------------------------------------*/
+size_t fade_gain(u32_t *gain, struct thread_ctx_s *ctx) {
+	size_t frames = _buf_cont_read(ctx->outputbuf) / BYTES_PER_FRAME;
+	struct outputstate *out = &ctx->output;
+	bool checkfade = false;
+
+	if (!out->fade) return frames;
+
+	if (out->fade == FADE_DUE) {
+		if (out->fade_start == ctx->outputbuf->readp) {
+			LOG_INFO("[%p]: fade start reached", ctx);
+			out->fade = FADE_ACTIVE;
+		} else if (out->fade_start > ctx->outputbuf->readp) {
+			frames = min(frames, (out->fade_start - ctx->outputbuf->readp) / BYTES_PER_FRAME);
+		}
+	}
+
+	if (out->fade == FADE_ACTIVE || out->fade == FADE_PENDING) {
+		// find position within fade
+		frames_t cur_f = ctx->outputbuf->readp >= out->fade_start ? (ctx->outputbuf->readp - out->fade_start) / BYTES_PER_FRAME :
+			(ctx->outputbuf->readp + ctx->outputbuf->size - out->fade_start) / BYTES_PER_FRAME;
+		frames_t dur_f = out->fade_end >= out->fade_start ? (out->fade_end - out->fade_start) / BYTES_PER_FRAME :
+			(out->fade_end + ctx->outputbuf->size - out->fade_start) / BYTES_PER_FRAME;
+
+		if (cur_f >= dur_f) {
+			// so far this part is useless as we don't support a continuous flow
+			if (out->fade_mode == FADE_INOUT && out->fade_dir == FADE_DOWN) {
+				LOG_INFO("[%p]: fade down complete, starting fade up", ctx);
+				out->fade_dir = FADE_UP;
+				out->fade_start = ctx->outputbuf->readp;
+				out->fade_end = ctx->outputbuf->readp + dur_f * BYTES_PER_FRAME;
+				if (out->fade_end >= ctx->outputbuf->wrap) out->fade_end -= ctx->outputbuf->size;
+				cur_f = 0;
+			} else {
+				LOG_INFO("[%p]: fade complete", ctx);
+				if (out->fade == FADE_PENDING) checkfade = true;
+				out->fade = FADE_INACTIVE;
+			}
+		}
+
+		// if fade in progress set fade gain, ensure cont_frames reduced so we get to end of fade at start of chunk
+		if (out->fade) {
+			if (out->fade_end > ctx->outputbuf->readp) {
+				frames = min(frames, (out->fade_end - ctx->outputbuf->readp) / BYTES_PER_FRAME);
+			}
+			if (out->fade_dir == FADE_UP || out->fade_dir == FADE_DOWN) {
+				if (out->fade_dir == FADE_DOWN) cur_f = dur_f - cur_f;
+				*gain = ((u64_t) cur_f << 16) / dur_f;
+			}
+		}
+
+		// we know there is at least one frame, but it might be in alignment buffer
+		if (!frames) frames = 1;
+
+		// to force smooth scale up/down, don't do too many frames
+		frames = min(frames, out->sample_rate / 10);
+
+		// a fade-down was pending ac codec ended while fade-up was still going
+		if (checkfade) _checkfade(false, ctx);
+	}
+
+	return frames;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -727,6 +719,7 @@ static void big32(void *dst, u32_t src)
 	*p++ = (u8_t) (src >> 8);
 	*p = (u8_t) (src);
 }
+
 
 
 

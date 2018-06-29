@@ -96,6 +96,7 @@ static decode_state pcm_decode(struct thread_ctx_s *ctx) {
 		// header must be done here otherwise output might send it too early
 		length = _output_pcm_header(ctx);
 		if (ctx->config.stream_length > 0) ctx->output.length = length;
+		//FIXME ctx->output.length = length;
 
 		LOG_INFO("[%p]: setting track start, estimated size %zd", ctx, length);
 
@@ -132,9 +133,8 @@ static decode_state pcm_decode(struct thread_ctx_s *ctx) {
 
 	if (ctx->output.channels == 2) {
 		if (ctx->output.sample_size == 8) {
-			while (count--) {
-				*optr++ = *iptr++ << 24;
-			}
+			if (!ctx->output.in_endian)	while (count--) *optr++ = *iptr++ << 24;
+			else while (count--) *optr++ = (*iptr++ ^ 0x80) << 24;
 		} else if (ctx->output.sample_size == 16) {
 			if (!ctx->output.in_endian) {
 				while (count--) {
@@ -174,10 +174,18 @@ static decode_state pcm_decode(struct thread_ctx_s *ctx) {
 		}
 	} else if (ctx->output.channels == 1) {
 		if (ctx->output.sample_size == 8) {
-			while (count--) {
-				*optr = *iptr++ << 24;
-				*(optr+1) = *optr;
-				optr += 2;
+			if (!ctx->output.in_endian) {
+				while (count--) {
+					*optr = *iptr++ << 24;
+					*(optr+1) = *optr;
+					optr += 2;
+				}
+			} else {
+				while (count--) {
+					*optr = (*iptr++ ^ 0x80) << 24;
+					*(optr+1) = *optr;
+					optr += 2;
+				}
 			}
 		} else if (ctx->output.sample_size == 16) {
 			if (!ctx->output.in_endian) {
@@ -276,53 +284,4 @@ struct codec *register_pcm(void) {
 
 void deregister_pcm(void) {
 }
-
-
-#if 0
-		// mono, 16 bits
-		if (ctx->output.sample_size == 16 && ctx->output.channels == 1) {
-			int count = frames;
-
-			// 2 bytes per sample and mono, expand to stereo, 1 frame per loop
-			if (!ctx->output.in_endian) {
-				while (count--) {
-					*optr++ = *iptr;
-					*optr++ = *(iptr + 1);
-					*optr++ = *iptr++;
-					*optr++ = *iptr++;
-				}
-			} else {
-				while (count--) {
-					*optr++ = *(iptr + 1);
-					*optr++ = *iptr;
-					*optr++ = *(iptr + 1);
-					*optr++ = *iptr++;
-					iptr++;
-				}
-			}
-		}
-
-		// 24 bits, the tricky one
-		if (ctx->output.sample_size == 24 && ctx->output.channels == 2) {
-			int count = frames * 2;
-
-			done = true;
-			// 3 bytes per sample, shrink to 2 and do 1/2 frame (1 channel) per loop
-			if (!ctx->output.in_endian) {
-				while (count--) {
-					iptr++;
-					*optr++ = *iptr++;
-					*optr++ = *iptr++;
-				}
-			} else {
-				while (count--) {
-					*optr++ = *(iptr + 1);
-					*optr++ = *iptr;
-					iptr += 3;
-				}
-			}
-		}
-#endif
-
-
 

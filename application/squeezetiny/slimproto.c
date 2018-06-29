@@ -284,7 +284,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 	case 's':
 		{
 			struct track_param info;
-			struct outputstate *out = &ctx->output;
+			struct outputproperties *props = malloc(sizeof(struct outputproperties));
 			char *mimetype;
 			bool sendSTMn = false;
 			unsigned header_len = len - sizeof(struct strm_packet);
@@ -307,7 +307,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 
 			LOCK_O;
 			// if streaming failed, we might never start to play previous index
-			info.next = (out->state == OUTPUT_RUNNING && out->index == ctx->render.index);
+			info.next = (ctx->output.state == OUTPUT_RUNNING && ctx->output.index == ctx->render.index);
 			UNLOCK_O;
 
 			// get metatda - they must be freed by callee whenever he wants
@@ -318,48 +318,48 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 
 			LOCK_O;
 
-			out->replay_gain = unpackN(&strm->replay_gain);
-			out->fade_mode = strm->transition_type - '0';
-			out->fade_secs = strm->transition_period;
-			out->duration = info.metadata.duration;
-			out->remote = info.metadata.remote;
-			out->icy.last = gettime_ms() - ICY_UPDATE_TIME;
-			out->trunc16 = false;
+			props->replay_gain = unpackN(&strm->replay_gain);
+			props->fade_mode = strm->transition_type - '0';
+			props->fade_secs = strm->transition_period;
+			props->duration = info.metadata.duration;
+			props->remote = info.metadata.remote;
+			props->trunc16 = false;
+			ctx->output.icy.last = gettime_ms() - ICY_UPDATE_TIME;
 
-			LOG_DEBUG("[%p]: set fade mode: %u", ctx, ctx->output.fade_mode);
+			LOG_DEBUG("[%p]: set fade mode: %u", ctx, props->fade_mode);
 
 			if (strm->format != '?') {
 				if (strm->format != 'a')
-					out->sample_size = (strm->pcm_sample_size != '?') ? pcm_sample_size[strm->pcm_sample_size - '0'] : 0xff;
+					props->sample_size = (strm->pcm_sample_size != '?') ? pcm_sample_size[strm->pcm_sample_size - '0'] : 0xff;
 				else
-					out->sample_size = strm->pcm_sample_size;
+					props->sample_size = strm->pcm_sample_size;
 
-				out->sample_rate = (strm->pcm_sample_rate != '?') ? pcm_sample_rate[strm->pcm_sample_rate - '0'] : 0xff;
-				if (ctx->output.sample_rate > ctx->config.sample_rate) {
-					 LOG_WARN("[%p]: Sample rate %u error suspected, forcing to %u", ctx, out->sample_rate, ctx->config.sample_rate);
-					 out->sample_rate = ctx->config.sample_rate;
+				props->sample_rate = (strm->pcm_sample_rate != '?') ? pcm_sample_rate[strm->pcm_sample_rate - '0'] : 0xff;
+				if (props->sample_rate > ctx->config.sample_rate) {
+					 LOG_WARN("[%p]: Sample rate %u error suspected, forcing to %u", ctx, props->sample_rate, ctx->config.sample_rate);
+					 props->sample_rate = ctx->config.sample_rate;
 				}
 
-				out->channels = (strm->pcm_channels != '?') ? pcm_channels[strm->pcm_channels - '1'] : 0xff;
-				out->in_endian = (strm->pcm_endianness != '?') ? strm->pcm_endianness - '0' : 0xff;
-				out->codec = strm->format;
+				props->channels = (strm->pcm_channels != '?') ? pcm_channels[strm->pcm_channels - '1'] : 0xff;
+				props->in_endian = (strm->pcm_endianness != '?') ? strm->pcm_endianness - '0' : 0xff;
+				props->codec = strm->format;
 
 				// check if re-encoding is needed
 				if (!strcasecmp(ctx->config.encode, "thru") ||
-					(!strcasecmp(ctx->config.encode, "pcm") && out->codec == 'p')) {
-					if (out->codec == 'p') {
-						u8_t sample_size = (out->sample_size == 24 && ctx->config.L24_format == L24_TRUNC16) ? 16 : out->sample_size;
-						mimetype = find_pcm_mimetype(out->in_endian, &sample_size,
+					(!strcasecmp(ctx->config.encode, "pcm") && props->codec == 'p')) {
+					if (props->codec == 'p') {
+						u8_t sample_size = (props->sample_size == 24 && ctx->config.L24_format == L24_TRUNC16) ? 16 : props->sample_size;
+						mimetype = find_pcm_mimetype(props->in_endian, &sample_size,
 												ctx->config.L24_format == L24_TRUNC16_PCM,
-												out->sample_rate, out->channels,
+												props->sample_rate, props->channels,
 												ctx->mimetypes, ctx->config.raw_audio_format);
-						out->trunc16 = (sample_size != out->sample_size);
-						out->encode = ENCODE_PCM;
+						props->trunc16 = (sample_size != props->sample_size);
+						props->encode = ENCODE_PCM;
 					} else {
-						mimetype = find_mimetype(out->codec, ctx->mimetypes, NULL);
-						if (out->codec == 'f') out->codec ='c';
-						else out->codec = '*';
-						out->encode = ENCODE_THRU;
+						mimetype = find_mimetype(props->codec, ctx->mimetypes, NULL);
+						if (props->codec == 'f') props->codec ='c';
+						else props->codec = '*';
+						props->encode = ENCODE_THRU;
 					}
 				} else if (!strcasecmp(ctx->config.encode, "pcm")) {
 					char format[16] = "";
@@ -368,30 +368,30 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 					if (stristr(ctx->config.raw_audio_format, "wav")) strcat(format, "wav");
 					if (stristr(ctx->config.raw_audio_format, "aif")) strcat(format, "aif");
 					mimetype = find_mimetype('p', ctx->mimetypes, format);
-					out->trunc16 = (ctx->config.L24_format == L24_TRUNC16);
-					out->in_endian = 1;
-					out->encode = ENCODE_PCM;
+					props->trunc16 = (ctx->config.L24_format == L24_TRUNC16);
+					props->encode = ENCODE_PCM;
+					props->in_endian = 1;
 
 				} else {
 				}
 
 				// matching found in player
 				if (mimetype) {
-					strcpy(out->mimetype, mimetype);
+					strcpy(props->mimetype, mimetype);
 					free(mimetype);
 
-					out->format = mimetype2format(out->mimetype);
-					out->out_endian = (out->format == 'w');
-					out->length = ctx->config.stream_length;
+					props->format = mimetype2format(props->mimetype);
+					props->out_endian = (props->format == 'w');
+					props->length = ctx->config.stream_length;
 
-					if (codec_open(out->codec, out->sample_size, out->sample_rate, out->channels, out->in_endian, ctx) ) {
-						strcpy(info.mimetype, out->mimetype);
+					if (codec_open(props->codec, props->sample_size, props->sample_rate, props->channels, props->in_endian, ctx) ) {
+						strcpy(info.mimetype, props->mimetype);
 						sprintf(info.uri, "http://%s:%hu/" BRIDGE_URL "%d.%s", sq_ip,
-								ctx->output.port, ++ctx->output.index, mimetype2ext(out->mimetype));
+								ctx->output.port, ++ctx->output.index, mimetype2ext(props->mimetype));
 
 						if (!ctx_callback(ctx, SQ_SET_TRACK, NULL, &info)) sendSTMn = true;
 
-						LOG_INFO("[%p]: codec:%c, ch:%d, s:%d, r:%d", ctx, out->codec, out->channels, out->sample_size, out->sample_rate);
+						LOG_INFO("[%p]: codec:%c, ch:%d, s:%d, r:%d", ctx, props->codec, props->channels, props->sample_size, props->sample_rate);
 					} else sendSTMn = true;
 				} else sendSTMn = true;
 			} else if (ctx->autostart >= 2) {
@@ -412,7 +412,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 
 			// codec error
 			if (sendSTMn) {
-				LOG_ERROR("[%p] no matching codec %c", ctx, out->codec);
+				LOG_ERROR("[%p] no matching codec %c", ctx, props->codec);
 				 sendSTAT("STMn", 0, ctx);
 			}
 		}
@@ -449,52 +449,52 @@ static void process_cont(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 /*---------------------------------------------------------------------------*/
 static void process_codc(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 	struct codc_packet *codc = (struct codc_packet *)pkt;
-	struct outputstate *out = &ctx->output;
+	struct outputproperties *props = malloc(sizeof(struct outputproperties));
 	struct track_param info;
 	char *mimetype;
 
 	LOCK_O;
 
 	if (codc->format != 'a')
-		out->sample_size = (codc->pcm_sample_size != '?') ? pcm_sample_size[codc->pcm_sample_size - '0'] : 0xff;
+		props->sample_size = (codc->pcm_sample_size != '?') ? pcm_sample_size[codc->pcm_sample_size - '0'] : 0xff;
 	else
-		out->sample_size = codc->pcm_sample_size;
-	out->sample_rate = (codc->pcm_sample_rate != '?') ? pcm_sample_rate[codc->pcm_sample_rate - '0'] : 0xff;
-	out->channels = (codc->pcm_channels != '?') ? pcm_channels[codc->pcm_channels - '1'] : 0xff;
-	out->in_endian = (codc->pcm_endianness != '?') ? codc->pcm_channels - '0' : 0xff;
-	out->codec = codc->format;
+		props->sample_size = codc->pcm_sample_size;
+	props->sample_rate = (codc->pcm_sample_rate != '?') ? pcm_sample_rate[codc->pcm_sample_rate - '0'] : 0xff;
+	props->channels = (codc->pcm_channels != '?') ? pcm_channels[codc->pcm_channels - '1'] : 0xff;
+	props->in_endian = (codc->pcm_endianness != '?') ? codc->pcm_channels - '0' : 0xff;
+	props->codec = codc->format;
 
-	if (out->codec == 'p') {
-		u8_t sample_size = (out->sample_size == 24 && ctx->config.L24_format == L24_TRUNC16) ? 16 : out->sample_size;
-		mimetype = find_pcm_mimetype(out->in_endian, &sample_size, ctx->config.L24_format == L24_TRUNC16_PCM,
-									out->sample_rate, out->channels, ctx->mimetypes, ctx->config.raw_audio_format);
-		out->trunc16 = (sample_size != out->sample_size);
-	} else mimetype = find_mimetype(out->codec, ctx->mimetypes,  ctx->config.encode);
+	if (props->codec == 'p') {
+		u8_t sample_size = (props->sample_size == 24 && ctx->config.L24_format == L24_TRUNC16) ? 16 : props->sample_size;
+		mimetype = find_pcm_mimetype(props->in_endian, &sample_size, ctx->config.L24_format == L24_TRUNC16_PCM,
+									props->sample_rate, props->channels, ctx->mimetypes, ctx->config.raw_audio_format);
+		props->trunc16 = (sample_size != props->sample_size);
+	} else mimetype = find_mimetype(props->codec, ctx->mimetypes,  ctx->config.encode);
 
 	// matching found in player
 	if (mimetype) {
-		strcpy(out->mimetype, mimetype);
-		strcpy(info.mimetype, out->mimetype);
+		strcpy(props->mimetype, mimetype);
+		strcpy(info.mimetype, props->mimetype);
 		free(mimetype);
 
-		out->format = mimetype2format(out->mimetype);
-		out->out_endian = (out->format == 'w');
-		out->length = ctx->config.stream_length;
+		props->format = mimetype2format(props->mimetype);
+		props->out_endian = (props->format == 'w');
+		props->length = ctx->config.stream_length;
 		if (!strcasecmp(ctx->config.encode, "thru")) {
-			out->encode = ENCODE_THRU;
-			if (out->codec == 'f') out->codec ='c';
+			props->encode = ENCODE_THRU;
+			if (props->codec == 'f') props->codec ='c';
 		}
-		else out->encode = ENCODE_THRU;
+		else props->encode = ENCODE_THRU;
 
-		codec_open(out->codec, out->sample_size, out->sample_rate, out->channels, out->in_endian, ctx);
+		codec_open(props->codec, props->sample_size, props->sample_rate, props->channels, props->in_endian, ctx);
 
 		sprintf(info.uri, "http://%s:%hu/" BRIDGE_URL "%d.%s", sq_ip,
-							ctx->output.port, ++ctx->output.index, mimetype2ext(out->mimetype));
+							ctx->output.port, ++ctx->output.index, mimetype2ext(props->mimetype));
 
 		if (!ctx_callback(ctx, SQ_SET_TRACK, NULL, &info)) sendSTAT("STMn", 0, ctx);
 	} else {
 		sendSTAT("STMn", 0, ctx);
-		LOG_ERROR("[%p] no matching codec %c", ctx, out->codec);
+		LOG_ERROR("[%p] no matching codec %c", ctx, props->codec);
     }
 
 	UNLOCK_O;
