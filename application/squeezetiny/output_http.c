@@ -267,6 +267,9 @@ static void output_thread(struct thread_ctx_s *ctx) {
 	if (ctx->output_running == THREAD_RUNNING) ctx->output_running = THREAD_EXITED;
 	UNLOCK_O;
 
+	// make sure we react quickly
+	wake_controller(ctx);
+
 	NFREE(tbuf);
 	NFREE(hbuf);
 
