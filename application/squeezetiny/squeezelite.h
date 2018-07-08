@@ -194,8 +194,6 @@ struct wake {
 // this is for decoded frames buffers (32 bits * 2 channels)
 #define BYTES_PER_FRAME 8
 
-typedef enum { THREAD_KILLED = 0, THREAD_RUNNING, THREAD_EXITED } thread_state;
-
 // utils.c (non logging)
 typedef struct {
 	char *key;
@@ -275,6 +273,7 @@ void 		buf_adjust(struct buffer *buf, size_t mod);
 void 		_buf_resize(struct buffer *buf, size_t size);
 void 		buf_init(struct buffer *buf, size_t size);
 void 		buf_destroy(struct buffer *buf);
+bool 		_buf_reset(struct buffer *buf);
 
 // slimproto.c
 void 		slimproto_close(struct thread_ctx_s *ctx);
@@ -397,37 +396,30 @@ typedef enum { FADE_NONE = 0, FADE_CROSSFADE, FADE_IN, FADE_OUT, FADE_INOUT } fa
 
 typedef enum { ENCODE_THRU, ENCODE_PCM, ENCODE_FLAC, ENCODE_MP3 } encode_mode;
 
-// function starting with _ must be called with mutex locked
-void 		output_init(unsigned output_buf_size, struct thread_ctx_s *ctx);
-void 		output_close(struct thread_ctx_s *ctx);
-void 		output_free_icy(struct thread_ctx_s *ctx);
-
-void 		_output_boot(struct thread_ctx_s *ctx);
-void		_output_fill(struct buffer *buf, struct thread_ctx_s *ctx);
-void 		_output_new_stream(struct thread_ctx_s *ctx);
-size_t		_output_pcm_header(struct thread_ctx_s *ctx );
-void 		_checkfade(bool, struct thread_ctx_s *ctx);
-
-// output_http.c
-void 		output_flush(struct thread_ctx_s *ctx);
-bool 		output_start(struct thread_ctx_s *ctx);
-void 		wake_output(struct thread_ctx_s *ctx);
+// parameters for the output management thread
+struct output_thread_s {
+		bool			running;
+		thread_type 	thread;
+		int				http;			// listening socket of http server
+		u16_t			port;           // listening port of http server
+		int 			index;
+};
 
 // info for the track being sent to the http renderer (not played)
 struct outputstate {
 	output_state state;		// license to stream or not
+	bool	drain_started; 	// flag set once draining has started on one thread
 	char	format;			// data sent format (p=pcm, w=wav, i=aif, f=flac)
 	encode_mode	encode;		// how shall audio be re-encoded
-	int     index;			// track index served by output thread
-	int		http;			// listening socket of http server
-	u16_t	port;           // listening port of http server
 	u8_t 	sample_size, channels, codec; // as name, original stream values
 	u32_t 	sample_rate;	// as name, original stream values
 	bool	trunc16;		 // true if 24 bits samples must be truncated to 16
 	int 	in_endian, out_endian;	// 1 = little (MSFT/INTL), 0 = big (PCM/AAPL)
 	u32_t 	duration;       // duration of track in ms, 0 if unknown
+	u32_t	bitrate;	  	// as per name
 	bool  	remote;			// local track or not (if duration == 0 => live)
 	ssize_t length;			// HTTP content-length (-1:no chunked, -3 chunked if possible, >0 fake length)
+	u16_t  	index;			// 16 bits track counter(see output_thread)
 	bool 	chunked;		// chunked mode
 	char 	mimetype[_STR_LEN_];	// content-type to send to player
 	bool  	track_started;	// track has started to be streamed (trigger, not state)
@@ -472,6 +464,22 @@ struct renderstate {
 	int     index;    		// current track index in player (-1 = unknown)
 };
 
+// function starting with _ must be called with mutex locked
+void 		output_init(unsigned output_buf_size, struct thread_ctx_s *ctx);
+void 		output_close(struct thread_ctx_s *ctx);
+void 		output_free_icy(struct thread_ctx_s *ctx);
+
+void 		_output_boot(struct thread_ctx_s *ctx);
+bool		_output_fill(struct buffer *buf, struct thread_ctx_s *ctx);
+void 		_output_new_stream(struct thread_ctx_s *ctx);
+size_t		_output_pcm_header(struct thread_ctx_s *ctx );
+void 		_checkfade(bool, struct thread_ctx_s *ctx);
+
+// output_http.c
+void 		output_flush(struct thread_ctx_s *ctx);
+u16_t		output_start(u16_t index, struct thread_ctx_s *ctx);
+void 		wake_output(struct thread_ctx_s *ctx);
+
 /***************** main thread context**************/
 typedef struct {
 	u32_t updated;
@@ -485,7 +493,7 @@ typedef struct {
 	stream_state stream_state;
 	u32_t	ms_played;
 	u32_t	duration;
-	thread_state output_running;
+	bool	output_drain;
 } status_t;
 
 typedef enum {TRACK_STOPPED = 0, TRACK_STARTED, TRACK_PAUSED} track_status_t;
@@ -495,11 +503,12 @@ typedef enum {TRACK_STOPPED = 0, TRACK_STARTED, TRACK_PAUSED} track_status_t;
 #define MAX_PLAYER		32
 
 struct thread_ctx_s {
-	int 	self;
-	int 	autostart;
-	bool	running;
-	bool	in_use;
-	bool	on;
+	int 		self;
+	int 		autostart;
+	bool		running;
+	thread_type	thread;
+	bool		in_use;
+	bool		on;
 	sq_dev_param_t	config;
 	char 		*mimetypes[MAX_MIMETYPES + 1];
 	mutex_type 	mutex;
@@ -530,13 +539,9 @@ struct thread_ctx_s {
 	char		cli_id[18];		// (6*2)+(5*':')+NULL
 	mutex_type	cli_mutex;
 	u32_t		cli_timestamp;
-	thread_state output_running;
-	bool	stream_running;
-	bool	decode_running;
-	thread_type output_thread;
-	thread_type stream_thread;
-	thread_type	thread;
-	thread_type decode_thread;
+	struct output_thread_s output_thread[2];
+	bool 		decode_running, stream_running;
+	thread_type	decode_thread, stream_thread;
 	struct sockaddr_in serv_addr;
 	#define MAXBUF 4096
 	event_event	wake_e;
@@ -575,5 +580,51 @@ void		 	deregister_mad(void);
 bool register_soxr(void);
 void deregister_soxr(void);
 #endif
+
+/*
+The whole process includes receiving from LMS into streambuf, then either
+passthrough to outputbuf when no decoding is involved or decoding into outpufbuf
+in 32 bits 2 channels samples in platform's native endianness
+There a single outputbuf and state, but up to two thread to send it to the
+player due UPnP gapless feature ( two track in semi-parallel)
+The outputbuf is transferred to a local small http buffer before it's actually
+send to the player. When decoder / re-encoding is used, that buffer contains
+the reformated audio (truncation, coding, swapping, gain ...)
+The other main reason for that last buffer is to benefit from UPnP gapless
+features which allows a "next track" request to be sent while playing the
+current track, but that request must be sent long before current track finishes.
+Long before is a buffering size problem, which means that with compressed
+formats it can be sent late but with PCM, some players with smaller memory may
+require that command to be send pretty early of the player stops, so to some
+extend that http buffer acts like an extension of UPnP player's own buffer.
+Still, due to the streaming nature of LMS (one single outputbuf) it is not
+possible to send the "current" and "next" track fully in parallel, so the trick
+is to use that http buffer so that as soon as the last byte of a current track
+has been put in it, then LMS can be requested with the next track and so the
+UPnP request will come a few seconds earlier (depends on http buffer size) than
+it would normally do. Again, for players with larger buffers, this is not really
+needed, but some have really small buffers.
+The output thread then have two states, the first one (running state) which does
+complete processing from outputbuf, gain, trucation, swapping, coding then write
+to the http buffer then send the audio to the buffer. The second one, (draining
+state) which just sends from http buffer. When entering draining state, data
+must not be pulled anymore from outputbuf.
+The two output threads cannot be both in running or draining state and they
+co-exist during limited period of time. When the running thread has emptied the
+outpufbuf (and decoder has stopped) then it moves to draining state and LMS is
+informed that the next track can be sent (STMd). If the UPnP player suppports
+gapeless, upon reception of LMS' next track request, another output thread is
+started (in running state) and the UPnP request is sent to the player which
+will, at some point (unknown, depends on the implementation) get the data using
+http. Depending how fast the UPnP player implements gapless, then there might be
+a small period of time where both thread will work in parallel, once doing full
+processing, the other one just sending what's left (draining) in http buffer.
+*/
+
+
+
+
+
+
 
 

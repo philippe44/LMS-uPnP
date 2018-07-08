@@ -49,7 +49,7 @@ static log_level *loglevel = &decode_loglevel;
 static decode_state pcm_decode(struct thread_ctx_s *ctx) {
 	size_t bytes, in, out, bytes_per_frame, count;
 	frames_t frames;
-	u8_t *iptr, buf[3*8];
+	u8_t *iptr, ibuf[BYTES_PER_FRAME];
 	u32_t *optr;
 	struct pcm *p = ctx->decode.handle;
 
@@ -120,9 +120,9 @@ static decode_state pcm_decode(struct thread_ctx_s *ctx) {
 	);
 
 	if (in == 0 && bytes > 0 && _buf_used(ctx->streambuf) >= bytes_per_frame) {
-		memcpy(buf, iptr, bytes);
-		memcpy(buf + bytes, ctx->streambuf->buf, bytes_per_frame - bytes);
-		iptr = buf;
+		memcpy(ibuf, iptr, bytes);
+		memcpy(ibuf + bytes, ctx->streambuf->buf, bytes_per_frame - bytes);
+		iptr = ibuf;
 		in = 1;
 	}
 

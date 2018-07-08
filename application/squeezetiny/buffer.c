@@ -19,7 +19,7 @@
  *
  */
 
-// fifo bufffers 
+// fifo bufffers
 
 #define _GNU_SOURCE
 
@@ -104,6 +104,13 @@ void buf_flush(struct buffer *buf) {
 	mutex_unlock(buf->mutex);
 }
 
+bool _buf_reset(struct buffer *buf) {
+	if (buf->readp != buf->writep) return false;
+	buf->readp  = buf->buf;
+	buf->writep = buf->buf;
+	return true;
+}
+
 // adjust buffer to multiple of mod bytes so reading in multiple always wraps on frame boundary
 void buf_adjust(struct buffer *buf, size_t mod) {
 	size_t size;
@@ -154,8 +161,7 @@ void buf_destroy(struct buffer *buf) {
 	}
 }
 
-unsigned _buf_read(void *dst, struct buffer *src, unsigned size)
-{
+unsigned _buf_read(void *dst, struct buffer *src, unsigned size) {
 	unsigned low, a_size = min(size, _buf_used(src));
 
 	low = min(a_size, _buf_cont_read(src));
@@ -165,3 +171,4 @@ unsigned _buf_read(void *dst, struct buffer *src, unsigned size)
 
 	return a_size;
 }
+

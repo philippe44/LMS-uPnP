@@ -327,6 +327,7 @@ static void sq_init_metadata(metadata_t *metadata)
 	metadata->file_size = 0;
 	metadata->duration 	= 0;
 	metadata->remote 	= false;
+	metadata->bitrate	= 0;
 }
 
 /*--------------------------------------------------------------------------*/
@@ -403,6 +404,11 @@ bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, bool next)
 		}
 		*/
 
+		if ((p = cli_find_tag(cur, "bitrate")) != NULL) {
+			metadata->bitrate = atol(p);
+			free(p);
+		}
+
 		if ((p = cli_find_tag(cur, "tracknum")) != NULL) {
 			metadata->track = atol(p);
 			free(p);
@@ -429,7 +435,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, bool next)
 			snprintf(artwork, _STR_LEN_, "http://%s:%s%s", ctx->server_ip, ctx->server_port, metadata->artwork);
 			// why the f... does LMS use .png extension in image proxy, where IT IS jpeg?
 			if ((p = strstr(artwork, ".png")) != NULL) strcpy(p, ".jpg");
-    		free(metadata->artwork);
+			free(metadata->artwork);
 			metadata->artwork = artwork;
 		}
 	}
@@ -518,12 +524,12 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 			} else if (ctx->render.state != RD_PLAYING) {
 				LOCK_O;
 				ctx->render.state = RD_PLAYING;
-				// output thread served index in the renderer, we are truly started
+				// PLAY event can happen before render index has been captured
 				if (ctx->render.index == ctx->output.index) {
 					ctx->output.track_started = true;
 					ctx->render.track_start_time = gettime_ms();
-					LOG_INFO("[%p] track started (at %u)", ctx, ctx->render.track_start_time);
-				} else {
+					LOG_INFO("[%p] track %u started at %u", ctx, ctx->render.index, ctx->render.track_start_time);
+            } else {
 					LOG_INFO("[%p] play notification", ctx );
 				}
 				UNLOCK_O;
@@ -564,7 +570,7 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 				sprintf(cmd, "%s stop", ctx->cli_id);
 				rsp = cli_send_cmd(cmd, false, true, ctx);
 				NFREE(rsp);
-			} else if (ctx->stream.state <= DISCONNECT && ctx->output_running == THREAD_RUNNING) {
+			} else if (ctx->stream.state <= DISCONNECT && ctx->output.drain_started) {
 				// this should be mutex protected, but will not make it foolproof still
 				LOG_INFO("[%p] un-managed STOP, re-starting", ctx);
 				sprintf(cmd, "%s time -5.00", ctx->cli_id);
@@ -602,9 +608,10 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 			uri = strstr(uri, BRIDGE_URL);
 			if (!uri) break;
 			/*
-			if we detect a change of track and this is the track served by the
-			output thread, then update render context. Still, we have to wait
-			for PLAY status before claiming track has started
+			if we detect a change of track then update render context. Still,
+			we have to wait	for PLAY status before claiming track has started.
+			make sure as well that renderer track number is not from an old
+			context
 			*/
 			sscanf(uri, BRIDGE_URL "%u", &index);
 			if (ctx->render.index != index && ctx->output.index == index) {
@@ -628,8 +635,9 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 	 }
  }
 
-/*---------------------------------------------------------------------------*/
-void sq_init(char *ip, u16_t port)
+
+/*---------------------------------------------------------------------------*/
+void sq_init(char *ip, u16_t port)
 {
 	strcpy(sq_ip, ip);
 	sq_port = port;

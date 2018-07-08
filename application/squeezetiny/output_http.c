@@ -35,11 +35,53 @@ static log_level 	*loglevel = &output_loglevel;
 #define HEAD_SIZE		65536
 #define ICY_INTERVAL	32000
 
-static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, size_t bytes, u8_t **tbuf, size_t hsize);
-static void mirror_header(key_data_t *src, key_data_t *rsp, char *key);
+struct thread_param_s {
+	struct thread_ctx_s *ctx;
+	struct output_thread_s *thread;
+};
+
+static void 	output_http_thread(struct thread_param_s *param);
+static ssize_t 	handle_http(struct thread_ctx_s *ctx, int sock, int thread_index,
+						   size_t bytes, u8_t **tbuf, size_t hsize);
+static void 	mirror_header(key_data_t *src, key_data_t *rsp, char *key);
 
 /*---------------------------------------------------------------------------*/
-static void output_thread(struct thread_ctx_s *ctx) {
+u16_t output_start(u16_t index, struct thread_ctx_s *ctx) {
+	struct thread_param_s *param = malloc(sizeof(struct thread_param_s));
+	int i = 0;
+
+	// start the http server thread (get an available one first)
+	if (ctx->output_thread[0].running) param->thread = ctx->output_thread + 1;
+	else param->thread = ctx->output_thread;
+
+	param->thread->index = index;
+	param->thread->running = true;
+	param->ctx = ctx;
+
+	// find a free port
+	param->thread->port = sq_port;
+	param->thread->http = bind_socket(&param->thread->port, SOCK_STREAM);
+	while (param->thread->http < 0 && param->thread->port++ && i++ < MAX_PLAYER) {
+		param->thread->http = bind_socket(&param->thread->port, SOCK_STREAM);
+	}
+
+	// and listen to it
+	if (param->thread->http <= 0 || listen(param->thread->http, 1)) {
+		closesocket(param->thread->http);
+		param->thread->http = -1;
+		free(param);
+		return 0;
+	}
+
+	LOG_ERROR("-------> starting thread %d", (param->thread == ctx->output_thread) ? 0 : 1);
+
+	pthread_create(&param->thread->thread, NULL, (void *(*)(void*)) &output_http_thread, param);
+
+	return param->thread->port;
+}
+
+/*---------------------------------------------------------------------------*/
+static void output_http_thread(struct thread_param_s *param) {
 	bool http_ready, done = false;
 	int sock = -1;
 	char chunk_frame_buf[16] = "", *chunk_frame = chunk_frame_buf;
@@ -50,6 +92,11 @@ static void output_thread(struct thread_ctx_s *ctx) {
 	u8_t *hbuf = malloc(HEAD_SIZE);
 	fd_set rfds, wfds;
 	struct buffer __obuf, *obuf = &__obuf;
+	struct output_thread_s *thread = param->thread;
+	struct thread_ctx_s *ctx = param->ctx;
+	bool draining = false;
+
+	free(param);
 
 	/*
 	This function is higly non-linear and painful to read at first, I agree
@@ -57,9 +104,7 @@ static void output_thread(struct thread_ctx_s *ctx) {
 	Read it carefully, and then it's pretty simple
 	*/
 
-	buf_init(obuf, 128*1024);
-
-	while (ctx->output_running) {
+	while (thread->running) {
 		struct timeval timeout = {0, 50*1000};
 		bool res = true;
 		int n;
@@ -68,10 +113,12 @@ static void output_thread(struct thread_ctx_s *ctx) {
 			struct timeval timeout = {0, 50*1000};
 
 			FD_ZERO(&rfds);
-			FD_SET(ctx->output.http, &rfds);
+			FD_SET(thread->http, &rfds);
 
-			if (select(ctx->output.http + 1, &rfds, NULL, NULL, &timeout) > 0) {
-				sock = accept(ctx->output.http, NULL, NULL);
+			// FIXME: need to add something if connection opening is re-attempted
+			// while we are "draining" - need to refuse it.
+			if (select(thread->http + 1, &rfds, NULL, NULL, &timeout) > 0) {
+				sock = accept(thread->http, NULL, NULL);
 				set_nonblock(sock);
 				http_ready = false;
 				FD_ZERO(&wfds);
@@ -80,9 +127,10 @@ static void output_thread(struct thread_ctx_s *ctx) {
 			if (sock != -1 && ctx->running) {
 				LOG_INFO("[%p]: got HTTP connection %u", ctx, sock);
 			} else {
-				// if streaming fails, must exit for slimproto
+				// if streaming fails, exit for slimproto - use outputbuf here!
 				LOCK_D; LOCK_O;
-				if (!_buf_used(obuf) && ctx->decode.state == DECODE_COMPLETE) {
+				if (!_buf_used(ctx->outputbuf) && ctx->decode.state == DECODE_COMPLETE) {
+					LOG_ERROR("[%p]: streaming failed, exiting", ctx);
 					UNLOCK_O; UNLOCK_D;
 					break;
 				}
@@ -98,6 +146,8 @@ static void output_thread(struct thread_ctx_s *ctx) {
 
 		// need to wait till we get a codec, the very unlikely case of "codc"
 		if (!mimetype && n > 0) {
+			u32_t size;
+
 			LOCK_D;
 			if (ctx->decode.state < DECODE_READY) {
 				LOG_INFO("[%p]: need to wait for codec", ctx);
@@ -107,12 +157,20 @@ static void output_thread(struct thread_ctx_s *ctx) {
 				continue;
 			}
 			mimetype = true;
+
+			if (ctx->output.bitrate) size = ctx->output.bitrate * 1000 / 8 * 3;
+			else if (ctx->output.sample_rate != 0xff) size = ctx->output.sample_rate * ctx->output.sample_size / 8 * ctx->output.channels * 3;
+			else size = 64*1024;
+			buf_init(obuf, size);
+
+			LOG_ERROR("[%p]: allocating final buffer %u", ctx, size);
+
 			UNLOCK_D;
 		}
 
 		// should be the HTTP headers (works with non-blocking socket)
 		if (n > 0 && FD_ISSET(sock, &rfds)) {
-			ssize_t offset = handle_http(ctx, sock, bytes, &tbuf, hsize);
+			ssize_t offset = handle_http(ctx, sock, thread->index, bytes, &tbuf, hsize);
 			http_ready = res = (offset >= 0 && offset <= bytes + 1);
 
 			// reset chunking and head/tails properly at every new connection
@@ -176,8 +234,17 @@ static void output_thread(struct thread_ctx_s *ctx) {
 			continue;
 		}
 
-		// get some data ready to send
-		_output_fill(obuf, ctx);
+		/*
+		pull some data from outpubuf (LOCK_D better but un-necesssary). Order of
+		test matters as pulling from outputbuf should stop once draining has
+		started
+		*/
+		if (!draining && !_output_fill(obuf, ctx) && ctx->decode.state != DECODE_RUNNING) {
+			// full track sent, draining from obuf (outputbuf free)
+			ctx->output.drain_started = true;
+			draining = true;
+			LOG_INFO("[%p]: draining - sent %zu bytes (gap %d)", ctx, bytes, ctx->output.length > 0 ? bytes - ctx->output.length : 0);
+		}
 
 		// now are surely running - socket is non blocking, so this is fast
 		if (_buf_used(obuf) || tpos < bytes) {
@@ -214,7 +281,6 @@ static void output_thread(struct thread_ctx_s *ctx) {
 			} else space = send(sock, (void*) _buf_readp(obuf), space, 0);
 
 			if (space > 0) {
-
 				// first transmission, set flags for slimproto
 				if (!bytes) _output_boot(ctx);
 
@@ -246,14 +312,9 @@ static void output_thread(struct thread_ctx_s *ctx) {
 
 				LOG_SDEBUG("[%p] sent %u bytes (total: %u)", ctx, space, bytes);
 			}
-
-			UNLOCK_O;
 		} else {
-			// check if all sent - LOCK_D shall always be locked before LOCK_O
-			// or locked alone
-			UNLOCK_O;
-			LOCK_D;
-			if (ctx->decode.state != DECODE_RUNNING) {
+			// check if all sent
+			if (draining) {
 				// sending final empty chunk
 				if (ctx->output.chunked) {
 					strcpy(chunk_frame_buf, "0\r\n\r\n");
@@ -261,97 +322,31 @@ static void output_thread(struct thread_ctx_s *ctx) {
 				}
 				done = true;
 			}
-			UNLOCK_D;
 			// we don't have anything to send, let select read or sleep
 			FD_ZERO(&wfds);
 		}
+
+		UNLOCK_O;
 	}
 
-	LOG_INFO("[%p]: completed: %u bytes (gap %d)", ctx, bytes, ctx->output.length > 0 ? bytes - ctx->output.length : 0);
-
-	LOCK_O;
-	if (ctx->output_running == THREAD_RUNNING) ctx->output_running = THREAD_EXITED;
-	UNLOCK_O;
+	LOG_INFO("[%p]: completed: %zu bytes", ctx, bytes);
 
 	NFREE(tbuf);
 	NFREE(hbuf);
-	buf_destroy(obuf);
+	if (mimetype) buf_destroy(obuf);
 
 	// in chunked mode, a full chunk might not have been sent (due to TCP)
 	if (sock != -1) shutdown_socket(sock);
-}
-
-/*---------------------------------------------------------------------------*/
-bool output_start(struct thread_ctx_s *ctx) {
-	// already running, stop the thread but at least we can re-use the port
-	if (ctx->output_running) {
-		LOCK_O;
-		ctx->output_running = THREAD_KILLED;
-		// new thread must wait for decoder to give greenlight
-		ctx->output.state = OUTPUT_WAITING;
-		UNLOCK_O;
-		pthread_join(ctx->output_thread, NULL);
-	} else {
-		int i = 0;
-
-		// find a free port
-		ctx->output.port = sq_port;
-		ctx->output.http = bind_socket(&ctx->output.port, SOCK_STREAM);
-		do {
-			ctx->output.http = bind_socket(&ctx->output.port, SOCK_STREAM);
-		} while (ctx->output.http < 0 && ctx->output.port++ && i++ < MAX_PLAYER);
-
-		// and listen to it
-		if (ctx->output.http <= 0 || listen(ctx->output.http, 1)) {
-			closesocket(ctx->output.http);
-			ctx->output.http = -1;
-			return false;
-		}
-	}
-
-	ctx->output_running = THREAD_RUNNING;
-	pthread_create(&ctx->output_thread, NULL, (void *(*)(void*)) &output_thread, ctx);
-
-	return true;
-}
-
-/*---------------------------------------------------------------------------*/
-void output_flush(struct thread_ctx_s *ctx) {
-	thread_state running;
+	shutdown_socket(thread->http);
 
 	LOCK_O;
-	running = ctx->output_running;
-	ctx->output_running = THREAD_KILLED;
-	ctx->render.ms_played = 0;
-	/*
-	Don't know actually if it's stopped or not but it will be and that stop event
-	does not matter as we are flushing the whole thing. But if we want the next
-	playback to work, better force that status to RD_STOPPED
-	*/
-	if (ctx->output.state != OUTPUT_OFF) ctx->output.state = OUTPUT_STOPPED;
+	thread->http = -1;
+	thread->running = false;
 	UNLOCK_O;
 
-	if (running) {
-		pthread_join(ctx->output_thread, NULL);
-		LOG_INFO("[%p]: terminating output thread", ctx);
-		if (ctx->output.http) {
-			shutdown_socket(ctx->output.http);
-			ctx->output.http = -1;
-		}
-	}
-
-	LOCK_O;
-	ctx->output.track_started = false;
-	ctx->output.track_start = NULL;
-	NFREE(ctx->output.header.buffer);
-	ctx->output.header.count = 0;
-	ctx->render.index = -1;
-	UNLOCK_O;
-
-	LOG_DEBUG("[%p]: flush output buffer", ctx);
-	buf_flush(ctx->outputbuf);
-
+	LOG_ERROR("-------> ending thread %d", (thread == ctx->output_thread) ? 0 : 1);
 }
+
 
 /*----------------------------------------------------------------------------*/
 /*
@@ -362,7 +357,7 @@ suspend the connection using TCP, but if they close it and want to resume (i.e.
 they request a range, we'll restart from where we were and mostly it will not be
 acceptable by the player, so then use the option seek_after_pause
 */
-static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, size_t bytes, u8_t **tbuf, size_t hsize)
+static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, int thread_index, size_t bytes, u8_t **tbuf, size_t hsize)
 {
 	char *body = NULL, *request = NULL, *str = NULL;
 	key_data_t headers[64], resp[16] = { { NULL, NULL } };
@@ -415,8 +410,8 @@ static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, size_t bytes, u8_
 	}
 
 	// are we opening the expected file
-	if (index != ctx->output.index) {
-		LOG_WARN("wrong file requested, refusing %u %d", index, ctx->output.index);
+	if (index != thread_index) {
+		LOG_WARN("wrong file requested, refusing %u %d", index, thread_index);
 		head = "HTTP/1.1 410 Gone";
 		res = -1;
 	} else {

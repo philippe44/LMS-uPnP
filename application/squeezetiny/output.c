@@ -27,13 +27,8 @@ static log_level 	*loglevel = &output_loglevel;
 #define LOCK_O 	 mutex_lock(ctx->outputbuf->mutex)
 #define UNLOCK_O mutex_unlock(ctx->outputbuf->mutex)
 
-#define BYTE_1(n)	((u8_t) (n >> 24))
-#define BYTE_2(n)	((u8_t) (n >> 16))
-#define BYTE_3(n)	((u8_t) (n >> 8))
-#define BYTE_4(n)	((u8_t) (n))
-
 static void 	lpcm_pack(u8_t *dst, u8_t *src, size_t bytes, u8_t channels, int endian);
-static void*	apply_gain(s32_t *p, u32_t gain, size_t frames);
+static void		apply_gain(s32_t *p, u32_t gain, size_t frames);
 size_t 			fade_gain(u32_t *gain, struct thread_ctx_s *ctx);
 static void 	scale_and_pack(void *dst, u32_t *src, size_t frames, u8_t channels,
 							   u8_t sample_size, int endian);
@@ -113,21 +108,25 @@ static void big32(void *dst, u32_t src);
 
 
 /*---------------------------------------------------------------------------*/
-void _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
+bool _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
 	size_t bytes = _buf_space(buf);
 	struct outputstate *p;
 
 	/*
 	The outputbuf contains FRAMES of 32 bits samples and 2 channels. The buf is
-	what will be sent to client, so it can be any thing from header, ICY data,
+	what will be sent to client, so it can be anything amongst header, ICY data,
 	passthru audio, uncompressed audio in 8,16,24,32 and 1 or 2 channels or
 	re-compressed audio.
 	The gain, truncation, L24 pack, swap, fade-in/out is applied *from* the
 	outputbuf and copied *to* this buf so it really has no specific alignement
 	but for simplicity we won't process anything until it has free space for the
 	largest block of audio which is BYTES_PER_FRAME
+	Input buffer (outputbuf) is a multiple of BYTES_PER_FRAME and the writep is
+	always aligned to a multiple of BYTES_PER_FRAME when starting a new track
+	Output buffer (buf) cannot have an alignement due to additon of header  for
+	wav and aif files
 	*/
-	if (bytes < BYTES_PER_FRAME) return;
+	if (bytes < BYTES_PER_FRAME) return true;
 
 	//just to make code more readable
 	p = &ctx->output;
@@ -143,7 +142,7 @@ void _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
 			LOG_INFO("[%p] PCM header sent (%u bytes)", ctx, p->header.size);
 			NFREE(p->header.buffer);
 		}
-		return;
+		return true;
 	}
 
 	// might be overloaded if there is some ICY or header to be sent
@@ -185,7 +184,7 @@ void _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
 		memcpy(buf->writep, p->icy.buffer + p->icy.size - p->icy.count, bytes);
 		_buf_inc_writep(buf, bytes);
 		p->icy.count -= bytes;
-		return;
+		return true;
 	}
 
 	// see how audio data shall be processed
@@ -198,28 +197,16 @@ void _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
 		if (p->icy.interval) p->icy.remain -= bytes;
 	} else if (p->encode == ENCODE_PCM) {
 		// uncompressed audio to be processed
-		u8_t *iptr, *optr, ibuf[BYTES_PER_FRAME], obuf[BYTES_PER_FRAME];
 		u8_t sample_size = p->trunc16 ? 16 : p->sample_size;
 		size_t in, out, frames, bytes_per_frame = (sample_size / 8) * p->channels;
+		u8_t *optr, obuf[BYTES_PER_FRAME];
 		u32_t gain = 65536L;
-		void *scratch;
 
-		in = _buf_used(ctx->outputbuf);
+		// outputbuf is processed by BYTES_PER_FRAMES multiples => aligns fine
+		in = min(_buf_used(ctx->outputbuf), _buf_cont_read(ctx->outputbuf));
+		if (!in) return false;
 
-		// need enough room in outputbuf and buf
-		if (in < BYTES_PER_FRAME || out < bytes_per_frame) return;
-
-		in = min(in, _buf_cont_read(ctx->outputbuf));
-
-		// no enough cont'd place in input, just process one frame
-		if (in < BYTES_PER_FRAME) {
-			memcpy(ibuf, ctx->outputbuf->readp, in);
-			memcpy(ibuf + in, ctx->outputbuf->buf, BYTES_PER_FRAME - in);
-			iptr = ibuf;
-			in = BYTES_PER_FRAME;
-		} else iptr = ctx->outputbuf->readp;
-
-		// space is less than cont_write when buffer is empty!
+		// buf cannot count on alignement because of headers (wav /aif)
 		out = min(_buf_space(buf), _buf_cont_write(buf));
 
 		// not enough cont'd place in output, just process one frame
@@ -228,14 +215,9 @@ void _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
 			out = bytes_per_frame;
 		} else optr = buf->writep;
 
-		//FIXME: check that this works even with in < BYTES_PER_FRAME
 		frames = fade_gain(&gain, ctx);
 		frames = min(frames, in / BYTES_PER_FRAME);
 		frames = min(frames, out / bytes_per_frame);
-
-		// apply gain if any (before truncation or packing)
-
-		//apply_gain(optr, iptr, out->replay_gain, bytes, out->sample_size, out->in_endian);
 
 		/*
 		// truncate or swap
@@ -256,36 +238,70 @@ void _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
 		*/
 
 		if (p->replay_gain) gain = ((u64_t) gain * p->replay_gain) >> 16;
-		scratch = apply_gain((s32_t*) iptr, gain, frames);
 
-		if (scratch) {
-			scale_and_pack(optr, scratch, frames, p->channels, sample_size, p->out_endian);
+		apply_gain((s32_t*) ctx->outputbuf->readp, gain, frames);
+		scale_and_pack(optr, (s32_t*) ctx->outputbuf->readp, frames, p->channels, sample_size, p->out_endian);
 
-			free(scratch);
-
-			// take the data from temporary buffer if needed
-			if (optr == obuf) {
-				size_t out = _buf_cont_write(buf);
-				memcpy(buf->writep, optr, out);
-				memcpy(buf->buf, optr + out, bytes_per_frame - out);
-			}
-
-			_buf_inc_readp(ctx->outputbuf, frames * BYTES_PER_FRAME);
+		// take the data from temporary buffer if needed
+		if (optr == obuf) {
+			size_t out = _buf_cont_write(buf);
+			memcpy(buf->writep, optr, out);
+			memcpy(buf->buf, optr + out, bytes_per_frame - out);
 		}
-
+		
 		LOG_SDEBUG("[%p]: processed %u frames", ctx, frames);
 
+		_buf_inc_readp(ctx->outputbuf, frames * BYTES_PER_FRAME);
 		_buf_inc_writep(buf, frames * bytes_per_frame);
 	}
+
+	return (bytes != 0);
 }
 
 /*---------------------------------------------------------------------------*/
 void _output_boot(struct thread_ctx_s *ctx) {
+/* FIXME
 	if (ctx->output.track_start != ctx->outputbuf->readp) {
 		LOG_ERROR("[%p] not a track boundary %p:%p",
 		ctx, ctx->output.track_start, ctx->outputbuf->readp);
 	}
+*/
 	ctx->output.track_start = NULL;
+}
+
+/*---------------------------------------------------------------------------*/
+void output_flush(struct thread_ctx_s *ctx) {
+	int i;
+
+	LOCK_O;
+
+	ctx->render.ms_played = 0;
+	/*
+	Don't know actually if it's stopped or not but it will be and that stop event
+	does not matter as we are flushing the whole thing. But if we want the next
+	playback to work, better force that status to RD_STOPPED
+	*/
+	if (ctx->output.state != OUTPUT_OFF) ctx->output.state = OUTPUT_STOPPED;
+
+	for (i = 0; i < 2; i++) if (ctx->output_thread[i].running) {
+		ctx->output_thread[i].running = false;
+		UNLOCK_O;
+		pthread_join(ctx->output_thread[i].thread, NULL);
+		LOCK_O;
+	}
+
+	ctx->output.track_started = false;
+	ctx->output.track_start = NULL;
+	ctx->output.drain_started = false;
+	NFREE(ctx->output.header.buffer);
+	ctx->output.header.count = 0;
+	ctx->render.index = -1;
+	UNLOCK_O;
+
+	//FIXME: release outputbuffer
+	LOG_DEBUG("[%p]: flush output buffer", ctx);
+	buf_flush(ctx->outputbuf);
+
 }
 
 /*---------------------------------------------------------------------------*/
@@ -294,6 +310,7 @@ void output_init(unsigned outputbuf_size, struct thread_ctx_s *ctx) {
 
 	outputbuf_size = max(outputbuf_size, 256*1024);
 	ctx->outputbuf = &ctx->__o_buf;
+	//FIXME: should be dynamically created
 	buf_init(ctx->outputbuf, outputbuf_size);
 
 	if (!ctx->outputbuf->buf) {
@@ -303,8 +320,9 @@ void output_init(unsigned outputbuf_size, struct thread_ctx_s *ctx) {
 
 	ctx->output.track_started = false;
 	ctx->output.track_start = NULL;
-	ctx->output_running = THREAD_KILLED;
-	ctx->output.http = -1;
+	ctx->output.drain_started = false;
+	ctx->output_thread[0].running = ctx->output_thread[1].running = false;
+	ctx->output_thread[0].http = ctx->output_thread[1].http = -1;
 	ctx->output.icy.artist = ctx->output.icy.title = ctx->output.icy.artwork = NULL;
 
 	ctx->render.index = -1;
@@ -312,17 +330,21 @@ void output_init(unsigned outputbuf_size, struct thread_ctx_s *ctx) {
 
 /*---------------------------------------------------------------------------*/
 void output_close(struct thread_ctx_s *ctx) {
-	bool running;
+	int i;
 
 	LOG_INFO("[%p] close media renderer", ctx);
 
 	LOCK_O;
-	running = ctx->output_running;
-	ctx->output_running = THREAD_KILLED;
-	UNLOCK_O;
 
 	// still a race condition if a stream just ended a bit before ...
-	if (running) pthread_join(ctx->output_thread, NULL);
+	for (i = 0; i < 2; i++) if (ctx->output_thread[i].running) {
+		ctx->output_thread[i].running = false;
+		UNLOCK_O;
+		pthread_join(ctx->output_thread[i].thread, NULL);
+		LOCK_O;
+	}
+
+	UNLOCK_O;
 
 	output_free_icy(ctx);
 	NFREE(ctx->output.header.buffer);
@@ -337,7 +359,6 @@ void output_free_icy(struct thread_ctx_s *ctx) {
 	NFREE(ctx->output.icy.artwork);
 }
 
-
 /*---------------------------------------------------------------------------*/
 void _output_new_stream(struct thread_ctx_s *ctx) {
 	size_t length;
@@ -346,7 +367,6 @@ void _output_new_stream(struct thread_ctx_s *ctx) {
 	if (ctx->config.stream_length > 0 && length) ctx->output.length = length;
 	//FIXME if (length) ctx->output.length = length;
 }
-
 
 /*---------------------------------------------------------------------------*/
 size_t _output_pcm_header(struct thread_ctx_s *ctx ) {
@@ -550,27 +570,18 @@ void scale_and_pack(void *dst, u32_t *src, size_t frames, u8_t channels, u8_t sa
 
 #define MAX_VAL32 0x7fffffffffffLL
 /*---------------------------------------------------------------------------*/
-void *apply_gain(s32_t *p, u32_t gain, size_t frames) {
-	s32_t *buf = malloc(frames * BYTES_PER_FRAME);
+static void apply_gain(s32_t *iptr, u32_t gain, size_t frames) {
 	size_t count = frames * 2;
 	s64_t sample;
 
-	if (!buf) return NULL;
+	if (gain == 65536) return;
 
-	if (gain == 65536) {
-		memcpy(buf, p, frames * BYTES_PER_FRAME);
-	} else {
-		s32_t *iptr = buf;
-
-		while (count--) {
-			sample = *p++ * (s64_t) gain;
-			if (sample > MAX_VAL32) sample = MAX_VAL32;
-			else if (sample < -MAX_VAL32) sample = -MAX_VAL32;
-			*iptr++ = sample >> 16;
-		}
+	while (count--) {
+		sample = *iptr * (s64_t) gain;
+		if (sample > MAX_VAL32) sample = MAX_VAL32;
+		else if (sample < -MAX_VAL32) sample = -MAX_VAL32;
+		*iptr++ = sample >> 16;
 	}
-
-	return buf;
 }
 
 /*---------------------------------------------------------------------------*/

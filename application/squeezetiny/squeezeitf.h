@@ -58,6 +58,7 @@ typedef struct metadata_s {
 	u32_t duration;
 	u32_t file_size;
 	bool  remote;
+	u32_t bitrate;
 } metadata_t;
 
 typedef	struct sq_dev_param_s {

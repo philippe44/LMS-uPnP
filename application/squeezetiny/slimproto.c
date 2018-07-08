@@ -290,7 +290,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 			unsigned header_len = len - sizeof(struct strm_packet);
 			char *header = (char *)(pkt + sizeof(struct strm_packet));
 			in_addr_t ip = (in_addr_t)strm->server_ip; // keep in network byte order
-			u16_t port = strm->server_port; // keep in network byte order
+			u16_t hport, port = strm->server_port; // keep in network byte order
 
 			if (ip == 0) ip = ctx->slimproto_ip;
 
@@ -313,15 +313,17 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 			// get metatda - they must be freed by callee whenever he wants
 			sq_get_metadata(ctx->self, &info.metadata, info.next);
 
-			// start the http server thread
-			output_start(ctx);
+			out->index++;
+			hport = output_start(out->index, ctx);
 
 			LOCK_O;
 
+			out->drain_started = false;
 			out->replay_gain = unpackN(&strm->replay_gain);
 			out->fade_mode = strm->transition_type - '0';
 			out->fade_secs = strm->transition_period;
 			out->duration = info.metadata.duration;
+			out->bitrate = info.metadata.bitrate;
 			out->remote = info.metadata.remote;
 			out->icy.last = gettime_ms() - ICY_UPDATE_TIME;
 			out->trunc16 = false;
@@ -347,6 +349,12 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 				// check if re-encoding is needed
 				if (!strcasecmp(ctx->config.encode, "thru") ||
 					(!strcasecmp(ctx->config.encode, "pcm") && out->codec == 'p')) {
+
+					// always start from a clean outputbuf for alignment
+					if (!_buf_reset(ctx->outputbuf)) {
+						LOG_ERROR("[%p]: buffer should be empty", ctx);
+					}
+
 					if (out->codec == 'p') {
 						u8_t sample_size = (out->sample_size == 24 && ctx->config.L24_format == L24_TRUNC16) ? 16 : out->sample_size;
 						mimetype = find_pcm_mimetype(out->in_endian, &sample_size,
@@ -387,7 +395,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 					if (codec_open(out->codec, out->sample_size, out->sample_rate, out->channels, out->in_endian, ctx) ) {
 						strcpy(info.mimetype, out->mimetype);
 						sprintf(info.uri, "http://%s:%hu/" BRIDGE_URL "%d.%s", sq_ip,
-								ctx->output.port, ++ctx->output.index, mimetype2ext(out->mimetype));
+								hport, out->index, mimetype2ext(out->mimetype));
 
 						if (!ctx_callback(ctx, SQ_SET_TRACK, NULL, &info)) sendSTMn = true;
 
@@ -452,6 +460,7 @@ static void process_codc(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 	struct outputstate *out = &ctx->output;
 	struct track_param info;
 	char *mimetype;
+	struct output_thread_s *output_thread;
 
 	LOCK_O;
 
@@ -489,7 +498,7 @@ static void process_codc(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 		codec_open(out->codec, out->sample_size, out->sample_rate, out->channels, out->in_endian, ctx);
 
 		sprintf(info.uri, "http://%s:%hu/" BRIDGE_URL "%d.%s", sq_ip,
-							ctx->output.port, ++ctx->output.index, mimetype2ext(out->mimetype));
+						   output_thread->port, ++ctx->output.index, mimetype2ext(out->mimetype));
 
 		if (!ctx_callback(ctx, SQ_SET_TRACK, NULL, &info)) sendSTAT("STMn", 0, ctx);
 	} else {
@@ -746,6 +755,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			bool _stream_disconnect = false;
 			disconnect_code disconnect_code;
 			size_t header_len = 0;
+
 			ctx->slim_run.last = now;
 
 			LOCK_S;
@@ -782,7 +792,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			ctx->status.output_full = ctx->sentSTMu ? 0 : ctx->outputbuf->size / 2;
 			ctx->status.output_size = ctx->outputbuf->size;
 			ctx->status.current_sample_rate = ctx->output.current_sample_rate;
-			ctx->status.output_running = ctx->output_running;
+			ctx->status.output_drain = ctx->output.drain_started;
 			ctx->status.duration = ctx->render.duration;
 			if (!ctx->render.ms_played && ctx->render.index != -1 && ctx->render.state != RD_STOPPED) {
 				ctx->status.ms_played = now - ctx->render.track_start_time - ctx->render.ms_paused;
@@ -796,13 +806,13 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			}
 
 			// streaming ended with no bytes, let STMd/u be sent to move on
-			if 	(ctx->status.stream_bytes == 0 && ctx->status.output_running == THREAD_EXITED) {
+			if 	(ctx->status.stream_bytes == 0 && ctx->status.output_drain) {
 				LOG_WARN("[%p]: nothing received", ctx);
 				ctx->canSTMdu = true;
 			}
 
 			if (ctx->output.state == OUTPUT_RUNNING && !ctx->sentSTMu &&
-				ctx->status.output_running == THREAD_EXITED && ctx->status.stream_state <= DISCONNECT &&
+				ctx->status.output_drain && ctx->status.stream_state <= DISCONNECT &&
 				ctx->render.state == RD_STOPPED && ctx->canSTMdu == true) {
 				_sendSTMu = true;
 				ctx->sentSTMu = true;
@@ -811,8 +821,8 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 
 			// if there is still data to be sent, try an overrun
 			if (ctx->output.state == OUTPUT_RUNNING && !ctx->sentSTMo &&
-				ctx->status.output_running == THREAD_RUNNING && ctx->status.stream_state == STREAMING_HTTP &&
-				ctx->render.state == RD_STOPPED  && ctx->canSTMdu) {
+				!ctx->status.output_drain && ctx->status.stream_state == STREAMING_HTTP &&
+				ctx->render.state == RD_STOPPED && ctx->canSTMdu) {
 				_sendSTMo = true;
 				ctx->sentSTMo = true;
 			}
@@ -846,7 +856,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 
 			/*
 			 wait for all output to be sent to the player before asking for next
-			 track. We need both THREAD_EXITED and STMs sent to be sure, as for
+			 track. We need both THREAD_FINISHING and STMs sent to be sure, as for
 			 short tracks the thread might exit before playback has started and
 			 we don't want to send STMd before STMs
 			 also, if STMd is sent early, streaming of next track will start but
@@ -854,7 +864,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			 services like Deezer or RP plugin close the connection before all
 			 has been sent, so need to wait a bit before sending STMd ... grr
 			*/
-			if ((ctx->decode.state == DECODE_COMPLETE && ctx->status.output_running == THREAD_EXITED &&	ctx->canSTMdu &&
+			if ((ctx->decode.state == DECODE_COMPLETE && ctx->status.output_drain && ctx->canSTMdu &&
 				(!ctx->output.remote || (ctx->status.duration && ctx->status.duration - ctx->status.ms_played < STREAM_DELAY))) ||
 				ctx->decode.state == DECODE_ERROR) {
 				if (ctx->decode.state == DECODE_COMPLETE) _sendSTMd = true;
