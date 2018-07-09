@@ -321,7 +321,7 @@ void output_flush(struct thread_ctx_s *ctx) {
 }
 
 /*---------------------------------------------------------------------------*/
-void output_init(unsigned outputbuf_size, struct thread_ctx_s *ctx) {
+bool output_init(unsigned outputbuf_size, struct thread_ctx_s *ctx) {
 	LOG_DEBUG("[%p] init output media renderer", ctx);
 
 	outputbuf_size = max(outputbuf_size, 256*1024);
@@ -331,7 +331,7 @@ void output_init(unsigned outputbuf_size, struct thread_ctx_s *ctx) {
 
 	if (!ctx->outputbuf->buf) {
 		LOG_ERROR("[%p]: unable to malloc output buffer", ctx);
-		exit(0);
+		return false;
 	}
 
 	ctx->output.track_started = false;
@@ -342,6 +342,8 @@ void output_init(unsigned outputbuf_size, struct thread_ctx_s *ctx) {
 	ctx->output.icy.artist = ctx->output.icy.title = ctx->output.icy.artwork = NULL;
 
 	ctx->render.index = -1;
+
+	return true;
 }
 
 /*---------------------------------------------------------------------------*/

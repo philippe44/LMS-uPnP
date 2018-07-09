@@ -307,7 +307,7 @@ struct streamstate {
 	bool  meta_send;
 };
 
-void 		stream_thread_init(unsigned buf_size, struct thread_ctx_s *ctx);
+bool 		stream_thread_init(unsigned buf_size, struct thread_ctx_s *ctx);
 void 		stream_close(struct thread_ctx_s *ctx);
 void 		stream_file(const char *header, size_t header_len, unsigned threshold, struct thread_ctx_s *ctx);
 void 		stream_sock(u32_t ip, u16_t port, const char *header, size_t header_len, unsigned threshold, bool cont_wait, struct thread_ctx_s *ctx);
@@ -465,7 +465,7 @@ struct renderstate {
 };
 
 // function starting with _ must be called with mutex locked
-void 		output_init(unsigned output_buf_size, struct thread_ctx_s *ctx);
+bool		output_init(unsigned output_buf_size, struct thread_ctx_s *ctx);
 void 		output_close(struct thread_ctx_s *ctx);
 void 		output_free_icy(struct thread_ctx_s *ctx);
 u32_t 		output_bitrate(struct thread_ctx_s *ctx);

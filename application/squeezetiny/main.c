@@ -710,12 +710,16 @@ bool sq_run_device(sq_dev_handle_t handle, sq_dev_param_t *param)
 										  ctx->config.mac[0], ctx->config.mac[1], ctx->config.mac[2],
 										  ctx->config.mac[3], ctx->config.mac[4], ctx->config.mac[5]);
 
-	stream_thread_init(ctx->config.stream_buf_size, ctx);
-	output_init(ctx->config.output_buf_size, ctx);
-	decode_thread_init(ctx);
-	slimproto_thread_init(ctx);
+	if (!stream_thread_init(ctx->config.stream_buf_size, ctx)) return false;
 
-	return true;
+	if (output_init(ctx->config.output_buf_size, ctx)) {
+		decode_thread_init(ctx);
+		slimproto_thread_init(ctx);
+		return true;
+	} else {
+		stream_close(ctx);
+		return false;
+	}
 }
 
 /*--------------------------------------------------------------------------*/
