@@ -326,7 +326,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 			out->bitrate = info.metadata.bitrate;
 			out->remote = info.metadata.remote;
 			out->icy.last = gettime_ms() - ICY_UPDATE_TIME;
-			out->trunc16 = false;
+			memset(&out->encode, 0, sizeof(out->encode));
 
 			LOG_DEBUG("[%p]: set fade mode: %u", ctx, ctx->output.fade_mode);
 
@@ -351,23 +351,24 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 					(!strcasecmp(ctx->config.encode, "pcm") && out->codec == 'p')) {
 
 					// always start from a clean outputbuf for alignment
+					// FIXME: will not work in "flow" mode
 					if (!_buf_reset(ctx->outputbuf)) {
 						LOG_ERROR("[%p]: buffer should be empty", ctx);
 					}
 
 					if (out->codec == 'p') {
-						u8_t sample_size = (out->sample_size == 24 && ctx->config.L24_format == L24_TRUNC16) ? 16 : out->sample_size;
-						mimetype = find_pcm_mimetype(out->in_endian, &sample_size,
+						out->encode.sample_rate = out->sample_rate;
+						out->encode.sample_size = (out->sample_size == 24 && ctx->config.L24_format == L24_TRUNC16) ? 16 : out->sample_size;
+						mimetype = find_pcm_mimetype(out->in_endian, &out->encode.sample_size,
 												ctx->config.L24_format == L24_TRUNC16_PCM,
 												out->sample_rate, out->channels,
 												ctx->mimetypes, ctx->config.raw_audio_format);
-						out->trunc16 = (sample_size != out->sample_size);
-						out->encode = ENCODE_PCM;
+						out->encode.mode = ENCODE_PCM;
 					} else {
 						mimetype = find_mimetype(out->codec, ctx->mimetypes, NULL);
 						if (out->codec == 'f') out->codec ='c';
 						else out->codec = '*';
-						out->encode = ENCODE_THRU;
+						out->encode.mode = ENCODE_THRU;
 					}
 				} else if (!strcasecmp(ctx->config.encode, "pcm")) {
 					char format[16] = "";
@@ -376,8 +377,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 					if (stristr(ctx->config.raw_audio_format, "wav")) strcat(format, "wav");
 					if (stristr(ctx->config.raw_audio_format, "aif")) strcat(format, "aif");
 					mimetype = find_mimetype('p', ctx->mimetypes, format);
-					out->trunc16 = (ctx->config.L24_format == L24_TRUNC16);
-					out->encode = ENCODE_PCM;
+					out->encode.mode = ENCODE_PCM;
 					out->in_endian = 1;
 
 				} else {
@@ -477,7 +477,6 @@ static void process_codc(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 		u8_t sample_size = (out->sample_size == 24 && ctx->config.L24_format == L24_TRUNC16) ? 16 : out->sample_size;
 		mimetype = find_pcm_mimetype(out->in_endian, &sample_size, ctx->config.L24_format == L24_TRUNC16_PCM,
 									out->sample_rate, out->channels, ctx->mimetypes, ctx->config.raw_audio_format);
-		out->trunc16 = (sample_size != out->sample_size);
 	} else mimetype = find_mimetype(out->codec, ctx->mimetypes,  ctx->config.encode);
 
 	// matching found in player
@@ -490,10 +489,10 @@ static void process_codc(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 		out->out_endian = (out->format == 'w');
 		out->length = ctx->config.stream_length;
 		if (!strcasecmp(ctx->config.encode, "thru")) {
-			out->encode = ENCODE_THRU;
+			out->encode.mode = ENCODE_THRU;
 			if (out->codec == 'f') out->codec ='c';
 		}
-		else out->encode = ENCODE_THRU;
+		else out->encode.mode = ENCODE_THRU;
 
 		codec_open(out->codec, out->sample_size, out->sample_rate, out->channels, out->in_endian, ctx);
 
@@ -504,7 +503,7 @@ static void process_codc(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 	} else {
 		sendSTAT("STMn", 0, ctx);
 		LOG_ERROR("[%p] no matching codec %c", ctx, out->codec);
-    }
+	}
 
 	UNLOCK_O;
 

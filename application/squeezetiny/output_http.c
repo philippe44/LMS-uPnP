@@ -160,7 +160,9 @@ static void output_http_thread(struct thread_param_s *param) {
 			buf_init(obuf, output_bitrate(ctx) / 8);
 			LOG_ERROR("[%p]: allocating final buffer %u", ctx, output_bitrate(ctx) / 8);
 
-			output_boot(ctx);
+			LOCK_O;
+			ctx->output.track_start = NULL;
+			UNLOCK_O;
 		}
 
 		// should be the HTTP headers (works with non-blocking socket)

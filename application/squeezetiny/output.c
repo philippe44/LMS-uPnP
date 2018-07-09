@@ -188,17 +188,16 @@ bool _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
 	}
 
 	// see how audio data shall be processed
-	if (p->encode == ENCODE_THRU) {
+	if (p->encode.mode == ENCODE_THRU) {
 		//	simple encoded audio, nothing to process, just forward outputbut
 		bytes = min(bytes, _buf_cont_write(buf));
 		memcpy(buf->writep, ctx->outputbuf->readp, bytes);
 		_buf_inc_writep(buf, bytes);
 		_buf_inc_readp(ctx->outputbuf, bytes);
 		if (p->icy.interval) p->icy.remain -= bytes;
-	} else if (p->encode == ENCODE_PCM) {
+	} else if (p->encode.mode == ENCODE_PCM) {
 		// uncompressed audio to be processed
-		u8_t sample_size = p->trunc16 ? 16 : p->sample_size;
-		size_t in, out, frames, bytes_per_frame = (sample_size / 8) * p->channels;
+		size_t in, out, frames, bytes_per_frame = (p->encode.sample_size / 8) * p->channels;
 		u8_t *optr, obuf[BYTES_PER_FRAME];
 		u32_t gain = 65536L;
 
@@ -240,7 +239,7 @@ bool _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
 		if (p->replay_gain) gain = ((u64_t) gain * p->replay_gain) >> 16;
 
 		apply_gain((s32_t*) ctx->outputbuf->readp, gain, frames);
-		scale_and_pack(optr, (s32_t*) ctx->outputbuf->readp, frames, p->channels, sample_size, p->out_endian);
+		scale_and_pack(optr, (u32_t*) ctx->outputbuf->readp, frames, p->channels, p->encode.sample_size, p->out_endian);
 
 		// take the data from temporary buffer if needed
 		if (optr == obuf) {
@@ -248,7 +247,7 @@ bool _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
 			memcpy(buf->writep, optr, out);
 			memcpy(buf->buf, optr + out, bytes_per_frame - out);
 		}
-		
+
 		LOG_SDEBUG("[%p]: processed %u frames", ctx, frames);
 
 		_buf_inc_readp(ctx->outputbuf, frames * BYTES_PER_FRAME);
@@ -259,27 +258,15 @@ bool _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
 }
 
 /*---------------------------------------------------------------------------*/
-void output_boot(struct thread_ctx_s *ctx) {
-	LOCK_O;
-	ctx->output.track_start = NULL;
-	UNLOCK_O;
-
-	if (ctx->output.encode == ENCODE_FLAC) {
-		
-	}
-}
-
-/*---------------------------------------------------------------------------*/
 u32_t output_bitrate(struct thread_ctx_s *ctx) {
 	// go conservative by default
 	u32_t size = 512*1024*8;
 
 	if (ctx->output.bitrate) size = ctx->output.bitrate * 1000 * 3;
 	else if (ctx->output.sample_rate != 0xff)
-			size = ctx->output.sample_rate * ctx->output.channels *
-				   (ctx->output.trunc16 ? 16 : ctx->output.sample_size) * 3;
+			size = ctx->output.sample_rate * ctx->output.channels * ctx->output.encode.sample_size * 3;
 
-	if (ctx->output.encode == ENCODE_FLAC) size /= 2;
+	if (ctx->output.encode.mode == ENCODE_FLAC) size /= 2;
 
 	// don't go too small anyway
 	return max(size, 32*1024*8);
@@ -378,8 +365,21 @@ void output_free_icy(struct thread_ctx_s *ctx) {
 }
 
 /*---------------------------------------------------------------------------*/
-void _output_new_stream(struct thread_ctx_s *ctx) {
+void _output_new_stream(u32_t sample_rate, u8_t sample_size, u8_t channels, struct thread_ctx_s *ctx) {
+	struct outputstate *out = &ctx->output;
 	size_t length;
+
+	out->sample_rate = sample_rate;
+	out->sample_size = sample_size;
+	out->channels = channels;
+
+	// this is not sent by PCM in thru mode, so values are not set yet
+	if (out->encode.mode == ENCODE_PCM) {
+		out->encode.sample_rate = out->sample_rate;
+		if (ctx->config.L24_format == L24_TRUNC16 && out->sample_size == 24) out->encode.sample_size = 16;
+		else out->encode.sample_size = out->sample_size;
+	} else if (out->encode.mode == ENCODE_FLAC) {
+	}
 
 	length = _output_pcm_header(ctx);
 	if (ctx->config.stream_length > 0 && length) ctx->output.length = length;
@@ -389,11 +389,7 @@ void _output_new_stream(struct thread_ctx_s *ctx) {
 /*---------------------------------------------------------------------------*/
 size_t _output_pcm_header(struct thread_ctx_s *ctx ) {
 	struct outputstate *out = &ctx->output;
-	u8_t sample_size;
 	size_t length;
-
-	// do we need to truncate 24 bits?
-	sample_size = out->trunc16 ? 16 : out->sample_size;
 
 	/*
 	do not create a size (content-length) when we really don't know it but
@@ -403,9 +399,9 @@ size_t _output_pcm_header(struct thread_ctx_s *ctx ) {
 	if (!out->duration) {
 		if (ctx->config.stream_length < 0) length = MAX_FILE_SIZE;
 		else length = ctx->config.stream_length;
-		length = (length / ((u64_t) out->sample_rate * out->channels * sample_size /8)) *
-				 (u64_t) out->sample_rate * out->channels * sample_size / 8;
-	} else length = (((u64_t) out->duration * out->sample_rate) / 1000) * out->channels * (sample_size / 8);
+		length = (length / ((u64_t) out->encode.sample_rate * out->channels * out->encode.sample_size /8)) *
+				 (u64_t) out->encode.sample_rate * out->channels * out->encode.sample_size / 8;
+	} else length = (((u64_t) out->duration * out->encode.sample_rate) / 1000) * out->channels * (out->encode.sample_size / 8);
 
 	switch (out->format) {
 	case 'w': {
@@ -413,10 +409,10 @@ size_t _output_pcm_header(struct thread_ctx_s *ctx ) {
 
 		memcpy(h, &wave_header, sizeof(struct wave_header_s));
 		little16(&h->channels, out->channels);
-		little16(&h->bits_per_sample, sample_size);
-		little32(&h->sample_rate, out->sample_rate);
-		little32(&h->byte_rate, out->sample_rate * out->channels * (sample_size / 8));
-		little16(&h->block_align, out->channels * (sample_size / 8));
+		little16(&h->bits_per_sample, out->encode.sample_size);
+		little32(&h->sample_rate, out->encode.sample_rate);
+		little32(&h->byte_rate, out->encode.sample_rate * out->channels * (out->encode.sample_size / 8));
+		little16(&h->block_align, out->channels * (out->encode.sample_size / 8));
 		little32(&h->subchunk2_size, length);
 		little32(&h->chunk_size, 36 + length);
 		length += 36 + 8;
@@ -429,11 +425,11 @@ size_t _output_pcm_header(struct thread_ctx_s *ctx ) {
 
 		memcpy(h, &aiff_header, sizeof(struct aiff_header_s));
 		big16(h->channels, out->channels);
-		big16(h->sample_size, sample_size);
-		big16(h->sample_rate_num, out->sample_rate);
+		big16(h->sample_size, out->encode.sample_size);
+		big16(h->sample_rate_num, out->encode.sample_rate);
 		big32(&h->data_size, length + 8);
 		big32(&h->chunk_size, (length+8+8) + (18+8) + 4);
-		big32(&h->frames, length / (out->channels * (sample_size / 8)));
+		big32(&h->frames, length / (out->channels * (out->encode.sample_size / 8)));
 		length += (8+8) + (18+8) + 4 + 8;
 		out->header.buffer = (u8_t*) h;
 		out->header.size = out->header.count = 54; // can't count on structure due to alignment

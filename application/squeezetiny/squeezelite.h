@@ -410,10 +410,8 @@ struct outputstate {
 	output_state state;		// license to stream or not
 	bool	drain_started; 	// flag set once draining has started on one thread
 	char	format;			// data sent format (p=pcm, w=wav, i=aif, f=flac)
-	encode_mode	encode;		// how shall audio be re-encoded
 	u8_t 	sample_size, channels, codec; // as name, original stream values
 	u32_t 	sample_rate;	// as name, original stream values
-	bool	trunc16;		 // true if 24 bits samples must be truncated to 16
 	int 	in_endian, out_endian;	// 1 = little (MSFT/INTL), 0 = big (PCM/AAPL)
 	u32_t 	duration;       // duration of track in ms, 0 if unknown
 	u32_t	bitrate;	  	// as per name
@@ -440,7 +438,6 @@ struct outputstate {
 		size_t size, count;
 		char *buffer;
 	} header;
-
 	// only useful with decode mode
 	fade_state fade;		// fading state
 	u8_t	   *fade_start;	// pointer to fading start in output buffer
@@ -451,6 +448,11 @@ struct outputstate {
 	// only used with pcm or decode mode
 	u32_t 		replay_gain;
 	u32_t		start_at;	// when to start the track, unused
+	struct {
+		u32_t sample_rate;
+		u8_t sample_size;
+		encode_mode mode;
+	} encode;
 };
 
 // http renderer state (track being played)
@@ -469,10 +471,10 @@ bool		output_init(unsigned output_buf_size, struct thread_ctx_s *ctx);
 void 		output_close(struct thread_ctx_s *ctx);
 void 		output_free_icy(struct thread_ctx_s *ctx);
 u32_t 		output_bitrate(struct thread_ctx_s *ctx);
-void 		output_boot(struct thread_ctx_s *ctx);
 
 bool		_output_fill(struct buffer *buf, struct thread_ctx_s *ctx);
-void 		_output_new_stream(struct thread_ctx_s *ctx);
+void 		_output_new_stream(u32_t sample_rate, u8_t sample_size, u8_t channels,
+							   struct thread_ctx_s *ctx);
 size_t		_output_pcm_header(struct thread_ctx_s *ctx );
 void 		_checkfade(bool, struct thread_ctx_s *ctx);
 

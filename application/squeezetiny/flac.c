@@ -117,12 +117,8 @@ static FLAC__StreamDecoderWriteStatus write_cb(const FLAC__StreamDecoder *decode
 		ctx->decode.new_stream = false;
 
 		ctx->output.current_sample_rate = decode_newstream(frame->header.sample_rate, ctx->output.supported_rates, ctx);
-		ctx->output.channels = channels;
-		ctx->output.sample_size = bits_per_sample;
-		ctx->output.sample_rate = ctx->output.current_sample_rate;
-
 		if (ctx->output.fade_mode) _checkfade(true, ctx);
-		_output_new_stream(ctx);
+		_output_new_stream(ctx->output.current_sample_rate, bits_per_sample, channels, ctx);
 
 		UNLOCK_O;
 	}
