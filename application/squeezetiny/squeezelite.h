@@ -468,8 +468,9 @@ struct renderstate {
 void 		output_init(unsigned output_buf_size, struct thread_ctx_s *ctx);
 void 		output_close(struct thread_ctx_s *ctx);
 void 		output_free_icy(struct thread_ctx_s *ctx);
+u32_t 		output_bitrate(struct thread_ctx_s *ctx);
+void 		output_boot(struct thread_ctx_s *ctx);
 
-void 		_output_boot(struct thread_ctx_s *ctx);
 bool		_output_fill(struct buffer *buf, struct thread_ctx_s *ctx);
 void 		_output_new_stream(struct thread_ctx_s *ctx);
 size_t		_output_pcm_header(struct thread_ctx_s *ctx );

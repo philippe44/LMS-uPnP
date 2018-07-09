@@ -146,8 +146,6 @@ static void output_http_thread(struct thread_param_s *param) {
 
 		// need to wait till we get a codec, the very unlikely case of "codc"
 		if (!mimetype && n > 0) {
-			u32_t size;
-
 			LOCK_D;
 			if (ctx->decode.state < DECODE_READY) {
 				LOG_INFO("[%p]: need to wait for codec", ctx);
@@ -157,15 +155,12 @@ static void output_http_thread(struct thread_param_s *param) {
 				continue;
 			}
 			mimetype = true;
-
-			if (ctx->output.bitrate) size = ctx->output.bitrate * 1000 / 8 * 3;
-			else if (ctx->output.sample_rate != 0xff) size = ctx->output.sample_rate * ctx->output.sample_size / 8 * ctx->output.channels * 3;
-			else size = 64*1024;
-			buf_init(obuf, size);
-
-			LOG_ERROR("[%p]: allocating final buffer %u", ctx, size);
-
 			UNLOCK_D;
+
+			buf_init(obuf, output_bitrate(ctx) / 8);
+			LOG_ERROR("[%p]: allocating final buffer %u", ctx, output_bitrate(ctx) / 8);
+
+			output_boot(ctx);
 		}
 
 		// should be the HTTP headers (works with non-blocking socket)
@@ -281,9 +276,6 @@ static void output_http_thread(struct thread_param_s *param) {
 			} else space = send(sock, (void*) _buf_readp(obuf), space, 0);
 
 			if (space > 0) {
-				// first transmission, set flags for slimproto
-				if (!bytes) _output_boot(ctx);
-
 				if (bytes < HEAD_SIZE) {
 					memcpy(hbuf + bytes, _buf_readp(obuf), min(space, HEAD_SIZE - bytes));
 					hsize += min(space, HEAD_SIZE - bytes);

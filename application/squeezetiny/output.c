@@ -259,14 +259,30 @@ bool _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
 }
 
 /*---------------------------------------------------------------------------*/
-void _output_boot(struct thread_ctx_s *ctx) {
-/* FIXME
-	if (ctx->output.track_start != ctx->outputbuf->readp) {
-		LOG_ERROR("[%p] not a track boundary %p:%p",
-		ctx, ctx->output.track_start, ctx->outputbuf->readp);
-	}
-*/
+void output_boot(struct thread_ctx_s *ctx) {
+	LOCK_O;
 	ctx->output.track_start = NULL;
+	UNLOCK_O;
+
+	if (ctx->output.encode == ENCODE_FLAC) {
+		
+	}
+}
+
+/*---------------------------------------------------------------------------*/
+u32_t output_bitrate(struct thread_ctx_s *ctx) {
+	// go conservative by default
+	u32_t size = 512*1024*8;
+
+	if (ctx->output.bitrate) size = ctx->output.bitrate * 1000 * 3;
+	else if (ctx->output.sample_rate != 0xff)
+			size = ctx->output.sample_rate * ctx->output.channels *
+				   (ctx->output.trunc16 ? 16 : ctx->output.sample_size) * 3;
+
+	if (ctx->output.encode == ENCODE_FLAC) size /= 2;
+
+	// don't go too small anyway
+	return max(size, 32*1024*8);
 }
 
 /*---------------------------------------------------------------------------*/
