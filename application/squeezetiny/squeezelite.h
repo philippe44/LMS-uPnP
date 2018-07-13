@@ -408,7 +408,7 @@ struct output_thread_s {
 // info for the track being sent to the http renderer (not played)
 struct outputstate {
 	output_state state;		// license to stream or not
-	bool	drain_started; 	// flag set once draining has started on one thread
+	bool	completed;	 	// whole track has been pulled from outputbuf
 	char	format;			// data sent format (p=pcm, w=wav, i=aif, f=flac)
 	u8_t 	sample_size, channels, codec; // as name, original stream values
 	u32_t 	sample_rate;	// as name, original stream values
@@ -422,7 +422,6 @@ struct outputstate {
 	char 	mimetype[_STR_LEN_];	// content-type to send to player
 	bool  	track_started;	// track has started to be streamed (trigger, not state)
 	u8_t  	*track_start;   // pointer where track starts in buffer, just for legacy compatibility
-	unsigned current_sample_rate;	// current in sample rate
 	unsigned supported_rates[2];	// moot for now
 	// for icy data
 	struct {
@@ -452,6 +451,7 @@ struct outputstate {
 		u32_t sample_rate;
 		u8_t sample_size;
 		encode_mode mode;
+		void *codec;
 	} encode;
 };
 
@@ -470,12 +470,9 @@ struct renderstate {
 bool		output_init(unsigned output_buf_size, struct thread_ctx_s *ctx);
 void 		output_close(struct thread_ctx_s *ctx);
 void 		output_free_icy(struct thread_ctx_s *ctx);
-u32_t 		output_bitrate(struct thread_ctx_s *ctx);
 
 bool		_output_fill(struct buffer *buf, struct thread_ctx_s *ctx);
-void 		_output_new_stream(u32_t sample_rate, u8_t sample_size, u8_t channels,
-							   struct thread_ctx_s *ctx);
-size_t		_output_pcm_header(struct thread_ctx_s *ctx );
+void 		_output_new_stream(struct buffer *buf, struct thread_ctx_s *ctx);
 void 		_checkfade(bool, struct thread_ctx_s *ctx);
 
 // output_http.c
@@ -491,12 +488,12 @@ typedef struct {
 	u64_t stream_bytes;         // v : bytes received for current stream
 	u32_t output_full;			// v : unread bytes in output buf
 	u32_t output_size;			// f : output_buf_size init param
-	u32_t current_sample_rate;
+	u32_t sample_rate;
 	u32_t last;
 	stream_state stream_state;
 	u32_t	ms_played;
 	u32_t	duration;
-	bool	output_drain;
+	bool	output_completed;
 } status_t;
 
 typedef enum {TRACK_STOPPED = 0, TRACK_STARTED, TRACK_PAUSED} track_status_t;

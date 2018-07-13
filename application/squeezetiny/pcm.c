@@ -89,18 +89,9 @@ static decode_state pcm_decode(struct thread_ctx_s *ctx) {
 	);
 
 	if (ctx->decode.new_stream) {
-		size_t length;
-
 		LOCK_O_not_direct;
 
-		// header must be done here otherwise output might send it too early
-		length = _output_pcm_header(ctx);
-		if (ctx->config.stream_length > 0) ctx->output.length = length;
-		//FIXME ctx->output.length = length;
-
-		LOG_INFO("[%p]: setting track start, estimated size %zd", ctx, length);
-
-		ctx->output.current_sample_rate = decode_newstream(ctx->output.sample_rate, ctx->output.supported_rates, ctx);
+		ctx->output.sample_rate = decode_newstream(ctx->output.sample_rate, ctx->output.supported_rates, ctx);
 		ctx->output.track_start = ctx->outputbuf->writep;
 		if (ctx->output.fade_mode) _checkfade(true, ctx);
 		ctx->decode.new_stream = false;

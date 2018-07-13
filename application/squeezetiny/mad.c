@@ -238,13 +238,16 @@ static decode_state mad_decode(struct thread_ctx_s *ctx) {
 		MAD(&gm, synth_frame, &m->synth, &m->frame);
 
 		if (ctx->decode.new_stream) {
-			LOCK_O;
 			LOG_INFO("[%p]: setting track_start", ctx);
-			ctx->output.current_sample_rate = decode_newstream(m->synth.pcm.samplerate, ctx->output.supported_rates, ctx);
+			LOCK_O;
+
+			ctx->output.sample_rate = decode_newstream(m->synth.pcm.samplerate, ctx->output.supported_rates, ctx);
+			ctx->output.sample_size = 16;
+			ctx->output.channels = m->synth.pcm.channels;
 			ctx->output.track_start = ctx->outputbuf->writep;
 			if (ctx->output.fade_mode) _checkfade(true, ctx);
-			_output_new_stream(ctx->output.current_sample_rate, 16, m->synth.pcm.channels, ctx);
 			ctx->decode.new_stream = false;
+
 			UNLOCK_O;
 		}
 

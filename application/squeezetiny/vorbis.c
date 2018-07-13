@@ -153,11 +153,14 @@ static decode_state vorbis_decode( struct thread_ctx_s *ctx) {
 
 		LOG_INFO("[%p]: setting track_start", ctx);
 		LOCK_O_not_direct;
-		ctx->output.current_sample_rate = decode_newstream(info->rate, ctx->output.supported_rates, ctx);
+
+		ctx->output.sample_rate = decode_newstream(info->rate, ctx->output.supported_rates, ctx);
+		ctx->output.sample_size = 16;
+		ctx->output.channels = info->channels;
 		ctx->output.track_start = ctx->outputbuf->writep;
 		if (ctx->output.fade_mode) _checkfade(true, ctx);
-		_output_new_stream(ctx->output.current_sample_rate, 16, info->channels, ctx);
 		ctx->decode.new_stream = false;
+
 		UNLOCK_O_not_direct;
 
 		IF_PROCESS(

@@ -20,6 +20,7 @@
  */
 
 #include "squeezelite.h"
+#include "FLAC/stream_encoder.h"
 
 extern log_level	output_loglevel;
 static log_level 	*loglevel = &output_loglevel;
@@ -27,11 +28,42 @@ static log_level 	*loglevel = &output_loglevel;
 #define LOCK_O 	 mutex_lock(ctx->outputbuf->mutex)
 #define UNLOCK_O mutex_unlock(ctx->outputbuf->mutex)
 
+static void 	output_encode_end(struct thread_ctx_s *ctx);
 static void 	lpcm_pack(u8_t *dst, u8_t *src, size_t bytes, u8_t channels, int endian);
 static void		apply_gain(s32_t *p, u32_t gain, size_t frames);
 size_t 			fade_gain(u32_t *gain, struct thread_ctx_s *ctx);
 static void 	scale_and_pack(void *dst, u32_t *src, size_t frames, u8_t channels,
 							   u8_t sample_size, int endian);
+
+static FLAC__StreamEncoderWriteStatus flac_write_callback(const FLAC__StreamEncoder *encoder, const FLAC__byte buffer[], size_t bytes, unsigned samples, unsigned current_frame, void *client_data);
+
+static struct {
+#if !LINKALL
+	// FLAC symbols to be dynamically loaded
+	FLAC__StreamEncoder* (*FLAC__stream_encoder_new)(void);
+	FLAC__bool (*FLAC__stream_encoder_finish)(FLAC__StreamEncoder *encoder);
+	void (*FLAC__stream_encoder_delete)(FLAC__StreamEncoder *encoder);
+	FLAC__bool (*FLAC__stream_encoder_set_verify)(FLAC__StreamEncoder*encoder, FLAC__bool value);
+	FLAC__bool (*FLAC__stream_encoder_set_compression_level)(FLAC__StreamEncoder *encoder, unsigned value);
+	FLAC__bool (*FLAC__stream_encoder_set_channels)(FLAC__StreamEncoder *encoder, unsigned value);
+	FLAC__bool (*FLAC__stream_encoder_set_bits_per_sample)(FLAC__StreamEncoder *encoder, unsigned value);
+	FLAC__bool (*FLAC__stream_encoder_set_sample_rate)(FLAC__StreamEncoder *encoder, unsigned value);
+	FLAC__bool (*FLAC__stream_encoder_set_blocksize)(FLAC__StreamEncoder *encoder, unsigned value);
+	FLAC__bool (*FLAC__stream_encoder_set_streamable_subset)(FLAC__StreamEncoder *encoder, FLAC__bool value);
+	FLAC__StreamEncoderInitStatus (*FLAC__stream_encoder_init_stream)(FLAC__StreamEncoder *encoder, FLAC__StreamEncoderWriteCallback write_callback, FLAC__StreamEncoderSeekCallback seek_callback, FLAC__StreamEncoderTellCallback tell_callback, FLAC__StreamEncoderMetadataCallback metadata_callback, void *client_data);
+#endif
+} f;
+
+#define FLAC_BLOCK_SIZE 1024
+
+#if LINKALL
+#define FLAC(h, fn, ...) (FLAC__ ## fn)(__VA_ARGS__)
+#define FLAC_A(h, a)     (FLAC__ ## a)
+#else
+#define FLAC(h, fn, ...) (h).FLAC__##fn(__VA_ARGS__)
+#define FLAC_A(h, a)     (h).FLAC__ ## a
+#endif
+
 
 /*---------------------------------- WAVE ------------------------------------*/
 static struct wave_header_s {
@@ -195,7 +227,7 @@ bool _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
 		_buf_inc_writep(buf, bytes);
 		_buf_inc_readp(ctx->outputbuf, bytes);
 		if (p->icy.interval) p->icy.remain -= bytes;
-	} else if (p->encode.mode == ENCODE_PCM) {
+	} else {
 		// uncompressed audio to be processed
 		size_t in, out, frames, bytes_per_frame = (p->encode.sample_size / 8) * p->channels;
 		u8_t *optr, obuf[BYTES_PER_FRAME];
@@ -203,7 +235,12 @@ bool _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
 
 		// outputbuf is processed by BYTES_PER_FRAMES multiples => aligns fine
 		in = min(_buf_used(ctx->outputbuf), _buf_cont_read(ctx->outputbuf));
-		if (!in) return false;
+
+		// no bytes means end of audio data
+		if (!in) {
+			output_encode_end(p);
+			return false;
+		}
 
 		// buf cannot count on alignement because of headers (wav /aif)
 		out = min(_buf_space(buf), _buf_cont_write(buf));
@@ -219,57 +256,135 @@ bool _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
 		frames = min(frames, out / bytes_per_frame);
 
 		/*
-		// truncate or swap
-		if (out->sample_size == 24 && out->trunc16) {
-			truncate16(optr, iptr, bytes, out->in_endian, out->out_endian);
-			obytes = (obytes * 2) / 3;
 		} else if (out->sample_size == 24 && ctx->config.L24_format == L24_PACKED_LPCM) {
 			lpcm_pack(optr, iptr, bytes, out->channels, out->in_endian);
-		} else if (out->in_endian != out->out_endian) {
-			swap(optr, iptr, bytes, out->sample_size);
-		} else memcpy(optr, iptr, bytes);
-		*/
-		/* to be applied
-			- gain
-			- fade
-			- truncation
-			- 24 bits packing
 		*/
 
 		if (p->replay_gain) gain = ((u64_t) gain * p->replay_gain) >> 16;
 
 		apply_gain((s32_t*) ctx->outputbuf->readp, gain, frames);
-		scale_and_pack(optr, (u32_t*) ctx->outputbuf->readp, frames, p->channels, p->encode.sample_size, p->out_endian);
 
-		// take the data from temporary buffer if needed
-		if (optr == obuf) {
-			size_t out = _buf_cont_write(buf);
-			memcpy(buf->writep, optr, out);
-			memcpy(buf->buf, optr + out, bytes_per_frame - out);
+		if (p->encode.mode == ENCODE_PCM) {
+			scale_and_pack(optr, (u32_t*) ctx->outputbuf->readp, frames, p->channels, p->encode.sample_size, p->out_endian);
+			// take the data from temporary buffer if needed
+			if (optr == obuf) {
+				size_t out = _buf_cont_write(buf);
+				memcpy(buf->writep, optr, out);
+				memcpy(buf->buf, optr + out, bytes_per_frame - out);
+			}
+			_buf_inc_writep(buf, frames * bytes_per_frame);
 		}
 
-		LOG_SDEBUG("[%p]: processed %u frames", ctx, frames);
-
 		_buf_inc_readp(ctx->outputbuf, frames * BYTES_PER_FRAME);
-		_buf_inc_writep(buf, frames * bytes_per_frame);
+
+		LOG_SDEBUG("[%p]: processed %u frames", ctx, frames);
 	}
 
 	return (bytes != 0);
 }
 
 /*---------------------------------------------------------------------------*/
-u32_t output_bitrate(struct thread_ctx_s *ctx) {
-	// go conservative by default
-	u32_t size = 512*1024*8;
+void _output_new_stream(struct buffer *obuf, struct thread_ctx_s *ctx) {
+	struct outputstate *out = &ctx->output;
 
-	if (ctx->output.bitrate) size = ctx->output.bitrate * 1000 * 3;
-	else if (ctx->output.sample_rate != 0xff)
-			size = ctx->output.sample_rate * ctx->output.channels * ctx->output.encode.sample_size * 3;
+	if (!out->encode.sample_rate) out->encode.sample_rate = out->sample_rate;
+	if (!out->encode.sample_size)
+		if (ctx->config.L24_format == L24_TRUNC16 && out->sample_size == 24) out->encode.sample_size = 16;
+		else out->encode.sample_size = out->sample_size;
 
-	if (ctx->output.encode.mode == ENCODE_FLAC) size /= 2;
+	if (out->encode.mode == ENCODE_PCM) {
+		size_t length;
 
-	// don't go too small anyway
-	return max(size, 32*1024*8);
+		buf_init(obuf, out->encode.sample_rate * out->channels * out->encode.sample_size / 8 * 3);
+
+		/*
+		do not create a size (content-length) when we really don't know it but
+		when we set a content-length (http_mode > 0) then at least the headers
+		should be consistent
+		*/
+		if (!out->duration) {
+			if (ctx->config.stream_length < 0) length = MAX_FILE_SIZE;
+			else length = ctx->config.stream_length;
+			length = (length / ((u64_t) out->encode.sample_rate * out->channels * out->encode.sample_size /8)) *
+					 (u64_t) out->encode.sample_rate * out->channels * out->encode.sample_size / 8;
+		} else length = (((u64_t) out->duration * out->encode.sample_rate) / 1000) * out->channels * (out->encode.sample_size / 8);
+
+		switch (out->format) {
+		case 'w': {
+			struct wave_header_s *h = malloc(sizeof(struct wave_header_s));
+
+			memcpy(h, &wave_header, sizeof(struct wave_header_s));
+			little16(&h->channels, out->channels);
+			little16(&h->bits_per_sample, out->encode.sample_size);
+			little32(&h->sample_rate, out->encode.sample_rate);
+			little32(&h->byte_rate, out->encode.sample_rate * out->channels * (out->encode.sample_size / 8));
+			little16(&h->block_align, out->channels * (out->encode.sample_size / 8));
+			little32(&h->subchunk2_size, length);
+			little32(&h->chunk_size, 36 + length);
+			length += 36 + 8;
+			out->header.buffer = (u8_t*) h;
+			out->header.size = out->header.count = sizeof(struct wave_header_s);
+		   }
+		   break;
+	   case 'i': {
+			struct aiff_header_s *h = malloc(sizeof(struct aiff_header_s));
+
+			memcpy(h, &aiff_header, sizeof(struct aiff_header_s));
+			big16(h->channels, out->channels);
+			big16(h->sample_size, out->encode.sample_size);
+			big16(h->sample_rate_num, out->encode.sample_rate);
+			big32(&h->data_size, length + 8);
+			big32(&h->chunk_size, (length+8+8) + (18+8) + 4);
+			big32(&h->frames, length / (out->channels * (out->encode.sample_size / 8)));
+			length += (8+8) + (18+8) + 4 + 8;
+			out->header.buffer = (u8_t*) h;
+			out->header.size = out->header.count = 54; // can't count on structure due to alignment
+			}
+			break;
+		case 'p':
+			default:
+			out->header.buffer = NULL;
+			out->header.size = out->header.count = 0;
+			//FIXME: why setting length here at 0?
+			// length = 0;
+			break;
+		}
+
+		if (ctx->config.stream_length > 0) ctx->output.length = length;
+		//FIXME ctx->output.length = length;
+		LOG_INFO("[%p]: PCM estimated size %zu", ctx, length);
+	} else if (out->encode.mode == ENCODE_FLAC) {
+		bool ok;
+		FLAC__StreamEncoder *codec;
+
+		buf_init(obuf, (out->encode.sample_rate * out->channels * out->encode.sample_size / 8 * 3) / 2);
+
+		//FIXME: veryfy that there is no conflic with DLL load
+		codec = FLAC(f, stream_encoder_new);
+		ok = FLAC(f, stream_encoder_set_verify,codec, false);
+		ok &= FLAC(f, stream_encoder_set_compression_level, codec, 5);
+		ok &= FLAC(f, stream_encoder_set_channels, codec, out->channels);
+		ok &= FLAC(f, stream_encoder_set_bits_per_sample, codec, out->encode.sample_size);
+		ok &= FLAC(f, stream_encoder_set_sample_rate, codec, out->encode.sample_rate);
+		ok &= FLAC(f, stream_encoder_set_blocksize, codec, FLAC_BLOCK_SIZE);
+		ok &= FLAC(f, stream_encoder_set_streamable_subset, codec, true);
+		ok &= !FLAC(f, stream_encoder_init_stream, codec, flac_write_callback, NULL, NULL, NULL, obuf);
+		out->encode.codec = (void*) codec;
+
+		LOG_INFO("[%p]: re-encoding using FLAC (%u)", ctx, ok);
+	} else {
+		buf_init(obuf, max((out->bitrate * 3) / 8, 512*1024));
+	}
+}
+
+/*---------------------------------------------------------------------------*/
+static void output_encode_end(struct thread_ctx_s *ctx) {
+	if (ctx->output.encode.mode == ENCODE_FLAC) {
+		// FIXME: is there a last blurp of data produced?
+		FLAC(f, stream_encoder_finish, ctx->output.encode.codec);
+		FLAC(f, stream_encoder_delete, ctx->output.encode.codec);
+		ctx->output.encode.codec = NULL;
+	}
 }
 
 /*---------------------------------------------------------------------------*/
@@ -295,16 +410,18 @@ void output_flush(struct thread_ctx_s *ctx) {
 
 	ctx->output.track_started = false;
 	ctx->output.track_start = NULL;
-	ctx->output.drain_started = false;
+	ctx->output.completed = false;
 	NFREE(ctx->output.header.buffer);
 	ctx->output.header.count = 0;
+	output_free_icy(ctx);
+	output_encode_end(ctx);
 	ctx->render.index = -1;
+
 	UNLOCK_O;
 
 	//FIXME: release outputbuffer
 	LOG_DEBUG("[%p]: flush output buffer", ctx);
 	buf_flush(ctx->outputbuf);
-
 }
 
 /*---------------------------------------------------------------------------*/
@@ -323,37 +440,43 @@ bool output_init(unsigned outputbuf_size, struct thread_ctx_s *ctx) {
 
 	ctx->output.track_started = false;
 	ctx->output.track_start = NULL;
-	ctx->output.drain_started = false;
+	ctx->output.completed = false;
 	ctx->output_thread[0].running = ctx->output_thread[1].running = false;
 	ctx->output_thread[0].http = ctx->output_thread[1].http = -1;
 	ctx->output.icy.artist = ctx->output.icy.title = ctx->output.icy.artwork = NULL;
 
 	ctx->render.index = -1;
 
+#if !LINKALL
+	// load share dlibrary and symbols if necessary
+	if (!f.FLAC__stream_encoder_new) {
+		void *handle = dlopen(LIBFLAC, RTLD_NOW);
+		char *err;
+
+		if (handle) {
+			f.FLAC__stream_encoder_new = dlsym(handle, "FLAC__stream_encoder_new");
+			f.FLAC__stream_encoder_finish = dlsym(handle, "FLAC__stream_encoder_finish");
+			f.FLAC__stream_encoder_delete = dlsym(handle, "FLAC__stream_encoder_delete");
+			f.FLAC__stream_encoder_set_verify = dlsym(handle, "FLAC__stream_encoder_set_verify");
+			f.FLAC__stream_encoder_set_compression_level = dlsym(handle, "FLAC__stream_encoder_set_compression_level");
+			f.FLAC__stream_encoder_set_channels = dlsym(handle, "FLAC__stream_encoder_set_channels");
+			f.FLAC__stream_encoder_set_bits_per_sample = dlsym(handle, "FLAC__stream_encoder_set_bits_per_sample");
+			f.FLAC__stream_encoder_set_sample_rate = dlsym(handle, "FLAC__stream_encoder_set_sample_rate");
+			f.FLAC__stream_encoder_set_blocksize = dlsym(handle, "FLAC__stream_encoder_set_blocksize");
+			f.FLAC__stream_encoder_set_streamable_subset = dlsym(handle, "FLAC__stream_encoder_set_streamable_subset");
+			f.FLAC__stream_encoder_init_stream = dlsym(handle, "FLAC__stream_encoder_init_stream");
+		} else {
+			LOG_INFO("loading flac: %s", dlerror());
+		}
+	}
+#endif
+
 	return true;
 }
 
 /*---------------------------------------------------------------------------*/
 void output_close(struct thread_ctx_s *ctx) {
-	int i;
-
 	LOG_INFO("[%p] close media renderer", ctx);
-
-	LOCK_O;
-
-	// still a race condition if a stream just ended a bit before ...
-	for (i = 0; i < 2; i++) if (ctx->output_thread[i].running) {
-		ctx->output_thread[i].running = false;
-		UNLOCK_O;
-		pthread_join(ctx->output_thread[i].thread, NULL);
-		LOCK_O;
-	}
-
-	UNLOCK_O;
-
-	output_free_icy(ctx);
-	NFREE(ctx->output.header.buffer);
-
 	buf_destroy(ctx->outputbuf);
 }
 
@@ -365,85 +488,19 @@ void output_free_icy(struct thread_ctx_s *ctx) {
 }
 
 /*---------------------------------------------------------------------------*/
-void _output_new_stream(u32_t sample_rate, u8_t sample_size, u8_t channels, struct thread_ctx_s *ctx) {
-	struct outputstate *out = &ctx->output;
-	size_t length;
-
-	out->sample_rate = sample_rate;
-	out->sample_size = sample_size;
-	out->channels = channels;
-
-	// this is not sent by PCM in thru mode, so values are not set yet
-	if (out->encode.mode == ENCODE_PCM) {
-		out->encode.sample_rate = out->sample_rate;
-		if (ctx->config.L24_format == L24_TRUNC16 && out->sample_size == 24) out->encode.sample_size = 16;
-		else out->encode.sample_size = out->sample_size;
-	} else if (out->encode.mode == ENCODE_FLAC) {
-	}
-
-	length = _output_pcm_header(ctx);
-	if (ctx->config.stream_length > 0 && length) ctx->output.length = length;
-	//FIXME if (length) ctx->output.length = length;
-}
-
-/*---------------------------------------------------------------------------*/
-size_t _output_pcm_header(struct thread_ctx_s *ctx ) {
-	struct outputstate *out = &ctx->output;
-	size_t length;
+static FLAC__StreamEncoderWriteStatus flac_write_callback(const FLAC__StreamEncoder *encoder, const FLAC__byte buffer[], size_t bytes, unsigned samples, unsigned current_frame, void *client_data) {
+	struct buffer *obuf = (struct buffer*) client_data;
 
 	/*
-	do not create a size (content-length) when we really don't know it but
-	when we set a content-length (http_mode > 0) then at least the headers
-	should be consistent
-	*/
-	if (!out->duration) {
-		if (ctx->config.stream_length < 0) length = MAX_FILE_SIZE;
-		else length = ctx->config.stream_length;
-		length = (length / ((u64_t) out->encode.sample_rate * out->channels * out->encode.sample_size /8)) *
-				 (u64_t) out->encode.sample_rate * out->channels * out->encode.sample_size / 8;
-	} else length = (((u64_t) out->duration * out->encode.sample_rate) / 1000) * out->channels * (out->encode.sample_size / 8);
-
-	switch (out->format) {
-	case 'w': {
-		struct wave_header_s *h = malloc(sizeof(struct wave_header_s));
-
-		memcpy(h, &wave_header, sizeof(struct wave_header_s));
-		little16(&h->channels, out->channels);
-		little16(&h->bits_per_sample, out->encode.sample_size);
-		little32(&h->sample_rate, out->encode.sample_rate);
-		little32(&h->byte_rate, out->encode.sample_rate * out->channels * (out->encode.sample_size / 8));
-		little16(&h->block_align, out->channels * (out->encode.sample_size / 8));
-		little32(&h->subchunk2_size, length);
-		little32(&h->chunk_size, 36 + length);
-		length += 36 + 8;
-		out->header.buffer = (u8_t*) h;
-		out->header.size = out->header.count = sizeof(struct wave_header_s);
-	   }
-	   break;
-   case 'i': {
-		struct aiff_header_s *h = malloc(sizeof(struct aiff_header_s));
-
-		memcpy(h, &aiff_header, sizeof(struct aiff_header_s));
-		big16(h->channels, out->channels);
-		big16(h->sample_size, out->encode.sample_size);
-		big16(h->sample_rate_num, out->encode.sample_rate);
-		big32(&h->data_size, length + 8);
-		big32(&h->chunk_size, (length+8+8) + (18+8) + 4);
-		big32(&h->frames, length / (out->channels * (out->encode.sample_size / 8)));
-		length += (8+8) + (18+8) + 4 + 8;
-		out->header.buffer = (u8_t*) h;
-		out->header.size = out->header.count = 54; // can't count on structure due to alignment
-		}
-		break;
-   case 'p':
-   default:
-		out->header.buffer = NULL;
-		out->header.size = out->header.count = 0;
-		length = 0;
-		break;
+	if (ctx->flac_len + bytes <= MAX_FLAC_BYTES) {
+		memcpy(ctx->flac_buffer + ctx->flac_len, buffer, bytes);
+		ctx->flac_len += bytes;
+	} else {
+		LOG_WARN("[%p]: flac coded buffer too big %u", ctx, bytes);
 	}
+	*/
 
-	return length;
+	return FLAC__STREAM_ENCODER_WRITE_STATUS_OK;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -604,7 +661,7 @@ void _checkfade(bool start, struct thread_ctx_s *ctx) {
 
 	LOG_INFO("[%p]: fade mode: %u duration: %u %s", ctx, ctx->output.fade_mode, ctx->output.fade_secs, start ? "track-start" : "track-end");
 
-	bytes = ctx->output.current_sample_rate * BYTES_PER_FRAME * ctx->output.fade_secs;
+	bytes = ctx->output.sample_rate * BYTES_PER_FRAME * ctx->output.fade_secs;
 	if (ctx->output.fade_mode == FADE_INOUT) {
 		bytes /= 2;
 	}

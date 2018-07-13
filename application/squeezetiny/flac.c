@@ -111,14 +111,15 @@ static FLAC__StreamDecoderWriteStatus write_cb(const FLAC__StreamDecoder *decode
 	FLAC__int32 *rptr = (FLAC__int32 *)buffer[channels > 1 ? 1 : 0];
 
 	if (ctx->decode.new_stream) {
+    	LOG_INFO("[%p]: setting track_start", ctx);
 		LOCK_O;
-		LOG_INFO("[%p]: setting track_start", ctx);
+
 		ctx->output.track_start = ctx->outputbuf->writep;
 		ctx->decode.new_stream = false;
-
-		ctx->output.current_sample_rate = decode_newstream(frame->header.sample_rate, ctx->output.supported_rates, ctx);
+		ctx->output.sample_rate = decode_newstream(frame->header.sample_rate, ctx->output.supported_rates, ctx);
+		ctx->output.sample_size = bits_per_sample;
+		ctx->output.channels = channels;
 		if (ctx->output.fade_mode) _checkfade(true, ctx);
-		_output_new_stream(ctx->output.current_sample_rate, bits_per_sample, channels, ctx);
 
 		UNLOCK_O;
 	}

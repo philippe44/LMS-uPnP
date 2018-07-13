@@ -318,7 +318,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 
 			LOCK_O;
 
-			out->drain_started = false;
+			out->completed = false;
 			out->replay_gain = unpackN(&strm->replay_gain);
 			out->fade_mode = strm->transition_type - '0';
 			out->fade_secs = strm->transition_period;
@@ -357,7 +357,6 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 					}
 
 					if (out->codec == 'p') {
-						out->encode.sample_rate = out->sample_rate;
 						out->encode.sample_size = (out->sample_size == 24 && ctx->config.L24_format == L24_TRUNC16) ? 16 : out->sample_size;
 						mimetype = find_pcm_mimetype(out->in_endian, &out->encode.sample_size,
 												ctx->config.L24_format == L24_TRUNC16_PCM,
@@ -380,7 +379,9 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 					out->encode.mode = ENCODE_PCM;
 					out->in_endian = 1;
 
-				} else {
+				} else if (!strcasecmp(ctx->config.encode, "flac")) {
+					out->encode.mode = ENCODE_FLAC;
+					out->encode.codec = NULL;
 				}
 
 				// matching found in player
@@ -790,29 +791,30 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			LOCK_O;
 			ctx->status.output_full = ctx->sentSTMu ? 0 : ctx->outputbuf->size / 2;
 			ctx->status.output_size = ctx->outputbuf->size;
-			ctx->status.current_sample_rate = ctx->output.current_sample_rate;
-			ctx->status.output_drain = ctx->output.drain_started;
+			ctx->status.sample_rate = ctx->output.sample_rate;
+			ctx->status.output_completed = ctx->output.completed;
 			ctx->status.duration = ctx->render.duration;
 			if (!ctx->render.ms_played && ctx->render.index != -1 && ctx->render.state != RD_STOPPED) {
 				ctx->status.ms_played = now - ctx->render.track_start_time - ctx->render.ms_paused;
 				if (ctx->render.state == RD_PAUSED) ctx->status.ms_played -= now - ctx->render.track_pause_time;
 			} else ctx->status.ms_played = ctx->render.ms_played;
 
+			// streaming properly started
 			if (ctx->output.track_started) {
 				_sendSTMs = true;
 				ctx->canSTMdu = true;
 				ctx->output.track_started = false;
 			}
 
-			// streaming ended with no bytes, let STMd/u be sent to move on
-			if 	(ctx->status.stream_bytes == 0 && ctx->status.output_drain) {
+			// streaming failed, wait till output thread ends and move on
+			if 	(ctx->status.stream_bytes == 0 && ctx->status.output_completed) {
 				LOG_WARN("[%p]: nothing received", ctx);
 				ctx->canSTMdu = true;
 			}
 
 			if (ctx->output.state == OUTPUT_RUNNING && !ctx->sentSTMu &&
-				ctx->status.output_drain && ctx->status.stream_state <= DISCONNECT &&
-				ctx->render.state == RD_STOPPED && ctx->canSTMdu == true) {
+				ctx->status.output_completed && ctx->status.stream_state <= DISCONNECT &&
+				ctx->render.state == RD_STOPPED && ctx->canSTMdu) {
 				_sendSTMu = true;
 				ctx->sentSTMu = true;
 				ctx->status.output_full = 0;
@@ -820,7 +822,8 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 
 			// if there is still data to be sent, try an overrun
 			if (ctx->output.state == OUTPUT_RUNNING && !ctx->sentSTMo &&
-				!ctx->status.output_drain && ctx->status.stream_state == STREAMING_HTTP &&
+				// !ctx->status.completed && ctx->status.stream_state == STREAMING_HTTP &&
+				ctx->status.stream_state == STREAMING_HTTP &&
 				ctx->render.state == RD_STOPPED && ctx->canSTMdu) {
 				_sendSTMo = true;
 				ctx->sentSTMo = true;
@@ -855,15 +858,15 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 
 			/*
 			 wait for all output to be sent to the player before asking for next
-			 track. We need both THREAD_FINISHING and STMs sent to be sure, as for
+			 track. We need draining started and STMs sent to be sure, as for
 			 short tracks the thread might exit before playback has started and
 			 we don't want to send STMd before STMs
 			 also, if STMd is sent early, streaming of next track will start but
-			 then will stall for a long time while current track is finishing and
-			 services like Deezer or RP plugin close the connection before all
-			 has been sent, so need to wait a bit before sending STMd ... grr
+			 then will stall for a long time while current track is finishing
+			 and services like Deezer or RP plugin close the connection before
+			 all has been sent, so need to wait a bit before sending STMd ...
 			*/
-			if ((ctx->decode.state == DECODE_COMPLETE && ctx->status.output_drain && ctx->canSTMdu &&
+			if ((ctx->decode.state == DECODE_COMPLETE && ctx->status.output_completed && ctx->canSTMdu &&
 				(!ctx->output.remote || (ctx->status.duration && ctx->status.duration - ctx->status.ms_played < STREAM_DELAY))) ||
 				ctx->decode.state == DECODE_ERROR) {
 				if (ctx->decode.state == DECODE_COMPLETE) _sendSTMd = true;

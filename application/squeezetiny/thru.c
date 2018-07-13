@@ -55,7 +55,7 @@ decode_state thru_decode(struct thread_ctx_s *ctx) {
 
 	if (ctx->decode.new_stream) {
 		LOG_INFO("[%p]: setting track_start", ctx);
-		ctx->output.current_sample_rate = decode_newstream(p->sample_rate, ctx->output.supported_rates, ctx);
+		ctx->output.sample_rate = decode_newstream(p->sample_rate, ctx->output.supported_rates, ctx);
 		ctx->output.track_start = ctx->outputbuf->writep;
 		ctx->decode.new_stream = false;
 	}

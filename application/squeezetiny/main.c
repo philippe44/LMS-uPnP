@@ -63,6 +63,7 @@ void sq_wipe_device(struct thread_ctx_s *ctx) {
 	mutex_unlock(ctx->cli_mutex);
 
 	slimproto_close(ctx);
+	output_flush(ctx);
 	output_close(ctx);
 #if RESAMPLE
 	process_end(ctx);
@@ -186,8 +187,8 @@ bool cli_open_socket(struct thread_ctx_s *ctx) {
 /*---------------------------------------------------------------------------*/
 char *cli_send_cmd(char *cmd, bool req, bool decode, struct thread_ctx_s *ctx)
 {
-#define CLI_LEN 2048
-	char packet[CLI_LEN];
+#define CLI_LEN 4096
+	char *packet;
 	int wait;
 	size_t len;
 	char *rsp = NULL;
@@ -199,6 +200,7 @@ bool cli_open_socket(struct thread_ctx_s *ctx) {
 	}
 	ctx->cli_timestamp = gettime_ms();
 
+	packet = malloc(CLI_LEN);
 	wait = CLI_SEND_TO / CLI_SEND_SLEEP;
 	cmd = cli_encode(cmd);
 	if (req) len = sprintf(packet, "%s ?\n", cmd);
@@ -251,8 +253,11 @@ bool cli_open_socket(struct thread_ctx_s *ctx) {
 		*(strrchr(rsp, '\n')) = '\0';
 	}
 
-	NFREE(cmd);
 	mutex_unlock(ctx->cli_mutex);
+
+	free(cmd);
+	free(packet);
+
 	return rsp;
 }
 
@@ -438,6 +443,8 @@ bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, bool next)
 			free(metadata->artwork);
 			metadata->artwork = artwork;
 		}
+	} else {
+		LOG_ERROR("[%p]: track not found %u %s", ctx, metadata->index, rsp);
 	}
 
 	if (!next && metadata->duration && ((p = cli_find_tag(rsp, "time")) != NULL)) {
@@ -570,12 +577,14 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 				sprintf(cmd, "%s stop", ctx->cli_id);
 				rsp = cli_send_cmd(cmd, false, true, ctx);
 				NFREE(rsp);
-			} else if (ctx->stream.state <= DISCONNECT && ctx->output.drain_started) {
-				// this should be mutex protected, but will not make it foolproof still
+			/* FIXME: not sure anymore what this tries to cover
+			} else if (ctx->stream.state <= DISCONNECT && !ctx->output.completed) {
+				// happens if streaming fails (spotty)
 				LOG_INFO("[%p] un-managed STOP, re-starting", ctx);
 				sprintf(cmd, "%s time -5.00", ctx->cli_id);
 				rsp = cli_send_cmd(cmd, false, true, ctx);
 				NFREE(rsp);
+			*/
 			} else {
 				// might be a STMu or a STMo, let slimproto decide
 				LOCK_O;

@@ -85,7 +85,7 @@ static void output_http_thread(struct thread_param_s *param) {
 	bool http_ready, done = false;
 	int sock = -1;
 	char chunk_frame_buf[16] = "", *chunk_frame = chunk_frame_buf;
-	bool mimetype = false;
+	bool acquired = false;
 	size_t hpos, bytes = 0, hsize = 0, tpos = 0;
 	ssize_t chunk_count;
 	u8_t *tbuf = NULL;
@@ -127,9 +127,16 @@ static void output_http_thread(struct thread_param_s *param) {
 			if (sock != -1 && ctx->running) {
 				LOG_INFO("[%p]: got HTTP connection %u", ctx, sock);
 			} else {
-				// if streaming fails, exit for slimproto - use outputbuf here!
+				/*
+				When streaming fails, decode will be completed but new_stream
+				never happened, so output thread is blocked until the player
+				closes the connection at which point we must exit and release
+				slimproto (case where bytes == 0). Note that outputbuf must be
+				used as obuf has not been set yet
+				*/
 				LOCK_D; LOCK_O;
 				if (!_buf_used(ctx->outputbuf) && ctx->decode.state == DECODE_COMPLETE) {
+					ctx->output.completed = true;
 					LOG_ERROR("[%p]: streaming failed, exiting", ctx);
 					UNLOCK_O; UNLOCK_D;
 					break;
@@ -144,25 +151,25 @@ static void output_http_thread(struct thread_param_s *param) {
 
 		n = select(sock + 1, &rfds, &wfds, NULL, &timeout);
 
-		// need to wait till we get a codec, the very unlikely case of "codc"
-		if (!mimetype && n > 0) {
+		// need to wait till we have an initialized codec
+		if (!acquired && n > 0) {
 			LOCK_D;
-			if (ctx->decode.state < DECODE_READY) {
-				LOG_INFO("[%p]: need to wait for codec", ctx);
+			if (!ctx->output.track_start) {
+				LOG_INFO("[%p]: wait to acquire codec parameters", ctx);
 				UNLOCK_D;
 				// not very elegant but let's not consume all CPU
 				usleep(50*1000);
 				continue;
 			}
-			mimetype = true;
+			acquired = true;
 			UNLOCK_D;
 
-			buf_init(obuf, output_bitrate(ctx) / 8);
-			LOG_ERROR("[%p]: allocating final buffer %u", ctx, output_bitrate(ctx) / 8);
-
 			LOCK_O;
+			_output_new_stream(obuf, ctx);
 			ctx->output.track_start = NULL;
 			UNLOCK_O;
+
+			LOG_ERROR("[%p]: drain buffer %u", ctx, obuf->size);
 		}
 
 		// should be the HTTP headers (works with non-blocking socket)
@@ -237,9 +244,10 @@ static void output_http_thread(struct thread_param_s *param) {
 		started
 		*/
 		if (!draining && !_output_fill(obuf, ctx) && ctx->decode.state != DECODE_RUNNING) {
-			// full track sent, draining from obuf (outputbuf free)
-			ctx->output.drain_started = true;
+			// full track pulled from outputbuf, draining from obuf
+			ctx->output.completed = true;
 			draining = true;
+			wake_controller(ctx);
 			LOG_INFO("[%p]: draining - sent %zu bytes (gap %d)", ctx, bytes, ctx->output.length > 0 ? bytes - ctx->output.length : 0);
 		}
 
@@ -327,7 +335,7 @@ static void output_http_thread(struct thread_param_s *param) {
 
 	NFREE(tbuf);
 	NFREE(hbuf);
-	if (mimetype) buf_destroy(obuf);
+	if (acquired) buf_destroy(obuf);
 
 	// in chunked mode, a full chunk might not have been sent (due to TCP)
 	if (sock != -1) shutdown_socket(sock);
