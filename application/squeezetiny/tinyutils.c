@@ -51,15 +51,19 @@
 #include <fcntl.h>
 #include <ctype.h>
 
+#include "tinyutils.h"
+
 extern log_level 	util_loglevel;
 static log_level 	*loglevel = &util_loglevel;
+
+static char *_lookup(char *mimetypes[], int n, ...);
 
 // cmdline parsing
 char *next_param(char *src, char c) {
 	static char *str = NULL;
 	char *ptr, *ret;
 	if (src) str = src;
- 	if (str && (ptr = strchr(str, c))) {
+	if (str && (ptr = strchr(str, c))) {
 		ret = str;
 		*ptr = '\0';
 		str = ptr + 1;
@@ -71,196 +75,11 @@ char *next_param(char *src, char c) {
 	return ret && ret[0] ? ret : NULL;
 }
 
-// clock
-u32_t gettime_ms(void) {
-#if WIN
-	return GetTickCount();
-#else
-#if LINUX || FREEBSD
-	struct timespec ts;
-	if (!clock_gettime(CLOCK_MONOTONIC, &ts)) {
-		return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
-	}
-#endif
-	struct timeval tv;
-	gettimeofday(&tv, NULL);
-	return tv.tv_sec * 1000 + tv.tv_usec / 1000;
-#endif
-}
-
-// mutex wait with timeout
-#if LINUX || FREEBSD
-int _mutex_timedlock(pthread_mutex_t *m, u32_t ms_wait)
-{
-	int rc = -1;
-	struct timespec ts;
-
-	if (!clock_gettime(CLOCK_REALTIME, &ts)) {
-		ts.tv_nsec += (ms_wait % 1000) * 1000000;
-		ts.tv_sec += ms_wait / 1000 + (ts.tv_nsec / 1000000000);
-		ts.tv_nsec = ts.tv_nsec % 1000000000;
-		rc = pthread_mutex_timedlock(m, &ts);
-	}
-	return rc;
-}
-#endif
-
-#if WIN || OSX
-int _mutex_timedlock(pthread_mutex_t *m, u32_t ms_wait)
-{
-	int rc;
-	s32_t wait = (s32_t) ms_wait;
-
-	/* Try to acquire the lock and, if we fail, sleep for 10ms. */
-	while (((rc = pthread_mutex_trylock (m)) == EBUSY) && (wait > 0)) {
-		wait -= 10;
-		usleep(10000);
-	}
-
-	return rc;
-}
-#endif
-
-
-/*----------------------------------------------------------------------------*/
-/* 																			  */
-/* NETWORK management														  */
-/* 																			  */
-/*----------------------------------------------------------------------------*/
-
-// mac address
-#if LINUX
-// search first 4 interfaces returned by IFCONF
-void get_mac(u8_t mac[]) {
-    struct ifconf ifc;
-    struct ifreq *ifr, *ifend;
-    struct ifreq ifreq;
-    struct ifreq ifs[4];
-
-	mac[0] = mac[1] = mac[2] = mac[3] = mac[4] = mac[5] = 0;
-
-    int s = socket(AF_INET, SOCK_DGRAM, 0);
- 
-    ifc.ifc_len = sizeof(ifs);
-    ifc.ifc_req = ifs;
-
-    if (ioctl(s, SIOCGIFCONF, &ifc) == 0) {
-		ifend = ifs + (ifc.ifc_len / sizeof(struct ifreq));
-
-		for (ifr = ifc.ifc_req; ifr < ifend; ifr++) {
-			if (ifr->ifr_addr.sa_family == AF_INET) {
-
-				strncpy(ifreq.ifr_name, ifr->ifr_name, sizeof(ifreq.ifr_name));
-				if (ioctl (s, SIOCGIFHWADDR, &ifreq) == 0) {
-					memcpy(mac, ifreq.ifr_hwaddr.sa_data, 6);
-					if (mac[0]+mac[1]+mac[2] != 0) {
-						break;
-					}
-				}
-			}
-		}
-	}
-
-	close(s);
-}
-#endif
-
-#if OSX || FREEBSD
-void get_mac(u8_t mac[]) {
-	struct ifaddrs *addrs, *ptr;
-	const struct sockaddr_dl *dlAddr;
-	const unsigned char *base;
-	
-	mac[0] = mac[1] = mac[2] = mac[3] = mac[4] = mac[5] = 0;
-	
-	if (getifaddrs(&addrs) == 0) {
-		ptr = addrs;
-		while (ptr) {
-			if (ptr->ifa_addr->sa_family == AF_LINK && ((const struct sockaddr_dl *) ptr->ifa_addr)->sdl_type == IFT_ETHER) {
-				dlAddr = (const struct sockaddr_dl *)ptr->ifa_addr;
-				base = (const unsigned char*) &dlAddr->sdl_data[dlAddr->sdl_nlen];
-				memcpy(mac, base, min(dlAddr->sdl_alen, 6));
-				break;
-			}
-			ptr = ptr->ifa_next;
-		}
-		freeifaddrs(addrs);
-	}
-}
-#endif
-
-#if WIN
-#pragma comment(lib, "IPHLPAPI.lib")
-void get_mac(u8_t mac[]) {
-    IP_ADAPTER_INFO AdapterInfo[16];
-    DWORD dwBufLen = sizeof(AdapterInfo);
-    DWORD dwStatus = GetAdaptersInfo(AdapterInfo, &dwBufLen);
-	
-	mac[0] = mac[1] = mac[2] = mac[3] = mac[4] = mac[5] = 0;
-
-	if (GetAdaptersInfo(AdapterInfo, &dwBufLen) == ERROR_SUCCESS) {
-		memcpy(mac, AdapterInfo[0].Address, 6);
-	}
-}
-#endif
-
-void set_nonblock(sockfd s) {
-#if WIN
-	u_long iMode = 1;
-	ioctlsocket(s, FIONBIO, &iMode);
-#else
-	int flags = fcntl(s, F_GETFL,0);
-	fcntl(s, F_SETFL, flags | O_NONBLOCK);
-#endif
-}
-
-void set_block(sockfd s) {
-#if WIN
-	u_long iMode = 0;
-	ioctlsocket(s, FIONBIO, &iMode);
-#else
-	int flags = fcntl(s, F_GETFL,0);
-	fcntl(s, F_SETFL, flags & ~O_NONBLOCK);
-#endif
-}
-
-// connect for socket already set to non blocking with timeout in ms
-int connect_timeout(sockfd sock, const struct sockaddr *addr, socklen_t addrlen, int timeout) {
-	fd_set w, e;
-	struct timeval tval;
-
-	if (connect(sock, addr, addrlen) < 0) {
-#if !WIN
-		if (last_error() != EINPROGRESS) {
-#else
-		if (last_error() != WSAEWOULDBLOCK) {
-#endif
-			return -1;
-		}
-	}
-
-	FD_ZERO(&w);
-	FD_SET(sock, &w);
-	e = w;
-	tval.tv_sec = timeout / 1000;
-	tval.tv_usec = (timeout - tval.tv_sec * 1000) * 1000;
-
-	// only return 0 if w set and sock error is zero, otherwise return error code
-	if (select(sock + 1, NULL, &w, &e, timeout ? &tval : NULL) == 1 && FD_ISSET(sock, &w)) {
-		int	error = 0;
-		socklen_t len = sizeof(error);
-		getsockopt(sock, SOL_SOCKET, SO_ERROR, (void *)&error, &len);
-		return error;
-	}
-
-	return -1;
-}
-
 void server_addr(char *server, in_addr_t *ip_ptr, unsigned *port_ptr) {
 	struct addrinfo *res = NULL;
 	struct addrinfo hints;
 	const char *port = NULL;
-	
+
 	if (strtok(server, ":")) {
 		port = strtok(NULL, ":");
 		if (port) {
@@ -270,13 +89,13 @@ void server_addr(char *server, in_addr_t *ip_ptr, unsigned *port_ptr) {
 
 	memset(&hints, 0, sizeof(struct addrinfo));
 	hints.ai_family = AF_INET;
-	
+
 	getaddrinfo(server, NULL, &hints, &res);
-	
+
 	if (res && res->ai_addr) {
 		*ip_ptr = ((struct sockaddr_in*)res->ai_addr)->sin_addr.s_addr;
-	} 
-	
+	}
+
 	if (res) {
 		freeaddrinfo(res);
 	}
@@ -566,6 +385,58 @@ int shutdown_socket(int sd)
 	return closesocket(sd);
 }
 
+void set_nonblock(sockfd s) {
+#if WIN
+	u_long iMode = 1;
+	ioctlsocket(s, FIONBIO, &iMode);
+#else
+	int flags = fcntl(s, F_GETFL,0);
+	fcntl(s, F_SETFL, flags | O_NONBLOCK);
+#endif
+}
+
+void set_block(sockfd s) {
+#if WIN
+	u_long iMode = 0;
+	ioctlsocket(s, FIONBIO, &iMode);
+#else
+	int flags = fcntl(s, F_GETFL,0);
+	fcntl(s, F_SETFL, flags & ~O_NONBLOCK);
+#endif
+}
+
+// connect for socket already set to non blocking with timeout in ms
+int connect_timeout(sockfd sock, const struct sockaddr *addr, socklen_t addrlen, int timeout) {
+	fd_set w, e;
+	struct timeval tval;
+
+	if (connect(sock, addr, addrlen) < 0) {
+#if !WIN
+		if (last_error() != EINPROGRESS) {
+#else
+		if (last_error() != WSAEWOULDBLOCK) {
+#endif
+			return -1;
+		}
+	}
+
+	FD_ZERO(&w);
+	FD_SET(sock, &w);
+	e = w;
+	tval.tv_sec = timeout / 1000;
+	tval.tv_usec = (timeout - tval.tv_sec * 1000) * 1000;
+
+	// only return 0 if w set and sock error is zero, otherwise return error code
+	if (select(sock + 1, NULL, &w, &e, timeout ? &tval : NULL) == 1 && FD_ISSET(sock, &w)) {
+		int	error = 0;
+		socklen_t len = sizeof(error);
+		getsockopt(sock, SOL_SOCKET, SO_ERROR, (void *)&error, &len);
+		return error;
+	}
+
+	return -1;
+}
+
 
 /*----------------------------------------------------------------------------*/
 /* 																			  */
@@ -798,6 +669,125 @@ char *kd_dump(key_data_t *kd)
 	str[pos] = '\0';
 
 	return str;
+}
+
+/*----------------------------------------------------------------------------*/
+/* 																			  */
+/* CODEC & MIMETYPE															  */
+/* 																			  */
+/*----------------------------------------------------------------------------*/
+
+/*---------------------------------------------------------------------------*/
+static char *_lookup(char *mimetypes[], int n, ...) {
+	char *mimetype, **p;
+	va_list args;
+
+	va_start(args, n);
+
+	while (n--) {
+		mimetype = va_arg(args, char*);
+		p = mimetypes;
+		while (*p) {
+			if (!strcmp(mimetype, *p)) {
+				va_end(args);
+				return strdup(*p);
+			}
+			p++;
+		}
+   }
+
+   va_end(args);
+
+   return NULL;
+}
+
+/*---------------------------------------------------------------------------*/
+char *find_mimetype(char codec, char *mimetypes[], char *options) {
+	switch (codec) {
+		case 'm': return _lookup(mimetypes, 3, "audio/mp3", "audio/mpeg", "audio/mpeg3");
+		case 'c':
+		case 'f': return _lookup(mimetypes, 2, "audio/x-flac", "audio/flac");
+		case 'w': return _lookup(mimetypes, 2, "audio/x-wma", "audio/wma");
+		case 'o': return _lookup(mimetypes, 2, "audio/ogg", "audio/x-ogg");
+		case 'a': return _lookup(mimetypes, 4, "audio/x-aac", "audio/aac", "audio/m4a", "audio/mp4");
+		case 'l': return _lookup(mimetypes, 1, "audio/m4a");
+		case 'p': {
+			char fmt[8];
+			char *mimetype;
+
+			while (1) {
+				if (sscanf(options, "%[^,]", fmt) <= 0) return NULL;
+
+				if (strstr(fmt, "wav")) {
+					mimetype = _lookup(mimetypes, 3, "audio/wav", "audio/x-wav", "audio/wave");
+					if (mimetype) return mimetype;
+				}
+
+				if (strstr(fmt, "aif")) {
+					mimetype = _lookup(mimetypes, 4, "audio/aiff", "audio/x-aiff", "audio/aif", "audio/x-aif");
+					if (mimetype) return mimetype;
+				}
+
+				options += strlen(fmt);
+				if (*options) options++;
+			}
+		}
+	}
+
+   return NULL;
+}
+
+/*---------------------------------------------------------------------------*/
+char* find_pcm_mimetype(u8_t endian, u8_t *sample_size, bool truncable, u32_t sample_rate,
+						u8_t channels, char *mimetypes[], char *options) {
+	char *mimetype, fmt[8];
+	u8_t size = *sample_size;
+
+	while (1) {
+
+		if (sscanf(options, "%[^,]", fmt) <= 0) return NULL;
+
+		while (strstr(fmt, "raw")) {
+			char **p, a[16], r[16], c[16];
+
+			// find audio/Lxx
+			p = mimetypes;
+			sprintf(a, "audio/L%hhu", *sample_size);
+			sprintf(r, "rate=%u", sample_rate);
+			sprintf(c, "channels=%hhu", channels);
+			while (*p) {
+				if (strstr(*p, a) &&
+				   (!strstr(*p, "rate=") || strstr(*p, r)) &&
+				   (!strstr(*p, "channels=") || strstr(*p, c))) {
+				   char *rsp;
+
+				   asprintf(&rsp, "%s;%s;%s", a, r, c);
+				   return rsp;
+				}
+				p++;
+			}
+
+			if (*sample_size == 24 && truncable) *sample_size = 16;
+			else {
+				*sample_size = size;
+				break;
+			}
+		}
+
+		if (strstr(fmt, "wav")) {
+			mimetype = _lookup(mimetypes, 3, "audio/wav", "audio/x-wav", "audio/wave");
+			if (mimetype) return mimetype;
+		}
+
+		if (strstr(fmt, "aif")) {
+			mimetype = _lookup(mimetypes, 4, "audio/aiff", "audio/x-aiff", "audio/aif", "audio/x-aif");
+			if (mimetype) return mimetype;
+		}
+
+		// try next one
+		options += strlen(fmt);
+		if (*options) options++;
+	}
 }
 
 

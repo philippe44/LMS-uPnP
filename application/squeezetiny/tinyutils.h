@@ -1,8 +1,9 @@
-/*
- *  Squeeze2upnp - LMS to uPNP gateway
+/* 
+ *  Squeezelite - lightweight headless squeezebox emulator
  *
+ *  (c) Adrian Smith 2012-2014, triode1@btinternet.com
  *	(c) Philippe 2015-2017, philippe_44@outlook.com
- *
+ *  
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -18,29 +19,24 @@
  *
  */
 
-#ifndef __UTIL_COMMON_H
-#define __UTIL_COMMON_H
+#ifndef __TINTUTILS_H
+#define __ITNYUTILS_H
 
-#include "squeezedefs.h"
 
-#define NFREE(p) if (p) { free(p); p = NULL; }
+typedef struct {
+	char *key;
+	char *data;
+} key_data_t;
 
-u32_t 		gettime_ms(void);
+bool 		http_parse(int sock, char **request, key_data_t *rkd, char **body, int *len);char*		http_send(int sock, char *method, key_data_t *rkd);
+int 		read_line(int fd, char *line, int maxlen, int timeout);
+int 		send_response(int sock, char *response);
 
-char*		url_encode(char *str);
-char*		url_decode(char *str);
-char*		toxml(char *src);
-
-char*		stristr(char *s1, char *s2);
-char*		strdupn(char *p);
-u32_t 		hash32(char *str);
-
-bool 		get_interface(struct in_addr *addr);
-in_addr_t 	get_localhost(char **name);
-void 		get_mac(u8_t *mac);
-
-char*		make_dlna_content(char *mimetype, u32_t duration);
-char*		mimetype2ext(char *mimetype);
-u8_t 		mimetype2format(char *mimetype);
+char*		kd_lookup(key_data_t *kd, char *key);
+bool 		kd_add(key_data_t *kd, char *key, char *value);
+char* 		kd_dump(key_data_t *kd);
+void 		kd_free(key_data_t *kd);
 
 #endif
+
+

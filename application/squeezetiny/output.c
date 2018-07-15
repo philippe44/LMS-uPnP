@@ -378,7 +378,6 @@ void _output_new_stream(struct buffer *obuf, struct thread_ctx_s *ctx) {
 		size = max((out->encode.sample_rate * out->encode.channels * out->encode.sample_size / 8 * 3) / 2, 2*FLAC_MIN_SPACE);
 		buf_init(obuf, size);
 
-		//FIXME: veryfy that there is no conflic with DLL load
 		codec = FLAC(f, stream_encoder_new);
 		ok = FLAC(f, stream_encoder_set_verify,codec, false);
 		ok &= FLAC(f, stream_encoder_set_compression_level, codec, 5);

@@ -194,27 +194,13 @@ struct wake {
 // this is for decoded frames buffers (32 bits * 2 channels)
 #define BYTES_PER_FRAME 8
 
-// utils.c (non logging)
-typedef struct {
-	char *key;
-	char *data;
-} key_data_t;
-
-bool 		http_parse(int sock, char **request, key_data_t *rkd, char **body, int *len);char*		http_send(int sock, char *method, key_data_t *rkd);
-int 		read_line(int fd, char *line, int maxlen, int timeout);
-int 		send_response(int sock, char *response);
-
-char*		kd_lookup(key_data_t *kd, char *key);
-bool 		kd_add(key_data_t *kd, char *key, char *value);
-char* 		kd_dump(key_data_t *kd);
-void 		kd_free(key_data_t *kd);
-
 typedef enum { EVENT_TIMEOUT = 0, EVENT_READ, EVENT_WAKE } event_type;
 struct thread_ctx_s;
 
+char *find_mimetype(char codec, char *mimetypes[], char *options);
+char* find_pcm_mimetype(u8_t endian, u8_t *sample_size, bool truncable, u32_t sample_rate,
+						u8_t channels, char *mimetypes[], char *options);
 char*		next_param(char *src, char c);
-u32_t 		gettime_ms(void);
-void 		get_mac(u8_t *mac);
 void 		set_nonblock(sockfd s);
 void 		set_block(sockfd s);
 int 		connect_timeout(sockfd sock, const struct sockaddr *addr, socklen_t addrlen, int timeout);
@@ -410,7 +396,6 @@ struct output_thread_s {
 struct outputstate {
 	output_state state;		// license to stream or not
 	bool	completed;	 	// whole track has been pulled from outputbuf
-	bool	flow;			// thread do not exit when track ends
 	char	format;			// data sent format (p=pcm, w=wav, i=aif, f=flac)
 	u8_t 	sample_size, channels, codec; // as name, original stream values
 	u32_t 	sample_rate;	// as name, original stream values
@@ -420,11 +405,12 @@ struct outputstate {
 	bool  	remote;			// local track or not (if duration == 0 => live)
 	ssize_t length;			// HTTP content-length (-1:no chunked, -3 chunked if possible, >0 fake length)
 	u16_t  	index;			// 16 bits track counter(see output_thread)
+	u16_t	port;			// port of latest thread (mainy used for codc)
 	bool 	chunked;		// chunked mode
 	char 	mimetype[_STR_LEN_];	// content-type to send to player
 	bool  	track_started;	// track has started to be streamed (trigger, not state)
 	u8_t  	*track_start;   // pointer where track starts in buffer, just for legacy compatibility
-	unsigned *supported_rates[2];	// for resampling (0 = use raw)
+	unsigned supported_rates[2];	// for resampling (0 = use raw)
 	// for icy data
 	struct {
 		size_t interval, remain;
@@ -453,9 +439,10 @@ struct outputstate {
 		u32_t sample_rate;
 		u8_t sample_size;
 		u8_t channels;
-		encode_mode mode;
-		void *codec;
-	} encode;
+		encode_mode mode;	// thru, pcm, flac
+		bool	flow;		// thread do not exit when track ends
+		void *codec;        // re-encoding codec
+	} encode;				// format of what being sent to player
 };
 
 // http renderer state (track being played)

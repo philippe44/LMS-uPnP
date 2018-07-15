@@ -127,7 +127,7 @@ bool resample_drain(struct thread_ctx_s *ctx) {
 
 	if (odone == 0) {
 
-		LOG_INFO("[%]: resample track complete - total track clips: %u", ctx, r->old_clips);
+		LOG_INFO("[%p]: resample track complete - total track clips: %u", ctx, r->old_clips);
 
 		SOXR(&gr, delete, r->resampler);
 		r->resampler = NULL;

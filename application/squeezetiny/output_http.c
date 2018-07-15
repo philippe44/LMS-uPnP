@@ -20,6 +20,7 @@
  */
 
 #include "squeezelite.h"
+#include "tinyutils.h"
 
 extern log_level	output_loglevel;
 static log_level 	*loglevel = &output_loglevel;
@@ -318,7 +319,7 @@ static void output_http_thread(struct thread_param_s *param) {
 		} else {
 			// check if all sent
 			if (draining) {
-				if (!ctx->output.flow) {
+				if (!ctx->output.encode.flow) {
 					// sending final empty chunk
 					if (ctx->output.chunked) {
 						strcpy(chunk_frame_buf, "0\r\n\r\n");

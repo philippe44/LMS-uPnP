@@ -194,177 +194,6 @@ u8_t mimetype2format(char *mimetype)
 	return '*';
 }
 
-/*---------------------------------------------------------------------------*/
-static char *_lookup(char *mimetypes[], int n, ...) {
-	char *mimetype, **p;
-	va_list args;
-
-	va_start(args, n);
-
-	while (n--) {
-		mimetype = va_arg(args, char*);
-		p = mimetypes;
-		while (*p) {
-			if (!strcmp(mimetype, *p)) {
-				va_end(args);
-				return strdup(*p);
-			}
-			p++;
-		}
-   }
-
-   va_end(args);
-
-   return NULL;
-}
-
-/*---------------------------------------------------------------------------*/
-char *find_mimetype(char codec, char *mimetypes[], char *options) {
-	switch (codec) {
-		case 'm': return _lookup(mimetypes, 3, "audio/mp3", "audio/mpeg", "audio/mpeg3");
-		case 'c':
-		case 'f': return _lookup(mimetypes, 2, "audio/x-flac", "audio/flac");
-		case 'w': return _lookup(mimetypes, 2, "audio/x-wma", "audio/wma");
-		case 'o': return _lookup(mimetypes, 2, "audio/ogg", "audio/x-ogg");
-		case 'a': return _lookup(mimetypes, 4, "audio/x-aac", "audio/aac", "audio/m4a", "audio/mp4");
-		case 'l': return _lookup(mimetypes, 1, "audio/m4a");
-		case 'p': {
-			char fmt[8];
-			char *mimetype;
-
-			while (1) {
-				if (sscanf(options, "%[^,]", fmt) <= 0) return NULL;
-
-				if (strstr(fmt, "wav")) {
-					mimetype = _lookup(mimetypes, 3, "audio/wav", "audio/x-wav", "audio/wave");
-					if (mimetype) return mimetype;
-				}
-
-				if (strstr(fmt, "aif")) {
-					mimetype = _lookup(mimetypes, 4, "audio/aiff", "audio/x-aiff", "audio/aif", "audio/x-aif");
-					if (mimetype) return mimetype;
-				}
-
-				options += strlen(fmt);
-				if (*options) options++;
-			}
-		}
-	}
-
-   return NULL;
-}
-
-/*---------------------------------------------------------------------------*/
-char* find_pcm_mimetype(u8_t endian, u8_t *sample_size, bool truncable, u32_t sample_rate,
-						u8_t channels, char *mimetypes[], char *options) {
-	char *mimetype, fmt[8];
-	u8_t size = *sample_size;
-
-	while (1) {
-
-		if (sscanf(options, "%[^,]", fmt) <= 0) return NULL;
-
-		while (strstr(fmt, "raw")) {
-			char **p, a[16], r[16], c[16];
-
-			// find audio/Lxx
-			p = mimetypes;
-			sprintf(a, "audio/L%hhu", *sample_size);
-			sprintf(r, "rate=%u", sample_rate);
-			sprintf(c, "channels=%hhu", channels);
-			while (*p) {
-				if (strstr(*p, a) &&
-				   (!strstr(*p, "rate=") || strstr(*p, r)) &&
-				   (!strstr(*p, "channels=") || strstr(*p, c))) {
-				   char *rsp;
-
-				   asprintf(&rsp, "%s;%s;%s", a, r, c);
-				   return rsp;
-				}
-				p++;
-			}
-
-			if (*sample_size == 24 && truncable) *sample_size = 16;
-			else {
-				*sample_size = size;
-				break;
-			}
-		}
-
-		if (strstr(fmt, "wav")) {
-			mimetype = _lookup(mimetypes, 3, "audio/wav", "audio/x-wav", "audio/wave");
-			if (mimetype) return mimetype;
-		}
-
-		if (strstr(fmt, "aif")) {
-			mimetype = _lookup(mimetypes, 4, "audio/aiff", "audio/x-aiff", "audio/aif", "audio/x-aif");
-			if (mimetype) return mimetype;
-		}
-
-		// try next one
-		options += strlen(fmt);
-		if (*options) options++;
-	}
-}
-
-
-#if 0
-/*---------------------------------------------------------------------------*/
-char* find_pcm_mimetype(u8_t endian, u8_t *sample_size, bool truncable, u32_t sample_rate,
-							  u8_t channels, char *mimetypes[], char *out) {
-	char *mimetype;
-	u8_t size = *sample_size;
-
-	// first try pcm search (preferred format)
-	while (1) {
-		char *mimetype, **p, *s;
-
-		// try the full mime-type
-		p = mimetypes;
-		asprintf(&s, "audio/L%hhu;rate=%u;channels=%hhu", *sample_size, sample_rate, channels);
-		while (*p) {
-			if (!strcmp(s, *p)) return strdup(*p);
-			p++;
-		}
-
-		// no luck, try a simple audio/Lxx w/o channel or rate indication
-		p = mimetypes;
-		sprintf(s, "audio/L%hhu", *sample_size);
-		while (*p) {
-			if (!strcmp(s, *p)) {
-				free(s);
-				asprintf(&s, "%s;rate=%u;channels=%hhu", *p, sample_rate, channels);
-				return s;
-			}
-			p++;
-		}
-		free(s);
-
-		// still no luck, try again with 16 bits if authorize to trunc 24 bits
-		if (*sample_size == 24 && truncable) *sample_size = 16;
-		else break;
-	}
-	*/
-
-	// need to restore sample_size;
-	*sample_size = size;
-
-	// no pcm, try based on endianness
-	if (endian) {
-		mimetype = _lookup(mimetypes, 3, "audio/wav", "audio/x-wav", "audio/wave");
-		if (strcmp(mimetype, "audio/null")) return mimetype;
-		free(mimetype);
-		return _lookup(mimetypes, 2, "audio/aiff", "audio/x-aiff");
-	}
-
-	// this is aiff, try that first and then wav
-	mimetype = _lookup(mimetypes, 2, "audio/aiff", "audio/x-aiff");
-	if (strcmp(mimetype, "audio/null")) return mimetype;
-	free(mimetype);
-	return _lookup(mimetypes, 3, "audio/wav", "audio/x-wav", "audio/wave");
-}
-#endif
-
 
 /*----------------------------------------------------------------------------*/
 /* 																			  */
@@ -472,7 +301,7 @@ char *toxml(char *src)
 
 /*----------------------------------------------------------------------------*/
 /* 																			  */
-/* SYSTEM															  	      */
+/* STDLIB															  	      */
 /* 																			  */
 /*----------------------------------------------------------------------------*/
 
@@ -543,6 +372,63 @@ char *strdupn(char *p)
 	if (p) return strdup(p);
 	return NULL;
 }
+
+/*----------------------------------------------------------------------------*/
+/* 																			  */
+/* SYSTEM															  	      */
+/* 																			  */
+/*----------------------------------------------------------------------------*/
+
+/*---------------------------------------------------------------------------*/
+u32_t gettime_ms(void) {
+#if WIN
+	return GetTickCount();
+#else
+#if LINUX || FREEBSD
+	struct timespec ts;
+	if (!clock_gettime(CLOCK_MONOTONIC, &ts)) {
+		return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+	}
+#endif
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	return tv.tv_sec * 1000 + tv.tv_usec / 1000;
+#endif
+}
+
+
+/*---------------------------------------------------------------------------*/
+#if LINUX || FREEBSD
+int _mutex_timedlock(pthread_mutex_t *m, u32_t ms_wait)
+{
+	int rc = -1;
+	struct timespec ts;
+
+	if (!clock_gettime(CLOCK_REALTIME, &ts)) {
+		ts.tv_nsec += (ms_wait % 1000) * 1000000;
+		ts.tv_sec += ms_wait / 1000 + (ts.tv_nsec / 1000000000);
+		ts.tv_nsec = ts.tv_nsec % 1000000000;
+		rc = pthread_mutex_timedlock(m, &ts);
+	}
+	return rc;
+}
+#endif
+
+#if WIN || OSX
+int _mutex_timedlock(pthread_mutex_t *m, u32_t ms_wait)
+{
+	int rc;
+	s32_t wait = (s32_t) ms_wait;
+
+	/* Try to acquire the lock and, if we fail, sleep for 10ms. */
+	while (((rc = pthread_mutex_trylock (m)) == EBUSY) && (wait > 0)) {
+		wait -= 10;
+		usleep(10000);
+	}
+
+	return rc;
+}
+#endif
 
 /*----------------------------------------------------------------------------*/
 /* 																			  */
@@ -747,5 +633,83 @@ in_addr_t get_localhost(char **name)
 	return LocalAddr.sin_addr.s_addr;
 #endif
 }
+
+// mac address
+#if LINUX
+// search first 4 interfaces returned by IFCONF
+void get_mac(u8_t mac[]) {
+	struct ifconf ifc;
+	struct ifreq *ifr, *ifend;
+	struct ifreq ifreq;
+	struct ifreq ifs[4];
+
+	mac[0] = mac[1] = mac[2] = mac[3] = mac[4] = mac[5] = 0;
+
+	int s = socket(AF_INET, SOCK_DGRAM, 0);
+
+	ifc.ifc_len = sizeof(ifs);
+	ifc.ifc_req = ifs;
+
+	if (ioctl(s, SIOCGIFCONF, &ifc) == 0) {
+		ifend = ifs + (ifc.ifc_len / sizeof(struct ifreq));
+
+		for (ifr = ifc.ifc_req; ifr < ifend; ifr++) {
+			if (ifr->ifr_addr.sa_family == AF_INET) {
+
+				strncpy(ifreq.ifr_name, ifr->ifr_name, sizeof(ifreq.ifr_name));
+				if (ioctl (s, SIOCGIFHWADDR, &ifreq) == 0) {
+					memcpy(mac, ifreq.ifr_hwaddr.sa_data, 6);
+					if (mac[0]+mac[1]+mac[2] != 0) {
+						break;
+					}
+				}
+			}
+		}
+	}
+
+	close(s);
+}
+#endif
+
+#if OSX || FREEBSD
+void get_mac(u8_t mac[]) {
+	struct ifaddrs *addrs, *ptr;
+	const struct sockaddr_dl *dlAddr;
+	const unsigned char *base;
+
+	mac[0] = mac[1] = mac[2] = mac[3] = mac[4] = mac[5] = 0;
+
+	if (getifaddrs(&addrs) == 0) {
+		ptr = addrs;
+		while (ptr) {
+			if (ptr->ifa_addr->sa_family == AF_LINK && ((const struct sockaddr_dl *) ptr->ifa_addr)->sdl_type == IFT_ETHER) {
+				dlAddr = (const struct sockaddr_dl *)ptr->ifa_addr;
+				base = (const unsigned char*) &dlAddr->sdl_data[dlAddr->sdl_nlen];
+				memcpy(mac, base, min(dlAddr->sdl_alen, 6));
+				break;
+			}
+			ptr = ptr->ifa_next;
+		}
+		freeifaddrs(addrs);
+	}
+}
+#endif
+
+#if WIN
+#pragma comment(lib, "IPHLPAPI.lib")
+void get_mac(u8_t mac[]) {
+	IP_ADAPTER_INFO AdapterInfo[16];
+	DWORD dwBufLen = sizeof(AdapterInfo);
+	DWORD dwStatus = GetAdaptersInfo(AdapterInfo, &dwBufLen);
+
+	mac[0] = mac[1] = mac[2] = mac[3] = mac[4] = mac[5] = 0;
+
+	if (GetAdaptersInfo(AdapterInfo, &dwBufLen) == ERROR_SUCCESS) {
+		memcpy(mac, AdapterInfo[0].Address, 6);
+	}
+}
+#endif
+
+
 
 

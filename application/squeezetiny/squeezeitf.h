@@ -66,7 +66,7 @@ typedef	struct sq_dev_param_s {
 	unsigned 	stream_buf_size;
 	unsigned 	output_buf_size;
 	char		codecs[_STR_LEN_];
-	char		encode[8];
+	char		encode[_STR_LEN_];
 	char 		raw_audio_format[_STR_LEN_];
 	char		server[_STR_LEN_];
 	sq_rate_e	sample_rate;
