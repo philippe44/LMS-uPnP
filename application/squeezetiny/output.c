@@ -58,6 +58,8 @@ static struct {
 #define FLAC_BLOCK_SIZE 1024
 #define FLAC_MIN_SPACE	(16*1024)
 
+#define DRAIN_LEN	3
+
 #if LINKALL
 #define FLAC(h, fn, ...) (FLAC__ ## fn)(__VA_ARGS__)
 #define FLAC_A(h, a)     (FLAC__ ## a)
@@ -144,7 +146,7 @@ static void big32(void *dst, u32_t src);
 /*---------------------------------------------------------------------------*/
 bool _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
 	size_t bytes = _buf_space(buf);
-	struct outputstate *p;
+	struct outputstate *p = &ctx->output;
 
 	/*
 	The outputbuf contains FRAMES of 32 bits samples and 2 channels. The buf is
@@ -154,16 +156,14 @@ bool _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
 	The gain, truncation, L24 pack, swap, fade-in/out is applied *from* the
 	outputbuf and copied *to* this buf so it really has no specific alignement
 	but for simplicity we won't process anything until it has free space for the
-	largest block of audio which is BYTES_PER_FRAME
-	Input buffer (outputbuf) is a multiple of BYTES_PER_FRAME and the writep is
-	always aligned to a multiple of BYTES_PER_FRAME when starting a new track
+	smallest block of audio which is BYTES_PER_FRAME
+	Except for THRU mode, outputbuf is a multiple of BYTES_PER_FRAME and the
+	writep is always aligned to a multiple of BYTES_PER_FRAME when starting a
+	new track
 	Output buffer (buf) cannot have an alignement due to additon of header  for
 	wav and aif files
 	*/
 	if (bytes < BYTES_PER_FRAME) return true;
-
-	//just to make code more readable
-	p = &ctx->output;
 
 	// write header pending data and exit
 	if (p->header.buffer) {
@@ -221,9 +221,9 @@ bool _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
 		return true;
 	}
 
-	// see how audio data shall be processed
+	// now proceeding audio data
 	if (p->encode.mode == ENCODE_THRU) {
-		//	simple encoded audio, nothing to process, just forward outputbut
+		//	simple encoded audio, nothing to process, just forward outputbuf
 		bytes = min(bytes, _buf_cont_write(buf));
 		memcpy(buf->writep, ctx->outputbuf->readp, bytes);
 		_buf_inc_writep(buf, bytes);
@@ -312,7 +312,7 @@ void _output_new_stream(struct buffer *obuf, struct thread_ctx_s *ctx) {
 	if (out->encode.mode == ENCODE_PCM) {
 		size_t length;
 
-		buf_init(obuf, out->encode.sample_rate * out->encode.channels * out->encode.sample_size / 8 * 3);
+		buf_init(obuf, out->encode.sample_rate * out->encode.channels * out->encode.sample_size / 8 * DRAIN_LEN);
 
 		/*
 		do not create a size (content-length) when we really don't know it but
@@ -375,7 +375,7 @@ void _output_new_stream(struct buffer *obuf, struct thread_ctx_s *ctx) {
 		size_t size;
 		bool ok;
 
-		size = max((out->encode.sample_rate * out->encode.channels * out->encode.sample_size / 8 * 3) / 2, 2*FLAC_MIN_SPACE);
+		size = max((out->encode.sample_rate * out->encode.channels * out->encode.sample_size / 8 * DRAIN_LEN) / 2, 2*FLAC_MIN_SPACE);
 		buf_init(obuf, size);
 
 		codec = FLAC(f, stream_encoder_new);
@@ -391,7 +391,7 @@ void _output_new_stream(struct buffer *obuf, struct thread_ctx_s *ctx) {
 
 		LOG_INFO("[%p]: encoding using FLAC (%u)", ctx, ok);
 	} else {
-		buf_init(obuf, max((out->bitrate * 3) / 8, 128*1024));
+		buf_init(obuf, max((out->bitrate * DRAIN_LEN) / 8, 128*1024));
 	}
 }
 
@@ -446,7 +446,7 @@ void output_flush(struct thread_ctx_s *ctx) {
 bool output_init(unsigned outputbuf_size, struct thread_ctx_s *ctx) {
 	LOG_DEBUG("[%p] init output media renderer", ctx);
 
-	outputbuf_size = max(outputbuf_size, 256*1024);
+	outputbuf_size = max((outputbuf_size / BYTES_PER_FRAME) * BYTES_PER_FRAME, 256*1024);
 	ctx->outputbuf = &ctx->__o_buf;
 	buf_init(ctx->outputbuf, outputbuf_size);
 

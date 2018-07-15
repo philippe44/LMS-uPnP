@@ -47,7 +47,7 @@ static ssize_t 	handle_http(struct thread_ctx_s *ctx, int sock, int thread_index
 static void 	mirror_header(key_data_t *src, key_data_t *rsp, char *key);
 
 /*---------------------------------------------------------------------------*/
-u16_t output_start(u16_t index, struct thread_ctx_s *ctx) {
+void output_start(u16_t index, struct thread_ctx_s *ctx) {
 	struct thread_param_s *param = malloc(sizeof(struct thread_param_s));
 	int i = 0;
 
@@ -60,10 +60,10 @@ u16_t output_start(u16_t index, struct thread_ctx_s *ctx) {
 	param->ctx = ctx;
 
 	// find a free port
-	param->thread->port = sq_port;
-	param->thread->http = bind_socket(&param->thread->port, SOCK_STREAM);
-	while (param->thread->http < 0 && param->thread->port++ && i++ < MAX_PLAYER) {
-		param->thread->http = bind_socket(&param->thread->port, SOCK_STREAM);
+	ctx->output.port = sq_port;
+	param->thread->http = bind_socket(&ctx->output.port, SOCK_STREAM);
+	while (param->thread->http < 0 && ctx->output.port++ && i++ < MAX_PLAYER) {
+		param->thread->http = bind_socket(&ctx->output.port, SOCK_STREAM);
 	}
 
 	// and listen to it
@@ -77,8 +77,6 @@ u16_t output_start(u16_t index, struct thread_ctx_s *ctx) {
 	LOG_ERROR("-------> starting thread %d", (param->thread == ctx->output_thread) ? 0 : 1);
 
 	pthread_create(&param->thread->thread, NULL, (void *(*)(void*)) &output_http_thread, param);
-
-	return param->thread->port;
 }
 
 /*---------------------------------------------------------------------------*/

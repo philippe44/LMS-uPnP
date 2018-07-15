@@ -499,6 +499,9 @@ u32_t sq_self_time(sq_dev_handle_t handle)
 
 
 /*---------------------------------------------------------------------------*/
+// FIXME: I'm not sure that ->index is always the right value when streaming
+// fails or in other error condition. Might need to looking into the active
+// thread "real" index, but that much more complicated
 void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *cookie, void *param)
 {
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];

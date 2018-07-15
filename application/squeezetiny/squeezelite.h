@@ -388,7 +388,6 @@ struct output_thread_s {
 		bool			running;
 		thread_type 	thread;
 		int				http;			// listening socket of http server
-		u16_t			port;           // listening port of http server
 		int 			index;
 };
 
@@ -468,7 +467,7 @@ void 		_checkfade(bool, struct thread_ctx_s *ctx);
 
 // output_http.c
 void 		output_flush(struct thread_ctx_s *ctx);
-u16_t		output_start(u16_t index, struct thread_ctx_s *ctx);
+void		output_start(u16_t index, struct thread_ctx_s *ctx);
 void 		wake_output(struct thread_ctx_s *ctx);
 
 /***************** main thread context**************/

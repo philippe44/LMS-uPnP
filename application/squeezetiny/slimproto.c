@@ -292,7 +292,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 			unsigned header_len = len - sizeof(struct strm_packet);
 			char *header = (char *)(pkt + sizeof(struct strm_packet));
 			in_addr_t ip = (in_addr_t)strm->server_ip; // keep in network byte order
-			u16_t hport, port = strm->server_port; // keep in network byte order
+			u16_t port = strm->server_port; // keep in network byte order
 
 			if (ip == 0) ip = ctx->slimproto_ip;
 
@@ -316,7 +316,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 			sq_get_metadata(ctx->self, &info.metadata, info.next);
 
 			out->index++;
-			hport = output_start(out->index, ctx);
+			output_start(out->index, ctx);
 
 			LOCK_O;
 
@@ -423,7 +423,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 					if (codec_open(out->codec, out->sample_size, out->sample_rate, out->channels, out->in_endian, ctx) ) {
 						strcpy(info.mimetype, out->mimetype);
 						sprintf(info.uri, "http://%s:%hu/" BRIDGE_URL "%d.%s", sq_ip,
-								hport, out->index, mimetype2ext(out->mimetype));
+								out->port, out->index, mimetype2ext(out->mimetype));
 
 						if (!ctx_callback(ctx, SQ_SET_TRACK, NULL, &info)) sendSTMn = true;
 
@@ -555,7 +555,6 @@ static void process_codc(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 
 	// matching found in player
 	if (mimetype) {
-			u16_t hport;
 		strcpy(out->mimetype, mimetype);
 		free(mimetype);
 
@@ -566,7 +565,7 @@ static void process_codc(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 		codec_open(out->codec, out->sample_size, out->sample_rate, out->channels, out->in_endian, ctx);
 		strcpy(info.mimetype, out->mimetype);
 		sprintf(info.uri, "http://%s:%hu/" BRIDGE_URL "%d.%s", sq_ip,
-				hport, out->index, mimetype2ext(out->mimetype));
+				out->port, out->index, mimetype2ext(out->mimetype));
 
 		if (!ctx_callback(ctx, SQ_SET_TRACK, NULL, &info)) sendSTAT("STMn", 0, ctx);
 
