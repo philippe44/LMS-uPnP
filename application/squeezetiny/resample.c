@@ -242,7 +242,7 @@ bool resample_newstream(unsigned raw_sample_rate, unsigned supported_rates[], st
 
 	} else {
 
-		LOG_INFO("[%p]: disable resampling - rates match", ctx);
+		LOG_INFO("[%p]: disable resampling - rates match %u", ctx, outrate);
 		return false;
 	}
 }

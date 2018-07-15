@@ -223,8 +223,8 @@ void parse_encode(struct outputstate *out) {
 	u32_t sample_rate;
 	u8_t sample_size;
 
-	sample_rate = 88200;
-	sample_size = 16;
+	sample_rate = -48000;
+	sample_size = 0;
 	
 	if (sample_rate > 0) out->supported_rates[0] = sample_rate;
 	else if (sample_rate < 0) out->supported_rates[0] = min(out->sample_rate, abs(sample_rate));
@@ -390,9 +390,6 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 						else out->codec = '*';
 						out->encode.mode = ENCODE_THRU;
 					}
-
-					// disable all resampling for compressed formats
-					if (out->encode.mode == ENCODE_THRU) out->supported_rates[0] = 0;
 
 				} else if (!strcasecmp(ctx->config.encode, "pcm")) {
 
