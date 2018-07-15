@@ -218,6 +218,22 @@ static void sendSETDName(const char *name, sockfd sock) {
 	send_packet((u8_t *)name, strlen(name) + 1, sock);
 }
 
+
+void parse_encode(struct outputstate *out) {
+	u32_t sample_rate;
+	u8_t sample_size;
+
+	sample_rate = 88200;
+	sample_size = 16;
+	
+	if (sample_rate > 0) out->supported_rates[0] = sample_rate;
+	else if (sample_rate < 0) out->supported_rates[0] = min(out->sample_rate, abs(sample_rate));
+	else out->supported_rates[0] = out->sample_rate;
+
+	out->encode.sample_rate = out->supported_rates[0];
+	if (sample_size) out->encode.sample_size = sample_size;
+}
+
 /*---------------------------------------------------------------------------*/
 static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 	struct strm_packet *strm = (struct strm_packet *)pkt;
@@ -227,7 +243,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 	}
 	else {
 		LOG_DEBUG("[%p] strm command %c", ctx, strm->command);
-    }
+	}
 
 	switch(strm->command) {
 	case 't':
@@ -318,7 +334,9 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 
 			LOCK_O;
 
+			memset(&out->encode, 0, sizeof(out->encode));
 			out->completed = false;
+			out->flow = false;
 			out->replay_gain = unpackN(&strm->replay_gain);
 			out->fade_mode = strm->transition_type - '0';
 			out->fade_secs = strm->transition_period;
@@ -326,25 +344,26 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 			out->bitrate = info.metadata.bitrate;
 			out->remote = info.metadata.remote;
 			out->icy.last = gettime_ms() - ICY_UPDATE_TIME;
-			memset(&out->encode, 0, sizeof(out->encode));
 
 			LOG_DEBUG("[%p]: set fade mode: %u", ctx, ctx->output.fade_mode);
 
 			if (strm->format != '?') {
 				if (strm->format != 'a')
-					out->sample_size = (strm->pcm_sample_size != '?') ? pcm_sample_size[strm->pcm_sample_size - '0'] : 0xff;
+					out->sample_size = (strm->pcm_sample_size != '?') ? pcm_sample_size[strm->pcm_sample_size - '0'] : 0;
 				else
 					out->sample_size = strm->pcm_sample_size;
 
-				out->sample_rate = (strm->pcm_sample_rate != '?') ? pcm_sample_rate[strm->pcm_sample_rate - '0'] : 0xff;
+				out->sample_rate = (strm->pcm_sample_rate != '?') ? pcm_sample_rate[strm->pcm_sample_rate - '0'] : 0;
 				if (ctx->output.sample_rate > ctx->config.sample_rate) {
 					 LOG_WARN("[%p]: Sample rate %u error suspected, forcing to %u", ctx, out->sample_rate, ctx->config.sample_rate);
 					 out->sample_rate = ctx->config.sample_rate;
 				}
 
-				out->channels = (strm->pcm_channels != '?') ? pcm_channels[strm->pcm_channels - '1'] : 0xff;
+				out->channels = (strm->pcm_channels != '?') ? pcm_channels[strm->pcm_channels - '1'] : 0;
 				out->in_endian = (strm->pcm_endianness != '?') ? strm->pcm_endianness - '0' : 0xff;
 				out->codec = strm->format;
+
+				parse_encode(out);
 
 				// check if re-encoding is needed
 				if (!strcasecmp(ctx->config.encode, "thru") ||
@@ -357,10 +376,12 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 					}
 
 					if (out->codec == 'p') {
-						out->encode.sample_size = (out->sample_size == 24 && ctx->config.L24_format == L24_TRUNC16) ? 16 : out->sample_size;
+						if (!out->encode.sample_size)
+							out->encode.sample_size = (out->sample_size == 24 && ctx->config.L24_format == L24_TRUNC16) ? 16 : out->sample_size;
+
 						mimetype = find_pcm_mimetype(out->in_endian, &out->encode.sample_size,
 												ctx->config.L24_format == L24_TRUNC16_PCM,
-												out->sample_rate, out->channels,
+												out->encode.sample_rate, out->channels,
 												ctx->mimetypes, ctx->config.raw_audio_format);
 						out->encode.mode = ENCODE_PCM;
 					} else {
@@ -369,19 +390,43 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 						else out->codec = '*';
 						out->encode.mode = ENCODE_THRU;
 					}
-				} else if (!strcasecmp(ctx->config.encode, "pcm")) {
-					char format[16] = "";
 
-					// cannot do raw PCM as channel, sample rate & size are unknown at this time
-					if (stristr(ctx->config.raw_audio_format, "wav")) strcat(format, "wav");
-					if (stristr(ctx->config.raw_audio_format, "aif")) strcat(format, "aif");
-					mimetype = find_mimetype('p', ctx->mimetypes, format);
+					// disable all resampling for compressed formats
+					if (out->encode.mode == ENCODE_THRU) out->supported_rates[0] = 0;
+
+				} else if (!strcasecmp(ctx->config.encode, "pcm")) {
+
+					/*
+					cannot do raw PCM as channel, sample rate & size are unknown
+					before codec receives some data, unless they are forced in
+					<encode>, then we need to also force chanels to 2
+					*/
+
+					out->in_endian = 1;
+
+					if (out->encode.sample_rate && out->encode.sample_size && stristr(ctx->config.raw_audio_format, "raw")) {
+						out->encode.channels = 2;
+						mimetype = find_pcm_mimetype(out->in_endian, &out->encode.sample_size,
+											ctx->config.L24_format == L24_TRUNC16_PCM,
+											out->encode.sample_rate, out->encode.channels,
+											ctx->mimetypes, ctx->config.raw_audio_format);
+					} else {
+						char format[16] = "";
+
+						if (stristr(ctx->config.raw_audio_format, "wav")) strcat(format, "wav");
+						if (stristr(ctx->config.raw_audio_format, "aif")) strcat(format, "aif");
+
+						mimetype = find_mimetype('p', ctx->mimetypes, format);
+					}
+
 					out->encode.mode = ENCODE_PCM;
-					out->in_endian = 1;
 
 				} else if (!strcasecmp(ctx->config.encode, "flac")) {
+
+					mimetype = find_mimetype('f', ctx->mimetypes, NULL);
 					out->encode.mode = ENCODE_FLAC;
 					out->encode.codec = NULL;
+
 				}
 
 				// matching found in player

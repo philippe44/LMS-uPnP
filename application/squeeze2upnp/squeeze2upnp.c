@@ -111,6 +111,7 @@ sq_dev_param_t glDeviceParam = {
 					"",						// name
 					{ 0x00,0x00,0x00,0x00,0x00,0x00 },
 					true,	  				// send_icy
+					"",						// resample_options
 					{ 	true,				// use_cli
 						"",     			// server
 					},

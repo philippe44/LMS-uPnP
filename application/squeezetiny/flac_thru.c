@@ -187,8 +187,6 @@ decode_state flac_decode(struct thread_ctx_s *ctx) {
 
 	if (ctx->decode.new_stream) {
 		LOG_INFO("[%p]: setting track_start", ctx);
-		ctx->output.sample_rate = decode_newstream(p->sample_rate, ctx->output.supported_rates, ctx);
-		if (ctx->output.fade_mode) _checkfade(true, ctx);
 		ctx->decode.new_stream = false;
 	}
 

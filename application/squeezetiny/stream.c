@@ -308,7 +308,6 @@ bool stream_thread_init(unsigned streambuf_size, struct thread_ctx_s *ctx) {
 
 	ctx->streambuf = &ctx->__s_buf;
 
-	// FIXME: should be dynamically created
 	buf_init(ctx->streambuf, streambuf_size);
 	if (ctx->streambuf->buf == NULL) {
 		LOG_ERROR("[%p] unable to malloc buffer", ctx);

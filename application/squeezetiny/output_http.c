@@ -245,6 +245,7 @@ static void output_http_thread(struct thread_param_s *param) {
 		*/
 		if (!draining && !_output_fill(obuf, ctx) && ctx->decode.state != DECODE_RUNNING) {
 			// full track pulled from outputbuf, draining from obuf
+			_output_end_stream(true, ctx);
 			ctx->output.completed = true;
 			draining = true;
 			wake_controller(ctx);
@@ -317,12 +318,14 @@ static void output_http_thread(struct thread_param_s *param) {
 		} else {
 			// check if all sent
 			if (draining) {
-				// sending final empty chunk
-				if (ctx->output.chunked) {
-					strcpy(chunk_frame_buf, "0\r\n\r\n");
-					chunk_frame = chunk_frame_buf;
-				}
-				done = true;
+				if (!ctx->output.flow) {
+					// sending final empty chunk
+					if (ctx->output.chunked) {
+						strcpy(chunk_frame_buf, "0\r\n\r\n");
+						chunk_frame = chunk_frame_buf;
+					}
+					done = true;
+				} else if (_buf_used(ctx->outputbuf)) draining = false;
 			}
 			// we don't have anything to send, let select read or sleep
 			FD_ZERO(&wfds);

@@ -121,15 +121,10 @@ static void *decode_thread(struct thread_ctx_s *ctx) {
 void decode_init(void) {
 	int i = 0;
 
-#if DECODE
 #if FFMPEG
 	if (!strstr(exclude_codecs, "alac") && (!include_codecs || strstr(include_codecs, "alac")))  codecs[i++] = register_ff("alc");
 	if (!strstr(exclude_codecs, "wma")  && (!include_codecs || strstr(include_codecs, "wma")))   codecs[i++] = register_ff("wma");
 #endif
-#if RESAMPLE
-	register_soxr();
-#endif
-#else
 	codecs[i++] = register_mad();
 	codecs[i++] = register_faad();
 	codecs[i++] = register_vorbis();
@@ -137,17 +132,15 @@ void decode_init(void) {
 	codecs[i++] = register_flac();
 	codecs[i++] = register_flac_thru();
 	codecs[i++] = register_thru();
+#if RESAMPLE
+	register_soxr();
 #endif
+
 }
 
 
 /*---------------------------------------------------------------------------*/
 void decode_end(void) {
-#if DECODE
-#if RESAMPLE
-	deregister_soxr();
-#endif
-#else
 	deregister_vorbis();
 	deregister_faad();
 	deregister_mad();
@@ -155,6 +148,8 @@ void decode_end(void) {
 	deregister_flac();
 	deregister_flac_thru();
 	deregister_thru();
+#if RESAMPLE
+	deregister_soxr();
 #endif
 }
 

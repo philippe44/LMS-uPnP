@@ -373,6 +373,7 @@ void 		process_end(struct thread_ctx_s *ctx);
 
 #if RESAMPLE
 // resample.c
+
 void 		resample_samples(struct thread_ctx_s *ctx);
 bool 		resample_drain(struct thread_ctx_s *ctx);
 bool 		resample_newstream(unsigned raw_sample_rate, unsigned supported_rates[],
@@ -409,6 +410,7 @@ struct output_thread_s {
 struct outputstate {
 	output_state state;		// license to stream or not
 	bool	completed;	 	// whole track has been pulled from outputbuf
+	bool	flow;			// thread do not exit when track ends
 	char	format;			// data sent format (p=pcm, w=wav, i=aif, f=flac)
 	u8_t 	sample_size, channels, codec; // as name, original stream values
 	u32_t 	sample_rate;	// as name, original stream values
@@ -422,7 +424,7 @@ struct outputstate {
 	char 	mimetype[_STR_LEN_];	// content-type to send to player
 	bool  	track_started;	// track has started to be streamed (trigger, not state)
 	u8_t  	*track_start;   // pointer where track starts in buffer, just for legacy compatibility
-	unsigned supported_rates[2];	// moot for now
+	unsigned *supported_rates[2];	// for resampling (0 = use raw)
 	// for icy data
 	struct {
 		size_t interval, remain;
@@ -450,6 +452,7 @@ struct outputstate {
 	struct {
 		u32_t sample_rate;
 		u8_t sample_size;
+		u8_t channels;
 		encode_mode mode;
 		void *codec;
 	} encode;
@@ -473,6 +476,7 @@ void 		output_free_icy(struct thread_ctx_s *ctx);
 
 bool		_output_fill(struct buffer *buf, struct thread_ctx_s *ctx);
 void 		_output_new_stream(struct buffer *buf, struct thread_ctx_s *ctx);
+void 		_output_end_stream(bool finish, struct thread_ctx_s *ctx);
 void 		_checkfade(bool, struct thread_ctx_s *ctx);
 
 // output_http.c

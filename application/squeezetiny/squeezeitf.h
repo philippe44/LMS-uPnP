@@ -75,6 +75,9 @@ typedef	struct sq_dev_param_s {
 	char		name[_STR_LEN_];
 	u8_t		mac[6];
 	bool		send_icy;
+#ifdef RESAMPLE
+	char		resample_options[_STR_LEN_];
+#endif
 	// set at runtime, not from config
 	struct {
 		bool		use_cli;

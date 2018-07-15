@@ -104,6 +104,9 @@ void SaveConfig(char *name, void *ref, bool full)
 	XMLUpdateNode(doc, common, false, "min_gapless", "%d", (int) glMRConfig.MinGapless);
 	XMLUpdateNode(doc, common, false, "auto_play", "%d", (int) glMRConfig.AutoPlay);
 	XMLUpdateNode(doc, common, false, "server", glDeviceParam.server);
+#ifdef RESAMPLE
+	XMLUpdateNode(doc, common, false, "resample_options", glDeviceParam.resample_options);
+#endif
 
 	for (i = 0; i < MAX_RENDERERS; i++) {
 		IXML_Node *dev_node;
@@ -196,6 +199,9 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 		sscanf(val,"%2x:%2x:%2x:%2x:%2x:%2x", &mac[0], &mac[1], &mac[2], &mac[3], &mac[4], &mac[5]);
 		for (i = 0; i < 6; i++) sq_conf->mac[i] = mac[i];
 	}
+#ifdef RESAMPLE
+	if (!strcmp(name, "resample_options")) strcpy(sq_conf->resample_options, val);
+#endif
 }
 
 /*----------------------------------------------------------------------------*/

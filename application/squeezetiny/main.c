@@ -724,6 +724,9 @@ bool sq_run_device(sq_dev_handle_t handle, sq_dev_param_t *param)
 	if (output_init(ctx->config.output_buf_size, ctx)) {
 		decode_thread_init(ctx);
 		slimproto_thread_init(ctx);
+#if RESAMPLE
+		process_init(param->resample_options, ctx);
+#endif
 		return true;
 	} else {
 		stream_close(ctx);
