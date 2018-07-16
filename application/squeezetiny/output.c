@@ -232,7 +232,7 @@ bool _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
 	} else {
 		// uncompressed audio to be processed
 		size_t in, out, frames, bytes_per_frame = (p->encode.sample_size / 8) * p->encode.channels;
-		u8_t *optr, obuf[BYTES_PER_FRAME];
+		u8_t *optr, obuf[BYTES_PER_FRAME*2];
 		u32_t gain = 65536L;
 
 		// outputbuf is processed by BYTES_PER_FRAMES multiples => aligns fine
@@ -255,27 +255,40 @@ bool _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
 		*/
 
 		if (p->encode.mode == ENCODE_PCM) {
+			u8_t min_frames;
+
+			// in case of L24_LPCM, we need 2 frames at least
+			if (p->encode.sample_size == 24 && ctx->config.L24_format == L24_PACKED_LPCM) min_frames = 2;
+			else min_frames = 1;
+
 			// buf cannot count on alignement because of headers (wav /aif)
 			out = min(_buf_space(buf), _buf_cont_write(buf));
 
 			// not enough cont'd place in output, just process one frame
-			if (out < bytes_per_frame) {
+			if (out < bytes_per_frame * min_frames) {
 				optr = obuf;
-				out = bytes_per_frame;
+				out = bytes_per_frame * min_frames;
 			} else optr = buf->writep;
 
 			frames = min(frames, in / BYTES_PER_FRAME);
 			frames = min(frames, out / bytes_per_frame);
 
+			if (frames < min_frames) return true;
+
 			apply_gain((s32_t*) ctx->outputbuf->readp, gain, 0, frames);
-			scale_and_pack(optr, (u32_t*) ctx->outputbuf->readp, frames,
-						   p->encode.channels, p->encode.sample_size, p->out_endian);
+
+			if (p->encode.sample_size == 24 && ctx->config.L24_format == L24_PACKED_LPCM)
+				lpcm_pack((u8_t*) optr, ctx->outputbuf->readp, frames * BYTES_PER_FRAME,
+						  p->encode.channels, p->in_endian);
+			else
+				scale_and_pack(optr, (u32_t*) ctx->outputbuf->readp, frames,
+							   p->encode.channels, p->encode.sample_size, p->out_endian);
 
 			// take the data from temporary buffer if needed
 			if (optr == obuf) {
 				size_t out = _buf_cont_write(buf);
 				memcpy(buf->writep, optr, out);
-				memcpy(buf->buf, optr + out, bytes_per_frame - out);
+				memcpy(buf->buf, optr + out, bytes_per_frame * min_frames - out);
 			}
 
 			_buf_inc_writep(buf, frames * bytes_per_frame);
@@ -375,7 +388,7 @@ void _output_new_stream(struct buffer *obuf, struct thread_ctx_s *ctx) {
 		size_t size;
 		bool ok;
 
-		size = max((out->encode.sample_rate * out->encode.channels * out->encode.sample_size / 8 * DRAIN_LEN) / 2, 2*FLAC_MIN_SPACE);
+		size = max((out->encode.sample_rate * out->encode.channels * out->encode.sample_size / 8 * DRAIN_LEN) / 2, 2 * FLAC_MIN_SPACE);
 		buf_init(obuf, size);
 
 		codec = FLAC(f, stream_encoder_new);
@@ -527,49 +540,53 @@ static FLAC__StreamEncoderWriteStatus flac_write_callback(const FLAC__StreamEnco
 void lpcm_pack(u8_t *dst, u8_t *src, size_t bytes, u8_t channels, int endian) {
 	size_t i;
 
+#if !SL_LITTLE_ENDIAN
+	endian = !endian;
+#endif
+
 	// bytes are always a multiple of 12 (and 6 ...)
 	// 3 bytes with packing required, 2 channels
 	if (channels == 2) {
-		if (endian) for (i = 0; i < bytes; i += 12) {
+		if (endian) for (i = 0; i < bytes; i += 16) {
 			// L0T,L0M & R0T,R0M
-			*dst++ = src[2]; *dst++ = src[1];
-			*dst++ = src[5]; *dst++ = src[4];
+			*dst++ = src[3]; *dst++ = src[2];
+			*dst++ = src[7]; *dst++ = src[6];
 			// L1T,L1M & R1T,R1M
-			*dst++ = src[8]; *dst++ = src[7];
-			*dst++ = src[11]; *dst++ = src[10];
+			*dst++ = src[9]; *dst++ = src[8];
+			*dst++ = src[15]; *dst++ = src[14];
 			// L0B, R0B, L1B, R1B
-			*dst++ = src[0]; *dst++ = src[3]; *dst++ = src[6]; *dst++ = src[9];
-			src += 12;
-		} else for (i = 0; i < bytes; i += 12) {
+			*dst++ = src[1]; *dst++ = src[5]; *dst++ = src[9]; *dst++ = src[13];
+			src += 16;
+		} else for (i = 0; i < bytes; i += 16) {
 			// L0T,L0M & R0T,R0M
 			*dst++ = src[0]; *dst++ = src[1];
-			*dst++ = src[3]; *dst++ = src[4];
+			*dst++ = src[4]; *dst++ = src[5];
 			// L1T,L1M & R1T,R1M
-			*dst++ = src[6]; *dst++ = src[7];
-			*dst++ = src[9]; *dst++ = src[10];
+			*dst++ = src[8]; *dst++ = src[9];
+			*dst++ = src[12]; *dst++ = src[13];
 			// L0B, R0B, L1B, R1B
-			*dst++ = src[2]; *dst++ = src[5]; *dst++ = src[8]; *dst++ = src[11];
-			src += 12;
+			*dst++ = src[2]; *dst++ = src[6]; *dst++ = src[10]; *dst++ = src[14];
+			src += 16;
 		}
 		// after that R0T,R0M,L0T,L0M,R1T,R1M,L1T,L1M,R0B,L0B,R1B,L1B
 	}
 
 	// 3 bytes with packing required, 1 channel
 	if (channels == 1) {
-		if (endian) for (i = 0; i < bytes; i += 6) {
+		if (endian) for (i = 0; i < bytes; i += 16) {
 			// C0T,C0M,C1,C1M
-			*dst++ = src[2]; *dst++ = src[1];
-			*dst++ = src[5]; *dst++ = src[4];
+			*dst++ = src[3]; *dst++ = src[2];
+			*dst++ = src[7]; *dst++ = src[6];
 			// C0B, C1B
-			*dst++ = src[0]; *dst++ = src[3];
-			src += 6;
-		} else for (i = 0; i < bytes; i += 6) {
+			*dst++ = src[1]; *dst++ = src[5];
+			src += 16;
+		} else for (i = 0; i < bytes; i += 16) {
 			// C0T,C0M,C1,C1M
 			*dst++ = src[0]; *dst++ = src[1];
-			*dst++ = src[3]; *dst++ = src[4];
+			*dst++ = src[4]; *dst++ = src[5];
 			// C0B, C1B
-			*dst++ = src[2]; *dst++ = src[5];
-			src += 6;
+			*dst++ = src[2]; *dst++ = src[6];
+			src += 16;
 		}
 		// after that C0T,C0M,C1T,C1M,C0B,C1B
 	}
@@ -712,9 +729,12 @@ void _checkfade(bool start, struct thread_ctx_s *ctx) {
 
 	LOG_INFO("[%p]: fade mode: %u duration: %u %s", ctx, ctx->output.fade_mode, ctx->output.fade_secs, start ? "track-start" : "track-end");
 
-	bytes = ctx->output.sample_rate * BYTES_PER_FRAME * ctx->output.fade_secs;
+	// encode sample_rate might not be set yet (means == source sample_rate)
+	if (ctx->output.encode.sample_rate) bytes = ctx->output.encode.sample_rate * BYTES_PER_FRAME * ctx->output.fade_secs;
+	else bytes = ctx->output.sample_rate * BYTES_PER_FRAME * ctx->output.fade_secs;
 	if (ctx->output.fade_mode == FADE_INOUT) {
-		bytes /= 2;
+		// must be align on a frame boundary otherwise output process locks
+		bytes = ((bytes / 2) / BYTES_PER_FRAME) * BYTES_PER_FRAME;
 	}
 
 	if (start && (ctx->output.fade_mode == FADE_IN || (ctx->output.fade_mode == FADE_INOUT && _buf_used(ctx->outputbuf) == 0))) {
@@ -757,6 +777,7 @@ size_t fade_gain(u32_t *gain, struct thread_ctx_s *ctx) {
 	if (!out->fade) return frames;
 
 	if (out->fade == FADE_DUE) {
+		LOG_SDEBUG("[%p] fade check at %p (start %p)", ctx, ctx->outputbuf->readp, ctx->output.fade_start);
 		if (out->fade_start == ctx->outputbuf->readp) {
 			LOG_INFO("[%p]: fade start reached", ctx);
 			out->fade = FADE_ACTIVE;
@@ -771,6 +792,8 @@ size_t fade_gain(u32_t *gain, struct thread_ctx_s *ctx) {
 			(ctx->outputbuf->readp + ctx->outputbuf->size - out->fade_start) / BYTES_PER_FRAME;
 		frames_t dur_f = out->fade_end >= out->fade_start ? (out->fade_end - out->fade_start) / BYTES_PER_FRAME :
 			(out->fade_end + ctx->outputbuf->size - out->fade_start) / BYTES_PER_FRAME;
+
+		LOG_SDEBUG("[%p] fading at %p (c:%u d:%u)", ctx, ctx->outputbuf->readp, cur_f, dur_f);
 
 		if (cur_f >= dur_f) {
 			// so far this part is useless as we don't support a continuous flow
@@ -803,9 +826,9 @@ size_t fade_gain(u32_t *gain, struct thread_ctx_s *ctx) {
 		if (!frames) frames = 1;
 
 		// to force smooth scale up/down, don't do too many frames
-		frames = min(frames, out->sample_rate / 10);
+		frames = min(frames, out->encode.sample_rate / 10);
 
-		// a fade-down was pending ac codec ended while fade-up was still going
+		// a fade-down was pending as codec ended while fade-up was still going
 		if (checkfade) _checkfade(false, ctx);
 	}
 

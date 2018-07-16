@@ -229,19 +229,23 @@ static void output_http_thread(struct thread_param_s *param) {
 			break;
 		}
 
+		// LOCK_D always before LOCK_O, deadlock risk otherwise
+		LOCK_D;
 		LOCK_O;
 
 		// slimproto has not released us yet or we have been stopped
 		if (ctx->output.state != OUTPUT_RUNNING) {
 			UNLOCK_O;
+			UNLOCK_D;
 			continue;
 		}
 
 		/*
-		pull some data from outpubuf (LOCK_D better but un-necesssary). Order of
-		test matters as pulling from outputbuf should stop once draining has
-		started
+		pull some data from outpubuf. Order of test matters as pulling from
+		outputbuf should stop once draining has	started. Need to LOCK_D as
+		we are going to apply fade
 		*/
+
 		if (!draining && !_output_fill(obuf, ctx) && ctx->decode.state != DECODE_RUNNING) {
 			// full track pulled from outputbuf, draining from obuf
 			_output_end_stream(true, ctx);
@@ -250,6 +254,8 @@ static void output_http_thread(struct thread_param_s *param) {
 			wake_controller(ctx);
 			LOG_INFO("[%p]: draining - sent %zu bytes (gap %d)", ctx, bytes, ctx->output.length > 0 ? bytes - ctx->output.length : 0);
 		}
+
+		UNLOCK_D;
 
 		// now are surely running - socket is non blocking, so this is fast
 		if (_buf_used(obuf) || tpos < bytes) {
