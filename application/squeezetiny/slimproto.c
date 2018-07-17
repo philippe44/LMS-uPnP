@@ -69,7 +69,8 @@ static u32_t 	pcm_sample_rate[] = { 11025, 22050, 32000, 44100, 48000,
 									  176400, 192000, 352800, 384000 };
 static u8_t		pcm_channels[] = { 1, 2 };
 
-static void parse_encode(struct thread_ctx_s *ctx);
+static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels,
+						  u8_t endianness, struct thread_ctx_s *ctx);
 
 /*---------------------------------------------------------------------------*/
 bool ctx_callback(struct thread_ctx_s *ctx, sq_action_t action, u8_t *cookie, void *param)
@@ -285,9 +286,6 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 		break;
 	case 's':
 		{
-			struct track_param info;
-			struct outputstate *out = &ctx->output;
-			char *mimetype;
 			bool sendSTMn = false;
 			unsigned header_len = len - sizeof(struct strm_packet);
 			char *header = (char *)(pkt + sizeof(struct strm_packet));
@@ -302,144 +300,36 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 			ctx->autostart = strm->autostart - '0';
 
 			sendSTAT("STMf", 0, ctx);
+
 			if (header_len > MAX_HEADER -1) {
 				LOG_WARN("[%p] header too long: %u", ctx, header_len);
 				break;
 			}
 
-			LOCK_O;
-			// if streaming failed, we might never start to play previous index
-			info.next = (out->state == OUTPUT_RUNNING && out->index == ctx->render.index);
-			UNLOCK_O;
-
-			// get metatda - they must be freed by callee whenever he wants
-			sq_get_metadata(ctx->self, &info.metadata, info.next);
-
-			out->index++;
-			output_start(out->index, ctx);
-
-			LOCK_O;
-
-			memset(&out->encode, 0, sizeof(out->encode));
-			out->completed = false;
-			out->encode.flow = false;
-			out->replay_gain = unpackN(&strm->replay_gain);
-			out->fade_mode = strm->transition_type - '0';
-			out->fade_secs = strm->transition_period;
-			out->duration = info.metadata.duration;
-			out->bitrate = info.metadata.bitrate;
-			out->remote = info.metadata.remote;
-			out->icy.last = gettime_ms() - ICY_UPDATE_TIME;
+			/*
+			No need to LOCK_O because the output thread is either waiting for
+			the player GET which will only happen after callback or the other
+			thread is draining and it does not need secured access to
+			parameters except for encode.flow. Any flush or stop request is in
+			that same thread as this function except when the device is being
+			deleted, where the callback	might be used in conflict
+			*/
+			ctx->output.replay_gain = unpackN(&strm->replay_gain);
+			ctx->output.fade_mode = strm->transition_type - '0';
+			ctx->output.fade_secs = strm->transition_period;
 
 			LOG_DEBUG("[%p]: set fade mode: %u", ctx, ctx->output.fade_mode);
 
 			if (strm->format != '?') {
-				if (strm->format != 'a')
-					out->sample_size = (strm->pcm_sample_size != '?') ? pcm_sample_size[strm->pcm_sample_size - '0'] : 0;
-				else
-					out->sample_size = strm->pcm_sample_size;
-
-				out->sample_rate = (strm->pcm_sample_rate != '?') ? pcm_sample_rate[strm->pcm_sample_rate - '0'] : 0;
-				if (ctx->output.sample_rate > ctx->config.sample_rate) {
-					 LOG_WARN("[%p]: Sample rate %u error suspected, forcing to %u", ctx, out->sample_rate, ctx->config.sample_rate);
-					 out->sample_rate = ctx->config.sample_rate;
-				}
-
-				out->channels = (strm->pcm_channels != '?') ? pcm_channels[strm->pcm_channels - '1'] : 0;
-				out->in_endian = (strm->pcm_endianness != '?') ? strm->pcm_endianness - '0' : 0xff;
-				out->codec = strm->format;
-
-				parse_encode(ctx);
-
-				// check if re-encoding is needed
-				if (out->encode.mode == ENCODE_THRU || (out->encode.mode == ENCODE_PCM && out->codec == 'p')) {
-
-					// always start from a clean outputbuf for alignment
-					// FIXME: will not work in "flow" mode
-					if (!_buf_reset(ctx->outputbuf)) {
-						LOG_ERROR("[%p]: buffer should be empty", ctx);
-					}
-
-					if (out->codec == 'p') {
-						if (!out->encode.sample_size)
-							out->encode.sample_size = (out->sample_size == 24 && ctx->config.L24_format == L24_TRUNC16) ? 16 : out->sample_size;
-
-						mimetype = find_pcm_mimetype(out->in_endian, &out->encode.sample_size,
-												ctx->config.L24_format == L24_TRUNC16_PCM,
-												out->encode.sample_rate, out->channels,
-												ctx->mimetypes, ctx->config.raw_audio_format);
-						out->encode.mode = ENCODE_PCM;
-					} else {
-						mimetype = find_mimetype(out->codec, ctx->mimetypes, NULL);
-						if (out->codec == 'f') out->codec ='c';
-						else out->codec = '*';
-						out->encode.mode = ENCODE_THRU;
-					}
-
-				} else if (out->encode.mode == ENCODE_PCM) {
-
-					/*
-					cannot do raw PCM as channel, sample rate & size are unknown
-					before codec receives some data, unless they are forced in
-					<encode>, then we need to also force chanels to 2
-					*/
-
-					out->in_endian = 1;
-
-					if (out->encode.sample_rate && out->encode.sample_size && stristr(ctx->config.raw_audio_format, "raw")) {
-						out->encode.channels = 2;
-						mimetype = find_pcm_mimetype(out->in_endian, &out->encode.sample_size,
-											ctx->config.L24_format == L24_TRUNC16_PCM,
-											out->encode.sample_rate, out->encode.channels,
-											ctx->mimetypes, ctx->config.raw_audio_format);
-					} else {
-						char format[16] = "";
-
-						if (stristr(ctx->config.raw_audio_format, "wav")) strcat(format, "wav");
-						if (stristr(ctx->config.raw_audio_format, "aif")) strcat(format, "aif");
-
-						mimetype = find_mimetype('p', ctx->mimetypes, format);
-					}
-
-					out->encode.mode = ENCODE_PCM;
-
-				} else if (out->encode.mode == ENCODE_FLAC) {
-
-					mimetype = find_mimetype('f', ctx->mimetypes, NULL);
-					out->encode.mode = ENCODE_FLAC;
-					out->encode.codec = NULL;
-
-				}
-
-				// matching found in player
-				if (mimetype) {
-					strcpy(out->mimetype, mimetype);
-					free(mimetype);
-
-					out->format = mimetype2format(out->mimetype);
-					out->out_endian = (out->format == 'w');
-					out->length = ctx->config.stream_length;
-
-					if (codec_open(out->codec, out->sample_size, out->sample_rate, out->channels, out->in_endian, ctx) ) {
-						strcpy(info.mimetype, out->mimetype);
-						sprintf(info.uri, "http://%s:%hu/" BRIDGE_URL "%d.%s", sq_ip,
-								out->port, out->index, mimetype2ext(out->mimetype));
-
-						if (!ctx_callback(ctx, SQ_SET_TRACK, NULL, &info)) sendSTMn = true;
-
-						LOG_INFO("[%p]: codec:%c, ch:%d, s:%d, r:%d", ctx, out->codec, out->channels, out->sample_size, out->sample_rate);
-					} else sendSTMn = true;
-				} else sendSTMn = true;
+				sendSTMn = !process_start(strm->format, strm->pcm_sample_rate, strm->pcm_sample_size,
+										  strm->pcm_channels, strm->pcm_endianness, ctx);
 			} else if (ctx->autostart >= 2) {
 				// extension to slimproto to allow server to detect codec from response header and send back in codc message
 				LOG_INFO("[%p] waiting for codc message", ctx);
 			} else {
 				LOG_ERROR("[%p] unknown codec requires autostart >= 2", ctx);
-				UNLOCK_O;
 				break;
 			}
-
-			UNLOCK_O;
 
 			stream_sock(ip, port, header, header_len, strm->threshold * 1024, ctx->autostart >= 2, ctx);
 
@@ -448,8 +338,8 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 
 			// codec error
 			if (sendSTMn) {
-				LOG_ERROR("[%p] no matching codec %c", ctx, out->codec);
-				 sendSTAT("STMn", 0, ctx);
+				LOG_ERROR("[%p] no matching codec %c", ctx, ctx->output.codec);
+				sendSTAT("STMn", 0, ctx);
 			}
 		}
 		break;
@@ -485,97 +375,12 @@ static void process_cont(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 /*---------------------------------------------------------------------------*/
 static void process_codc(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 	struct codc_packet *codc = (struct codc_packet *)pkt;
-	struct outputstate *out = &ctx->output;
-	struct track_param info;
-	char *mimetype;
-	struct output_thread_s *output_thread;
 
-	LOCK_O;
-
-	if (codc->format != 'a')
-		out->sample_size = (codc->pcm_sample_size != '?') ? pcm_sample_size[codc->pcm_sample_size - '0'] : 0;
-	else
-		out->sample_size = codc->pcm_sample_size;
-
-	out->sample_rate = (codc->pcm_sample_rate != '?') ? pcm_sample_rate[codc->pcm_sample_rate - '0'] : 0;
-	out->channels = (codc->pcm_channels != '?') ? pcm_channels[codc->pcm_channels - '1'] : 0;
-	out->in_endian = (codc->pcm_endianness != '?') ? codc->pcm_endianness - '0' : 0xff;
-	out->codec = codc->format;
-
-	parse_encode(ctx);
-
-	// check if re-encoding is needed
-	if (out->encode.mode == ENCODE_THRU || (out->encode.mode == ENCODE_PCM && out->codec == 'p')) {
-
-		// always start from a clean outputbuf for alignment
-		// FIXME: will not work in "flow" mode
-		if (!_buf_reset(ctx->outputbuf)) {
-			LOG_ERROR("[%p]: buffer should be empty", ctx);
-		}
-
-		if (out->codec == 'p') {
-			if (!out->encode.sample_size)
-				out->encode.sample_size = (out->sample_size == 24 && ctx->config.L24_format == L24_TRUNC16) ? 16 : out->sample_size;
-
-			mimetype = find_pcm_mimetype(out->in_endian, &out->encode.sample_size,
-										ctx->config.L24_format == L24_TRUNC16_PCM,
-										out->encode.sample_rate, out->channels,
-											ctx->mimetypes, ctx->config.raw_audio_format);
-			out->encode.mode = ENCODE_PCM;
-		} else {
-			mimetype = find_mimetype(out->codec, ctx->mimetypes, NULL);
-			if (out->codec == 'f') out->codec ='c';
-			else out->codec = '*';
-			out->encode.mode = ENCODE_THRU;
-		}
-	} else if (out->encode.mode == ENCODE_PCM) {
-		out->in_endian = 1;
-
-		if (out->encode.sample_rate && out->encode.sample_size && stristr(ctx->config.raw_audio_format, "raw")) {
-			out->encode.channels = 2;
-			mimetype = find_pcm_mimetype(out->in_endian, &out->encode.sample_size,
-										ctx->config.L24_format == L24_TRUNC16_PCM,
-										out->encode.sample_rate, out->encode.channels,
-										ctx->mimetypes, ctx->config.raw_audio_format);
-		} else {
-			char format[16] = "";
-
-			if (stristr(ctx->config.raw_audio_format, "wav")) strcat(format, "wav");
-			if (stristr(ctx->config.raw_audio_format, "aif")) strcat(format, "aif");
-
-			mimetype = find_mimetype('p', ctx->mimetypes, format);
-		}
-
-		out->encode.mode = ENCODE_PCM;
-	} else if (out->encode.mode == ENCODE_FLAC) {
-		mimetype = find_mimetype('f', ctx->mimetypes, NULL);
-		out->encode.mode = ENCODE_FLAC;
-		out->encode.codec = NULL;
-	}
-
-	// matching found in player
-	if (mimetype) {
-		strcpy(out->mimetype, mimetype);
-		free(mimetype);
-
-		out->format = mimetype2format(out->mimetype);
-		out->out_endian = (out->format == 'w');
-		out->length = ctx->config.stream_length;
-
-		codec_open(out->codec, out->sample_size, out->sample_rate, out->channels, out->in_endian, ctx);
-		strcpy(info.mimetype, out->mimetype);
-		sprintf(info.uri, "http://%s:%hu/" BRIDGE_URL "%d.%s", sq_ip,
-				out->port, out->index, mimetype2ext(out->mimetype));
-
-		if (!ctx_callback(ctx, SQ_SET_TRACK, NULL, &info)) sendSTAT("STMn", 0, ctx);
-
-		LOG_INFO("[%p]: codc:%c, ch:%d, s:%d, r:%d", ctx, out->codec, out->channels, out->sample_size, out->sample_rate);
-	} else {
+	if (!process_start(codc->format, codc->pcm_sample_rate, codc->pcm_sample_size,
+					  codc->pcm_channels, codc->pcm_endianness, ctx)) {
+		LOG_ERROR("[%p] codc error %c", ctx);
 		sendSTAT("STMn", 0, ctx);
-		LOG_ERROR("[%p] no matching codec %c", ctx, out->codec);
 	}
-
-	UNLOCK_O;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -1149,27 +954,159 @@ void slimproto_thread_init(struct thread_ctx_s *ctx) {
 }
 
 /*---------------------------------------------------------------------------*/
-static void parse_encode(struct thread_ctx_s *ctx) {
-	s32_t sample_rate = 0;
-	u8_t sample_size = 0;
-	char *p, *encode = ctx->config.encode;
+static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_t endianness,
+						  struct thread_ctx_s *ctx) {
 	struct outputstate *out = &ctx->output;
+	struct track_param info;
+	char *mimetype, *p, *encode = ctx->config.encode;
+	bool ret = false;
+	s32_t sample_rate;
 
+	LOCK_O;
+	// if streaming failed, we might never start to play previous index
+	info.next = (ctx->output.state == OUTPUT_RUNNING && out->index == ctx->render.index);
+	UNLOCK_O;
+
+	// get metadata - they must be freed by callee whenever he wants
+	sq_get_metadata(ctx->self, &info.metadata, info.next);
+
+	// reset key parameters
+	out->completed = false;
+	out->duration = info.metadata.duration;
+	out->bitrate = info.metadata.bitrate;
+	out->remote = info.metadata.remote;
+	out->icy.last = gettime_ms() - ICY_UPDATE_TIME;
+
+	// read source parameters (if any)
+	if (format != 'a')
+		out->sample_size = (size != '?') ? pcm_sample_size[size - '0'] : 0;
+	else
+		out->sample_size = size;
+	out->sample_rate = (rate != '?') ? pcm_sample_rate[rate - '0'] : 0;
+	if (ctx->output.sample_rate > ctx->config.sample_rate) {
+		 LOG_WARN("[%p]: Sample rate %u error suspected, forcing to %u", ctx, out->sample_rate, ctx->config.sample_rate);
+		 out->sample_rate = ctx->config.sample_rate;
+	}
+	out->channels = (channels != '?') ? pcm_channels[channels - '1'] : 0;
+	out->in_endian = (endianness != '?') ? endianness - '0' : 0xff;
+	out->codec = format;
+
+	// in flow mode we now have eveything, just initialize codec
+	if (out->encode.flow) {
+		sq_free_metadata(&info.metadata);
+		return codec_open(out->codec, out->sample_size, out->sample_rate,
+						  out->channels, out->in_endian, ctx);
+	} else out->index++;
+
+	// detect processing mode
 	if (stristr(encode, "thru")) out->encode.mode = ENCODE_THRU;
 	else if (stristr(encode, "pcm")) out->encode.mode = ENCODE_PCM;
 	else if (stristr(encode, "flac")) out->encode.mode = ENCODE_FLAC;
 
-	if (stristr(encode, "flow")) out->encode.flow = true;
-
+	// read forced re-encoding parameters
 	if ((p = stristr(encode, "r:")) != NULL) sample_rate = atoi(p+2);
+	else sample_rate = 0;
+	if ((p = stristr(encode, "s:")) != NULL) out->encode.sample_size = atoi(p+2);
+	else out->encode.sample_size = 0;
 
-	if (sample_rate > 0) out->supported_rates[0] = sample_rate;
+	// force re-encoding channels to be re-read
+	out->encode.channels = 0;
+
+	// in case of flow, all parameters shall be set
+	if (stristr(encode, "flow") && out->encode.mode != ENCODE_THRU) {
+		sq_free_metadata(&info.metadata);
+		sq_default_metadata(&info.metadata, true);
+
+		if (!sample_rate) sample_rate = 44100;
+		if (!out->encode.sample_size) out->encode.sample_size = 16;
+		out->encode.channels = 2;
+		out->encode.flow = true;
+	}
+
+	// set sample rate for re-encoding
+	if (sample_rate > 0) out->supported_rates[0] = sample_rate;
 	else if (sample_rate < 0) out->supported_rates[0] = min(out->sample_rate, abs(sample_rate));
 	else out->supported_rates[0] = out->sample_rate;
-
 	out->encode.sample_rate = out->supported_rates[0];
-	if ((p = stristr(encode, "s:")) != NULL) out->encode.sample_size = atoi(p+2);
+
+	// check if re-encoding is needed
+	if (out->encode.mode == ENCODE_THRU || (out->encode.mode == ENCODE_PCM && out->codec == 'p')) {
+
+		// pcm needs alignement which is not guaranteed in THRU mode
+		if (out->encode.mode == ENCODE_THRU && !_buf_reset(ctx->outputbuf)) {
+			LOG_ERROR("[%p]: buffer should be empty", ctx);
+		}
+
+		if (out->codec == 'p') {
+			if (!out->encode.sample_size)
+				out->encode.sample_size = (out->sample_size == 24 && ctx->config.L24_format == L24_TRUNC16) ? 16 : out->sample_size;
+
+			mimetype = find_pcm_mimetype(&out->encode.sample_size, ctx->config.L24_format == L24_TRUNC16_PCM,
+										 out->encode.sample_rate, out->channels,
+										 ctx->mimetypes, ctx->config.raw_audio_format);
+			out->encode.mode = ENCODE_PCM;
+		} else {
+			mimetype = find_mimetype(out->codec, ctx->mimetypes, NULL);
+			if (out->codec == 'f') out->codec ='c';
+			else out->codec = '*';
+			out->encode.mode = ENCODE_THRU;
+		}
+
+	} else if (out->encode.mode == ENCODE_PCM) {
+
+		/*
+		Cannot do raw PCM as channel, sample rate & size are unknown before
+		codec receives some data, unless they are forced in	<encode>, then we
+		need to also force channels to 2
+		*/
+		if (out->encode.sample_rate && out->encode.sample_size && stristr(ctx->config.raw_audio_format, "raw")) {
+			out->encode.channels = 2;
+			mimetype = find_pcm_mimetype(&out->encode.sample_size, ctx->config.L24_format == L24_TRUNC16_PCM,
+										 out->encode.sample_rate, out->encode.channels,
+										 ctx->mimetypes, ctx->config.raw_audio_format);
+		} else {
+			char format[16] = "";
+
+			if (stristr(ctx->config.raw_audio_format, "wav")) strcat(format, "wav");
+			if (stristr(ctx->config.raw_audio_format, "aif")) strcat(format, "aif");
+
+			mimetype = find_mimetype('p', ctx->mimetypes, format);
+		}
+
+		out->encode.mode = ENCODE_PCM;
+
+	} else if (out->encode.mode == ENCODE_FLAC) {
+
+		mimetype = find_mimetype('f', ctx->mimetypes, NULL);
+		out->encode.mode = ENCODE_FLAC;
+
+	}
+
+	// matching found in player
+	if (mimetype) {
+		strcpy(out->mimetype, mimetype);
+		free(mimetype);
+
+		out->format = mimetype2format(out->mimetype);
+		out->out_endian = (out->format == 'w');
+		out->length = ctx->config.stream_length;
+
+		if (codec_open(out->codec, out->sample_size, out->sample_rate, out->channels, out->in_endian, ctx) ) {
+			output_start(ctx);
+
+			strcpy(info.mimetype, out->mimetype);
+			sprintf(info.uri, "http://%s:%hu/" BRIDGE_URL "%d.%s", sq_ip,
+					out->port, out->index, mimetype2ext(out->mimetype));
+
+			ret = ctx_callback(ctx, SQ_SET_TRACK, NULL, &info);
+
+			LOG_INFO("[%p]: codec:%c, ch:%d, s:%d, r:%d", ctx, out->codec, out->channels, out->sample_size, out->sample_rate);
+		} else sq_free_metadata(&info.metadata);
+	}
+
+	return ret;
 }
+
 
 
 

@@ -738,7 +738,7 @@ char *kd_dump(key_data_t *kd)
 }
 
 /*---------------------------------------------------------------------------*/
-char* find_pcm_mimetype(u8_t endian, u8_t *sample_size, bool truncable, u32_t sample_rate,
+char* find_pcm_mimetype(u8_t *sample_size, bool truncable, u32_t sample_rate,
 						u8_t channels, char *mimetypes[], char *options) {
 	char *mimetype, fmt[8];
 	u8_t size = *sample_size;

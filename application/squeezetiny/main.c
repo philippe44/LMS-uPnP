@@ -340,11 +340,11 @@ void sq_default_metadata(metadata_t *metadata, bool init)
 {
 	if (init) sq_init_metadata(metadata);
 
-	if (!metadata->title) metadata->title 	= strdup("[LMS]");
-	if (!metadata->album) metadata->album 	= strdup("[no album]");
-	if (!metadata->artist) metadata->artist = strdup("[no artist]");
-	if (!metadata->genre) metadata->genre 	= strdup("[no genre]");
-	if (!metadata->remote_title) metadata->remote_title	= strdup("[no remote]");
+	if (!metadata->title) metadata->title 	= strdup("Streaming from LMS");
+	if (!metadata->album) metadata->album 	= strdup("");
+	if (!metadata->artist) metadata->artist = strdup("");
+	if (!metadata->genre) metadata->genre 	= strdup("");
+	if (!metadata->remote_title) metadata->remote_title	= strdup("Streaming from LMS");
 }
 
 
@@ -609,7 +609,19 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 			u32_t time = *((u32_t*) param);
 			LOG_DEBUG("[%p] time %d %d", ctx, ctx->render.ms_played, time);
 			LOCK_O;
-			if (ctx->render.index != -1) ctx->render.ms_played = time;
+			if (ctx->render.index != -1) {
+				ctx->render.ms_played = time - ctx->output.offset;
+				if (ctx->output.encode.flow && ctx->render.ms_played > ctx->render.duration) {
+					ctx->output.offset += ctx->render.duration;
+					ctx->render.ms_played -= ctx->render.duration;
+					ctx->render.duration = ctx->output.duration;
+					ctx->output.track_started = true;
+					ctx->render.track_start_time = gettime_ms();
+					LOG_INFO("[%p] flow track started at %u for %u", ctx,
+							   ctx->render.track_start_time, ctx->render.duration);
+					wake_controller(ctx);
+				}
+			}
 			UNLOCK_O;
 			break;
 		}

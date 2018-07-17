@@ -30,7 +30,7 @@ static log_level 	*loglevel = &output_loglevel;
 
 static void 	lpcm_pack(u8_t *dst, u8_t *src, size_t bytes, u8_t channels, int endian);
 static void		apply_gain(s32_t *p, u32_t gain, u8_t shift, size_t frames);
-static void 	mono(s32_t *iptr,  size_t frames);
+static void 	to_mono(s32_t *iptr,  size_t frames);
 size_t 			fade_gain(u32_t *gain, struct thread_ctx_s *ctx);
 static void 	scale_and_pack(void *dst, u32_t *src, size_t frames, u8_t channels,
 							   u8_t sample_size, int endian);
@@ -59,6 +59,7 @@ static struct {
 #define FLAC_MIN_SPACE	(16*1024)
 
 #define DRAIN_LEN	3
+#define MAX_FRAMES 	4096
 
 #if LINKALL
 #define FLAC(h, fn, ...) (FLAC__ ## fn)(__VA_ARGS__)
@@ -246,19 +247,15 @@ bool _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
 			else return false;
 		}
 
-		frames = fade_gain(&gain, ctx);
+		// using max_frames to miss MAX_FRAMES fade down at worst
+		frames = min(MAX_FRAMES, fade_gain(&gain, ctx));
 		if (p->replay_gain) gain = ((u64_t) gain * p->replay_gain) >> 16;
-
-		/*
-		} else if (out->sample_size == 24 && ctx->config.L24_format == L24_PACKED_LPCM) {
-			lpcm_pack(optr, iptr, bytes, out->encode.channels, out->in_endian);
-		*/
 
 		if (p->encode.mode == ENCODE_PCM) {
 			u8_t min_frames;
 
 			// in case of L24_LPCM, we need 2 frames at least
-			if (p->encode.sample_size == 24 && ctx->config.L24_format == L24_PACKED_LPCM) min_frames = 2;
+			if (p->encode.sample_size == 24 && ctx->config.L24_format == L24_PACKED_LPCM && p->format == 'p') min_frames = 2;
 			else min_frames = 1;
 
 			// buf cannot count on alignement because of headers (wav /aif)
@@ -277,9 +274,9 @@ bool _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
 
 			apply_gain((s32_t*) ctx->outputbuf->readp, gain, 0, frames);
 
-			if (p->encode.sample_size == 24 && ctx->config.L24_format == L24_PACKED_LPCM)
+			if (min_frames == 2)
 				lpcm_pack((u8_t*) optr, ctx->outputbuf->readp, frames * BYTES_PER_FRAME,
-						  p->encode.channels, p->in_endian);
+						  p->encode.channels, 1);
 			else
 				scale_and_pack(optr, (u32_t*) ctx->outputbuf->readp, frames,
 							   p->encode.channels, p->encode.sample_size, p->out_endian);
@@ -300,7 +297,7 @@ bool _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
 			frames = min(frames, out / bytes_per_frame);
 
 			apply_gain((s32_t*) ctx->outputbuf->readp, gain, 32 - p->encode.sample_size, frames);
-			if (p->encode.channels == 1) mono((s32_t*) ctx->outputbuf->readp, frames);
+			if (p->encode.channels == 1) to_mono((s32_t*) ctx->outputbuf->readp, frames);
 			FLAC(f, stream_encoder_process_interleaved, p->encode.codec, (FLAC__int32*) ctx->outputbuf->readp, frames);
 		}
 
@@ -443,6 +440,8 @@ void output_flush(struct thread_ctx_s *ctx) {
 	ctx->output.track_started = false;
 	ctx->output.track_start = NULL;
 	ctx->output.completed = false;
+	ctx->output.encode.flow = false;
+	ctx->output.offset = 0;
 	NFREE(ctx->output.header.buffer);
 	ctx->output.header.count = 0;
 	output_free_icy(ctx);
@@ -471,10 +470,12 @@ bool output_init(unsigned outputbuf_size, struct thread_ctx_s *ctx) {
 	ctx->output.track_started = false;
 	ctx->output.track_start = NULL;
 	ctx->output.completed = false;
+	ctx->output.encode.flow = false;
+	ctx->output.offset = 0;
+	ctx->output.encode.codec = NULL;
 	ctx->output_thread[0].running = ctx->output_thread[1].running = false;
 	ctx->output_thread[0].http = ctx->output_thread[1].http = -1;
 	ctx->output.icy.artist = ctx->output.icy.title = ctx->output.icy.artwork = NULL;
-
 	ctx->render.index = -1;
 
 #if !LINKALL
@@ -714,7 +715,7 @@ static void apply_gain(s32_t *iptr, u32_t gain, u8_t shift, size_t frames) {
 }
 
 /*---------------------------------------------------------------------------*/
-static void mono(s32_t *iptr,  size_t frames) {
+static void to_mono(s32_t *iptr,  size_t frames) {
 	s32_t *optr = iptr;
 
 	while (frames--) {

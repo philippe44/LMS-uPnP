@@ -198,7 +198,7 @@ typedef enum { EVENT_TIMEOUT = 0, EVENT_READ, EVENT_WAKE } event_type;
 struct thread_ctx_s;
 
 char *find_mimetype(char codec, char *mimetypes[], char *options);
-char* find_pcm_mimetype(u8_t endian, u8_t *sample_size, bool truncable, u32_t sample_rate,
+char* find_pcm_mimetype(u8_t *sample_size, bool truncable, u32_t sample_rate,
 						u8_t channels, char *mimetypes[], char *options);
 char*		next_param(char *src, char c);
 void 		set_nonblock(sockfd s);
@@ -400,6 +400,7 @@ struct outputstate {
 	u32_t 	sample_rate;	// as name, original stream values
 	int 	in_endian, out_endian;	// 1 = little (MSFT/INTL), 0 = big (PCM/AAPL)
 	u32_t 	duration;       // duration of track in ms, 0 if unknown
+	u32_t	offset;			// offset of track in ms (for flow mode)
 	u32_t	bitrate;	  	// as per name
 	bool  	remote;			// local track or not (if duration == 0 => live)
 	ssize_t length;			// HTTP content-length (-1:no chunked, -3 chunked if possible, >0 fake length)
@@ -467,7 +468,7 @@ void 		_checkfade(bool, struct thread_ctx_s *ctx);
 
 // output_http.c
 void 		output_flush(struct thread_ctx_s *ctx);
-void		output_start(u16_t index, struct thread_ctx_s *ctx);
+void		output_start(struct thread_ctx_s *ctx);
 void 		wake_output(struct thread_ctx_s *ctx);
 
 /***************** main thread context**************/
