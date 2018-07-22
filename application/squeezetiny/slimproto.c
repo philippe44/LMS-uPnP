@@ -306,15 +306,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 				break;
 			}
 
-			/*
-			No need to LOCK_O because the output thread is either waiting for
-			the player GET which will only happen after callback or the other
-			thread is draining and it does not need secured access to
-			parameters except for encode.flow. Any flush or stop request is in
-			that same thread as this function except when the device is being
-			deleted, where the callback	might be used in conflict
-			*/
-			ctx->output.replay_gain = unpackN(&strm->replay_gain);
+			ctx->output.next_replay_gain = unpackN(&strm->replay_gain);
 			ctx->output.fade_mode = strm->transition_type - '0';
 			ctx->output.fade_secs = strm->transition_period;
 
@@ -371,7 +363,6 @@ static void process_cont(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 	}
 }
 
-// FIXME: need to port all strms here
 /*---------------------------------------------------------------------------*/
 static void process_codc(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 	struct codc_packet *codc = (struct codc_packet *)pkt;
@@ -664,7 +655,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			ctx->status.output_full = ctx->sentSTMu ? 0 : ctx->outputbuf->size / 2;
 			ctx->status.output_size = ctx->outputbuf->size;
 			ctx->status.sample_rate = ctx->output.sample_rate;
-			ctx->status.output_completed = ctx->output.completed;
+			ctx->status.output_ready = ctx->output.completed || ctx->output.encode.flow;
 			ctx->status.duration = ctx->render.duration;
 			if (!ctx->render.ms_played && ctx->render.index != -1 && ctx->render.state != RD_STOPPED) {
 				ctx->status.ms_played = now - ctx->render.track_start_time - ctx->render.ms_paused;
@@ -679,17 +670,19 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			}
 
 			// streaming failed, wait till output thread ends and move on
-			if 	(ctx->status.stream_bytes == 0 && ctx->status.output_completed) {
+			if (ctx->status.stream_bytes == 0 && ctx->output.completed) {
 				LOG_WARN("[%p]: nothing received", ctx);
 				ctx->canSTMdu = true;
 			}
 
+			// normal end of track with underrun
 			if (ctx->output.state == OUTPUT_RUNNING && !ctx->sentSTMu &&
-				ctx->status.output_completed && ctx->status.stream_state <= DISCONNECT &&
+				ctx->status.output_ready && ctx->status.stream_state <= DISCONNECT &&
 				ctx->render.state == RD_STOPPED && ctx->canSTMdu) {
 				_sendSTMu = true;
 				ctx->sentSTMu = true;
 				ctx->status.output_full = 0;
+				ctx->output.encode.flow = false;
 			}
 
 			// if there is still data to be sent, try an overrun
@@ -729,25 +722,36 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			}
 
 			/*
-			 wait for all output to be sent to the player before asking for next
-			 track. We need draining started and STMs sent to be sure, as for
-			 short tracks the thread might exit before playback has started and
-			 we don't want to send STMd before STMs
-			 also, if STMd is sent early, streaming of next track will start but
-			 then will stall for a long time while current track is finishing
-			 and services like Deezer or RP plugin close the connection before
-			 all has been sent, so need to wait a bit before sending STMd ...
+			 Unless flow mode is used, wait for all output to be sent to the
+			 player before asking for next track. The outputbuf must be empty
+			 and STMs sent, because for short tracks the output thread might
+			 exit before playback has started and we don't want to send STMd
+			 before STMs.
+			 Streaming services like Deezer or RP plugin close connection if
+			 stalled for too long (30s), so if STMd is sent too early, once the
+			 outputbuf is filled, connection will be idle for a while, so need
+			 to wait a bit toward the end of the track before sending STMd.
+			 But when flow mode is used, the stream is regulated by the player
+			 and thus should be continuous, so there is no need to wait toward
+			 the end of the track, which also fits nicely with the requirement
+			 for cross fade (need to have enough of current track in outputbuf
+			 when codec of next track starts)
 			*/
-			if ((ctx->decode.state == DECODE_COMPLETE && ctx->status.output_completed && ctx->canSTMdu &&
-				(!ctx->output.remote || (ctx->status.duration && ctx->status.duration - ctx->status.ms_played < STREAM_DELAY))) ||
+			if ((ctx->decode.state == DECODE_COMPLETE && ctx->canSTMdu && ctx->status.output_ready &&
+				(ctx->output.encode.flow || !ctx->output.remote ||
+				 (ctx->status.duration && ctx->status.duration - ctx->status.ms_played < STREAM_DELAY))) ||
 				ctx->decode.state == DECODE_ERROR) {
+
 				if (ctx->decode.state == DECODE_COMPLETE) _sendSTMd = true;
 				if (ctx->decode.state == DECODE_ERROR)    _sendSTMn = true;
 				ctx->decode.state = DECODE_STOPPED;
-				if (ctx->status.stream_state == STREAMING_HTTP || ctx->status.stream_state == STREAMING_FILE) {
+				if (ctx->status.stream_state == STREAMING_HTTP ||
+					ctx->status.stream_state == STREAMING_FILE) {
 					_stream_disconnect = true;
 				}
+
 			}
+
 			UNLOCK_D;
 
 			if (_stream_disconnect) stream_disconnect(ctx);
@@ -958,19 +962,27 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 						  struct thread_ctx_s *ctx) {
 	struct outputstate *out = &ctx->output;
 	struct track_param info;
-	char *mimetype, *p, *encode = ctx->config.encode;
+	char *mimetype = NULL, *p, *encode = ctx->config.encode;
 	bool ret = false;
 	s32_t sample_rate;
 
 	LOCK_O;
 	// if streaming failed, we might never start to play previous index
 	info.next = (ctx->output.state == OUTPUT_RUNNING && out->index == ctx->render.index);
+	// assumes that buffer content is preserved if size does not change
+	_buf_resize(ctx->outputbuf, ctx->config.outputbuf_size);
 	UNLOCK_O;
+
+	/*
+	No further LOCK_O used because tehre is either no output thread active or it
+	is in draining mode (or flow) and then does not do concurrent access to the
+	output context
+	*/
 
 	// get metadata - they must be freed by callee whenever he wants
 	sq_get_metadata(ctx->self, &info.metadata, info.next);
 
-	// reset key parameters
+	// set key parameters
 	out->completed = false;
 	out->duration = info.metadata.duration;
 	out->bitrate = info.metadata.bitrate;
@@ -998,12 +1010,15 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 						  out->channels, out->in_endian, ctx);
 	} else out->index++;
 
+	// reset time offset for new tracks
+	out->offset = 0;
+
 	// detect processing mode
 	if (stristr(encode, "thru")) out->encode.mode = ENCODE_THRU;
 	else if (stristr(encode, "pcm")) out->encode.mode = ENCODE_PCM;
 	else if (stristr(encode, "flac")) out->encode.mode = ENCODE_FLAC;
 
-	// read forced re-encoding parameters
+	// force read of re-encoding parameters
 	if ((p = stristr(encode, "r:")) != NULL) sample_rate = atoi(p+2);
 	else sample_rate = 0;
 	if ((p = stristr(encode, "s:")) != NULL) out->encode.sample_size = atoi(p+2);
@@ -1079,6 +1094,8 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 
 		mimetype = find_mimetype('f', ctx->mimetypes, NULL);
 		out->encode.mode = ENCODE_FLAC;
+		if ((p = stristr(encode, "flac:")) != NULL) out->encode.level = atoi(p+5);
+		if (abs(out->encode.level) > 9) out->encode.level = 0;
 
 	}
 
@@ -1091,8 +1108,8 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 		out->out_endian = (out->format == 'w');
 		out->length = ctx->config.stream_length;
 
-		if (codec_open(out->codec, out->sample_size, out->sample_rate, out->channels, out->in_endian, ctx) ) {
-			output_start(ctx);
+		if (codec_open(out->codec, out->sample_size, out->sample_rate, out->channels,
+			out->in_endian, ctx) &&	output_start(ctx)) {
 
 			strcpy(info.mimetype, out->mimetype);
 			sprintf(info.uri, "http://%s:%hu/" BRIDGE_URL "%d.%s", sq_ip,

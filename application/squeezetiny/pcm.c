@@ -51,7 +51,6 @@ static decode_state pcm_decode(struct thread_ctx_s *ctx) {
 	frames_t frames;
 	u8_t *iptr, ibuf[BYTES_PER_FRAME];
 	u32_t *optr;
-	struct pcm *p = ctx->decode.handle;
 
 	LOCK_S;
 	LOCK_O_direct;
@@ -91,6 +90,7 @@ static decode_state pcm_decode(struct thread_ctx_s *ctx) {
 	if (ctx->decode.new_stream) {
 		LOCK_O_not_direct;
 
+		ctx->output.direct_sample_rate = ctx->output.sample_rate;
 		ctx->output.sample_rate = decode_newstream(ctx->output.sample_rate, ctx->output.supported_rates, ctx);
 		ctx->output.track_start = ctx->outputbuf->writep;
 		if (ctx->output.fade_mode) _checkfade(true, ctx);
@@ -119,6 +119,8 @@ static decode_state pcm_decode(struct thread_ctx_s *ctx) {
 
 	frames = min(in, out);
 	frames = min(frames, MAX_DECODE_FRAMES);
+
+	ctx->decode.frames += frames;
 
 	count = frames * ctx->output.channels;
 

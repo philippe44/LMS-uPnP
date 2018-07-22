@@ -241,6 +241,7 @@ static decode_state mad_decode(struct thread_ctx_s *ctx) {
 			LOG_INFO("[%p]: setting track_start", ctx);
 			LOCK_O;
 
+			ctx->output.direct_sample_rate = m->synth.pcm.samplerate;
 			ctx->output.sample_rate = decode_newstream(m->synth.pcm.samplerate, ctx->output.supported_rates, ctx);
 			ctx->output.sample_size = 16;
 			ctx->output.channels = m->synth.pcm.channels;
@@ -296,6 +297,8 @@ static decode_state mad_decode(struct thread_ctx_s *ctx) {
 				m->samples = 0;
 			}
 		}
+
+		ctx->decode.frames += frames;
 
 		LOG_SDEBUG("[%p]: write %u frames", ctx, frames);
 

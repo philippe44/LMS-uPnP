@@ -99,8 +99,8 @@ static u8_t LMSVolumeMap[101] = {
 
 sq_dev_param_t glDeviceParam = {
 					HTTP_CHUNKED, 	 		// stream_length
-					1024*1024, 				// stream_buffer_size
-					1024*1024,				// output_buffer_size
+					STREAMBUF_SIZE,			// stream_buffer_size
+					OUTPUTBUF_SIZE,			// output_buffer_size
 					"flc,aif,pcm,mp3",		// codecs
 					"thru",					// encode
 					"raw,wav,aif",			// raw_audio_format
@@ -111,7 +111,9 @@ sq_dev_param_t glDeviceParam = {
 					"",						// name
 					{ 0x00,0x00,0x00,0x00,0x00,0x00 },
 					true,	  				// send_icy
+#ifdef RESAMPLE
 					"",						// resample_options
+#endif
 					{ 	true,				// use_cli
 						"",     			// server
 					},

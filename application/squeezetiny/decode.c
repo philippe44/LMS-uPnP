@@ -97,6 +97,7 @@ static void *decode_thread(struct thread_ctx_s *ctx) {
 
 					LOCK_O;
 					if (ctx->output.fade_mode) _checkfade(false, ctx);
+					_checkduration(ctx->decode.frames, ctx);
 					UNLOCK_O;
 
 					wake_controller(ctx);
@@ -233,6 +234,7 @@ bool codec_open(u8_t codec, u8_t sample_size, u32_t sample_rate, u8_t channels, 
 
 	ctx->decode.new_stream = true;
 	ctx->decode.state = DECODE_STOPPED;
+	ctx->decode.frames = 0;
 
 	MAY_PROCESS(
 		ctx->decode.direct = true; // potentially changed within codec when processing enabled

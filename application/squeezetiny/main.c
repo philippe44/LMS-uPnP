@@ -611,7 +611,7 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 			LOCK_O;
 			if (ctx->render.index != -1) {
 				ctx->render.ms_played = time - ctx->output.offset;
-				if (ctx->output.encode.flow && ctx->render.ms_played > ctx->render.duration) {
+				if (ctx->output.encode.flow && ctx->render.duration && ctx->render.ms_played > ctx->render.duration) {
 					ctx->output.offset += ctx->render.duration;
 					ctx->render.ms_played -= ctx->render.duration;
 					ctx->render.duration = ctx->output.duration;
@@ -734,9 +734,9 @@ bool sq_run_device(sq_dev_handle_t handle, sq_dev_param_t *param)
 										  ctx->config.mac[0], ctx->config.mac[1], ctx->config.mac[2],
 										  ctx->config.mac[3], ctx->config.mac[4], ctx->config.mac[5]);
 
-	if (!stream_thread_init(ctx->config.stream_buf_size, ctx)) return false;
+	if (!stream_thread_init(ctx)) return false;
 
-	if (output_init(ctx->config.output_buf_size, ctx)) {
+	if (output_init(ctx)) {
 		decode_thread_init(ctx);
 		slimproto_thread_init(ctx);
 #if RESAMPLE

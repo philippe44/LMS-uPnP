@@ -25,6 +25,9 @@
 #include "squeezedefs.h"
 #include "util_common.h"
 
+#define OUTPUTBUF_SIZE	(4*1024*1024)
+#define STREAMBUF_SIZE	(512*1024)
+
 #define MAX_FILE_SIZE 	0xffff0000
 #define	MAX_MIMETYPES 	128
 #define BRIDGE_URL	 	"bridge-"
@@ -63,8 +66,8 @@ typedef struct metadata_s {
 
 typedef	struct sq_dev_param_s {
 	enum { HTTP_INFINITE = -1, HTTP_CHUNKED = -3, HTTP_LARGE = MAX_FILE_SIZE } stream_length;
-	unsigned 	stream_buf_size;
-	unsigned 	output_buf_size;
+	unsigned 	streambuf_size;
+	unsigned 	outputbuf_size;
 	char		codecs[_STR_LEN_];
 	char		encode[_STR_LEN_];
 	char 		raw_audio_format[_STR_LEN_];

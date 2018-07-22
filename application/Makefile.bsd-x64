@@ -4,6 +4,7 @@ LDFLAGS ?= -s -lpthread -lm -lrt -L.
 
 OBJ					= bin/bsd-x64
 EXECUTABLE 			= bin/squeeze2upnp-bsd-x64
+EXECUTABLE_STATIC	= bin/squeeze2upnp-bsd-x64-static
 
 include Makefile
 

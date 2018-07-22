@@ -373,6 +373,7 @@ static decode_state faad_decode(struct thread_ctx_s *ctx) {
 			LOG_INFO("[%p]: setting track_start", ctx);
 			LOCK_O;
 
+			ctx->output.direct_sample_rate = a->samplerate;
 			ctx->output.sample_rate = decode_newstream(a->samplerate, ctx->output.supported_rates, ctx);
 			ctx->output.sample_size = 16;
 			ctx->output.channels = a->channels;
@@ -479,6 +480,8 @@ static decode_state faad_decode(struct thread_ctx_s *ctx) {
 		}
 		a->samples -= frames;
 	}
+
+	ctx->decode.frames += frames;
 
 	LOG_SDEBUG("[%p]: write %u frames", ctx, frames);
 

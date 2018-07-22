@@ -35,6 +35,9 @@ static log_level 	*loglevel = &output_loglevel;
 #define TAIL_SIZE		(2048*1024)
 #define HEAD_SIZE		65536
 #define ICY_INTERVAL	32000
+#define TIMEOUT			50
+#define SLEEP			50
+#define DRAIN_MAX		(5000 / TIMEOUT)
 
 struct thread_param_s {
 	struct thread_ctx_s *ctx;
@@ -47,7 +50,7 @@ static ssize_t 	handle_http(struct thread_ctx_s *ctx, int sock, int thread_index
 static void 	mirror_header(key_data_t *src, key_data_t *rsp, char *key);
 
 /*---------------------------------------------------------------------------*/
-void output_start(struct thread_ctx_s *ctx) {
+bool output_start(struct thread_ctx_s *ctx) {
 	struct thread_param_s *param = malloc(sizeof(struct thread_param_s));
 	int i = 0;
 
@@ -71,12 +74,14 @@ void output_start(struct thread_ctx_s *ctx) {
 		closesocket(param->thread->http);
 		param->thread->http = -1;
 		free(param);
-		return 0;
+		return false;
 	}
 
-	LOG_ERROR("-------> starting thread %d", (param->thread == ctx->output_thread) ? 0 : 1);
+	LOG_INFO("[%p]: starting thread %d", ctx, param->thread == ctx->output_thread ? 0 : 1);
 
 	pthread_create(&param->thread->thread, NULL, (void *(*)(void*)) &output_http_thread, param);
+
+	return true;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -93,7 +98,7 @@ static void output_http_thread(struct thread_param_s *param) {
 	struct buffer __obuf, *obuf = &__obuf;
 	struct output_thread_s *thread = param->thread;
 	struct thread_ctx_s *ctx = param->ctx;
-	bool draining = false;
+	unsigned drain_count = DRAIN_MAX;
 
 	free(param);
 
@@ -104,12 +109,12 @@ static void output_http_thread(struct thread_param_s *param) {
 	*/
 
 	while (thread->running) {
-		struct timeval timeout = {0, 50*1000};
+		struct timeval timeout = {0, TIMEOUT*1000};
 		bool res = true;
 		int n;
 
 		if (sock == -1) {
-			struct timeval timeout = {0, 50*1000};
+			struct timeval timeout = {0, TIMEOUT*1000};
 
 			FD_ZERO(&rfds);
 			FD_SET(thread->http, &rfds);
@@ -157,7 +162,7 @@ static void output_http_thread(struct thread_param_s *param) {
 				LOG_INFO("[%p]: wait to acquire codec parameters", ctx);
 				UNLOCK_D;
 				// not very elegant but let's not consume all CPU
-				usleep(50*1000);
+				usleep(SLEEP*1000);
 				continue;
 			}
 			acquired = true;
@@ -165,10 +170,9 @@ static void output_http_thread(struct thread_param_s *param) {
 
 			LOCK_O;
 			_output_new_stream(obuf, ctx);
-			ctx->output.track_start = NULL;
 			UNLOCK_O;
 
-			LOG_ERROR("[%p]: drain buffer %u", ctx, obuf->size);
+			LOG_INFO("[%p]: drain buffer size %u", ctx, obuf->size);
 		}
 
 		// should be the HTTP headers (works with non-blocking socket)
@@ -238,22 +242,35 @@ static void output_http_thread(struct thread_param_s *param) {
 		}
 
 		/*
-		Pull some data from outpubuf. Order of test matters as pulling from
-		outputbuf should stop once draining has	started. There is a chance that
-		if we are here right after the end of decoding and before the _checkfade
-		call is made in decode.c, then we could empty the whole outputbuf in
-		_output_fill and	miss the fade down. Only way around would be to use
-		LOCK_D before calling _output_fill but then it creates a dead lock. Best
-		is to have _outputfill proceed by small chunks
+		Pull some data from outpubuf. In non-flow mode, order of test matters
+		as pulling from	outputbuf should stop once draining has	started,
+		otherwise it will start reading data of next track. Draining starts as
+		soon as decoder	is COMPLETE or ERROR (no LOCK_D, not critical) and STMd
+		will only be requested when "complete" has been set, so two different
+		tracks will never co-exist in outpufbuf
+		In flow mode, STMd will be sent as soon as decode finishes *and* track
+		has already started, so two tracks will co-exist in outputbuf and this
+		is needed for crossfade. Pulling audio from outputbuf must be continuous
+		and draining will self-reset every time a decoding restarts. There is a
+		risk that if a player has a very large buffer, the whole next track is
+		decoded (COMPLETE), sent in outputbuf, transfered to obuf which is then
+		fully sent to the player before that track even starts, so as soon as it
+		actually starts, decoder states moves to STOPPED, STMd is sent but new
+		deata does not arrive before the test below happens, so output thread
+		exit. I	don't know how to prevent that from happening, except by using
+		horrific timers
 		*/
 
-		if (!draining && !_output_fill(obuf, ctx) && ctx->decode.state != DECODE_RUNNING) {
+		if (ctx->output.encode.flow) {
+			if (!_output_fill(obuf, ctx) && ctx->decode.state == DECODE_STOPPED) drain_count--;
+			else drain_count = DRAIN_MAX;
+		} else if (drain_count && !_output_fill(obuf, ctx) && ctx->decode.state > DECODE_RUNNING) {
 			// full track pulled from outputbuf, draining from obuf
-			if (!ctx->output.encode.flow) _output_end_stream(true, ctx);
+			_output_end_stream(true, ctx);
 			ctx->output.completed = true;
-			draining = true;
+			drain_count = 0;
 			wake_controller(ctx);
-			LOG_INFO("[%p]: draining - sent %zu bytes (gap %d)", ctx, bytes, ctx->output.length > 0 ? bytes - ctx->output.length : 0);
+			LOG_INFO("[%p]: draining - sent %zu bytes", ctx, bytes);
 		}
 
 		// now are surely running - socket is non blocking, so this is fast
@@ -321,18 +338,12 @@ static void output_http_thread(struct thread_param_s *param) {
 			}
 		} else {
 			// check if all sent
-			if (draining) {
-				if (!ctx->output.encode.flow) {    //FIXME
-					// sending final empty chunk
-					if (ctx->output.chunked) {
-						strcpy(chunk_frame_buf, "0\r\n\r\n");
-						chunk_frame = chunk_frame_buf;
-					}
-					done = true;
-				} else if (_buf_used(ctx->outputbuf)) {
-					LOG_INFO("[%p]: flow restarting", ctx);
-					draining = false;
+			if (!drain_count) {
+				if (ctx->output.chunked) {
+					strcpy(chunk_frame_buf, "0\r\n\r\n");
+					chunk_frame = chunk_frame_buf;
 				}
+				done = true;
 			}
 			// we don't have anything to send, let select read or sleep
 			FD_ZERO(&wfds);
@@ -340,8 +351,6 @@ static void output_http_thread(struct thread_param_s *param) {
 
 		UNLOCK_O;
 	}
-
-	LOG_INFO("[%p]: completed: %zu bytes", ctx, bytes);
 
 	NFREE(tbuf);
 	NFREE(hbuf);
@@ -354,10 +363,15 @@ static void output_http_thread(struct thread_param_s *param) {
 	LOCK_O;
 	thread->http = -1;
 	thread->running = false;
-	if (ctx->output.encode.flow) _output_end_stream(false, ctx);
+	if (ctx->output.encode.flow) {
+		// terminate codec if needed (FLAC so far)
+		_output_end_stream(false, ctx);
+		// need to have slimproto move on in case of stream failure
+		ctx->output.completed = true;
+	}
 	UNLOCK_O;
 
-	LOG_ERROR("-------> ending thread %d", (thread == ctx->output_thread) ? 0 : 1);
+	LOG_INFO("[%p]: ending thread %d sent %zu bytes", ctx, thread == ctx->output_thread ? 0 : 1, bytes);
 }
 
 

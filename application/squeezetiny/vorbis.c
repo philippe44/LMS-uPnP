@@ -154,6 +154,7 @@ static decode_state vorbis_decode( struct thread_ctx_s *ctx) {
 		LOG_INFO("[%p]: setting track_start", ctx);
 		LOCK_O_not_direct;
 
+		ctx->output.direct_sample_rate = info->rate;
 		ctx->output.sample_rate = decode_newstream(info->rate, ctx->output.supported_rates, ctx);
 		ctx->output.sample_size = 16;
 		ctx->output.channels = info->channels;
@@ -222,6 +223,8 @@ static decode_state vorbis_decode( struct thread_ctx_s *ctx) {
 				*--optr = *iptr   << 16;
 			}
 		}
+
+		ctx->decode.frames += frames;
 
 		IF_DIRECT(
 			_buf_inc_writep(ctx->outputbuf, frames * BYTES_PER_FRAME);

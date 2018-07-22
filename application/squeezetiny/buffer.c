@@ -32,20 +32,6 @@ bool _buf_wrap(struct buffer *buf) {
 	return buf->writep <= buf->readp ? true : false;
 }
 
-int _buf_seek(struct buffer *buf, unsigned by, unsigned from) {
-	unsigned seek = from + by;
-	u8_t	*p;
-
-	// NB : a stream always starts at the beginning of the buffer
-	while (seek >= buf->size) seek -= buf->size;
-	p = buf->buf + seek;
-
-	if (p <= buf->readp || p >= buf->writep) buf->readp = p;
-	else  buf->readp = buf->writep;
-
-	return buf->readp - p;
-}
-
 unsigned _buf_used(struct buffer *buf) {
 	return buf->writep >= buf->readp ? buf->writep - buf->readp : buf->size - (buf->readp - buf->writep);
 }
@@ -84,19 +70,6 @@ void _buf_inc_writep(struct buffer *buf, unsigned by) {
 	}
 }
 
-void _buf_move(struct buffer *buf, unsigned by) {
-	by = min(by, _buf_used(buf));
-	if (buf->writep >= buf->readp) {
-		memcpy(buf->readp, buf->readp + by, buf->writep - buf->readp);
-	}
-	else {
-		memcpy(buf->readp, buf->readp + by, buf->wrap - buf->readp);
-		memcpy(buf->wrap - by, buf->buf, by);
-		memcpy(buf->buf, buf->buf + by, buf->writep - buf->buf - by);
-	}
-	buf->writep -= by;
-}
-
 void buf_flush(struct buffer *buf) {
 	mutex_lock(buf->mutex);
 	buf->readp  = buf->buf;
@@ -125,6 +98,7 @@ void buf_adjust(struct buffer *buf, size_t mod) {
 
 // called with mutex locked to resize, does not retain contents, reverts to original size if fails
 void _buf_resize(struct buffer *buf, size_t size) {
+	if (buf->size == size) return;
 	free(buf->buf);
 	buf->buf = malloc(size);
 	if (!buf->buf) {
@@ -171,4 +145,5 @@ unsigned _buf_read(void *dst, struct buffer *src, unsigned size) {
 
 	return a_size;
 }
+
 

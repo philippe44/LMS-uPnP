@@ -19,8 +19,8 @@
  *
  */
 
-#ifndef __TINTUTILS_H
-#define __ITNYUTILS_H
+#ifndef __TINYUTILS_H
+#define __TINYUTILS_H
 
 
 typedef struct {

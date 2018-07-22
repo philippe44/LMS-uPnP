@@ -300,15 +300,15 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 
 
 /*---------------------------------------------------------------------------*/
-bool stream_thread_init(unsigned streambuf_size, struct thread_ctx_s *ctx) {
+bool stream_thread_init(struct thread_ctx_s *ctx) {
 
 	pthread_attr_t attr;
 
-	LOG_DEBUG("[%p] streambuf size: %u", ctx, streambuf_size);
+	LOG_DEBUG("[%p] streambuf size: %u", ctx, ctx->config.streambuf_size);
 
 	ctx->streambuf = &ctx->__s_buf;
 
-	buf_init(ctx->streambuf, streambuf_size);
+	buf_init(ctx->streambuf, ctx->config.streambuf_size);
 	if (ctx->streambuf->buf == NULL) {
 		LOG_ERROR("[%p] unable to malloc buffer", ctx);
 		return false;

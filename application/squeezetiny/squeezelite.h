@@ -251,8 +251,6 @@ void 		_buf_inc_readp(struct buffer *buf, unsigned by);
 void 		_buf_inc_writep(struct buffer *buf, unsigned by);
 unsigned 	_buf_read(void *dst, struct buffer *src, unsigned btes);
 void*		_buf_readp(struct buffer *buf);
-int	 		_buf_seek(struct buffer *src, unsigned from, unsigned by);
-void 		_buf_move(struct buffer *buf, unsigned by);
 unsigned 	_buf_size(struct buffer *src);
 void 		buf_flush(struct buffer *buf);
 void 		buf_adjust(struct buffer *buf, size_t mod);
@@ -293,7 +291,7 @@ struct streamstate {
 	bool  meta_send;
 };
 
-bool 		stream_thread_init(unsigned buf_size, struct thread_ctx_s *ctx);
+bool 		stream_thread_init(struct thread_ctx_s *ctx);
 void 		stream_close(struct thread_ctx_s *ctx);
 void 		stream_file(const char *header, size_t header_len, unsigned threshold, struct thread_ctx_s *ctx);
 void 		stream_sock(u32_t ip, u16_t port, const char *header, size_t header_len, unsigned threshold, bool cont_wait, struct thread_ctx_s *ctx);
@@ -305,6 +303,7 @@ typedef enum { DECODE_STOPPED = 0, DECODE_READY, DECODE_RUNNING, DECODE_COMPLETE
 struct decodestate {
 	decode_state state;
 	bool new_stream;
+	u32_t frames;
 	mutex_type mutex;
 	void *handle;
 #if PROCESS
@@ -371,6 +370,8 @@ void 		resample_end(struct thread_ctx_s *ctx);
 
 // output.c
 
+#define	OUTPUTBUF_IDLE_SIZE (256*1024)
+
 #define ICY_LEN_MAX		(255*16+1)
 #define ICY_UPDATE_TIME	5000
 
@@ -396,8 +397,10 @@ struct outputstate {
 	output_state state;		// license to stream or not
 	bool	completed;	 	// whole track has been pulled from outputbuf
 	char	format;			// data sent format (p=pcm, w=wav, i=aif, f=flac)
-	u8_t 	sample_size, channels, codec; // as name, original stream values
-	u32_t 	sample_rate;	// as name, original stream values
+	u8_t 	sample_size, channels;	// from original stream
+	u8_t	codec;			 // from original stream
+	u32_t 	sample_rate;	// sample rate after optional resampling
+	u32_t	direct_sample_rate;		// original sample rate;
 	int 	in_endian, out_endian;	// 1 = little (MSFT/INTL), 0 = big (PCM/AAPL)
 	u32_t 	duration;       // duration of track in ms, 0 if unknown
 	u32_t	offset;			// offset of track in ms (for flow mode)
@@ -423,25 +426,26 @@ struct outputstate {
 	// for format that requires headers
 	struct {
 		size_t size, count;
-		char *buffer;
+		u8_t *buffer;
 	} header;
 	// only useful with decode mode
 	fade_state fade;		// fading state
-	u8_t	   *fade_start;	// pointer to fading start in output buffer
+	u8_t	    *fade_start;// pointer to fading start in output buffer
 	u8_t 		*fade_end;	// pointer to fading end in output buffer
 	fade_dir 	fade_dir;	// fading direction
 	fade_mode 	fade_mode;  // fading mode
 	unsigned 	fade_secs;  // set by slimproto
 	// only used with pcm or decode mode
-	u32_t 		replay_gain;
+	u32_t 		replay_gain, next_replay_gain;
 	u32_t		start_at;	// when to start the track, unused
 	struct {
-		u32_t sample_rate;
-		u8_t sample_size;
-		u8_t channels;
+		u32_t	sample_rate;
+		u8_t 	sample_size;
+		u8_t 	channels;
 		encode_mode mode;	// thru, pcm, flac
-		bool	flow;		// thread do not exit when track ends
-		void *codec;        // re-encoding codec
+		bool  	flow;		// thread do not exit when track ends
+		void 	*codec; 	// re-encoding codec
+		u8_t   	level;      // in flac, compression level
 	} encode;				// format of what being sent to player
 };
 
@@ -457,7 +461,7 @@ struct renderstate {
 };
 
 // function starting with _ must be called with mutex locked
-bool		output_init(unsigned output_buf_size, struct thread_ctx_s *ctx);
+bool		output_init(struct thread_ctx_s *ctx);
 void 		output_close(struct thread_ctx_s *ctx);
 void 		output_free_icy(struct thread_ctx_s *ctx);
 
@@ -465,10 +469,11 @@ bool		_output_fill(struct buffer *buf, struct thread_ctx_s *ctx);
 void 		_output_new_stream(struct buffer *buf, struct thread_ctx_s *ctx);
 void 		_output_end_stream(bool finish, struct thread_ctx_s *ctx);
 void 		_checkfade(bool, struct thread_ctx_s *ctx);
+void 		_checkduration(u32_t frames, struct thread_ctx_s *ctx);
 
 // output_http.c
 void 		output_flush(struct thread_ctx_s *ctx);
-void		output_start(struct thread_ctx_s *ctx);
+bool		output_start(struct thread_ctx_s *ctx);
 void 		wake_output(struct thread_ctx_s *ctx);
 
 /***************** main thread context**************/
@@ -484,7 +489,7 @@ typedef struct {
 	stream_state stream_state;
 	u32_t	ms_played;
 	u32_t	duration;
-	bool	output_completed;
+	bool	output_ready;
 } status_t;
 
 typedef enum {TRACK_STOPPED = 0, TRACK_STARTED, TRACK_PAUSED} track_status_t;

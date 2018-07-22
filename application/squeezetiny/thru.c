@@ -40,7 +40,6 @@ struct thru {
 /*---------------------------------------------------------------------------*/
 decode_state thru_decode(struct thread_ctx_s *ctx) {
 	unsigned int in, out;
-	struct thru *p = ctx->decode.handle;
 
 	LOCK_S;
 	LOCK_O_direct;

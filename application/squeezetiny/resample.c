@@ -143,7 +143,7 @@ bool resample_drain(struct thread_ctx_s *ctx) {
 bool resample_newstream(unsigned raw_sample_rate, unsigned supported_rates[], struct thread_ctx_s *ctx) {
 	struct soxr *r = ctx->decode.process_handle;
 	unsigned outrate = 0;
-	int i;
+	int i = 0;
 
 	if (r->exception) {
 		// find direct match - avoid resampling (or passthrough)

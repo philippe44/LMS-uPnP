@@ -161,7 +161,7 @@ char *make_dlna_content(char *mimetype, u32_t duration) {
 /*---------------------------------------------------------------------------*/
 char *mimetype2ext(char *mimetype)
 {
-	if (!mimetype) return '\0';
+	if (!mimetype) return "";
 
 	if (strstr(mimetype, "wav")) return "wav";
 	if (strstr(mimetype, "audio/L")) return "pcm";

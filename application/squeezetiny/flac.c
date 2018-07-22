@@ -116,6 +116,7 @@ static FLAC__StreamDecoderWriteStatus write_cb(const FLAC__StreamDecoder *decode
 
 		ctx->output.track_start = ctx->outputbuf->writep;
 		ctx->decode.new_stream = false;
+		ctx->output.direct_sample_rate = frame->header.sample_rate;
 		ctx->output.sample_rate = decode_newstream(frame->header.sample_rate, ctx->output.supported_rates, ctx);
 		ctx->output.sample_size = bits_per_sample;
 		ctx->output.channels = channels;
@@ -123,6 +124,8 @@ static FLAC__StreamDecoderWriteStatus write_cb(const FLAC__StreamDecoder *decode
 
 		UNLOCK_O;
 	}
+
+	ctx->decode.frames += frames;
 
 	LOCK_O_direct;
 
