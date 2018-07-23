@@ -58,7 +58,7 @@ static struct {
 #endif
 
 #define FLAC_BLOCK_SIZE 1024
-#define FLAC_MIN_SPACE	(16*1024)
+#define FLAC_MIN_SPACE	(32*1024)
 
 #define DRAIN_LEN		3
 #define MAX_FRAMES_SEC 	10
@@ -536,6 +536,10 @@ static FLAC__StreamEncoderWriteStatus flac_write_callback(const FLAC__StreamEnco
 	struct buffer *obuf = (struct buffer*) client_data;
 	unsigned out = _buf_space(obuf);
 
+	/*
+	Seems that this callback can be called multiple time after a call to the flac
+	encoder ... so it's difficult to assess the mimum size required
+	*/
 	if (out < bytes) {
 		LOG_ERROR("[%p]: not enough space for FLAC buffer %u %u", obuf, out, bytes);
 		return FLAC__STREAM_ENCODER_WRITE_STATUS_FATAL_ERROR;

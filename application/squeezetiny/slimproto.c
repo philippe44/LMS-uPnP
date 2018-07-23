@@ -683,15 +683,18 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 				ctx->sentSTMu = true;
 				ctx->status.output_full = 0;
 				ctx->output.encode.flow = false;
+				// FIXME: what was that not set before?
+				ctx->output.state = OUTPUT_STOPPED;
 			}
 
 			// if there is still data to be sent, try an overrun
 			if (ctx->output.state == OUTPUT_RUNNING && !ctx->sentSTMo &&
-				// !ctx->status.completed && ctx->status.stream_state == STREAMING_HTTP &&
 				ctx->status.stream_state == STREAMING_HTTP &&
 				ctx->render.state == RD_STOPPED && ctx->canSTMdu) {
 				_sendSTMo = true;
 				ctx->sentSTMo = true;
+				// FIXME: what was that not set before?
+				ctx->output.state = OUTPUT_STOPPED;
 			}
 
 			UNLOCK_O;
@@ -967,8 +970,11 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 	s32_t sample_rate;
 
 	LOCK_O;
-	// if streaming failed, we might never start to play previous index
-	info.next = (ctx->output.state == OUTPUT_RUNNING && out->index == ctx->render.index);
+	// FIXME: why testing index here? Seems like in case of failed streaming,
+	// we want a "next" and not a "current", unless
+	// if streaming failed, we might have never started to play previous index
+	//	info.next = (ctx->output.state == OUTPUT_RUNNING && out->index == ctx->render.index);
+	info.next = ctx->output.state == OUTPUT_RUNNING;
 	// assumes that buffer content is preserved if size does not change
 	_buf_resize(ctx->outputbuf, ctx->config.outputbuf_size);
 	UNLOCK_O;
