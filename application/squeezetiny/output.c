@@ -60,8 +60,8 @@ static struct {
 #define FLAC_BLOCK_SIZE 1024
 #define FLAC_MIN_SPACE	(16*1024)
 
-#define DRAIN_LEN	3
-#define MAX_FRAMES 	4096
+#define DRAIN_LEN		3
+#define MAX_FRAMES_SEC 	10
 
 #if LINKALL
 #define FLAC(h, fn, ...) (FLAC__ ## fn)(__VA_ARGS__)
@@ -259,7 +259,7 @@ bool _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
 			} else optr = buf->writep;
 
 			frames = min(in / BYTES_PER_FRAME, out / bytes_per_frame);
-			frames = min(frames, MAX_FRAMES);
+			frames = min(frames, p->encode.sample_rate / MAX_FRAMES_SEC);
 
 			// fading & gain
 			frames = gain_and_fade(frames, min_frames, 0, ctx);
@@ -292,7 +292,7 @@ bool _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
 			if (!in) return false;
 
 			frames = min(in / BYTES_PER_FRAME, out / bytes_per_frame);
-			frames = min(frames, MAX_FRAMES);
+			frames = min(frames, p->encode.sample_rate / MAX_FRAMES_SEC);
 
 			// fading & gain
 			frames = gain_and_fade(frames, 1, 32 - p->encode.sample_size, ctx);
@@ -517,8 +517,13 @@ void output_free_icy(struct thread_ctx_s *ctx) {
 
 /*---------------------------------------------------------------------------*/
 void _checkduration(u32_t frames, struct thread_ctx_s *ctx) {
-	u32_t duration = ((u64_t) frames * 1000 ) / ctx->output.direct_sample_rate;
-	if (ctx->output.encode.flow && duration != ctx->render.duration) {
+	u32_t duration;
+
+	if (!ctx->output.encode.flow) return;
+
+	duration = ((u64_t) frames * 1000 ) / ctx->output.direct_sample_rate;
+
+	if (duration != ctx->render.duration) {
 		LOG_INFO("[%p]: duration adjustement %u %u", ctx, duration, ctx->render.duration);
 		if (abs((s32_t) (duration - ctx->render.duration)) > 1000) {
 			LOG_WARN("[%p]: skipping too big duration gap %u %u", ctx, duration, ctx->render.duration);
@@ -826,9 +831,6 @@ size_t gain_and_fade(size_t frames, size_t min_frames, u8_t shift, struct thread
 
 		// if fade in progress set fade gain, ensure cont_frames reduced so we get to end of fade at start of chunk
 		if (out->fade) {
-			// to force smooth scale up/down, don't do too many frames
-			frames = min(frames, out->encode.sample_rate / 10);
-
 			// don't overshoot fade end
 			if (out->fade_end > ctx->outputbuf->readp)
 				frames = min(frames, (out->fade_end - ctx->outputbuf->readp) / BYTES_PER_FRAME);

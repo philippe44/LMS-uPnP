@@ -179,21 +179,44 @@ PLUGIN_UPNPBRIDGE_CODECSPARAM
 	EN	Audio codec parameters
 
 PLUGIN_UPNPBRIDGE_CODECSPARAM_DESC
-	EN	Several codecs are supported by the UPnP player. They will be reported to LMS to decide when to do transcoding. 
-	EN	<br><i>- Supported Codecs:</i>  Tells LMS supported codecs. Comma-separated, list made of mp3, flc, aif, pcm, aac and alc
-	EN	For example, to only support (in order of preference) PCM then FLAC and then MP3 , enter "pcm,flc,mp3" (without "")
-	EN	(<b>aac and alc are untested</b>. 
-	EN	<br><b>NB: if a codec listed here is detected to NOT be supported by the player, it will be ignored</b>
-	EN	<br>- <i>Forced MimeTypes:</i> Force UPnP player's support of some MIME types if they are not auto-detected (see user's guide)
-	EN	<br>- <i>FLAC header:</i> a FLAC header is required by some players.
-	EN	<br>- <i>Uncompressed format:</i> comma-separated list (<b>ordered</b>) of supported uncompressed audio formats (amongst wav, aiff, raw)
-	EN	<br>- <i>24 bits PCM:</i> 24 bits sample tweaking, including possibility to shrink them to 16 bits
+	EN	The bridge can either simply passthru audio data to the player (with minor alteration) or do a full transcoding of
+	EN	the audio. Transcoding improves compatibility by sending controlled format and allows replay gain as well as fading 
+	EN	in and out. It's also possible to send audio in a continuous flow of data instead of tracks one-bye-one. This enables
+	EN	true gapless and cross-fading. See user's guide for more details
+	EN	<br>- <i>Mode:</i> set processing mode. Format is [thru|pcm|flac:[q]][,r:[-]<rate>][,s:8|16|24][,flow]. "thru" is simple 
+	EN	passthru, "pcm" and "flac" are for decoding, re-encoding and sending in "pcm" or "flac" to player. When re-encoding
+	EN	"r:" forces	a maximum sample rate when predicated with "-" or a fixed sample rate if not. "s:" is to set sample size. 
+	EN	"flow" forces creates a continuous sample flow of audio, enabling true gapless and cross-fading, but metadata will not 
+	EN	be sent in that mode. 
+	EN	<br><i>- Codecs:</i>  reports supported codecs to LMS. Comma-separated, list made of mp3, flc, aif, pcm, aac, ogg
+	EN	and alc. In passthru mode, if a listed codec is NOT supported by the UPnP player, it will be ignored while if re-encode
+	EN	is enabled, local decoding will be done by the bridge (only mp3,aac,flac,pmc and ogg are supported)
+	EN	<br>- <i>PCM format:</i> comma-separated list (<b>ordered</b>) of supported uncompressed audio formats (amongst 
+	EN	wav, aiff, raw). These formats are used when sending pcm audio to the UPnP Player.
+	EN	<br><i>- Max rate:</i>  reports max sample rate to LMS. This does not influence local resampling, it's just an 
+	EN	information for LMS.
 		
+PLUGIN_UPNPBRIDGE_MODE
+	EN	Mode
+
+PLUGIN_UPNPBRIDGE_RAWAUDIOFORMAT
+	EN	PCM format
+
 PLUGIN_UPNPBRIDGE_SAMPLERATE
-	EN	Max Sample Rate
+	EN	Max rate
 
 PLUGIN_UPNPBRIDGE_CODECS
-	EN	Supported codecs
+	EN	Codecs
+	
+PLUGIN_UPNPBRIDGE_THRUPARAM
+	EN	Audio Passthrouh parameters
+	
+PLUGIN_UPNPBRIDGE_THRUPARAM_DESC
+	EN	These parameters are mainly used in passthrough mode, although the 24 bits PCM can apply in full processing mode if not
+	EN	specified in the "Mode" options ("s:" parameter)
+	EN	<br>- <i>FLAC header:</i> a FLAC header is required by some players in thru mode.
+	EN	<br>- <i>24 bits PCM:</i> 24 bits sample tweaking, including possibility to shrink them to 16 bits, even in thru mode
+	EN	<br>- <i>Forced MimeTypes:</i> Force UPnP player's support of some MIME types if they are not auto-detected (see user's guide)
 
 PLUGIN_UPNPBRIDGE_FLACHEADER
 	EN	FLAC header
@@ -201,9 +224,6 @@ PLUGIN_UPNPBRIDGE_FLACHEADER
 PLUGIN_UPNPBRIDGE_L24FORMAT
 	EN	24 bits PCM
 	
-PLUGIN_UPNPBRIDGE_RAWAUDIOFORMAT
-	EN	PCM format
-
 PLUGIN_UPNPBRIDGE_FORCEDMIMETYPES
 	EN	Extra MimeTypes
 

@@ -50,22 +50,12 @@ sub binaries {
 	}
 	
 	if ($os->{'os'} eq 'Darwin') {
-		return qw(squeeze2upnp-osx-multi);
+		return qw(squeeze2upnp-osx-multi squeeze2upnp-osx-multi-static);
 	}
 	
 	if ($os->{'os'} eq 'Windows') {
 		return qw(squeeze2upnp-win.exe);
 	}	
-	
-=comment	
-		if ($os->{'isWin6+'} ne '') {
-			return qw(squeeze2upnp-win.exe);
-		} else {
-			return qw(squeeze2upnp-winxp.exe);
-		}	
-	}
-=cut	
-	
 }
 
 sub bin {

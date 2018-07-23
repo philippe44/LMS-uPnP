@@ -123,32 +123,35 @@
 	[% END %]
 	
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_CODECSPARAM" desc="PLUGIN_UPNPBRIDGE_CODECSPARAM_DESC" %]
-		<table style="border-spacing:0">
-		<tr><td style="padding: 0 10px 2px 0">[% "PLUGIN_UPNPBRIDGE_CODECS" | string %]&nbsp
-		<input type="text" class="stdedit" name="codecs" id="codecs" value="[% codecs %]" size="10"></td>
-		<td style="padding: 0 10px 2px 0">[% "PLUGIN_UPNPBRIDGE_SAMPLERATE" | string %]&nbsp
+		[% "PLUGIN_UPNPBRIDGE_MODE" | string %]&nbsp
+		<input type="text" class="stdedit" name="mode" id="mode" value="[% mode %]" size="15">
+		[% "PLUGIN_UPNPBRIDGE_CODECS" | string %]&nbsp
+		<input type="text" class="stdedit" name="codecs" id="codecs" value="[% codecs %]" size="15"></td>
+		[% "PLUGIN_UPNPBRIDGE_SAMPLERATE" | string %]&nbsp
 		<select class="stdedit" name="sample_rate" id="sample_rate">
-		[% FOREACH entry IN [ '', '44100', '48000', '96000', '192000' ] %]
+		[% FOREACH entry IN [ '', '44100', '48000', '88200', '96000', '176400', '192000' ] %]
 			<option [% IF entry == sample_rate %]selected[% END %] value="[% entry %]">[% entry %]</option>
 		[% END %]
-		</select></td>
-		<td style="padding: 0 10px 2px 0">[% "PLUGIN_UPNPBRIDGE_FLACHEADER" | string %]&nbsp
+		</select>
+		[% "PLUGIN_UPNPBRIDGE_RAWAUDIOFORMAT" | string %]&nbsp
+		<input type="text" class="stdedit" name="raw_audio_format" id="raw_audio_format" value="[% raw_audio_format %]" size="10"></td>
+	[% END %]
+	
+	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_THRUPARAM" desc="PLUGIN_UPNPBRIDGE_THRUPARAM_DESC" %]
+		[% "PLUGIN_UPNPBRIDGE_FLACHEADER" | string %]&nbsp
 		<select class="stdedit" name="flac_header" id="flac_header">
 		[% FOREACH entry IN [ ['',''], ['none','0'], ['normal','1'], ['fixed size','2'] ] %]
 			<option [% IF entry.1 == flac_header %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
 		[% END %]
-		</select></td></tr>
-		<tr><td style="padding: 0 10px 2px 0">
-		[% "PLUGIN_UPNPBRIDGE_FORCEDMIMETYPES" | string %]&nbsp
-		<input type="text" class="stdedit" name="forced_mimetypes" id="forced_mimetypes" value="[% forced_mimetypes %]" size="10"></td>
-		<td style="padding: 0 10px 2px 0">[% "PLUGIN_UPNPBRIDGE_RAWAUDIOFORMAT" | string %]&nbsp
-		<input type="text" class="stdedit" name="raw_audio_format" id="raw_audio_format" value="[% raw_audio_format %]" size="10"></td>
-		<td style="padding: 0 10px 2px 0">[% "PLUGIN_UPNPBRIDGE_L24FORMAT" | string %]&nbsp
+		</select>
+		[% "PLUGIN_UPNPBRIDGE_L24FORMAT" | string %]&nbsp
 		<select class="stdedit" name="L24_format" id="L24_format">
 		[% FOREACH entry IN [ ['',''], ['plain 24 bits','0'], ['packed type 1','1'] ['16 bits always','2'] ['16 bits raw only', '3'] ] %]
 			<option [% IF entry.1 == L24_format %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
 		[% END %]
-		</select></td></tr></table>
+		</select>
+		[% "PLUGIN_UPNPBRIDGE_FORCEDMIMETYPES" | string %]&nbsp
+		<input type="text" class="stdedit" name="forced_mimetypes" id="forced_mimetypes" value="[% forced_mimetypes %]" size="10">
 	[% END %]
 	
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_UPNPMGMT" desc="PLUGIN_UPNPBRIDGE_UPNPMGMT_DESC" %]

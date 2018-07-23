@@ -962,7 +962,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 						  struct thread_ctx_s *ctx) {
 	struct outputstate *out = &ctx->output;
 	struct track_param info;
-	char *mimetype = NULL, *p, *encode = ctx->config.encode;
+	char *mimetype = NULL, *p, *mode = ctx->config.mode;
 	bool ret = false;
 	s32_t sample_rate;
 
@@ -1014,25 +1014,25 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 	out->offset = 0;
 
 	// detect processing mode
-	if (stristr(encode, "thru")) out->encode.mode = ENCODE_THRU;
-	else if (stristr(encode, "pcm")) out->encode.mode = ENCODE_PCM;
-	else if (stristr(encode, "flac")) out->encode.mode = ENCODE_FLAC;
+	if (stristr(mode, "thru")) out->encode.mode = ENCODE_THRU;
+	else if (stristr(mode, "pcm")) out->encode.mode = ENCODE_PCM;
+	else if (stristr(mode, "flac")) out->encode.mode = ENCODE_FLAC;
 
 	// force read of re-encoding parameters
-	if ((p = stristr(encode, "r:")) != NULL) sample_rate = atoi(p+2);
+	if ((p = stristr(mode, "r:")) != NULL) sample_rate = atoi(p+2);
 	else sample_rate = 0;
-	if ((p = stristr(encode, "s:")) != NULL) out->encode.sample_size = atoi(p+2);
+	if ((p = stristr(mode, "s:")) != NULL) out->encode.sample_size = atoi(p+2);
 	else out->encode.sample_size = 0;
 
 	// force re-encoding channels to be re-read
 	out->encode.channels = 0;
 
 	// in case of flow, all parameters shall be set
-	if (stristr(encode, "flow") && out->encode.mode != ENCODE_THRU) {
+	if (stristr(mode, "flow") && out->encode.mode != ENCODE_THRU) {
 		sq_free_metadata(&info.metadata);
 		sq_default_metadata(&info.metadata, true);
 
-		if (!sample_rate) sample_rate = 44100;
+		if (!sample_rate || sample_rate < 0) sample_rate = 44100;
 		if (!out->encode.sample_size) out->encode.sample_size = 16;
 		out->encode.channels = 2;
 		out->encode.flow = true;
@@ -1042,6 +1042,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 	if (sample_rate > 0) out->supported_rates[0] = sample_rate;
 	else if (sample_rate < 0) out->supported_rates[0] = min(out->sample_rate, abs(sample_rate));
 	else out->supported_rates[0] = out->sample_rate;
+
 	out->encode.sample_rate = out->supported_rates[0];
 
 	// check if re-encoding is needed
@@ -1094,7 +1095,8 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 
 		mimetype = find_mimetype('f', ctx->mimetypes, NULL);
 		out->encode.mode = ENCODE_FLAC;
-		if ((p = stristr(encode, "flac:")) != NULL) out->encode.level = atoi(p+5);
+		if (out->sample_size > 24) out->encode.sample_size = 24;
+		if ((p = stristr(mode, "flac:")) != NULL) out->encode.level = atoi(p+5);
 		if (abs(out->encode.level) > 9) out->encode.level = 0;
 
 	}
