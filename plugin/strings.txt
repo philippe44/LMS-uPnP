@@ -179,10 +179,10 @@ PLUGIN_UPNPBRIDGE_CODECSPARAM
 	EN	Audio codec parameters
 
 PLUGIN_UPNPBRIDGE_CODECSPARAM_DESC
-	EN	The bridge can either simply passthru audio data to the player (with minor alteration) or do a full transcoding of
-	EN	the audio. Transcoding improves compatibility by sending controlled format and allows replay gain as well as fading 
-	EN	in and out. It's also possible to send audio in a continuous flow of data instead of tracks one-bye-one. This enables
-	EN	true gapless and cross-fading. See user's guide for more details
+	EN	The bridge can either simply passthrough audio data to the player (with minor alteration) or do a full transcoding which
+	EN	improves compatibility by sending controlled format and allows replay gain as well as fading in and out. It's also 
+	EN	possible to send audio in a continuous flow of data instead of tracks one-bye-one to enable true gapless and 
+	EN	cross-fading. See user's guide for more details
 	EN	<br>- <i>Mode:</i> set processing mode. Format is [thru|pcm|flac:[q]][,r:[-]<rate>][,s:8|16|24][,flow]. "thru" is simple 
 	EN	passthru, "pcm" and "flac" are for decoding, re-encoding and sending in "pcm" or "flac" to player. When re-encoding
 	EN	"r:" forces	a maximum sample rate when predicated with "-" or a fixed sample rate if not. "s:" is to set sample size. 
@@ -193,8 +193,8 @@ PLUGIN_UPNPBRIDGE_CODECSPARAM_DESC
 	EN	is enabled, local decoding will be done by the bridge (only mp3,aac,flac,pmc and ogg are supported)
 	EN	<br>- <i>PCM format:</i> comma-separated list (<b>ordered</b>) of supported uncompressed audio formats (amongst 
 	EN	wav, aiff, raw). These formats are used when sending pcm audio to the UPnP Player.
-	EN	<br><i>- Max rate:</i>  reports max sample rate to LMS. This does not influence local resampling, it's just an 
-	EN	information for LMS.
+	EN	<br><i>- Max rate:</i>  reports maximum sample rate to LMS. This does not influence local resampling, it's just an 
+	EN	information for LMS to decide to do transcoding. 
 		
 PLUGIN_UPNPBRIDGE_MODE
 	EN	Mode

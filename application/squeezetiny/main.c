@@ -349,7 +349,7 @@ void sq_default_metadata(metadata_t *metadata, bool init)
 
 
 /*--------------------------------------------------------------------------*/
-bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, bool next)
+bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, unsigned offset)
 {
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
 	char cmd[1024];
@@ -365,7 +365,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, bool next)
 
 	sq_init_metadata(metadata);
 
-	sprintf(cmd, "%s status - 2 tags:xcfldatgrKN", ctx->cli_id);
+	sprintf(cmd, "%s status - %d tags:xcfldatgrKN", ctx->cli_id, offset + 1);
 	rsp = cli_send_cmd(cmd, false, false, ctx);
 
 	if (!rsp || !*rsp) {
@@ -376,14 +376,14 @@ bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, bool next)
 
 	// find the current index
 	if ((p = cli_find_tag(rsp, "playlist_cur_index")) != NULL) {
-		metadata->index = atoi(p);
-		if (next) metadata->index++;
+		metadata->index = atoi(p) + offset;
 		free(p);
 	}
 
 	// need to make sure we rollover if end of list
 	if ((p = cli_find_tag(rsp, "playlist_tracks")) != NULL) {
 		metadata->index %= atoi(p);
+		free(p);
 	}
 
 	sprintf(cmd, "playlist%%20index%%3a%d ", metadata->index);
@@ -447,7 +447,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, bool next)
 		LOG_ERROR("[%p]: track not found %u %s", ctx, metadata->index, rsp);
 	}
 
-	if (!next && metadata->duration && ((p = cli_find_tag(rsp, "time")) != NULL)) {
+	if (!offset && metadata->duration && ((p = cli_find_tag(rsp, "time")) != NULL)) {
 		metadata->duration -= (u32_t) (atof(p) * 1000);
 		free(p);
 	}
@@ -499,9 +499,6 @@ u32_t sq_self_time(sq_dev_handle_t handle)
 
 
 /*---------------------------------------------------------------------------*/
-// FIXME: I'm not sure that ->index is always the right value when streaming
-// fails or in other error condition. Might need to looking into the active
-// thread "real" index, but that much more complicated
 void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *cookie, void *param)
 {
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
@@ -615,6 +612,7 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 					ctx->output.offset += ctx->render.duration;
 					ctx->render.ms_played -= ctx->render.duration;
 					ctx->render.duration = ctx->output.duration;
+					ctx->render.index = ctx->output.index;
 					ctx->output.track_started = true;
 					ctx->render.track_start_time = gettime_ms();
 					LOG_INFO("[%p] flow track started at %u for %u", ctx,

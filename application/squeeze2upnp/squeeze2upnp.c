@@ -280,11 +280,12 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 			sq_free_metadata(&Device->NextMetaData);
 			if (!Device->Config.SendCoverArt) NFREE(p->metadata.artwork);
 
-			LOG_INFO("[%p]:\n\tartist:%s\n\talbum:%s\n\ttitle:%s\n\tgenre:%s\n\tduration:%d.%03d\n\tsize:%d\n\tcover:%s", Device,
-				p->metadata.artist, p->metadata.album, p->metadata.title,
-				p->metadata.genre, div(p->metadata.duration, 1000).quot,
-				div(p->metadata.duration,1000).rem, p->metadata.file_size,
-				p->metadata.artwork ? p->metadata.artwork : "");
+			LOG_INFO("[%p]:\n\tartist:%s\n\talbum:%s\n\ttitle:%s\n\tgenre:%s\n\t"
+					 "duration:%d.%03d\n\tsize:%d\n\tcover:%s\n\toffset:%u", Device,
+					p->metadata.artist, p->metadata.album, p->metadata.title,
+					p->metadata.genre, div(p->metadata.duration, 1000).quot,
+					div(p->metadata.duration,1000).rem, p->metadata.file_size,
+					p->metadata.artwork ? p->metadata.artwork : "", p->offset);
 
 			// passing DLNAfeatures back is really ugly
 			ProtoInfo = MakeProtoInfo(p->mimetype, p->metadata.duration);
@@ -296,7 +297,7 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 				LOG_INFO("[%p]: Sonos live stream", Device);
 			} else uri = strdup(p->uri);
 
-			if (p->next) {
+			if (p->offset) {
 				if (!Device->Config.AcceptNextURI || !p->metadata.duration) {
 					LOG_INFO("[%p]: next URI gapped %s", Device, uri);
 					Device->NextURI = uri;

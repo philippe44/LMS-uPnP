@@ -586,7 +586,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			struct metadata_s metadata;
 			u32_t hash;
 
-			sq_get_metadata(ctx->self, &metadata, false);
+			sq_get_metadata(ctx->self, &metadata, 0);
 			ctx->output.icy.last = now;
 
 			hash = hash32(metadata.artist) ^ hash32(metadata.title) ^ hash32(metadata.artwork);
@@ -683,7 +683,6 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 				ctx->sentSTMu = true;
 				ctx->status.output_full = 0;
 				ctx->output.encode.flow = false;
-				// FIXME: what was that not set before?
 				ctx->output.state = OUTPUT_STOPPED;
 			}
 
@@ -693,7 +692,6 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 				ctx->render.state == RD_STOPPED && ctx->canSTMdu) {
 				_sendSTMo = true;
 				ctx->sentSTMo = true;
-				// FIXME: what was that not set before?
 				ctx->output.state = OUTPUT_STOPPED;
 			}
 
@@ -970,12 +968,9 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 	s32_t sample_rate;
 
 	LOCK_O;
-	// FIXME: why testing index here? Seems like in case of failed streaming,
-	// we want a "next" and not a "current", unless
-	// if streaming failed, we might have never started to play previous index
-	//	info.next = (ctx->output.state == OUTPUT_RUNNING && out->index == ctx->render.index);
-	info.next = ctx->output.state == OUTPUT_RUNNING;
-	// assumes that buffer content is preserved if size does not change
+	out->index++;
+	// try to handle next track failed stream where we jump over N tracks
+	info.offset = ctx->render.index != -1 ? out->index - ctx->render.index : 0;
 	_buf_resize(ctx->outputbuf, ctx->config.outputbuf_size);
 	UNLOCK_O;
 
@@ -986,7 +981,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 	*/
 
 	// get metadata - they must be freed by callee whenever he wants
-	sq_get_metadata(ctx->self, &info.metadata, info.next);
+	sq_get_metadata(ctx->self, &info.metadata, info.offset);
 
 	// set key parameters
 	out->completed = false;
@@ -1014,7 +1009,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 		sq_free_metadata(&info.metadata);
 		return codec_open(out->codec, out->sample_size, out->sample_rate,
 						  out->channels, out->in_endian, ctx);
-	} else out->index++;
+	}
 
 	// reset time offset for new tracks
 	out->offset = 0;

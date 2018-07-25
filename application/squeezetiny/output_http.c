@@ -77,7 +77,7 @@ bool output_start(struct thread_ctx_s *ctx) {
 		return false;
 	}
 
-	LOG_INFO("[%p]: starting thread %d", ctx, param->thread == ctx->output_thread ? 0 : 1);
+	LOG_INFO("[%p]: start thread %d", ctx, param->thread == ctx->output_thread ? 0 : 1);
 
 	pthread_create(&param->thread->thread, NULL, (void *(*)(void*)) &output_http_thread, param);
 
@@ -86,12 +86,12 @@ bool output_start(struct thread_ctx_s *ctx) {
 
 /*---------------------------------------------------------------------------*/
 static void output_http_thread(struct thread_param_s *param) {
-	bool http_ready, done = false;
+	bool http_ready = false, done = false;
 	int sock = -1;
 	char chunk_frame_buf[16] = "", *chunk_frame = chunk_frame_buf;
 	bool acquired = false;
-	size_t hpos, bytes = 0, hsize = 0, tpos = 0;
-	ssize_t chunk_count;
+	size_t hpos = 0, bytes = 0, hsize = 0, tpos = 0;
+	ssize_t chunk_count = 0;
 	u8_t *tbuf = NULL;
 	u8_t *hbuf = malloc(HEAD_SIZE);
 	fd_set rfds, wfds;
@@ -99,6 +99,7 @@ static void output_http_thread(struct thread_param_s *param) {
 	struct output_thread_s *thread = param->thread;
 	struct thread_ctx_s *ctx = param->ctx;
 	unsigned drain_count = DRAIN_MAX;
+	u32_t start = gettime_ms();
 
 	free(param);
 
@@ -113,7 +114,7 @@ static void output_http_thread(struct thread_param_s *param) {
 		bool res = true;
 		int n;
 
-		if (sock == -1) {
+		if (sock == -1 && drain_count) {
 			struct timeval timeout = {0, TIMEOUT*1000};
 
 			FD_ZERO(&rfds);
@@ -159,7 +160,6 @@ static void output_http_thread(struct thread_param_s *param) {
 		if (!acquired && n > 0) {
 			LOCK_D;
 			if (!ctx->output.track_start) {
-				LOG_INFO("[%p]: wait to acquire codec parameters", ctx);
 				UNLOCK_D;
 				// not very elegant but let's not consume all CPU
 				usleep(SLEEP*1000);
@@ -172,7 +172,7 @@ static void output_http_thread(struct thread_param_s *param) {
 			_output_new_stream(obuf, ctx);
 			UNLOCK_O;
 
-			LOG_INFO("[%p]: drain buffer size %u", ctx, obuf->size);
+			LOG_INFO("[%p]: drain is %u (waited %u)", ctx, obuf->size, gettime_ms() - start);
 		}
 
 		// should be the HTTP headers (works with non-blocking socket)
@@ -270,7 +270,7 @@ static void output_http_thread(struct thread_param_s *param) {
 			ctx->output.completed = true;
 			drain_count = 0;
 			wake_controller(ctx);
-			LOG_INFO("[%p]: draining - sent %zu bytes", ctx, bytes);
+			LOG_INFO("[%p]: draining (%zu bytes)", ctx, bytes);
 		}
 
 		// now are surely running - socket is non blocking, so this is fast
@@ -371,7 +371,7 @@ static void output_http_thread(struct thread_param_s *param) {
 	}
 	UNLOCK_O;
 
-	LOG_INFO("[%p]: ending thread %d sent %zu bytes", ctx, thread == ctx->output_thread ? 0 : 1, bytes);
+	LOG_INFO("[%p]: end thread %d (%zu bytes)", ctx, thread == ctx->output_thread ? 0 : 1, bytes);
 }
 
 

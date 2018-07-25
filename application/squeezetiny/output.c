@@ -40,6 +40,7 @@ static void 	scale_and_pack(void *dst, u32_t *src, size_t frames, u8_t channels,
 static FLAC__StreamEncoderWriteStatus flac_write_callback(const FLAC__StreamEncoder *encoder, const FLAC__byte buffer[], size_t bytes, unsigned samples, unsigned current_frame, void *client_data);
 
 #if !LINKALL
+void *handle = NULL;
 static struct {
 	// FLAC symbols to be dynamically loaded
 	FLAC__StreamEncoder* (*FLAC__stream_encoder_new)(void);
@@ -440,7 +441,7 @@ void output_flush(struct thread_ctx_s *ctx) {
 		UNLOCK_O;
 		pthread_join(ctx->output_thread[i].thread, NULL);
 		LOCK_O;
-	}
+    }
 
 	ctx->output.track_started = false;
 	ctx->output.track_start = NULL;
@@ -477,8 +478,8 @@ bool output_init(struct thread_ctx_s *ctx) {
 
 #if !LINKALL
 	// load share dlibrary and symbols if necessary
-	if (!f.FLAC__stream_encoder_new) {
-		void *handle = dlopen(LIBFLAC, RTLD_NOW);
+	if (!handle) {
+		handle = dlopen(LIBFLAC, RTLD_NOW);
 
 		if (handle) {
 			f.FLAC__stream_encoder_new = dlsym(handle, "FLAC__stream_encoder_new");
@@ -506,6 +507,9 @@ bool output_init(struct thread_ctx_s *ctx) {
 void output_close(struct thread_ctx_s *ctx) {
 	LOG_INFO("[%p] close media renderer", ctx);
 	buf_destroy(ctx->outputbuf);
+#if !LINKALL
+	if (handle) dlclose(handle);
+#endif
 }
 
 /*---------------------------------------------------------------------------*/
@@ -524,10 +528,15 @@ void _checkduration(u32_t frames, struct thread_ctx_s *ctx) {
 	duration = ((u64_t) frames * 1000 ) / ctx->output.direct_sample_rate;
 
 	if (duration != ctx->render.duration) {
-		LOG_INFO("[%p]: duration adjustement %u %u", ctx, duration, ctx->render.duration);
+		LOG_INFO("[%p]: duration adjust f:%u t:%u", ctx, duration, ctx->render.duration);
+		ctx->output.duration = duration;
+		if (ctx->output.index != ctx->render.index) {
+			ctx->render.duration = duration;
+			LOG_INFO("[%p]: updating in playing track", ctx);
+		}
 		if (abs((s32_t) (duration - ctx->render.duration)) > 1000) {
-			LOG_WARN("[%p]: skipping too big duration gap %u %u", ctx, duration, ctx->render.duration);
-		} else ctx->render.duration = duration;
+			LOG_WARN("[%p]: duration too long", ctx);
+		}
 	}
 }
 
@@ -808,7 +817,7 @@ size_t gain_and_fade(size_t frames, size_t min_frames, u8_t shift, struct thread
 		if (cur_f >= dur_f) {
 			// only happens in flow mode as decode starts with empty outputbuf
 			if (out->fade_mode == FADE_INOUT && out->fade_dir == FADE_DOWN) {
-				LOG_INFO("[%p]: fade down complete, starting fade up", ctx);
+				LOG_INFO("[%p]: fade down complete, start fade up", ctx);
 				out->fade_dir = FADE_UP;
 				out->fade_start = ctx->outputbuf->readp;
 				out->fade_end = ctx->outputbuf->readp + dur_f * BYTES_PER_FRAME;
@@ -820,7 +829,8 @@ size_t gain_and_fade(size_t frames, size_t min_frames, u8_t shift, struct thread
 					_buf_inc_readp(ctx->outputbuf, dur_f * BYTES_PER_FRAME);
 					// current track is shorter due to crossfade
 					ctx->render.duration -= (dur_f * 1000) / out->encode.sample_rate;
-					LOG_INFO("[%p]: skipped crossfaded start", ctx);
+					LOG_INFO("[%p]: skipped crossfaded start %ums", ctx, (dur_f * 1000) / out->encode.sample_rate);
+
 				} else {
 					LOG_WARN("[%p]: unable to skip crossfaded start", ctx);
 				}
@@ -860,7 +870,7 @@ size_t gain_and_fade(size_t frames, size_t min_frames, u8_t shift, struct thread
 			}
 		}
 
-		LOG_ERROR("[%p]: fade gain %d", ctx, fade);
+		LOG_DEBUG("[%p]: fade gain %d", ctx, fade);
 	}
 
 	// lpcm_pack requires at least 2 frames or buffer too short for cross fade
