@@ -1043,10 +1043,11 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 
 	// set sample rate for re-encoding
 	if (sample_rate > 0) out->supported_rates[0] = sample_rate;
-	else if (sample_rate < 0) out->supported_rates[0] = min(out->sample_rate, abs(sample_rate));
+	else if (sample_rate < 0) out->supported_rates[0] = out->sample_rate ? min(out->sample_rate, abs(sample_rate)) : sample_rate;
 	else out->supported_rates[0] = out->sample_rate;
 
-	out->encode.sample_rate = out->supported_rates[0];
+	if (out->supported_rates[0] > 0) out->encode.sample_rate = out->supported_rates[0];
+	else out->encode.sample_rate = 0;
 
 	// check if re-encoding is needed
 	if (out->encode.mode == ENCODE_THRU || (out->encode.mode == ENCODE_PCM && out->codec == 'p')) {
@@ -1100,7 +1101,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 		out->encode.mode = ENCODE_FLAC;
 		if (out->sample_size > 24) out->encode.sample_size = 24;
 		if ((p = stristr(mode, "flac:")) != NULL) out->encode.level = atoi(p+5);
-		if (abs(out->encode.level) > 9) out->encode.level = 0;
+		if (out->encode.level > 9) out->encode.level = 0;
 
 	}
 

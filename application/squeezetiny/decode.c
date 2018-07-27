@@ -209,7 +209,7 @@ void decode_flush(struct thread_ctx_s *ctx) {
 }
 
 /*---------------------------------------------------------------------------*/
-unsigned decode_newstream(unsigned sample_rate, unsigned supported_rates[], struct thread_ctx_s *ctx) {
+unsigned decode_newstream(unsigned sample_rate, int supported_rates[], struct thread_ctx_s *ctx) {
 	// called with O locked to get sample rate for potentially processed output stream
 	// release O mutex during process_newstream as it can take some time
 

@@ -340,7 +340,7 @@ void 		decode_thread_init(struct thread_ctx_s *ctx);
 
 void 		decode_close(struct thread_ctx_s *ctx);
 void 		decode_flush(struct thread_ctx_s *ctx);
-unsigned 	decode_newstream(unsigned sample_rate, unsigned supported_rates[],
+unsigned 	decode_newstream(unsigned sample_rate, int supported_rates[],
 							 struct thread_ctx_s *ctx);
 bool 		codec_open(u8_t codec, u8_t sample_size, u32_t sample_rate,
 					   u8_t	channels, u8_t endianness, struct thread_ctx_s *ctx);
@@ -351,7 +351,7 @@ void 		process_samples(struct thread_ctx_s *ctx);
 void 		process_drain(struct thread_ctx_s *ctx);
 void 		process_flush(struct thread_ctx_s *ctx);
 unsigned 	process_newstream(bool *direct, unsigned raw_sample_rate,
-							  unsigned supported_rates[], struct thread_ctx_s *ctx);
+							  int supported_rates[], struct thread_ctx_s *ctx);
 void 		process_init(char *opt, struct thread_ctx_s *ctx);
 void 		process_end(struct thread_ctx_s *ctx);
 #endif
@@ -361,7 +361,7 @@ void 		process_end(struct thread_ctx_s *ctx);
 
 void 		resample_samples(struct thread_ctx_s *ctx);
 bool 		resample_drain(struct thread_ctx_s *ctx);
-bool 		resample_newstream(unsigned raw_sample_rate, unsigned supported_rates[],
+bool 		resample_newstream(unsigned raw_sample_rate, int supported_rates[],
 							   struct thread_ctx_s *ctx);
 void 		resample_flush(struct thread_ctx_s *ctx);
 bool 		resample_init(char *opt, struct thread_ctx_s *ctx);
@@ -413,7 +413,7 @@ struct outputstate {
 	char 	mimetype[_STR_LEN_];	// content-type to send to player
 	bool  	track_started;	// track has started to be streamed (trigger, not state)
 	u8_t  	*track_start;   // pointer where track starts in buffer, just for legacy compatibility
-	unsigned supported_rates[2];	// for resampling (0 = use raw)
+	int		supported_rates[2];	// for resampling (0 = use raw)
 	// for icy data
 	struct {
 		size_t interval, remain;

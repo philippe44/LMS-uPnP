@@ -1,5 +1,11 @@
+1.0.0
+ - full processing mode with flow
+ - many bug fixes
+ - (3) handling of < 0 sample rates
+
 0.3.0.9
  - pcm format was not inserting rate & channel when it was missing in ProtocolInfo
+ - (3) handling of < 0 sample rates
  
 0.3.0.8
  - set STREAM_DELAY to 15s

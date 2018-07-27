@@ -114,7 +114,7 @@ void process_drain(struct thread_ctx_s *ctx) {
 }
 
 // new stream - called with decode mutex set
-unsigned process_newstream(bool *direct, unsigned raw_sample_rate, unsigned supported_rates[], struct thread_ctx_s *ctx) {
+unsigned process_newstream(bool *direct, unsigned raw_sample_rate, int supported_rates[], struct thread_ctx_s *ctx) {
 
 	bool active = NEWSTREAM_FUNC(raw_sample_rate, supported_rates, ctx);
 

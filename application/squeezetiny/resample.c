@@ -140,7 +140,7 @@ bool resample_drain(struct thread_ctx_s *ctx) {
 	}
 }
 
-bool resample_newstream(unsigned raw_sample_rate, unsigned supported_rates[], struct thread_ctx_s *ctx) {
+bool resample_newstream(unsigned raw_sample_rate, int supported_rates[], struct thread_ctx_s *ctx) {
 	struct soxr *r = ctx->decode.process_handle;
 	unsigned outrate = 0;
 	int i = 0;
@@ -148,6 +148,8 @@ bool resample_newstream(unsigned raw_sample_rate, unsigned supported_rates[], st
 	if (r->exception) {
 		// find direct match - avoid resampling (or passthrough)
 		if (!supported_rates[0]) outrate = raw_sample_rate;
+		else if (supported_rates[0] < 0)
+			outrate = raw_sample_rate < abs(supported_rates[0]) ? raw_sample_rate : abs(supported_rates[0]);
 		else for (i = 0; supported_rates[i]; i++) {
 			if (raw_sample_rate == supported_rates[i]) {
 				outrate = raw_sample_rate;
