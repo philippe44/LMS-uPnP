@@ -485,6 +485,8 @@ u32_t sq_self_time(sq_dev_handle_t handle)
 	u32_t time;
 	u32_t now = gettime_ms();
 
+	if (!handle || !ctx->in_use) return 0;
+
 	LOCK_O;
 
 	if (ctx->render.index != -1 && ctx->render.state != RD_STOPPED) {
