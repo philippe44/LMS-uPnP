@@ -670,11 +670,12 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			}
 
 			// streaming failed, wait till output thread ends and move on
-			if (ctx->status.stream_bytes == 0 && ctx->output.completed) {
+			if (ctx->status.stream_bytes == 0 && ctx->output.completed && ctx->output.state == OUTPUT_RUNNING) {
 				LOG_WARN("[%p]: nothing received", ctx);
 				// when streaming fails, need to make sure we move on
 				ctx->render.state = RD_STOPPED;
 				ctx->canSTMdu = true;
+				_sendSTMn = true;
 			}
 
 			// normal end of track with underrun

@@ -1,5 +1,5 @@
 CFLAGS  ?= -Wall -fPIC -ggdb -O2 $(OPTS) $(INCLUDE) $(DEFINES)
-LDFLAGS ?= -lgomp -lpthread -lm -lrt -ldl -L.
+LDFLAGS ?= -s -lgomp -lpthread -lm -lrt -ldl -L.
 
 OBJ					= bin/x86
 EXECUTABLE 			= bin/squeeze2upnp-x86
