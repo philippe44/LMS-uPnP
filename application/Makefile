@@ -21,6 +21,7 @@ CFLAGS 		+= -fdata-sections -ffunction-sections
 vpath %.c $(TOOLS):$(SRC):$(SQUEEZETINY)
 
 INCLUDE = -I. \
+		-I$(BASE)\
 		  -I$(VALGRIND)/memcheck -I$(VALGRIND)/include \
 		  -I$(SQUEEZETINY) \
 		  -I$(TOOLS) \
@@ -44,7 +45,7 @@ SOURCES_LIBS = flac.c mad.c faad.c vorbis.c output.c
 OBJECTS 		= $(patsubst %.c,$(OBJ)/%.o,$(SOURCES)) $(patsubst %.c,$(OBJ)/%.o,$(SOURCES_LIBS)) 
 OBJECTS_STATIC 	= $(patsubst %.c,$(OBJ)/%.o,$(SOURCES)) $(patsubst %.c,$(OBJ)/%-static.o,$(SOURCES_LIBS)) 
 
-LIBRARY 	= $(OBJ)/libupnp.a $(OBJ)/libixml.a $(OBJ)/libthreadutil.a $(OBJ)/libsoxr.a
+LIBRARY 	= $(OBJ)/libupnp.a $(OBJ)/libixml.a $(OBJ)/libthreadutil.a $(OBJ)/libsoxr.a $(OBJ)/libshine.a
 LIBRARY_STATIC 	= $(LIBRARY) $(OBJ)/libfaad.a $(OBJ)/libFLAC.a $(OBJ)/libmad.a $(OBJ)/libvorbisfile.a $(OBJ)/libvorbis.a $(OBJ)/libogg.a 
 
 all: $(EXECUTABLE) $(EXECUTABLE_STATIC)

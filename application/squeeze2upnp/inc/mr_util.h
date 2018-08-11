@@ -40,7 +40,7 @@ void 			MakeMacUnique(struct sMR *Device);
 
 char*			MakeProtoInfo(char *MimeType, u32_t duration);
 char** 			ParseProtocolInfo(char *Info, char* Forced);
-void 			CheckCodecs(char *Codecs, char *Sink);
+void 			CheckCodecs(char *Codecs, char *Sink, char *Forced);
 
 
 #endif

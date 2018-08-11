@@ -29,7 +29,7 @@
 	<profile name='Jongo S3x'>
 		<stream_length>1000000000</stream_length>
 		<codecs>aac,pcm,flc,mp3</codecs>
-		<allow_flac>1</allow_flac>
+		<forced_mimetypes>audio/flac</forced_mimetypes>
 	</profile>	
 	<profile name='foobar 2000'></profile>
 	<profile name='Sonos'>

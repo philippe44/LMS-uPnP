@@ -296,7 +296,7 @@ char** ParseProtocolInfo(char *Info, char *Forced)
 
 
 /*----------------------------------------------------------------------------*/
-static void _CheckCodecs(char *Codecs, char *Sink, char *Codec, int n, ...)
+static void _CheckCodecs(char *Codecs, char *Sink, char *Forced, char *Codec, int n, ...)
 {
 	int i;
 	va_list args;
@@ -306,12 +306,11 @@ static void _CheckCodecs(char *Codecs, char *Sink, char *Codec, int n, ...)
 	for (i = 0; i < n; i++) {
 		char *lookup = va_arg(args, char*);
 
-		if (strstr(Sink, lookup)) {
+		if (strstr(Sink, lookup) || strstr(Forced, lookup)) {
 			if (strlen(Codecs)) {
 				strcat(Codecs, ",");
 				strcat(Codecs, Codec);
-			}
-			else strcpy(Codecs, Codec);
+			} else strcpy(Codecs, Codec);
 			return;
 		}
 	}
@@ -320,7 +319,7 @@ static void _CheckCodecs(char *Codecs, char *Sink, char *Codec, int n, ...)
 }
 
 /*----------------------------------------------------------------------------*/
-void CheckCodecs(char *Codecs, char *Sink)
+void CheckCodecs(char *Codecs, char *Sink, char *Forced)
 {
 	char *p, *buf;
 
@@ -331,14 +330,14 @@ void CheckCodecs(char *Codecs, char *Sink)
 		char *q = strchr(p, ',');
 		if (q) *q = '\0';
 
-		if (strstr(p,"mp3")) _CheckCodecs(Codecs, Sink, "mp3", 2, "mp3", "mpeg");
-		if (strstr(p,"flc")) _CheckCodecs(Codecs, Sink, "flc", 1, "flac");
-		if (strstr(p,"wma")) _CheckCodecs(Codecs, Sink, "wma", 1, "wma");
-		if (strstr(p,"ogg")) _CheckCodecs(Codecs, Sink, "ogg", 1, "ogg");
-		if (strstr(p,"aac")) _CheckCodecs(Codecs, Sink, "aac", 3, "aac", "m4a", "mp4");
-		if (strstr(p,"alc")) _CheckCodecs(Codecs, Sink, "alc", 1, "m4a");
-		if (strstr(p,"pcm")) _CheckCodecs(Codecs, Sink, "pcm", 2, "wav", "audio/L");
-		if (strstr(p,"aif")) _CheckCodecs(Codecs, Sink, "aif", 3, "aif", "wav", "audio/L");
+		if (strstr(p,"mp3")) _CheckCodecs(Codecs, Sink, Forced, "mp3", 2, "mp3", "mpeg");
+		if (strstr(p,"flc")) _CheckCodecs(Codecs, Sink, Forced, "flc", 1, "flac");
+		if (strstr(p,"wma")) _CheckCodecs(Codecs, Sink, Forced, "wma", 1, "wma");
+		if (strstr(p,"ogg")) _CheckCodecs(Codecs, Sink, Forced, "ogg", 1, "ogg");
+		if (strstr(p,"aac")) _CheckCodecs(Codecs, Sink, Forced, "aac", 3, "aac", "m4a", "mp4");
+		if (strstr(p,"alc")) _CheckCodecs(Codecs, Sink, Forced, "alc", 1, "m4a");
+		if (strstr(p,"pcm")) _CheckCodecs(Codecs, Sink, Forced, "pcm", 2, "wav", "audio/L");
+		if (strstr(p,"aif")) _CheckCodecs(Codecs, Sink, Forced, "aif", 3, "aif", "wav", "audio/L");
 
 		p = (q) ? q + 1 : NULL;
 	}

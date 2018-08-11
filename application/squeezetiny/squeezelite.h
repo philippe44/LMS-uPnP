@@ -250,6 +250,7 @@ unsigned 	_buf_cont_write(struct buffer *buf);
 void 		_buf_inc_readp(struct buffer *buf, unsigned by);
 void 		_buf_inc_writep(struct buffer *buf, unsigned by);
 unsigned 	_buf_read(void *dst, struct buffer *src, unsigned btes);
+unsigned 	_buf_write(struct buffer *buf, void *src, unsigned size);
 void*		_buf_readp(struct buffer *buf);
 unsigned 	_buf_size(struct buffer *src);
 void 		buf_flush(struct buffer *buf);
@@ -429,12 +430,13 @@ struct outputstate {
 		u8_t *buffer;
 	} header;
 	// only useful with decode mode
-	fade_state fade;		// fading state
+	fade_state  fade; 		// fading state
+	unsigned 	fade_secs;  // set by slimproto
+	fade_mode 	fade_mode;  // fading mode
 	u8_t	    *fade_start;// pointer to fading start in output buffer
 	u8_t 		*fade_end;	// pointer to fading end in output buffer
+	u8_t		*fade_writep;	// pointer to pending fade position
 	fade_dir 	fade_dir;	// fading direction
-	fade_mode 	fade_mode;  // fading mode
-	unsigned 	fade_secs;  // set by slimproto
 	// only used with pcm or decode mode
 	u32_t 		replay_gain, next_replay_gain;
 	u32_t		start_at;	// when to start the track, unused
@@ -445,7 +447,11 @@ struct outputstate {
 		encode_mode mode;	// thru, pcm, flac
 		bool  	flow;		// thread do not exit when track ends
 		void 	*codec; 	// re-encoding codec
-		u8_t   	level;      // in flac, compression level
+		u16_t  	level;      // in flac, compression level, in mp3 bitrate
+		u8_t	*buffer;	// interim codec buffer (optional)
+		size_t	count;		// # of *frames* in buffer
+		u8_t	*data;		// pending encoded data
+		size_t	pending;	// size of pending encoded (to be sent first)
 	} encode;				// format of what being sent to player
 };
 
@@ -463,11 +469,12 @@ struct renderstate {
 // function starting with _ must be called with mutex locked
 bool		output_init(struct thread_ctx_s *ctx);
 void 		output_close(struct thread_ctx_s *ctx);
+void 		output_set_icy(struct metadata_s *metadata, bool init, u32_t now, struct thread_ctx_s *ctx);
 void 		output_free_icy(struct thread_ctx_s *ctx);
 
 bool		_output_fill(struct buffer *buf, struct thread_ctx_s *ctx);
 void 		_output_new_stream(struct buffer *buf, struct thread_ctx_s *ctx);
-void 		_output_end_stream(bool finish, struct thread_ctx_s *ctx);
+void 		_output_end_stream(struct buffer *buf, struct thread_ctx_s *ctx);
 void 		_checkfade(bool, struct thread_ctx_s *ctx);
 void 		_checkduration(u32_t frames, struct thread_ctx_s *ctx);
 

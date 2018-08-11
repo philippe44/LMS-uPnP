@@ -146,4 +146,16 @@ unsigned _buf_read(void *dst, struct buffer *src, unsigned size) {
 	return a_size;
 }
 
+unsigned _buf_write(struct buffer *buf, void *src, unsigned size) {
+	unsigned bytes;
+
+	size = min(size, _buf_space(buf));
+	bytes = min(size, _buf_cont_write(buf));
+	memcpy(buf->writep, src, bytes);
+	memcpy(buf->buf, (u8_t*) src + bytes, size - bytes);
+	_buf_inc_writep(buf, size);
+
+	return size;
+}
+
 

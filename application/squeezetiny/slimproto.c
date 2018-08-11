@@ -584,23 +584,9 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 		if (ctx->output.state == OUTPUT_RUNNING && ctx->config.send_icy && 
 			ctx->output.icy.interval && (ctx->output.icy.last + ICY_UPDATE_TIME) - now > ICY_UPDATE_TIME) {
 			struct metadata_s metadata;
-			u32_t hash;
 
 			sq_get_metadata(ctx->self, &metadata, 0);
-			ctx->output.icy.last = now;
-
-			hash = hash32(metadata.artist) ^ hash32(metadata.title) ^ hash32(metadata.artwork);
-			if (hash != ctx->output.icy.hash) {
-				LOCK_O;
-				ctx->output.icy.updated = true;
-				ctx->output.icy.hash = hash;
-				output_free_icy(ctx);
-				ctx->output.icy.artist = strdupn(metadata.artist);
-				ctx->output.icy.title = strdupn(metadata.title);
-				ctx->output.icy.artwork = strdupn(metadata.artwork);
-				UNLOCK_O;
-			}
-
+			output_set_icy(&metadata, false, now, ctx);
 			sq_free_metadata(&metadata);
 		}
 
@@ -991,7 +977,6 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 	out->duration = info.metadata.duration;
 	out->bitrate = info.metadata.bitrate;
 	out->remote = info.metadata.remote;
-	out->icy.last = gettime_ms() - ICY_UPDATE_TIME;
 
 	// read source parameters (if any)
 	if (format != 'a')
@@ -1014,13 +999,11 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 						  out->channels, out->in_endian, ctx);
 	}
 
-	// reset time offset for new tracks
-	out->offset = 0;
-
 	// detect processing mode
 	if (stristr(mode, "thru")) out->encode.mode = ENCODE_THRU;
 	else if (stristr(mode, "pcm")) out->encode.mode = ENCODE_PCM;
 	else if (stristr(mode, "flac")) out->encode.mode = ENCODE_FLAC;
+	else if (stristr(mode, "mp3")) out->encode.mode = ENCODE_MP3;
 
 	// force read of re-encoding parameters
 	if ((p = stristr(mode, "r:")) != NULL) sample_rate = atoi(p+2);
@@ -1030,9 +1013,15 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 
 	// force re-encoding channels to be re-read
 	out->encode.channels = 0;
+	// reset time offset for new tracks
+	out->offset = 0;
+	// set ICY metadata if possible
+	if (ctx->config.send_icy && (!out->duration || out->encode.flow))
+		output_set_icy(&info.metadata, true, gettime_ms(), ctx);
 
 	// in case of flow, all parameters shall be set
 	if (stristr(mode, "flow") && out->encode.mode != ENCODE_THRU) {
+		if (ctx->config.send_icy) output_set_icy(&info.metadata, true, gettime_ms(), ctx);
 		sq_free_metadata(&info.metadata);
 		sq_default_metadata(&info.metadata, true);
 
@@ -1040,6 +1029,8 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 		if (!out->encode.sample_size) out->encode.sample_size = 16;
 		out->encode.channels = 2;
 		out->encode.flow = true;
+	} else {
+		if (ctx->config.send_icy && !out->duration) output_set_icy(&info.metadata, true, gettime_ms(), ctx);
 	}
 
 	// set sample rate for re-encoding
@@ -1070,7 +1061,6 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 			mimetype = find_mimetype(out->codec, ctx->mimetypes, NULL);
 			if (out->codec == 'f') out->codec ='c';
 			else out->codec = '*';
-			out->encode.mode = ENCODE_THRU;
 		}
 
 	} else if (out->encode.mode == ENCODE_PCM) {
@@ -1094,19 +1084,28 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 			mimetype = find_mimetype('p', ctx->mimetypes, format);
 		}
 
-		out->encode.mode = ENCODE_PCM;
-
 	} else if (out->encode.mode == ENCODE_FLAC) {
 
 		mimetype = find_mimetype('f', ctx->mimetypes, NULL);
-		out->encode.mode = ENCODE_FLAC;
 		if (out->sample_size > 24) out->encode.sample_size = 24;
 		if ((p = stristr(mode, "flac:")) != NULL) out->encode.level = atoi(p+5);
 		if (out->encode.level > 9) out->encode.level = 0;
 
+	} else if (out->encode.mode == ENCODE_MP3) {
+
+		mimetype = find_mimetype('m', ctx->mimetypes, NULL);
+		out->encode.sample_size = 16;
+		// need to tweak a bit samples rates
+		if (!out->supported_rates[0] || out->supported_rates[0] < -48000 ) out->supported_rates[0] = -48000;
+		else if (out->supported_rates[0] > 48000) out->supported_rates[0] = out->encode.sample_rate = 48000;
+		if ((p = stristr(mode, "mp3:")) != NULL) {
+			out->encode.level = atoi(p+4);
+			if (out->encode.level > 320) out->encode.level = 320;
+		} else out->encode.level = 128;
+
 	}
 
-	// matching found in player
+	// matching found in player
 	if (mimetype) {
 		strcpy(out->mimetype, mimetype);
 		free(mimetype);

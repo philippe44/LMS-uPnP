@@ -34,7 +34,7 @@ static log_level 	*loglevel = &output_loglevel;
 #define MAX_BLOCK		(32*1024)
 #define TAIL_SIZE		(2048*1024)
 #define HEAD_SIZE		65536
-#define ICY_INTERVAL	32000
+#define ICY_INTERVAL	16384
 #define TIMEOUT			50
 #define SLEEP			50
 #define DRAIN_MAX		(5000 / TIMEOUT)
@@ -256,7 +256,7 @@ static void output_http_thread(struct thread_param_s *param) {
 		decoded (COMPLETE), sent in outputbuf, transfered to obuf which is then
 		fully sent to the player before that track even starts, so as soon as it
 		actually starts, decoder states moves to STOPPED, STMd is sent but new
-		deata does not arrive before the test below happens, so output thread
+		data does not arrive before the test below happens, so output thread
 		exit. I	don't know how to prevent that from happening, except by using
 		horrific timers
 		*/
@@ -266,7 +266,7 @@ static void output_http_thread(struct thread_param_s *param) {
 			else drain_count = DRAIN_MAX;
 		} else if (drain_count && !_output_fill(obuf, ctx) && ctx->decode.state > DECODE_RUNNING) {
 			// full track pulled from outputbuf, draining from obuf
-			_output_end_stream(true, ctx);
+			_output_end_stream(obuf, ctx);
 			ctx->output.completed = true;
 			drain_count = 0;
 			wake_controller(ctx);
@@ -364,8 +364,8 @@ static void output_http_thread(struct thread_param_s *param) {
 	thread->http = -1;
 	thread->running = false;
 	if (ctx->output.encode.flow) {
-		// terminate codec if needed (FLAC so far)
-		_output_end_stream(false, ctx);
+		// terminate codec if needed
+		_output_end_stream(NULL, ctx);
 		// need to have slimproto move on in case of stream failure
 		ctx->output.completed = true;
 	}
@@ -424,15 +424,14 @@ static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, int thread_index,
 	// check if add ICY metadata is needed (only on live stream)
 	ctx->output.icy.interval = ctx->output.icy.count = 0;
 	format = mimetype2format(ctx->output.mimetype);
-	if (ctx->config.send_icy && !ctx->output.duration &&
+	if (ctx->config.send_icy && (!ctx->output.duration || ctx->output.encode.flow) &&
 		(format == 'm' || format == 'a') &&
 		((str = kd_lookup(headers, "Icy-MetaData")) != NULL) && atol(str)) {
 		asprintf(&str, "%u", ICY_INTERVAL);
 		kd_add(resp, "icy-metaint", str);
 		LOCK_O;
 		ctx->output.icy.interval = ctx->output.icy.remain = ICY_INTERVAL;
-		// just to make sure icy will be resent
-		ctx->output.icy.hash++;
+		ctx->output.icy.updated = true;
 		UNLOCK_O;
 	}
 

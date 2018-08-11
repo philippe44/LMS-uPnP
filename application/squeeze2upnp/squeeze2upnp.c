@@ -1163,9 +1163,9 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 		return false;
 	}
 
-	CheckCodecs(Device->sq_config.codecs, *Sink);
+	CheckCodecs(Device->sq_config.codecs, *Sink, Device->Config.ForcedMimeTypes);
 
-	MakeMacUnique(Device);
+	MakeMacUnique(Device);
 
 	pthread_cond_init(&Device->Cond, 0);
 	pthread_create(&Device->Thread, NULL, &MRThread, Device);

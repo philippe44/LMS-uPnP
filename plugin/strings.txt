@@ -183,7 +183,7 @@ PLUGIN_UPNPBRIDGE_CODECSPARAM_DESC
 	EN	improves compatibility by sending controlled format and allows replay gain as well as fading in and out. It's also 
 	EN	possible to send audio in a continuous flow of data instead of tracks one-bye-one to enable true gapless and 
 	EN	cross-fading. See user's guide for more details
-	EN	<br>- <i>Mode:</i> set processing mode. Format is [thru|pcm|flac:[q]][,r:[-]<rate>][,s:8|16|24][,flow]. "thru" is simple 
+	EN	<br>- <i>Mode:</i> set processing mode. Format is [thru|pcm|flac[:0..9]][,r:[-]\<rate\>][,s:\<8|16|24\>][,flow]. "thru" is simple 
 	EN	passthru, "pcm" and "flac" are for decoding, re-encoding and sending in "pcm" or "flac" to player. When re-encoding
 	EN	"r:" forces	a maximum sample rate when predicated with "-" or a fixed sample rate if not. "s:" is to set sample size. 
 	EN	"flow" forces creates a continuous sample flow of audio, enabling true gapless and cross-fading, but metadata will not 

@@ -21,6 +21,7 @@
 
 #include "squeezelite.h"
 #include "FLAC/stream_encoder.h"
+#include "shine/src/lib/layer3.h"
 
 extern log_level	output_loglevel;
 static log_level 	*loglevel = &output_loglevel;
@@ -28,7 +29,7 @@ static log_level 	*loglevel = &output_loglevel;
 #define LOCK_O 	 mutex_lock(ctx->outputbuf->mutex)
 #define UNLOCK_O mutex_unlock(ctx->outputbuf->mutex)
 
-static size_t 	gain_and_fade(size_t frames, size_t min_frames, u8_t shift, struct thread_ctx_s *ctx);
+static size_t 	gain_and_fade(size_t frames, u8_t shift, struct thread_ctx_s *ctx);
 static void 	lpcm_pack(u8_t *dst, u8_t *src, size_t bytes, u8_t channels, int endian);
 static void apply_gain(s32_t *iptr, u32_t fade, u32_t gain, u8_t shift, size_t frames);
 static void 	apply_cross(struct buffer *outputbuf, s32_t *cptr, u32_t fade,
@@ -59,7 +60,8 @@ static struct {
 #endif
 
 #define FLAC_BLOCK_SIZE 1024
-#define FLAC_MIN_SPACE	(32*1024)
+#define FLAC_MAX_FRAMES	4096
+#define FLAC_MIN_SPACE	(FLAC_MAX_FRAMES * BYTES_PER_FRAME)
 
 #define DRAIN_LEN		3
 #define MAX_FRAMES_SEC 	10
@@ -194,14 +196,10 @@ bool _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
 
 			if (p->icy.updated) {
 				// there is room for 1 extra byte at the beginning for length
-#if ICY_ARTWORK
-				len_16 = sprintf(p->icy.buffer, "NStreamTitle='%s - %s';StreamURL='%s';",
-								 p->icy.artist, p->icy.title, p->icy.artwork) - 1;
+				len_16 = sprintf(p->icy.buffer, "NStreamTitle='%s%s%s';StreamURL='%s';",
+								 p->icy.artist, *p->icy.artist ? " - " : "",
+								 p->icy.title, p->icy.artwork) - 1;
 				LOG_INFO("[%p]: ICY update\n\t%s\n\t%s\n\t%s", ctx, p->icy.artist, p->icy.title, p->icy.artwork);
-#else
-				len_16 = sprintf(p->icy.buffer, "NStreamTitle='%s - %s'", p->icy.artist, p->icy.title) - 1;
-				LOG_INFO("[%p]: ICY update\n\t%s\n\t%s", ctx, p->icy.artist, p->icy.title);
-#endif
 				len_16 = (len_16 + 15) / 16;
 			}
 
@@ -234,75 +232,128 @@ bool _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
 		if (p->icy.interval) p->icy.remain -= bytes;
 	} else {
 		// uncompressed audio to be processed
-		size_t in, out, frames = 0, bytes_per_frame = (p->encode.sample_size / 8) * p->encode.channels;
-		u8_t *optr, obuf[BYTES_PER_FRAME*2];
+		size_t in, out, frames = 0, process;
+		size_t bytes_per_frame = (p->encode.sample_size / 8) * p->encode.channels;
 
 		// outputbuf is processed by BYTES_PER_FRAMES multiples => aligns fine
 		in = min(_buf_used(ctx->outputbuf), _buf_cont_read(ctx->outputbuf));
 
+		// no bytes may mean end of audio data - need at least one frame
+		if (!in) return false;
+		else if (in < BYTES_PER_FRAME) return true;
+
 		if (p->encode.mode == ENCODE_PCM) {
-			u8_t min_frames;
+			u8_t *optr, obuf[BYTES_PER_FRAME*2];
 
-			// no bytes may mean end of audio data, let caller decide
-			if (!in) return false;
-
-			// in case of L24_LPCM, we need 2 frames at least
-			if (p->encode.sample_size == 24 && ctx->config.L24_format == L24_PACKED_LPCM && p->format == 'p') min_frames = 2;
-			else min_frames = 1;
-
-			// buf cannot count on alignement because of headers (wav /aif)
+			// buf cannot count on alignment because of headers (wav/aif)
 			out = min(_buf_space(buf), _buf_cont_write(buf));
 
-			// not enough cont'd place in output, just process one frame
-			if (out < bytes_per_frame * min_frames) {
+			// not enough cont'd place in output, just process 2 frames
+			if (out < bytes_per_frame * 2) {
 				optr = obuf;
-				out = bytes_per_frame * min_frames;
+				out = bytes_per_frame * 2;
 			} else optr = buf->writep;
 
+			// all modes excpet 24 bits packed
+			in = min(in, _buf_cont_read(ctx->outputbuf));
 			frames = min(in / BYTES_PER_FRAME, out / bytes_per_frame);
 			frames = min(frames, p->encode.sample_rate / MAX_FRAMES_SEC);
+			if (p->encode.buffer && p->encode.count == 1) frames = 1;
 
 			// fading & gain
-			frames = gain_and_fade(frames, min_frames, 0, ctx);
+			process = frames = gain_and_fade(frames, 0, ctx);
 
-			// not able to process at that time
+			// not able to process at that time (cross-fade), callback later
 			if (!frames) return true;
 
-			if (min_frames == 2)
-				lpcm_pack((u8_t*) optr, ctx->outputbuf->readp, frames * BYTES_PER_FRAME,
-						  p->encode.channels, 1);
-			else
-				scale_and_pack(optr, (u32_t*) ctx->outputbuf->readp, frames,
-							   p->encode.channels, p->encode.sample_size, p->out_endian);
+			// in case of L24_LPCM, we need 2 frames at least
+			if (p->encode.buffer) {
+				if (frames == 1) {
+					*((s32_t*) p->encode.buffer + p->encode.count) = *((s32_t*) ctx->outputbuf->readp);
+					if (++p->encode.count == 2) {
+						lpcm_pack((u8_t*) optr, p->encode.buffer, 2 * BYTES_PER_FRAME, p->encode.channels, 1);
+						p->encode.count = 0;
+						process = 2;
+					} else process = 0;
+				} else lpcm_pack((u8_t*) optr, ctx->outputbuf->readp, frames * BYTES_PER_FRAME,
+								  p->encode.channels, 1);
+			} else scale_and_pack(optr, (u32_t*) ctx->outputbuf->readp, frames,
+								  p->encode.channels, p->encode.sample_size, p->out_endian);
 
-			// take the data from temporary buffer if needed
-			if (optr == obuf) {
-				size_t out = _buf_cont_write(buf);
-				memcpy(buf->writep, optr, out);
-				memcpy(buf->buf, optr + out, bytes_per_frame * min_frames - out);
-			}
-
-			_buf_inc_writep(buf, frames * bytes_per_frame);
+			// take the data from temporary buffer if needed
+			if (optr == obuf) _buf_write(buf, optr, bytes_per_frame * process);
+			else _buf_inc_writep(buf, process * bytes_per_frame);
 		} else if (p->encode.mode == ENCODE_FLAC) {
-			out = _buf_space(buf);
+			if (!p->encode.codec) return false;
 
 			// make sure FLAC has enough space to proceed
-			if (out < FLAC_MIN_SPACE) return true;
+			if (_buf_space(buf) < FLAC_MIN_SPACE) return true;
 
-			// no bytes may mean end of audio data, let caller decide
-			if (!in) return false;
-
-			frames = min(in / BYTES_PER_FRAME, out / bytes_per_frame);
+			// FLAC can take a little as one frame, just need the cont'd space
+			frames = min(in / BYTES_PER_FRAME, FLAC_MAX_FRAMES);
 			frames = min(frames, p->encode.sample_rate / MAX_FRAMES_SEC);
 
 			// fading & gain
-			frames = gain_and_fade(frames, 1, 32 - p->encode.sample_size, ctx);
+			frames = gain_and_fade(frames, 32 - p->encode.sample_size, ctx);
 
-			// not able to process at that time
+			// see comment in gain_and_fade
 			if (!frames) return true;
 
 			if (p->encode.channels == 1) to_mono((s32_t*) ctx->outputbuf->readp, frames);
 			FLAC(f, stream_encoder_process_interleaved, p->encode.codec, (FLAC__int32*) ctx->outputbuf->readp, frames);
+		} else if (p->encode.mode == ENCODE_MP3) {
+			s32_t *iptr;
+			s16_t *optr;
+			int i, block = shine_samples_per_pass(p->encode.codec);
+
+			if (!p->encode.codec) return false;
+
+			// make sure we have enough space in output (assume 1:1 ratio ...)
+			if (_buf_space(buf) < SHINE_MAX_SAMPLES * 2) return true;
+
+			// if there is any pending data to be sent
+			if (p->encode.pending) {
+				_buf_write(buf, p->encode.data, p->encode.pending);
+				if (p->icy.interval) p->icy.remain -= p->encode.pending;
+				p->encode.pending = 0;
+			}
+
+			frames = min(in / BYTES_PER_FRAME, block - p->encode.count);
+			frames = min(frames, p->encode.sample_rate / MAX_FRAMES_SEC);
+
+			// fading & gain
+			frames = gain_and_fade(frames, 0, ctx);
+
+			// see comment in gain_and_fade
+			if (!frames) return true;
+
+			// aggregate the data in interim buffer
+			iptr = (s32_t*) ctx->outputbuf->readp;
+			optr = (s16_t*) p->encode.buffer + p->encode.count * p->encode.channels;
+			if (p->encode.channels == 2) for (i = 0; i < frames * 2; i++) *optr++ = *iptr++ >> 16;
+			else for (i = 0; i < frames; i++) *optr++ = iptr[2*i] >> 16;
+			p->encode.count += frames;
+
+			// full block available, encode it
+			if (p->encode.count == block) {
+				int bytes;
+				u8_t *data;
+
+				p->encode.count = 0;
+				data = shine_encode_buffer_interleaved(p->encode.codec, (s16_t*) p->encode.buffer, &bytes);
+
+				// must take care of icy limit if any
+				if (p->icy.interval) {
+					if (p->icy.remain < bytes) {
+						p->encode.pending = bytes - p->icy.remain;
+						p->encode.data = data + p->icy.remain;
+						bytes = p->icy.remain;
+					}
+					p->icy.remain -= bytes;
+				}
+
+				_buf_write(buf, data, bytes);
+			}
 		}
 
 		_buf_inc_readp(ctx->outputbuf, frames * BYTES_PER_FRAME);
@@ -323,7 +374,6 @@ void _output_new_stream(struct buffer *obuf, struct thread_ctx_s *ctx) {
 		if (ctx->config.L24_format == L24_TRUNC16 && out->sample_size == 24) out->encode.sample_size = 16;
 		else out->encode.sample_size = out->sample_size;
 	}
-
 
 	if (out->encode.mode == ENCODE_PCM) {
 		size_t length;
@@ -378,6 +428,10 @@ void _output_new_stream(struct buffer *obuf, struct thread_ctx_s *ctx) {
 			default:
 			out->header.buffer = NULL;
 			out->header.size = out->header.count = 0;
+			if (out->encode.sample_size == 24 && ctx->config.L24_format == L24_PACKED_LPCM) {
+				out->encode.buffer = malloc(3 * out->encode.channels);
+				out->encode.count = 2;
+            }
 			//FIXME: why setting length here at 0?
 			// length = 0;
 			break;
@@ -388,11 +442,9 @@ void _output_new_stream(struct buffer *obuf, struct thread_ctx_s *ctx) {
 		LOG_INFO("[%p]: PCM estimated size %zu", ctx, length);
 	} else if (out->encode.mode == ENCODE_FLAC) {
 		FLAC__StreamEncoder *codec;
-		size_t size;
 		bool ok;
 
-		size = max((out->encode.sample_rate * out->encode.channels * out->encode.sample_size / 8 * DRAIN_LEN) / 2, 2 * FLAC_MIN_SPACE);
-		buf_init(obuf, size);
+		buf_init(obuf, max((out->encode.sample_rate * out->encode.channels * out->encode.sample_size / 8 * DRAIN_LEN) / 2, 2 * FLAC_MIN_SPACE));
 
 		codec = FLAC(f, stream_encoder_new);
 		ok = FLAC(f, stream_encoder_set_verify,codec, false);
@@ -405,21 +457,72 @@ void _output_new_stream(struct buffer *obuf, struct thread_ctx_s *ctx) {
 		ok &= !FLAC(f, stream_encoder_init_stream, codec, flac_write_callback, NULL, NULL, NULL, obuf);
 		out->encode.codec = (void*) codec;
 
-		LOG_INFO("[%p]: encoding using FLAC (%u)", ctx, ok);
+		LOG_INFO("[%p]: encoding using FLAC (codec:%p %u)", ctx, out->encode.codec, ok);
+	} else if (out->encode.mode == ENCODE_MP3) {
+		shine_config_t config;
+		
+		buf_init(obuf, (out->encode.level * 1024 / 8) * DRAIN_LEN);
+
+		shine_set_config_mpeg_defaults(&config.mpeg);
+		config.wave.samplerate = out->encode.sample_rate;
+		config.wave.channels = out->encode.channels;
+		config.mpeg.bitr = out->encode.level;
+		if (config.wave.channels > 1) config.mpeg.mode = STEREO;
+		else config.mpeg.mode = MONO;
+
+		out->encode.codec = (void*) shine_initialise(&config);
+		out->encode.buffer = malloc(shine_samples_per_pass(out->encode.codec) * out->encode.channels * 2);
+		out->encode.count = 0;
+		out->encode.pending = 0;
+
+		LOG_INFO("[%p]: encoding using MP3 shine (codec:%p)", ctx, out->encode.codec);
 	} else {
 		buf_init(obuf, max((out->bitrate * DRAIN_LEN) / 8, 128*1024));
 	}
 }
 
 /*---------------------------------------------------------------------------*/
-void _output_end_stream(bool finish, struct thread_ctx_s *ctx) {
-	if (ctx->output.encode.mode == ENCODE_FLAC && ctx->output.encode.codec) {
-		// FLAC is a pain and requires a last encode call
-		LOG_INFO("[%p]: finishing FLAC", ctx);
-		if (finish) FLAC(f, stream_encoder_finish, ctx->output.encode.codec);
-		FLAC(f, stream_encoder_delete, ctx->output.encode.codec);
-		ctx->output.encode.codec = NULL;
+void _output_end_stream(struct buffer *buf, struct thread_ctx_s *ctx) {
+	struct outputstate *out = &ctx->output;
+
+	if (out->encode.codec) {
+		if (out->encode.mode == ENCODE_FLAC) {
+			// FLAC is a pain and requires a last encode call
+			LOG_INFO("[%p]: finishing FLAC", ctx);
+			if (buf) FLAC(f, stream_encoder_finish, out->encode.codec);
+			FLAC(f, stream_encoder_delete, out->encode.codec);
+			out->encode.codec = NULL;
+		} else if (out->encode.mode == ENCODE_MP3) {
+			LOG_INFO("[%p]: finishing MP3", ctx);
+			if (buf) {
+				int bytes;
+				u8_t *data;
+
+				// if there is any pending data to be sent
+				if (out->encode.pending) _buf_write(buf, out->encode.data, out->encode.pending);
+
+				// code remaining audio
+				if (out->encode.count) {
+					memset(out->encode.buffer + out->encode.count * out->encode.channels * 2,
+						   0, (shine_samples_per_pass(out->encode.codec) - out->encode.count) * out->encode.channels * 2);
+					data = shine_encode_buffer_interleaved(out->encode.codec, (s16_t*) out->encode.buffer, &bytes);
+					_buf_write(buf, data, bytes);
+				}
+
+				// final encoder flush
+				data = shine_flush(out->encode.codec, &bytes);
+				_buf_write(buf, data, bytes);
+			}
+			shine_close(out->encode.codec);
+			out->encode.codec = NULL;
+		}
 	}
+
+	// free any buffer
+	NFREE(out->encode.buffer);
+	out->encode.count = 0;
+	out->encode.pending = 0;
+	out->fade_writep = NULL;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -441,14 +544,14 @@ void output_flush(struct thread_ctx_s *ctx) {
 		UNLOCK_O;
 		pthread_join(ctx->output_thread[i].thread, NULL);
 		LOCK_O;
-    }
+	}
 
 	ctx->output.track_started = false;
 	ctx->output.track_start = NULL;
 	ctx->output.encode.flow = false;
 	NFREE(ctx->output.header.buffer);
 	output_free_icy(ctx);
-	_output_end_stream(false, ctx);
+	_output_end_stream(NULL, ctx);
 	ctx->render.index = -1;
 	_buf_resize(ctx->outputbuf, OUTPUTBUF_IDLE_SIZE);
 
@@ -467,13 +570,16 @@ bool output_init(struct thread_ctx_s *ctx) {
 	ctx->outputbuf = &ctx->__o_buf;
 	buf_init(ctx->outputbuf, OUTPUTBUF_IDLE_SIZE);
 
+	// all this is NULL at init, normally ...
 	ctx->output.track_started = false;
 	ctx->output.track_start = NULL;
 	ctx->output.encode.flow = false;
 	ctx->output.encode.codec = NULL;
+	ctx->output.fade_writep = NULL;
+	ctx->output.icy.artist = ctx->output.icy.title = ctx->output.icy.artwork = NULL;
+
 	ctx->output_thread[0].running = ctx->output_thread[1].running = false;
 	ctx->output_thread[0].http = ctx->output_thread[1].http = -1;
-	ctx->output.icy.artist = ctx->output.icy.title = ctx->output.icy.artwork = NULL;
 	ctx->render.index = -1;
 
 #if !LINKALL
@@ -520,23 +626,44 @@ void output_free_icy(struct thread_ctx_s *ctx) {
 }
 
 /*---------------------------------------------------------------------------*/
+void output_set_icy(struct metadata_s *metadata, bool init, u32_t now, struct thread_ctx_s *ctx) {
+	u32_t hash;
+
+	ctx->output.icy.last = now;
+	hash = hash32(metadata->artist) ^ hash32(metadata->title) ^ hash32(metadata->artwork);
+	if (init || hash != ctx->output.icy.hash) {
+		LOCK_O;
+		if (!init) ctx->output.icy.updated = true;
+		ctx->output.icy.hash = hash;
+		output_free_icy(ctx);
+		ctx->output.icy.artist = strdupn(metadata->artist);
+		ctx->output.icy.title = strdupn(metadata->title);
+		ctx->output.icy.artwork = strdupn(metadata->artwork);
+		UNLOCK_O;
+	}
+}
+
+/*---------------------------------------------------------------------------*/
 void _checkduration(u32_t frames, struct thread_ctx_s *ctx) {
 	u32_t duration;
+	s32_t gap;
 
 	if (!ctx->output.encode.flow) return;
 
 	duration = ((u64_t) frames * 1000 ) / ctx->output.direct_sample_rate;
 
-	if (duration != ctx->render.duration) {
-		LOG_INFO("[%p]: duration adjust f:%u t:%u", ctx, duration, ctx->render.duration);
+	if (ctx->output.index == ctx->render.index) {
+		gap = duration - ctx->render.duration;
+		ctx->render.duration = duration;
+		LOG_INFO("[%p]: adjust (playing) d:%u (%d)", ctx, ctx->render.duration, gap);
+	} else {
+		gap = duration - ctx->output.duration;
 		ctx->output.duration = duration;
-		if (ctx->output.index != ctx->render.index) {
-			ctx->render.duration = duration;
-			LOG_INFO("[%p]: updating in playing track", ctx);
-		}
-		if (abs((s32_t) (duration - ctx->render.duration)) > 1000) {
-			LOG_WARN("[%p]: duration too long", ctx);
-		}
+		LOG_INFO("[%p]: adjust (next) d:%u (%d)", ctx, ctx->output.duration, gap);
+	}
+
+	if (abs(gap) > 1000) {
+		LOG_WARN("[%p]: gap too large d:%u g:%d", ctx, duration, gap);
 	}
 }
 
@@ -714,74 +841,67 @@ static void to_mono(s32_t *iptr,  size_t frames) {
 
 /*---------------------------------------------------------------------------*/
 void _checkfade(bool start, struct thread_ctx_s *ctx) {
+	struct outputstate *out = &ctx->output;
 	frames_t bytes;
 
-	LOG_INFO("[%p]: fade mode: %u duration: %u %s", ctx, ctx->output.fade_mode, ctx->output.fade_secs, start ? "track-start" : "track-end");
+	LOG_INFO("[%p]: fade mode: %u duration: %u %s", ctx, out->fade_mode, out->fade_secs, start ? "track-start" : "track-end");
 
 	// encode sample_rate might not be set yet (means == source sample_rate)
-	if (ctx->output.encode.sample_rate) bytes = ctx->output.encode.sample_rate * BYTES_PER_FRAME * ctx->output.fade_secs;
-	else bytes = ctx->output.sample_rate * BYTES_PER_FRAME * ctx->output.fade_secs;
-	if (ctx->output.fade_mode == FADE_INOUT) {
+	if (out->encode.sample_rate) bytes = out->encode.sample_rate * BYTES_PER_FRAME * out->fade_secs;
+	else bytes = out->sample_rate * BYTES_PER_FRAME * out->fade_secs;
+
+	if (out->fade_mode == FADE_INOUT) {
 		// must be aligned on a frame boundary otherwise output process locks
 		bytes = ((bytes / 2) / BYTES_PER_FRAME) * BYTES_PER_FRAME;
 	}
 
-	if (start && (ctx->output.fade_mode == FADE_IN || (ctx->output.fade_mode == FADE_INOUT && _buf_used(ctx->outputbuf) == 0))) {
+	if (start && (out->fade_mode == FADE_IN || (out->fade_mode == FADE_INOUT && _buf_used(ctx->outputbuf) == 0))) {
 		bytes = min(bytes, ctx->outputbuf->size - BYTES_PER_FRAME); // shorter than full buffer otherwise start and end align
 		LOG_INFO("[%p]: fade IN: %u frames", ctx, bytes / BYTES_PER_FRAME);
-		ctx->output.fade = FADE_DUE;
-		ctx->output.fade_dir = FADE_UP;
-		ctx->output.fade_start = ctx->outputbuf->writep;
-		ctx->output.fade_end = ctx->output.fade_start + bytes;
-		if (ctx->output.fade_end >= ctx->outputbuf->wrap) {
-			ctx->output.fade_end -= ctx->outputbuf->size;
-		}
+		out->fade = FADE_DUE;
+		out->fade_dir = FADE_UP;
+		out->fade_start = ctx->outputbuf->writep;
+		out->fade_end = out->fade_start + bytes;
+		if (out->fade_end >= ctx->outputbuf->wrap) out->fade_end -= ctx->outputbuf->size;
 	}
 
-	if (!start && (ctx->output.fade_mode == FADE_OUT || ctx->output.fade_mode == FADE_INOUT)) {
-		if (!ctx->output.fade) {
+	if (!start && (out->fade_mode == FADE_OUT || out->fade_mode == FADE_INOUT)) {
+		// need to memorize the fade context for later
+		if (!out->fade) {
 			bytes = min(_buf_used(ctx->outputbuf), bytes);
-			LOG_INFO("[%p]: fade %s: %u frames", ctx, ctx->output.fade_mode == FADE_INOUT ? "IN-OUT" : "OUT", bytes / BYTES_PER_FRAME);
-			ctx->output.fade = FADE_DUE;
-			ctx->output.fade_dir = FADE_DOWN;
-			ctx->output.fade_start = ctx->outputbuf->writep - bytes;
-			if (ctx->output.fade_start < ctx->outputbuf->buf) {
-				ctx->output.fade_start += ctx->outputbuf->size;
-			}
-			ctx->output.fade_end = ctx->outputbuf->writep;
+			LOG_INFO("[%p]: fade %s: %u frames", ctx, out->fade_mode == FADE_INOUT ? "IN-OUT" : "OUT", bytes / BYTES_PER_FRAME);
+			out->fade = FADE_DUE;
+			out->fade_dir = FADE_DOWN;
+			out->fade_start = ctx->outputbuf->writep - bytes;
+			if (out->fade_start < ctx->outputbuf->buf) out->fade_start += ctx->outputbuf->size;
+			out->fade_end = ctx->outputbuf->writep;
 		} else {
-			// optionally, writep should be memorized for when continuous streaming is available
-			ctx->output.fade = FADE_PENDING;
-			LOG_INFO("[%p]: fade OUT delayed as IN still processing", ctx);
+			out->fade_writep = ctx->outputbuf->writep;
+			LOG_INFO("[%p]: fade IN active -> delay OUT", ctx);
 		}
 	}
 
-	if (start && ctx->output.fade_mode == FADE_CROSSFADE) {
+	if (start && out->fade_mode == FADE_CROSSFADE) {
 		// condition will always be false except in flow mode
 		if (_buf_used(ctx->outputbuf) != 0) {
 			bytes = min(bytes, _buf_used(ctx->outputbuf));
 			// max of 90% of outputbuf as we consume additional buffer during crossfade
 			bytes = min(bytes, (((9 * ctx->outputbuf->size) / 10) / BYTES_PER_FRAME) * BYTES_PER_FRAME);
 			LOG_INFO("[%p]: CROSSFADE: %u frames", ctx, bytes / BYTES_PER_FRAME);
-			ctx->output.fade = FADE_DUE;
-			ctx->output.fade_dir = FADE_CROSS;
-			ctx->output.fade_start = ctx->outputbuf->writep - bytes;
-			if (ctx->output.fade_start < ctx->outputbuf->buf) {
-				ctx->output.fade_start += ctx->outputbuf->size;
-			}
-			ctx->output.fade_end = ctx->outputbuf->writep;
+			out->fade = FADE_DUE;
+			out->fade_dir = FADE_CROSS;
+			out->fade_start = ctx->outputbuf->writep - bytes;
+			if (out->fade_start < ctx->outputbuf->buf) out->fade_start += ctx->outputbuf->size;
+			out->fade_end = ctx->outputbuf->writep;
 		}
 	}
 }
 
 /*---------------------------------------------------------------------------*/
-size_t gain_and_fade(size_t frames, size_t min_frames, u8_t shift, struct thread_ctx_s *ctx) {
+size_t gain_and_fade(size_t frames, u8_t shift, struct thread_ctx_s *ctx) {
 	struct outputstate *out = &ctx->output;
-	u32_t fade = 65536;
+	u32_t gain = 65536;
 	s32_t *cptr = NULL;
-
-	// avoid LOG_ERROR message if no frame to process
-	if (!frames) return frames;
 
 	// need to align replay_gain change
 	if (out->track_start) {
@@ -796,7 +916,7 @@ size_t gain_and_fade(size_t frames, size_t min_frames, u8_t shift, struct thread
 	}
 
 	if (out->fade == FADE_DUE) {
-		LOG_SDEBUG("[%p] fade check at %p (start %p)", ctx, ctx->outputbuf->readp, ctx->output.fade_start);
+		LOG_SDEBUG("[%p] fade check at %p (start %p)", ctx, ctx->outputbuf->readp, out->fade_start);
 		if (out->fade_start == ctx->outputbuf->readp) {
 			LOG_INFO("[%p]: fade start reached", ctx);
 			out->fade = FADE_ACTIVE;
@@ -805,7 +925,7 @@ size_t gain_and_fade(size_t frames, size_t min_frames, u8_t shift, struct thread
 		}
 	}
 
-	if (out->fade == FADE_ACTIVE || out->fade == FADE_PENDING) {
+	if (out->fade == FADE_ACTIVE) {
 		// find position within fade
 		frames_t cur_f = ctx->outputbuf->readp >= out->fade_start ? (ctx->outputbuf->readp - out->fade_start) / BYTES_PER_FRAME :
 			(ctx->outputbuf->readp + ctx->outputbuf->size - out->fade_start) / BYTES_PER_FRAME;
@@ -838,8 +958,16 @@ size_t gain_and_fade(size_t frames, size_t min_frames, u8_t shift, struct thread
 				out->replay_gain = out->next_replay_gain;
 			} else {
 				LOG_INFO("[%p]: fade complete", ctx);
-				if (out->fade == FADE_PENDING) _checkfade(false, ctx);
-				else out->fade = FADE_INACTIVE;
+            	out->fade = FADE_INACTIVE;
+				if (out->fade_writep) {
+					size_t bytes = (out->encode.sample_rate * BYTES_PER_FRAME * out->fade_secs) / 2;
+					bytes = min((bytes / BYTES_PER_FRAME) * BYTES_PER_FRAME, _buf_used(ctx->outputbuf));
+                    LOG_INFO("[%p]: fade pending OUT: %u frames", ctx, bytes / BYTES_PER_FRAME);
+					out->fade_dir = FADE_DOWN;
+					out->fade_start = out->fade_writep - bytes;
+					if (out->fade_start < ctx->outputbuf->buf) out->fade_start += ctx->outputbuf->size;
+					out->fade_end = out->fade_writep;
+				}
 			}
 		}
 
@@ -851,37 +979,42 @@ size_t gain_and_fade(size_t frames, size_t min_frames, u8_t shift, struct thread
 
 			if (out->fade_dir == FADE_UP || out->fade_dir == FADE_DOWN) {
 				if (out->fade_dir == FADE_DOWN) cur_f = dur_f - cur_f;
-				fade = ((u64_t) cur_f << 16) / dur_f;
+				gain = ((u64_t) cur_f << 16) / dur_f;
 			} else if (out->fade_dir == FADE_CROSS) {
-				size_t in = _buf_used(ctx->outputbuf) / BYTES_PER_FRAME;
 				// cross fade requires special treatment done below
-				if (in > dur_f + frames) {
-					fade  = ((u64_t) cur_f << 16) / dur_f;
+				if (_buf_used(ctx->outputbuf) / BYTES_PER_FRAME > dur_f + frames) {
+					gain  = ((u64_t) cur_f << 16) / dur_f;
 					cptr = (s32_t *)(out->fade_end + cur_f * BYTES_PER_FRAME);
 				} else {
 					/*
-					Wait for decode to fill buffer. If the track is too short,
-					then we'll never get out of this, but then the output thread
-					will end on no data when the decoder stops, so at least we
-					arenot stuck
+					need more data in buffer to be able to proceed. The caller
+					can either respond to its own caller that he needs more data
+					or tell it's done. So it's about risk of stopping the flow
+					vs risk of being trap in an output_thread loop. Both require
+					user's intervention. Assuming that short tracks are rare
+					and that cross-fade does not happen for last track, then the
+					risk of being stuck is low & preferred.
 					*/
-					frames = in > dur_f ? in - dur_f : 0;
+					frames = 0;
+					LOG_INFO("[%p]: need more frames for cross-fade %u", ctx, dur_f + frames - _buf_used(ctx->outputbuf) / BYTES_PER_FRAME);
 				}
 			}
+		} else if (out->fade_writep) {
+			out->fade = FADE_DUE;
+			out->fade_writep = NULL;
 		}
 
-		LOG_DEBUG("[%p]: fade gain %d", ctx, fade);
+		LOG_DEBUG("[%p]: fade gain %d", ctx, gain);
 	}
 
-	// lpcm_pack requires at least 2 frames or buffer too short for cross fade
-	if ((frames || out->fade_dir == FADE_CROSS) && frames < min_frames) {
-		LOG_INFO("[%p]: not enough frames to proceed", ctx);
-		return 0;
+	if (frames) {
+		// now can apply various gain & fading
+		if (cptr) apply_cross(ctx->outputbuf, cptr, gain, out->replay_gain, out->next_replay_gain, shift, frames);
+		else apply_gain((s32_t*) ctx->outputbuf->readp, gain, out->replay_gain, shift, frames);
+	} else {
+		// need to wait for more input frames to do cross-fade
+		LOG_INFO("[%p]: not enough frames yet for cross-fade", ctx);
 	}
-
-	// now can apply various gain & fading
-	if (cptr) apply_cross(ctx->outputbuf, cptr, fade, out->replay_gain, out->next_replay_gain, shift, frames);
-	else apply_gain((s32_t*) ctx->outputbuf->readp, fade, out->replay_gain, shift, frames);
 
 	return frames;
 }

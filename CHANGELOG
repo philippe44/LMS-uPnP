@@ -1,3 +1,14 @@
+1.1.0
+ - add MP3 re-encoding
+ - icy artwork removes ' - ' when no artist
+ - reduce icy interval to 16384
+ - forced_mimetypes was not used for checking codecs
+ - fade-in/out was not working properly for short tracks in flow mode
+  
+1.0.1
+ - (1-2) start full icy metadata at the very begining ot HTTP response
+ - re-activate artwork sending in icy metadata
+ 
 1.0.0
  - full processing mode with flow
  - send STMd in case of streaming error (0 bytes)
