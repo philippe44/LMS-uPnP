@@ -59,6 +59,7 @@ static struct {
 } f;
 #endif
 
+// careful, this should not be more than 1/8 of obuf size
 #define FLAC_BLOCK_SIZE 1024
 #define FLAC_MAX_FRAMES	4096
 #define FLAC_MIN_SPACE	(FLAC_MAX_FRAMES * BYTES_PER_FRAME)
@@ -444,7 +445,7 @@ void _output_new_stream(struct buffer *obuf, struct thread_ctx_s *ctx) {
 		FLAC__StreamEncoder *codec;
 		bool ok;
 
-		buf_init(obuf, max((out->encode.sample_rate * out->encode.channels * out->encode.sample_size / 8 * DRAIN_LEN) / 2, 2 * FLAC_MIN_SPACE));
+		buf_init(obuf, max((out->encode.sample_rate * out->encode.channels * out->encode.sample_size / 8 * DRAIN_LEN) / 2, 10 * FLAC_MIN_SPACE));
 
 		codec = FLAC(f, stream_encoder_new);
 		ok = FLAC(f, stream_encoder_set_verify,codec, false);
@@ -455,12 +456,13 @@ void _output_new_stream(struct buffer *obuf, struct thread_ctx_s *ctx) {
 		ok &= FLAC(f, stream_encoder_set_blocksize, codec, FLAC_BLOCK_SIZE);
 		ok &= FLAC(f, stream_encoder_set_streamable_subset, codec, true);
 		ok &= !FLAC(f, stream_encoder_init_stream, codec, flac_write_callback, NULL, NULL, NULL, obuf);
-		out->encode.codec = (void*) codec;
+		if (ok) out->encode.codec = (void*) codec;
+		else  FLAC(f, stream_encoder_delete, codec);
 
-		LOG_INFO("[%p]: encoding using FLAC (codec:%p %u)", ctx, out->encode.codec, ok);
+		LOG_INFO("[%p]: encoding with FLAC (%p))", ctx, out->encode.codec);
 	} else if (out->encode.mode == ENCODE_MP3) {
 		shine_config_t config;
-		
+
 		buf_init(obuf, (out->encode.level * 1024 / 8) * DRAIN_LEN);
 
 		shine_set_config_mpeg_defaults(&config.mpeg);
@@ -475,7 +477,7 @@ void _output_new_stream(struct buffer *obuf, struct thread_ctx_s *ctx) {
 		out->encode.count = 0;
 		out->encode.pending = 0;
 
-		LOG_INFO("[%p]: encoding using MP3 shine (codec:%p)", ctx, out->encode.codec);
+		LOG_INFO("[%p]: encoding with shine MP3 (%p)", ctx, out->encode.codec);
 	} else {
 		buf_init(obuf, max((out->bitrate * DRAIN_LEN) / 8, 128*1024));
 	}

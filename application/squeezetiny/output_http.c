@@ -110,7 +110,7 @@ static void output_http_thread(struct thread_param_s *param) {
 	*/
 
 	while (thread->running) {
-		struct timeval timeout = {0, TIMEOUT*1000};
+		struct timeval timeout = {0, 0};
 		bool res = true;
 		int n;
 
@@ -154,6 +154,9 @@ static void output_http_thread(struct thread_param_s *param) {
 		FD_ZERO(&rfds);
 		FD_SET(sock, &rfds);
 
+		// short wait if obuf has free space and there is something to process
+		timeout.tv_usec = _buf_used(ctx->outputbuf) && _buf_space(obuf) > obuf->size / 8 ?
+						   			TIMEOUT*1000 / 10 : TIMEOUT*1000;
 		n = select(sock + 1, &rfds, &wfds, NULL, &timeout);
 
 		// need to wait till we have an initialized codec
@@ -257,11 +260,18 @@ static void output_http_thread(struct thread_param_s *param) {
 		fully sent to the player before that track even starts, so as soon as it
 		actually starts, decoder states moves to STOPPED, STMd is sent but new
 		data does not arrive before the test below happens, so output thread
-		exit. I	don't know how to prevent that from happening, except by using
-		horrific timers
+		exits. I don't know how to prevent that from happening, except by using
+		horrific timers. Note as well that drain_count is not a proper timer,
+		but it starts only to decrement when decoder is STOPPED and after all
+		outputbuf has been process, so when still sending obuf, the time counted
+		depends when the player releases the wfds, which is not predictible.
+		Still, as soon as obuf is empty, this is chunks of TIMEOUT, so it's very
+		unlikey that while emptying obuf, the decoder has not restarted if there
+		is a next track
 		*/
 
 		if (ctx->output.encode.flow) {
+			// drain_count is not really time, but close enough
 			if (!_output_fill(obuf, ctx) && ctx->decode.state == DECODE_STOPPED) drain_count--;
 			else drain_count = DRAIN_MAX;
 		} else if (drain_count && !_output_fill(obuf, ctx) && ctx->decode.state > DECODE_RUNNING) {
@@ -449,7 +459,7 @@ static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, int thread_index,
 			free(str);
 		}
 
-		mirror_header(headers, resp, "TransferMode.DLNA.ORG");
+		mirror_header(headers, resp, "transferMode.dlna.org");
 
 		if (kd_lookup(headers, "getcontentFeatures.dlna.org")) {
 			char *dlna_features = make_dlna_content(ctx->output.mimetype, ctx->output.duration);
