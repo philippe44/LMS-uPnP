@@ -5,7 +5,9 @@
  - forced_mimetypes was not used for checking codecs
  - fade-in/out was not working properly for short tracks in flow mode
  (2) transferMode.dlna.org has wrong case
-  
+ (3) shorter wait in select() if obuf has space and there is data to proceed
+ (3) faulty player timing pushed to SQ_TIME to hide from slimproto
+   
 1.0.1
  - (1-2) start full icy metadata at the very begining ot HTTP response
  - re-activate artwork sending in icy metadata

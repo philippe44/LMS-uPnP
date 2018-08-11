@@ -605,25 +605,37 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 			NFREE(rsp);
 			break;
 		}
+
 		case SQ_TIME: {
-			u32_t time = *((u32_t*) param);
-			LOG_DEBUG("[%p] time %d %d", ctx, ctx->render.ms_played, time);
+			u32_t now, time = *((u32_t*) param);
 			LOCK_O;
 			if (ctx->render.index != -1) {
-				ctx->render.ms_played = time - ctx->output.offset;
+				now = gettime_ms();
+
+				// check if player reports time correctly
+				if (!time) {
+					if (now > ctx->render.track_start_time + 3000) {
+						ctx->render.ms_played = now - ctx->render.track_start_time - ctx->render.ms_paused;
+						if (ctx->render.state == RD_PAUSED) ctx->status.ms_played -= now - ctx->render.track_pause_time;
+					} else ctx->render.ms_played = 0;
+				} else ctx->render.ms_played = time - ctx->output.offset;
+
+				// in flow mode, time starts at the very beginning of playlist
 				if (ctx->output.encode.flow && ctx->render.duration && ctx->render.ms_played > ctx->render.duration) {
 					ctx->output.offset += ctx->render.duration;
 					ctx->render.ms_played -= ctx->render.duration;
 					ctx->render.duration = ctx->output.duration;
 					ctx->render.index = ctx->output.index;
 					ctx->output.track_started = true;
-					ctx->render.track_start_time = gettime_ms();
+					ctx->render.track_start_time = now;
+					ctx->render.ms_paused = ctx->render.track_pause_time = 0;
 					LOG_INFO("[%p] flow track started at %u for %u", ctx,
 							   ctx->render.track_start_time, ctx->render.duration);
 					wake_controller(ctx);
 				}
-			}
+			} else ctx->render.ms_played = 0;
 			UNLOCK_O;
+			LOG_DEBUG("[%p] time %d %d", ctx, ctx->render.ms_played, time);
 			break;
 		}
 		case SQ_TRACK_INFO: {

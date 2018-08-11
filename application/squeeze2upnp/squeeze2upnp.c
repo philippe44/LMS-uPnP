@@ -692,8 +692,8 @@ int ActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 			if (p->State == PLAYING) {
 				u32_t Elapsed;
 				r = XMLGetFirstDocumentItem(Action->ActionResult, "RelTime");
-				Elapsed = Time2Int(r) * 1000;
-				if (Elapsed) {
+				if (r) {
+					Elapsed = Time2Int(r) * 1000;
 					LOG_DEBUG("[%p]: position %d (cookie %p)", p, Elapsed, Cookie);
 					sq_notify(p->SqueezeHandle, p, SQ_TIME, NULL, &Elapsed);
 				}

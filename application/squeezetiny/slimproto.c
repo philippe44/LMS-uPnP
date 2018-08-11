@@ -643,10 +643,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			ctx->status.sample_rate = ctx->output.sample_rate;
 			ctx->status.output_ready = ctx->output.completed || ctx->output.encode.flow;
 			ctx->status.duration = ctx->render.duration;
-			if (!ctx->render.ms_played && ctx->render.index != -1 && ctx->render.state != RD_STOPPED) {
-				ctx->status.ms_played = now - ctx->render.track_start_time - ctx->render.ms_paused;
-				if (ctx->render.state == RD_PAUSED) ctx->status.ms_played -= now - ctx->render.track_pause_time;
-			} else ctx->status.ms_played = ctx->render.ms_played;
+			ctx->status.ms_played = ctx->render.ms_played;
 
 			// streaming properly started
 			if (ctx->output.track_started) {
