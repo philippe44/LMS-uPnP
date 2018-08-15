@@ -7,6 +7,8 @@
  (2) transferMode.dlna.org has wrong case
  (3) shorter wait in select() if obuf has space and there is data to proceed
  (3) faulty player timing pushed to SQ_TIME to hide from slimproto
+ (4) when ICY metadata was set, header string was not released
+ (4) improve settings UI
    
 1.0.1
  - (1-2) start full icy metadata at the very begining ot HTTP response
