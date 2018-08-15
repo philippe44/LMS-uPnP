@@ -46,7 +46,7 @@ struct thread_param_s {
 
 static void 	output_http_thread(struct thread_param_s *param);
 static ssize_t 	handle_http(struct thread_ctx_s *ctx, int sock, int thread_index,
-						   size_t bytes, u8_t **tbuf, size_t hsize);
+						   size_t bytes, u8_t **tbuf, size_t hsize,struct buffer *obuf);
 static void 	mirror_header(key_data_t *src, key_data_t *rsp, char *key);
 
 /*---------------------------------------------------------------------------*/
@@ -180,7 +180,7 @@ static void output_http_thread(struct thread_param_s *param) {
 
 		// should be the HTTP headers (works with non-blocking socket)
 		if (n > 0 && FD_ISSET(sock, &rfds)) {
-			ssize_t offset = handle_http(ctx, sock, thread->index, bytes, &tbuf, hsize);
+			ssize_t offset = handle_http(ctx, sock, thread->index, bytes, &tbuf, hsize, obuf);
 			http_ready = res = (offset >= 0 && offset <= bytes + 1);
 
 			// reset chunking and head/tails properly at every new connection
@@ -205,6 +205,7 @@ static void output_http_thread(struct thread_param_s *param) {
 
 		// got a connection but a select timeout, so no HTTP headers yet
 		if (!http_ready) continue;
+		LOG_ERROR("HTTPREADY", NULL);
 
 		// need to send the header as it's a restart (Sonos!)
 		if (hpos) {
@@ -394,7 +395,8 @@ suspend the connection using TCP, but if they close it and want to resume (i.e.
 they request a range, we'll restart from where we were and mostly it will not be
 acceptable by the player, so then use the option seek_after_pause
 */
-static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, int thread_index, size_t bytes, u8_t **tbuf, size_t hsize)
+static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, int thread_index,
+						   size_t bytes, u8_t **tbuf, size_t hsize, struct buffer *obuf)
 {
 	char *body = NULL, *request = NULL, *str = NULL;
 	key_data_t headers[64], resp[16] = { { NULL, NULL } };
@@ -444,6 +446,7 @@ static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, int thread_index,
 		ctx->output.icy.interval = ctx->output.icy.remain = ICY_INTERVAL;
 		ctx->output.icy.updated = true;
 		UNLOCK_O;
+		buf_flush(obuf);
 	} else ctx->output.icy.interval = 0;
 
 	// are we opening the expected file
