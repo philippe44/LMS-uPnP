@@ -310,9 +310,10 @@ sub beforeRender {
 	# this works only because 'mode' is set manually by reading XML	
 	my @items = split /,/, $params->{mode};
 	
-	delete $params->{encode_rate_flag};
-	delete $params->{encode_flow};
-	
+	foreach my $item (qw(rate rate_flag flow mode size level bitrate)) {
+		delete $params->{"encode_$item"};
+	}	
+		
 	foreach my $item (@items) {
 		if ($item =~ /r:(-?\d*)/) {
 			$params->{encode_rate} = abs($1);
