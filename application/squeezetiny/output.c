@@ -171,7 +171,7 @@ bool _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
 	*/
 	if (bytes < BYTES_PER_FRAME) return true;
 
-	// write header pending data and exit
+	// write header pending data if any and exit
 	if (p->header.buffer) {
 		bytes = min(p->header.count, _buf_cont_write(buf));
 		memcpy(buf->writep, p->header.buffer + p->header.size - p->header.count, bytes);
@@ -185,43 +185,7 @@ bool _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
 		return true;
 	}
 
-	// might be overloaded if there is some ICY or header to be sent
 	bytes = min(bytes, _buf_cont_read(ctx->outputbuf));
-
-	// check if ICY sending is active
-	if (p->icy.interval && !p->icy.count) {
-		if (!p->icy.remain) {
-			int len_16 = 0;
-
-			LOG_SDEBUG("[%p]: ICY checking", ctx);
-
-			if (p->icy.updated) {
-				// there is room for 1 extra byte at the beginning for length
-				len_16 = sprintf(p->icy.buffer, "NStreamTitle='%s%s%s';StreamURL='%s';",
-								 p->icy.artist, *p->icy.artist ? " - " : "",
-								 p->icy.title, p->icy.artwork) - 1;
-				LOG_INFO("[%p]: ICY update\n\t%s\n\t%s\n\t%s", ctx, p->icy.artist, p->icy.title, p->icy.artwork);
-				len_16 = (len_16 + 15) / 16;
-			}
-
-			p->icy.buffer[0] = len_16;
-			p->icy.size = p->icy.count = len_16 * 16 + 1;
-			p->icy.remain = p->icy.interval;
-			p->icy.updated = false;
-		} else {
-			// do not go over icy interval
-			bytes = min(bytes, p->icy.remain);
-		}
-	}
-
-	// write ICY pending data and exit
-	if (p->icy.count) {
-		bytes = min(p->icy.count, _buf_cont_write(buf));
-		memcpy(buf->writep, p->icy.buffer + p->icy.size - p->icy.count, bytes);
-		_buf_inc_writep(buf, bytes);
-		p->icy.count -= bytes;
-		return true;
-	}
 
 	// now proceeding audio data
 	if (p->encode.mode == ENCODE_THRU) {
@@ -230,7 +194,6 @@ bool _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
 		memcpy(buf->writep, ctx->outputbuf->readp, bytes);
 		_buf_inc_writep(buf, bytes);
 		_buf_inc_readp(ctx->outputbuf, bytes);
-		if (p->icy.interval) p->icy.remain -= bytes;
 	} else {
 		// uncompressed audio to be processed
 		size_t in, out, frames = 0, process;
@@ -312,13 +275,6 @@ bool _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
 			// make sure we have enough space in output (assume 1:1 ratio ...)
 			if (_buf_space(buf) < SHINE_MAX_SAMPLES * 2) return true;
 
-			// if there is any pending data to be sent
-			if (p->encode.pending) {
-				_buf_write(buf, p->encode.data, p->encode.pending);
-				if (p->icy.interval) p->icy.remain -= p->encode.pending;
-				p->encode.pending = 0;
-			}
-
 			frames = min(in / BYTES_PER_FRAME, block - p->encode.count);
 			frames = min(frames, p->encode.sample_rate / MAX_FRAMES_SEC);
 
@@ -342,16 +298,6 @@ bool _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
 
 				p->encode.count = 0;
 				data = shine_encode_buffer_interleaved(p->encode.codec, (s16_t*) p->encode.buffer, &bytes);
-
-				// must take care of icy limit if any
-				if (p->icy.interval) {
-					if (p->icy.remain < bytes) {
-						p->encode.pending = bytes - p->icy.remain;
-						p->encode.data = data + p->icy.remain;
-						bytes = p->icy.remain;
-					}
-					p->icy.remain -= bytes;
-				}
 
 				_buf_write(buf, data, bytes);
 			}
@@ -475,7 +421,6 @@ void _output_new_stream(struct buffer *obuf, struct thread_ctx_s *ctx) {
 		out->encode.codec = (void*) shine_initialise(&config);
 		out->encode.buffer = malloc(shine_samples_per_pass(out->encode.codec) * out->encode.channels * 2);
 		out->encode.count = 0;
-		out->encode.pending = 0;
 
 		LOG_INFO("[%p]: encoding with shine MP3 (%p)", ctx, out->encode.codec);
 	} else {
@@ -500,9 +445,6 @@ void _output_end_stream(struct buffer *buf, struct thread_ctx_s *ctx) {
 				int bytes;
 				u8_t *data;
 
-				// if there is any pending data to be sent
-				if (out->encode.pending) _buf_write(buf, out->encode.data, out->encode.pending);
-
 				// code remaining audio
 				if (out->encode.count) {
 					memset(out->encode.buffer + out->encode.count * out->encode.channels * 2,
@@ -523,7 +465,6 @@ void _output_end_stream(struct buffer *buf, struct thread_ctx_s *ctx) {
 	// free any buffer
 	NFREE(out->encode.buffer);
 	out->encode.count = 0;
-	out->encode.pending = 0;
 	out->fade_writep = NULL;
 }
 

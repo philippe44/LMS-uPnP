@@ -450,8 +450,6 @@ struct outputstate {
 		u16_t  	level;      // in flac, compression level, in mp3 bitrate
 		u8_t	*buffer;	// interim codec buffer (optional)
 		size_t	count;		// # of *frames* in buffer
-		u8_t	*data;		// pending encoded data
-		size_t	pending;	// size of pending encoded (to be sent first)
 	} encode;				// format of what being sent to player
 };
 
