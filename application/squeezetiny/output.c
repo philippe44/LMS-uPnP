@@ -37,6 +37,7 @@ static void 	apply_cross(struct buffer *outputbuf, s32_t *cptr, u32_t fade,
 static void 	to_mono(s32_t *iptr,  size_t frames);
 static void 	scale_and_pack(void *dst, u32_t *src, size_t frames, u8_t channels,
 							   u8_t sample_size, int endian);
+static int 		shine_make_config_valid(int freq, int *bitr);
 
 static FLAC__StreamEncoderWriteStatus flac_write_callback(const FLAC__StreamEncoder *encoder, const FLAC__byte buffer[], size_t bytes, unsigned samples, unsigned current_frame, void *client_data);
 
@@ -268,9 +269,11 @@ bool _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
 		} else if (p->encode.mode == ENCODE_MP3) {
 			s32_t *iptr;
 			s16_t *optr;
-			int i, block = shine_samples_per_pass(p->encode.codec);
+			int i, block;
 
 			if (!p->encode.codec) return false;
+
+			block = shine_samples_per_pass(p->encode.codec);
 
 			// make sure we have enough space in output (assume 1:1 ratio ...)
 			if (_buf_space(buf) < SHINE_MAX_SAMPLES * 2) return true;
@@ -402,14 +405,18 @@ void _output_new_stream(struct buffer *obuf, struct thread_ctx_s *ctx) {
 		ok &= FLAC(f, stream_encoder_set_blocksize, codec, FLAC_BLOCK_SIZE);
 		ok &= FLAC(f, stream_encoder_set_streamable_subset, codec, true);
 		ok &= !FLAC(f, stream_encoder_init_stream, codec, flac_write_callback, NULL, NULL, NULL, obuf);
-		if (ok) out->encode.codec = (void*) codec;
-		else  FLAC(f, stream_encoder_delete, codec);
-
-		LOG_INFO("[%p]: encoding with FLAC (%p))", ctx, out->encode.codec);
+		if (ok) {
+			out->encode.codec = (void*) codec;
+			LOG_INFO("[%p]: encoding with FLAC-%u)", ctx, out->encode.level);
+		}
+		else {
+			FLAC(f, stream_encoder_delete, codec);
+			LOG_ERROR("%p]: failed initializing flac-%u r:%u s:%u c:%u", ctx,
+								  out->encode.level, out->encode.sample_rate,
+								  out->encode.sample_size, out->encode.channels);
+		}
 	} else if (out->encode.mode == ENCODE_MP3) {
 		shine_config_t config;
-
-		buf_init(obuf, (out->encode.level * 1024 / 8) * DRAIN_LEN);
 
 		shine_set_config_mpeg_defaults(&config.mpeg);
 		config.wave.samplerate = out->encode.sample_rate;
@@ -418,11 +425,22 @@ void _output_new_stream(struct buffer *obuf, struct thread_ctx_s *ctx) {
 		if (config.wave.channels > 1) config.mpeg.mode = STEREO;
 		else config.mpeg.mode = MONO;
 
-		out->encode.codec = (void*) shine_initialise(&config);
-		out->encode.buffer = malloc(shine_samples_per_pass(out->encode.codec) * out->encode.channels * 2);
-		out->encode.count = 0;
+		// first make sure we find a solution
+		shine_make_config_valid(config.wave.samplerate, &config.mpeg.bitr);
+		out->encode.level = config.mpeg.bitr;
 
-		LOG_INFO("[%p]: encoding with shine MP3 (%p)", ctx, out->encode.codec);
+		out->encode.count = 0;
+		out->encode.codec = (void*) shine_initialise(&config);
+		if (out->encode.codec) {
+			out->encode.buffer = malloc(shine_samples_per_pass(out->encode.codec) * out->encode.channels * 2);
+			LOG_INFO("[%p]: encoding with shine MP3-%u", ctx, out->encode.level);
+		} else {
+			LOG_ERROR("%p]: failed initializing MP3-%u r:%u s:%u c:%u", ctx,
+								  out->encode.level, out->encode.sample_rate,
+								  out->encode.sample_size, out->encode.channels);
+		}
+
+		buf_init(obuf, (out->encode.level * 1024 / 8) * DRAIN_LEN);
 	} else {
 		buf_init(obuf, max((out->bitrate * DRAIN_LEN) / 8, 128*1024));
 	}
@@ -1017,6 +1035,30 @@ void apply_cross(struct buffer *outputbuf, s32_t *cptr, u32_t fade, u32_t gain_i
 		else if (sample < -MAX_VAL32) sample = -MAX_VAL32;
 		*iptr++ = sample >> (16 + shift);
 	}
+}
+
+/*---------------------------------------------------------------------------*/
+static int shine_make_config_valid(int freq, int *bitr) {
+	int i, bitrates[] = { 0, 8, 16, 24, 32, 48, 56, 64, 80, 96, 112, 128,
+						 144, 160, 192, 224, 245, 320 };
+	int samplerate_index, mpeg_version;
+
+	samplerate_index = shine_find_samplerate_index(freq);
+	if (samplerate_index < 0) return -1;
+
+	mpeg_version = shine_mpeg_version(samplerate_index);
+
+	// find index first
+	for (i = sizeof(bitrates) / sizeof(int); i && bitrates[i] >= *bitr; i--);
+	if (!i) return -1;
+
+    // find match equal or less
+	while (shine_find_bitrate_index(bitrates[i], mpeg_version) < 0) i--;
+
+	if (i < 0) return -1;
+	else *bitr = bitrates[i];
+
+	return mpeg_version;
 }
 
 /*---------------------------------------------------------------------------*/
