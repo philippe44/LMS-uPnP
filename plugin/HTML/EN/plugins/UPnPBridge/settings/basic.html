@@ -122,36 +122,50 @@
 		</select>
 	[% END %]
 	
-	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_CODECSPARAM" desc="PLUGIN_UPNPBRIDGE_CODECSPARAM_DESC" %]
-		[% "PLUGIN_UPNPBRIDGE_CODECS" | string %]&nbsp
-		<input type="text" class="stdedit" name="codecs" id="codecs" value="[% codecs %]" size="15"></td>
-		[% "PLUGIN_UPNPBRIDGE_SAMPLERATE" | string %]&nbsp
+	<script type="text/javascript">
+	function showadvanced(status, options) {
+		var options = document.getElementById(options);
+		options.style.display = (status.checked) ? 'inline' : 'none';
+	}
+	</script>
+	
+	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_UPNPAUDIOCAPS" desc="PLUGIN_UPNPBRIDGE_UPNPAUDIOCAPS_DESC" %]
+		[% "PLUGIN_UPNPBRIDGE_CODECS" | string %]
+		<input type="text" class="stdedit" name="codecs" id="codecs" value="[% codecs %]" size="20">&nbsp
+		[% "PLUGIN_UPNPBRIDGE_SAMPLERATE" | string %]
 		<select class="stdedit" name="sample_rate" id="sample_rate">
 		[% FOREACH entry IN [ '', '44100', '48000', '88200', '96000', '176400', '192000' ] %]
 			<option [% IF entry == sample_rate %]selected[% END %] value="[% entry %]">[% entry %]</option>
 		[% END %]
-		</select>
-		[% "PLUGIN_UPNPBRIDGE_RAWAUDIOFORMAT" | string %]&nbsp
-		<input type="text" class="stdedit" name="raw_audio_format" id="raw_audio_format" value="[% raw_audio_format %]" size="6"></td>
-		[% "PLUGIN_UPNPBRIDGE_FORCEDMIMETYPES" | string %]&nbsp
-		<input type="text" class="stdedit" name="forced_mimetypes" id="forced_mimetypes" value="[% forced_mimetypes %]" size="10">
+		</select>&nbsp&nbsp
+		<input name="advanced_upnpaudio_flag" type="checkbox" onchange="showadvanced(this,'advanced_upnpaudio')" [% IF advanced_upnpaudio_flag %]checked [% END %]>&nbsp[% "PLUGIN_UPNPBRIDGE_ADVANCED" | string %]
+		<span id="advanced_upnpaudio" [% IF !advanced_upnpaudio_flag %]hidden[% END %]><br><br>
+			[% "PLUGIN_UPNPBRIDGE_RAWAUDIOFORMAT" | string %]&nbsp
+			<input type="text" class="stdedit" name="raw_audio_format" id="raw_audio_format" value="[% raw_audio_format %]" size="8">&nbsp&nbsp
+			[% "PLUGIN_UPNPBRIDGE_FORCEDMIMETYPES" | string %]&nbsp
+			<input type="text" class="stdedit" name="forced_mimetypes" id="forced_mimetypes" value="[% forced_mimetypes %]" size="20">
+		</span>
 	[% END %]
 	
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_ENCODEPARAMS" desc="PLUGIN_UPNPBRIDGE_ENCODEPARAMS_DESC" %]
 		<script type="text/javascript">
-		function modechange() {
-			var mode = document.getElementById('encode_mode');
-			var idx = mode.selectedIndex;
-			var params = document.getElementById('encode_params');
+		function modechange(input) {
+			var mode = input.options[input.selectedIndex].value;
+			var process = document.getElementsByClassName('encode_process');
+			var	thru = document.getElementById('encode_thru');
 			var	flac = document.getElementById('encode_flac');
 			var	mp3 = document.getElementById('encode_mp3');
-			
-			mode = mode.options[idx].value;
-			params.style.display = 'inline';
-			mp3.style.display = flac.style.display = 'none';
-			
+						
+			thru.style.display = flac.style.display = mp3.style.display = 'none';
+			for (var i = 0; i < process.length; i++) {
+				process[i].style.display = 'inline';
+			}
+												
 			if (!mode || mode === 'thru') {
-				params.style.display = 'none';
+				thru.style.display = 'inline';
+				for (var i = 0; i < process.length; i++) {
+					process[i].style.display = 'none';
+				}
 			} else if (mode === 'flc') {
 				flac.style.display = 'inline';
 			} else if (mode === 'mp3') {
@@ -160,59 +174,72 @@
 		}
 		</script>
 		
-		[% "PLUGIN_UPNPBRIDGE_ENCODEMODE" | string %]&nbsp
-		<select class="stdedit" name="encode_mode" id="encode_mode" onchange="modechange()">
+		[% "PLUGIN_UPNPBRIDGE_ENCODEMODE" | string %]
+		<select class="stdedit" name="encode_mode" id="encode_mode" onchange="modechange(this)">
 		[% FOREACH entry IN [ ['',''], ['none','thru'], ['pcm','pcm'], ['flac', 'flc'], ['mp3', 'mp3'] ] %]
 			<option [% IF entry.1 == encode_mode %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
 		[% END %]
-		</select>
-		<span id="encode_params" [% IF !encode_mode || encode_mode == 'thru' %]hidden[% END %]>
-		<span id="encode_flac" [% IF encode_mode != 'flc' %]hidden[% END %]>
-		[% "PLUGIN_UPNPBRIDGE_ENCODEFLACLEVEL" | string %]&nbsp
-		<select class="stdedit" name="encode_level" id="encode_level">
-		[% FOREACH entry IN [ '', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' ] %]
-			<option [% IF entry == encode_level %]selected[% END %] value="[% entry %]">[% entry %]</option>
-		[% END %]
-		</select>
+		</select>&nbsp
+		<span class="encode_process" [% IF !encode_mode || encode_mode == 'thru' %]hidden[% END %]>
+			<input name="encode_flow" type="checkbox" [% IF encode_flow %] checked [% END %]>&nbsp[% "PLUGIN_UPNPBRIDGE_ENCODEFLOW" | string %]&nbsp
 		</span>
-		<span id="encode_mp3" [% IF encode_mode != 'mp3' %]hidden[% END %]>
-		[% "PLUGIN_UPNPBRIDGE_ENCODEMP3BITRATE" | string %]&nbsp
-		<select class="stdedit" name="encode_bitrate" id="encode_bitrate">
-		[% FOREACH entry IN [ '', '64', '96', '128', '144', '160', '192', '224', '256', '320' ] %]
-			<option [% IF entry == encode_bitrate %]selected[% END %] value="[% entry %]">[% entry %]</option>
-		[% END %]
-		</select>
-		</span>
-		[% "PLUGIN_UPNPBRIDGE_ENCODERATE" | string %]&nbsp
-		<select class="stdedit" name="encode_rate" id="encode_rate">
-		[% FOREACH entry IN [ '', '44100', '48000', '88200', '96000', '176400', '192000' ] %]
-			<option [% IF entry == encode_rate %]selected[% END %] value="[% entry %]">[% entry %]</option>
-		[% END %]
-		</select>
-		&nbsp<input name="encode_rate_flag" type="checkbox" [% IF encode_rate_flag %] checked [% END %]>&nbsp[% "PLUGIN_UPNPBRIDGE_ENCODERATEFLAG" | string %]&nbsp&nbsp
-		[% "PLUGIN_UPNPBRIDGE_ENCODESIZE" | string %]&nbsp
-		<select class="stdedit" name="encode_size" id="encode_size">
-		[% FOREACH entry IN [ '', '8', '16', '24', '32' ] %]
-			<option [% IF entry == encode_size %]selected[% END %] value="[% entry %]">[% entry %]</option>
-		[% END %]
-		</select>
-		&nbsp<input name="encode_flow" type="checkbox" [% IF encode_flow %] checked [% END %]>&nbsp[% "PLUGIN_UPNPBRIDGE_ENCODEFLOW" | string %]
-		</span>
-	[% END %]
-	
-	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_THRUPARAM" desc="PLUGIN_UPNPBRIDGE_THRUPARAM_DESC" %]
-		[% "PLUGIN_UPNPBRIDGE_FLACHEADER" | string %]&nbsp
-		<select class="stdedit" name="flac_header" id="flac_header">
-		[% FOREACH entry IN [ ['',''], ['none','0'], ['normal','1'], ['fixed size','2'] ] %]
-			<option [% IF entry.1 == flac_header %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
-		[% END %]
-		</select>
-		[% "PLUGIN_UPNPBRIDGE_L24FORMAT" | string %]&nbsp
+		[% "PLUGIN_UPNPBRIDGE_L24FORMAT" | string %]
 		<select class="stdedit" name="L24_format" id="L24_format">
 		[% FOREACH entry IN [ ['',''], ['plain 24 bits','0'], ['packed type 1','1'] ['16 bits always','2'] ['16 bits raw only', '3'] ] %]
 			<option [% IF entry.1 == L24_format %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
 		[% END %]
-		</select>
+		</select>&nbsp&nbsp
+		<input name="advanced_encode_flag" type="checkbox" onchange="showadvanced(this,'advanced_encode')" [% IF advanced_encode_flag %]checked [% END %]>&nbsp[% "PLUGIN_UPNPBRIDGE_ADVANCED" | string %]
+		<span id="advanced_encode" [% IF !advanced_encode_flag %]hidden[% END %]>
+			<br><br>
+			<span id="encode_thru" [% IF encode_mode && encode_mode != 'thru' %]hidden[% END %]>
+				[% "PLUGIN_UPNPBRIDGE_FLACHEADER" | string %]&nbsp
+				<select class="stdedit" name="flac_header" id="flac_header">
+				[% FOREACH entry IN [ ['',''], ['none','0'], ['normal','1'], ['fixed size','2'] ] %]
+					<option [% IF entry.1 == flac_header %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+				[% END %]
+				</select>&nbsp
+			</span>
+			<span class="encode_process" [% IF !encode_mode || encode_mode == 'thru' %]hidden[% END %]>
+				<span id="encode_flac" [% IF encode_mode != 'flc' %]hidden[% END %]>
+					[% "PLUGIN_UPNPBRIDGE_ENCODEFLACLEVEL" | string %]
+					<select class="stdedit" name="encode_level" id="encode_level">
+					[% FOREACH entry IN [ '', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' ] %]
+						<option [% IF entry == encode_level %]selected[% END %] value="[% entry %]">[% entry %]</option>
+					[% END %]
+					</select>&nbsp
+				</span>
+				<span id="encode_mp3" [% IF encode_mode != 'mp3' %]hidden[% END %]>
+					[% "PLUGIN_UPNPBRIDGE_ENCODEMP3BITRATE" | string %]
+					<select class="stdedit" name="encode_bitrate" id="encode_bitrate">
+					[% FOREACH entry IN [ '', '64', '96', '128', '144', '160', '192', '224', '256', '320' ] %]
+						<option [% IF entry == encode_bitrate %]selected[% END %] value="[% entry %]">[% entry %]</option>
+					[% END %]
+					</select>&nbsp
+				</span>
+				<script type="text/javascript">
+				function encoderate(rate) {
+					var param = document.getElementById('encode_rate_span');
+					param.style.display = rate.options[rate.selectedIndex].value ? 'inline' : 'none';
+				}
+				</script>
+				[% "PLUGIN_UPNPBRIDGE_ENCODERATE" | string %]
+				<select class="stdedit" name="encode_rate" id="encode_rate" onchange="encoderate(this)">
+				[% FOREACH entry IN [ ['source',''], ['44100','44100'], ['48000','48000'], ['88200','88200'], ['96000','96000'], ['176400','176400'], ['192000','192000'] ] %]
+					<option [% IF entry.1 == encode_rate %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+				[% END %]
+				</select>
+				<span id="encode_rate_span"  [% IF !encode_rate %]hidden[% END %]>
+					<input name="encode_rate_flag" type="checkbox"[% IF encode_rate_flag %]checked[% END %]>&nbsp[% "PLUGIN_UPNPBRIDGE_ENCODERATEFLAG" | string %]
+				</span>&nbsp
+				[% "PLUGIN_UPNPBRIDGE_ENCODESIZE" | string %]
+				<select class="stdedit" name="encode_size" id="encode_size">
+				[% FOREACH entry IN [ ['source',''], ['8','8'], ['16','16'], ['24','24'], ['32','32'] ] %]
+					<option [% IF entry.1 == encode_size %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+				[% END %]
+				</select>&nbsp
+			</span>	
+		</span>	
 	[% END %]
 	
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_UPNPMGMT" desc="PLUGIN_UPNPBRIDGE_UPNPMGMT_DESC" %]
@@ -227,7 +254,7 @@
 	
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_VOLUMEMGMT" desc="PLUGIN_UPNPBRIDGE_VOLUMEMGMT_DESC" %]
 		[% "PLUGIN_UPNPBRIDGE_MAXVOLUME" | string %]&nbsp</th><input type="text" class="stdedit" name="max_volume" id="max_volume" value="[% max_volume %]" size="3">
-		&nbsp&nbsp<font color=blue>[% "PLUGIN_UPNPBRIDGE_VOLUMEONPLAY" | string %]</font>&nbsp<select class="stdedit" name="volume_on_play" id="volume_on_play">
+		&nbsp&nbsp[% "PLUGIN_UPNPBRIDGE_VOLUMEONPLAY" | string %]&nbsp<select class="stdedit" name="volume_on_play" id="volume_on_play">
 		[% FOREACH entry IN [ ['',''], ['only when playing','1'], ['ignore all changes','-1'], ['transparent forward','0'] ] %]
 			<option [% IF entry.1 == volume_on_play %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
 		[% END %]

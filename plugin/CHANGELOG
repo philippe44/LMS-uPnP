@@ -10,6 +10,7 @@
  (4) when ICY metadata was set, header string was not released
  (4) improve settings UI
  (5) ICY metadata addition moved to output_thread so that obuf only contains data (needed when a HTTP close/open happens)
+ (6) Improve webUI parameters handling
    
 1.0.1
  - (1-2) start full icy metadata at the very begining ot HTTP response

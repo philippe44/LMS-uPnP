@@ -175,50 +175,70 @@ PLUGIN_UPNPBRIDGE_ACCEPTNEXTURI
 PLUGIN_UPNPBRIDGE_SEEKAFTERPAUSE
 	EN	Seek on resume
 
-PLUGIN_UPNPBRIDGE_CODECSPARAM
-	EN	Audio codec parameters
+PLUGIN_UPNPBRIDGE_UPNPAUDIOCAPS
+	EN	UPnP player audio capabilities
 
-PLUGIN_UPNPBRIDGE_CODECSPARAM_DESC
-	EN	Set capabilities that are reported to LMS. 
-	EN	<br><i>- Codecs:</i>  supported codecs. Comma-separated, list made of mp3, flc, aif, pcm, aac, ogg
+PLUGIN_UPNPBRIDGE_UPNPAUDIOCAPS_DESC
+	EN	List the audio capabilities of the UPnP/DLNA player as they will be reported to LMS
+	EN	<br><i>- Codecs:</i> supported codecs. Comma-separated, list made of mp3, flc, aif, pcm, aac, ogg
 	EN	and alc. If re-encoding is disabled and a listed codec is NOT supported by the UPnP player, it will be ignored.
 	EN	If re-encoding is enabled, local decoding will be done by the bridge (only mp3,aac,flac,pmc and ogg are supported)
-	EN	<br>- <i>PCM format:</i> comma-separated list (<b>ordered</b>) of supported uncompressed audio formats (amongst 
-	EN	wav, aiff, raw). These formats are used when sending pcm audio to the UPnP Player.
-	EN	<br><i>- Max rate:</i> maximum sample rate. This does not influence local resampling, it's just an information 
-	EN	for LMS to decide when to do transcoding. 
-	EN	<br><i>- MimeTypes:</i> force UPnP player's support of some MIME types if they are not auto-detected (see user's guide)
+	EN	<br><i>- Max sample rate:</i> maximum supported sample rate. This will let LMS decide when to do resampling on
+	EN	the server side.
+	EN	<br>- <i>PCM format:</i> comma-separated list (<b>ordered</b>) of supported uncompressed audio formats (wav, aiff or
+	EN	raw). These formats are used when sending pcm audio to the UPnP Player.
+	EN	<br><i>- Additional MimeTypes:</i> force UPnP player's support of some MIME types if they are not auto-detected (see 
+	EN	user's guide)
 		
+PLUGIN_UPNPBRIDGE_SAMPLERATE
+	EN	Max sample rate
+
+PLUGIN_UPNPBRIDGE_CODECS
+	EN	Codecs
+	
+PLUGIN_UPNPBRIDGE_ADVANCED
+	EN	Show advanced options
+	
+PLUGIN_UPNPBRIDGE_RAWAUDIOFORMAT
+	EN	PCM format
+	
+PLUGIN_UPNPBRIDGE_FORCEDMIMETYPES
+	EN	Additional MimeTypes
+
 PLUGIN_UPNPBRIDGE_ENCODEPARAMS
-	EN	Audio transcoding options
+	EN	Audio format to UPnP player
 	
 PLUGIN_UPNPBRIDGE_ENCODEPARAMS_DESC
 	EN	The bridge can either simply passthrough audio data to the player (with minor alteration) or do a full transcoding which
 	EN	improves compatibility by sending controlled format and allows replay gain as well as fading in and out. It's also 
 	EN	possible to send audio in a continuous flow of data instead of tracks one-bye-one to enable true gapless and 
 	EN	cross-fading. See user's guide for more details
-	EN	<br><i>- Mode:</i> set processing mode. When left empty or set to 'none', audio is simply passed through to player
-	EN	<br><i>- Level:</i> in flac mode, set the compression level. 0 = lowest compression & CPU load
-	EN	<br><i>- Bitrate:</i> in mp3, set bitrate
-	EN	<br><i>- Sample rate:</i> resample rate for re-encoding. When "Max" is set, resampling will only happen if rate is
-	EN	above set value, except in flow mode where rate is fixed. When left empty no resampling is done.
-	EN	<br><i>- Sample size:</i> sample size for re-encoding. When left empty, original track sample size is used.
+	EN	<br><i>- Transcode:</i> format sent to player. When left empty or set to 'none', audio is simply passed through to player
 	EN	<br><i>- Flow:</i> enable "flow" mode where playlists are sent as a continuous audio stream.
-	
+	EN	<br><i>- 24 bits PCM:</i> 24 bits sample can be sent in plain or packed using a special DVD formt. If UPnP player does
+	EN	not support 24 bits pcm at all, samples can tbe truncated to 16 bits. Some players accept 'wav' in 24 bits but not "raw",
+	EN	in which case truncation is only made for "raw". 
+	EN	<br><i>- Flac compression:</i> in flac mode, set the compression level. 0 = lowest compression & CPU load
+	EN	<br><i>- MP3 bitrate:</i> in mp3 mode, set bitrate
+	EN	<br><i>- Resampling rate:</i> resample rate for re-encoding. When "Max" is set, resampling will only happen if rate is
+	EN	above set value, except in flow mode where rate must be fixed (44100 by default). When left empty no resampling is done.
+	EN	<br><i>- Sample size:</i> sample size for re-encoding. When left empty, original track sample size is used except in flow
+	EN	where sample size must be fixed (16 bits by default)
+
 PLUGIN_UPNPBRIDGE_ENCODEMODE
-	EN	Encoding
+	EN	Transcode
 
 PLUGIN_UPNPBRIDGE_ENCODEFLACLEVEL
-	EN	Level
+	EN	Flac compression
 	
 PLUGIN_UPNPBRIDGE_ENCODEMP3BITRATE
-	EN	Bitrate
+	EN	MP3 bitrate
 	
 PLUGIN_UPNPBRIDGE_ENCODERATEFLAG
 	EN	Max
 	
 PLUGIN_UPNPBRIDGE_ENCODERATE
-	EN	Sample rate
+	EN	Resampling rate
 
 PLUGIN_UPNPBRIDGE_ENCODESIZE
 	EN	Sample size
@@ -226,33 +246,12 @@ PLUGIN_UPNPBRIDGE_ENCODESIZE
 PLUGIN_UPNPBRIDGE_ENCODEFLOW
 	EN	Flow
 	
-PLUGIN_UPNPBRIDGE_RAWAUDIOFORMAT
-	EN	PCM format
-
-PLUGIN_UPNPBRIDGE_SAMPLERATE
-	EN	Max rate
-
-PLUGIN_UPNPBRIDGE_CODECS
-	EN	Codecs
-	
-PLUGIN_UPNPBRIDGE_THRUPARAM
-	EN	Audio passthrough parameters
-	
-PLUGIN_UPNPBRIDGE_THRUPARAM_DESC
-	EN	These parameters are mainly used in passthrough mode, although the 24 bits PCM can apply in full processing mode if not
-	EN	specified in the "Mode" options ("s:" parameter)
-	EN	<br>- <i>FLAC header:</i> a FLAC header is required by some players in thru mode.
-	EN	<br>- <i>24 bits PCM:</i> 24 bits sample tweaking, including possibility to shrink them to 16 bits, even in thru mode
-	
 PLUGIN_UPNPBRIDGE_FLACHEADER
 	EN	FLAC header
 
 PLUGIN_UPNPBRIDGE_L24FORMAT
 	EN	24 bits PCM
 	
-PLUGIN_UPNPBRIDGE_FORCEDMIMETYPES
-	EN	Extra MimeTypes
-
 PLUGIN_UPNPBRIDGE_SERVER
 	EN	LMS Server
 	

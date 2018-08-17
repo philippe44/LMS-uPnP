@@ -66,11 +66,13 @@ sub handler {
 			if ($params->{encode_mode} eq 'flc') {
 				$params->{mode} .=  ":$params->{encode_level}" if defined $params->{encode_level} && $params->{encode_level} ne '';
 			} elsif ($params->{encode_mode} eq 'mp3') {
-				$params->{mode} .=  ":$params->{encode_bitrate}" if defined $params->{encode_bitrate};
+				$params->{mode} .=  ":$params->{encode_bitrate}" if $params->{encode_bitrate};
+			} 
+			if ($params->{encode_mode} && $params->{encode_mode} ne 'thru') {
+				$params->{mode} .= ",r:" . ($params->{encode_rate_flag} ? "-" : "") . $params->{encode_rate} if $params->{encode_rate};
+				$params->{mode} .= ",s:$params->{encode_size}" if $params->{encode_size};
+				$params->{mode} .= ",flow" if $params->{encode_flow};
 			}	
-			$params->{mode} .= ",r:" . ($params->{encode_rate_flag} ? "-" : "") . $params->{encode_rate} if $params->{encode_rate};
-			$params->{mode} .= ",s:$params->{encode_size}" if $params->{encode_size};
-			$params->{mode} .= ",flow" if $params->{encode_flow};
 		}	
 						
 		for my $param (@bool) {
@@ -325,7 +327,7 @@ sub beforeRender {
 		} else {
 			$item =~ m|([^:]+):*(\d*)|i;
 			$params->{encode_mode} = $1;
-			$params->{encode_level} = $2 if $2 && $1 eq 'flc';
+			$params->{encode_level} = $2 if defined $2 && $1 eq 'flc';
 			$params->{encode_bitrate} = $2 if $2 && $1 eq 'mp3';
 		}	
 	}	
