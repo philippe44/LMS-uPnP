@@ -166,7 +166,7 @@
 				for (var i = 0; i < process.length; i++) {
 					process[i].style.display = 'none';
 				}
-			} else if (mode === 'flc') {
+			} else if (mode === 'flac') {
 				flac.style.display = 'inline';
 			} else if (mode === 'mp3') {
 				mp3.style.display = 'inline';
@@ -176,7 +176,7 @@
 		
 		[% "PLUGIN_UPNPBRIDGE_ENCODEMODE" | string %]
 		<select class="stdedit" name="encode_mode" id="encode_mode" onchange="modechange(this)">
-		[% FOREACH entry IN [ ['',''], ['none','thru'], ['pcm','pcm'], ['flac', 'flc'], ['mp3', 'mp3'] ] %]
+		[% FOREACH entry IN [ ['',''], ['none','thru'], ['pcm','pcm'], ['flac', 'flac'], ['mp3', 'mp3'] ] %]
 			<option [% IF entry.1 == encode_mode %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
 		[% END %]
 		</select>&nbsp
@@ -201,7 +201,7 @@
 				</select>&nbsp
 			</span>
 			<span class="encode_process" [% IF !encode_mode || encode_mode == 'thru' %]hidden[% END %]>
-				<span id="encode_flac" [% IF encode_mode != 'flc' %]hidden[% END %]>
+				<span id="encode_flac" [% IF encode_mode != 'flac' %]hidden[% END %]>
 					[% "PLUGIN_UPNPBRIDGE_ENCODEFLACLEVEL" | string %]
 					<select class="stdedit" name="encode_level" id="encode_level">
 					[% FOREACH entry IN [ '', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' ] %]

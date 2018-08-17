@@ -21,7 +21,7 @@ CFLAGS 		+= -fdata-sections -ffunction-sections
 vpath %.c $(TOOLS):$(SRC):$(SQUEEZETINY)
 
 INCLUDE = -I. \
-		-I$(BASE)\
+		  -I$(BASE)\
 		  -I$(VALGRIND)/memcheck -I$(VALGRIND)/include \
 		  -I$(SQUEEZETINY) \
 		  -I$(TOOLS) \
