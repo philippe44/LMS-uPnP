@@ -282,12 +282,12 @@ char** ParseProtocolInfo(char *Info, char *Forced)
 	} while (i < MAX_MIMETYPES && n < size);
 
 	p = Forced;
-	size = strlen(Forced);
-	while (i < MAX_MIMETYPES && *p) {
+	size = p ? strlen(p) : 0;
+	while (size > 0 && i < MAX_MIMETYPES) {
 		strtok(p, ",");
 		MimeTypes[i] = strdup(p);
-		p += strlen(p);
-		if (*p) p++;
+		size -= strlen(p) + 1;
+		p += strlen(p) + 1;
 		i++;
 	}
 

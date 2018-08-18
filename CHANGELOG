@@ -14,6 +14,8 @@
  (6) check mp3 sample rate & bitrate consitency
  (7) 24 bits packed processing as incorrect when a single frame was available 
  (7) mp3 bitrate selection was using one level below minimum   
+ (8) 24 bits packed correction
+ (8) only one extra mimetype was taken into account
  
 1.0.1
  - (1-2) start full icy metadata at the very begining ot HTTP response

@@ -1103,7 +1103,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 	}
 
 	// matching found in player
-	if (mimetype) {
+	if (mimetype) {
 		strcpy(out->mimetype, mimetype);
 		free(mimetype);
 

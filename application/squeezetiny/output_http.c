@@ -158,7 +158,8 @@ static void output_http_thread(struct thread_param_s *param) {
 
 		// short wait if obuf has free space and there is something to process
 		timeout.tv_usec = _buf_used(ctx->outputbuf) && _buf_space(obuf) > obuf->size / 8 ?
-						   			TIMEOUT*1000 / 10 : TIMEOUT*1000;
+									TIMEOUT*1000 / 10 : TIMEOUT*1000;
+
 		n = select(sock + 1, &rfds, &wfds, NULL, &timeout);
 
 		// need to wait till we have an initialized codec
