@@ -1051,7 +1051,7 @@ static int shine_make_config_valid(int freq, int *bitr) {
 	mpeg_version = shine_mpeg_version(samplerate_index);
 
 	// find index first
-	for (i = sizeof(bitrates) / sizeof(int); i && bitrates[i] >= *bitr; i--);
+	for (i = sizeof(bitrates) / sizeof(int); i && bitrates[i] > *bitr; i--);
 	if (!i) return -1;
 
     // find match equal or less
