@@ -234,7 +234,8 @@ bool _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
 			// in case of L24_LPCM, we need 2 frames at least
 			if (p->encode.buffer) {
 				if (frames == 1) {
-					*((s32_t*) p->encode.buffer + p->encode.count) = *((s32_t*) ctx->outputbuf->readp);
+					// copy L+R in temporary buffer
+					memcpy(p->encode.buffer + p->encode.count * BYTES_PER_FRAME, ctx->outputbuf->readp, BYTES_PER_FRAME);
 					if (++p->encode.count == 2) {
 						lpcm_pack((u8_t*) optr, p->encode.buffer, 2 * BYTES_PER_FRAME, p->encode.channels, 1);
 						p->encode.count = 0;
@@ -379,9 +380,10 @@ void _output_new_stream(struct buffer *obuf, struct thread_ctx_s *ctx) {
 			out->header.buffer = NULL;
 			out->header.size = out->header.count = 0;
 			if (out->encode.sample_size == 24 && ctx->config.L24_format == L24_PACKED_LPCM) {
-				out->encode.buffer = malloc(3 * out->encode.channels);
-				out->encode.count = 2;
-            }
+				// need room for 2 frames with L+R
+				out->encode.buffer = malloc(2 * BYTES_PER_FRAME);
+				out->encode.count = 0;
+			}
 			//FIXME: why setting length here at 0?
 			// length = 0;
 			break;
@@ -666,7 +668,7 @@ void lpcm_pack(u8_t *dst, u8_t *src, size_t bytes, u8_t channels, int endian) {
 			*dst++ = src[3]; *dst++ = src[2];
 			*dst++ = src[7]; *dst++ = src[6];
 			// L1T,L1M & R1T,R1M
-			*dst++ = src[9]; *dst++ = src[8];
+			*dst++ = src[11]; *dst++ = src[10];
 			*dst++ = src[15]; *dst++ = src[14];
 			// L0B, R0B, L1B, R1B
 			*dst++ = src[1]; *dst++ = src[5]; *dst++ = src[9]; *dst++ = src[13];

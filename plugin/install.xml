@@ -1,8 +1,5 @@
 <?xml version='1.0' standalone='yes'?>
 <extensions>
-  <description>PLUGIN_UPNPBRIDGE_DESC</description>
-  <defaultState>enabled</defaultState>
-  <creator>Philippe</creator>
   <version>1.1.0.6</version>
   <profilesURL>http://sourceforge.net/projects/lms-to-upnp/files/profiles.xml/download</profilesURL>
   <module>Plugins::UPnPBridge::Plugin</module>
@@ -14,4 +11,5 @@
     <id>SlimServer</id>
   </targetApplication>
   <optionsURL>plugins/UPnPBridge/settings/basic.html</optionsURL>
+  <defaultState>enabled</defaultState>
 </extensions>
