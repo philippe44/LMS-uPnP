@@ -399,7 +399,9 @@ void _output_new_stream(struct buffer *obuf, struct thread_ctx_s *ctx) {
 
 		if (ctx->config.stream_length > 0) ctx->output.length = length;
 		//FIXME ctx->output.length = length;
-		LOG_INFO("[%p]: PCM estimated size %zu", ctx, length);
+		LOG_INFO("[%p]: encoding in PCM r:%u s:%u f:%c", ctx, out->encode.sample_rate,
+											out->encode.sample_size, out->format);
+		LOG_INFO("[%p]: estimated length %zu", ctx, length);
 	} else if (out->encode.mode == ENCODE_FLAC) {
 		FLAC__StreamEncoder *codec;
 		bool ok;
@@ -417,7 +419,8 @@ void _output_new_stream(struct buffer *obuf, struct thread_ctx_s *ctx) {
 		ok &= !FLAC(f, stream_encoder_init_stream, codec, flac_write_callback, NULL, NULL, NULL, obuf);
 		if (ok) {
 			out->encode.codec = (void*) codec;
-			LOG_INFO("[%p]: encoding with FLAC-%u)", ctx, out->encode.level);
+			LOG_INFO("[%p]: encoding in FLAC-%u, r:%u s:%u", ctx, out->encode.level,
+										out->encode.sample_rate, out->encode.sample_size);
 		}
 		else {
 			FLAC(f, stream_encoder_delete, codec);
@@ -443,7 +446,9 @@ void _output_new_stream(struct buffer *obuf, struct thread_ctx_s *ctx) {
 		out->encode.codec = (void*) shine_initialise(&config);
 		if (out->encode.codec) {
 			out->encode.buffer = malloc(shine_samples_per_pass(out->encode.codec) * out->encode.channels * 2);
-			LOG_INFO("[%p]: encoding with shine MP3-%u", ctx, out->encode.level);
+			LOG_INFO("[%p]: encoding in MP3-%u r:%u s:%u", ctx,
+										out->encode.level, out->encode.sample_rate,
+										out->encode.sample_size);
 		} else {
 			LOG_ERROR("%p]: failed initializing MP3-%u r:%u s:%u c:%u", ctx,
 								  out->encode.level, out->encode.sample_rate,
@@ -1059,7 +1064,7 @@ static int shine_make_config_valid(int freq, int *bitr) {
 	mpeg_version = shine_mpeg_version(samplerate_index);
 
 	// find index first
-	for (i = sizeof(bitrates) / sizeof(int); i && bitrates[i] > *bitr; i--) {}
+	for (i = sizeof(bitrates) / sizeof(int) - 1; i && bitrates[i] > *bitr; i--) {}
     if (!i) return -1;
 
     // find match equal or less
