@@ -17,6 +17,8 @@
  (8) 24 bits packed correction
  (8) only one extra mimetype was taken into account
  (8) mp3 validation was starting one level too high
+ (9) send_icy was not zeroing len in case of error (non blocking sock)
+ (9) when building pcm 24 bits, at least 2 frames must be available in destination buf
  
 1.0.1
  - (1-2) start full icy metadata at the very begining ot HTTP response

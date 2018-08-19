@@ -210,8 +210,13 @@ bool _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
 		if (p->encode.mode == ENCODE_PCM) {
 			u8_t *optr, obuf[BYTES_PER_FRAME*2];
 
+			out = _buf_space(buf);
+
+			// we might need 2 frames to process 24 packed case
+			if (out < 2 * bytes_per_frame) return true;
+
 			// buf cannot count on alignment because of headers (wav/aif)
-			out = min(_buf_space(buf), _buf_cont_write(buf));
+			out = min(out, _buf_cont_write(buf));
 
 			// not enough cont'd place in output, just process 2 frames
 			if (out < bytes_per_frame * 2) {
@@ -256,9 +261,10 @@ bool _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
 			} else scale_and_pack(optr, (u32_t*) ctx->outputbuf->readp, frames,
 								  p->encode.channels, p->encode.sample_size, p->out_endian);
 
-			// take the data from temporary buffer if needed
+			// take the data from temporary buffer if needed
 			if (optr == obuf) _buf_write(buf, optr, bytes_per_frame * process);
 			else _buf_inc_writep(buf, process * bytes_per_frame);
+
 		} else if (p->encode.mode == ENCODE_FLAC) {
 			if (!p->encode.codec) return false;
 

@@ -348,7 +348,7 @@ static void output_http_thread(struct thread_param_s *param) {
 				} else tpos += space;
 
 				LOG_SDEBUG("[%p] sent %u bytes (total: %u)", ctx, space, bytes);
-			}
+            }
 		} else {
 			// check if all sent
 			if (!drain_count) {
@@ -395,7 +395,8 @@ static ssize_t send_with_icy(struct thread_ctx_s *ctx, int sock, const void *buf
 	// ICY not active, just send
 	if (!p->icy.interval) {
 		bytes = send(sock, buf, *len, flags);
-		if (bytes >= 0) *len = bytes;
+		if (bytes > 0) *len = bytes;
+		else *len = 0;
 		return bytes;
 	}
 
@@ -440,7 +441,7 @@ static ssize_t send_with_icy(struct thread_ctx_s *ctx, int sock, const void *buf
 		*len = min(*len - bytes, p->icy.remain);
 		*len = send(sock, buf, *len, flags);
 		// socket is non-blocking
-		if (*len <= 0) *len = 0;
+		if (*len < 0) *len = 0;
 		else p->icy.remain -= *len;
 	} else *len = 0;
 
