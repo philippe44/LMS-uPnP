@@ -182,7 +182,7 @@ PLUGIN_UPNPBRIDGE_UPNPAUDIOCAPS_DESC
 	EN	List the audio capabilities of the UPnP/DLNA player as they will be reported to LMS
 	EN	<br><i>- Codecs:</i> supported codecs. Comma-separated, list made of mp3, flc, aif, pcm, aac, ogg
 	EN	and alc. If re-encoding is disabled and a listed codec is NOT supported by the UPnP player, it will be ignored.
-	EN	If re-encoding is enabled, local decoding will be done by the bridge (only mp3,aac,flac,pmc and ogg are supported)
+	EN	If re-encoding is enabled, local decoding will be done by the bridge (only mp3,aac,flc,pcm and ogg are supported)
 	EN	<br><i>- Max sample rate:</i> maximum supported sample rate. This will let LMS decide when to do resampling on
 	EN	the server side.
 	EN	<br>- <i>PCM format:</i> comma-separated list (<b>ordered</b>) of supported uncompressed audio formats (wav, aiff or

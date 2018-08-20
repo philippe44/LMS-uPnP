@@ -1,3 +1,7 @@
+1.1.2
+ - (skipped 1.1.1)
+ - re-encode mode for flac is named 'flc', not 'flac'
+ 
 1.1.0
  - add MP3 re-encoding
  - icy artwork removes ' - ' when no artist
