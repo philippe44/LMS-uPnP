@@ -1079,8 +1079,8 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 			mimetype = find_pcm_mimetype(&sample_size, ctx->config.L24_format == L24_TRUNC16_PCM,
 										   sample_rate, 2, ctx->mimetypes, ctx->config.raw_audio_format);
 
-			 // if matching found, need to set generic format
-			 if (mimetype) strcpy(mimetype, "*");
+			 // if matching found, set generic format "*" if audio/L used
+			 if (strstr(mimetype, "audio/L")) strcpy(mimetype, "*");
 		} else {
 			char format[16] = "";
 
