@@ -747,10 +747,10 @@ char* find_pcm_mimetype(u8_t *sample_size, bool truncable, u32_t sample_rate,
 
 		if (sscanf(options, "%[^,]", fmt) <= 0) return NULL;
 
+		// don't even try raw if we have no idea of sample size or rate
 		while (strstr(fmt, "raw")) {
 			char **p, a[16], r[16], c[16];
 
-			// find audio/Lxx
 			p = mimetypes;
 			sprintf(a, "audio/L%hhu", *sample_size);
 			sprintf(r, "rate=%u", sample_rate);

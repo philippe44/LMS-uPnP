@@ -163,7 +163,7 @@ char *mimetype2ext(char *mimetype)
 	if (!mimetype) return "";
 
 	if (strstr(mimetype, "wav")) return "wav";
-	if (strstr(mimetype, "audio/L")) return "pcm";
+	if (strstr(mimetype, "audio/L") || mimetype[0] == '*') return "pcm";
 	if (strstr(mimetype, "flac")) return "flac";
 	if (strstr(mimetype, "flc")) return "flc";
 	if (strstr(mimetype, "mp3") || strstr(mimetype, "mpeg")) return "mp3";
@@ -182,7 +182,7 @@ u8_t mimetype2format(char *mimetype)
 	if (!mimetype) return '\0';
 
 	if (strstr(mimetype, "wav")) return 'w';
-	if (strstr(mimetype, "audio/L")) return 'p';
+	if (strstr(mimetype, "audio/L") || mimetype[0] == '*') return 'p';
 	if (strstr(mimetype, "flac") || strstr(mimetype, "flc")) return 'f';
 	if (strstr(mimetype, "mp3") || strstr(mimetype, "mpeg")) return 'm';
 	if (strstr(mimetype, "ogg")) return 'o';

@@ -1041,7 +1041,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 	// check if re-encoding is needed
 	if (out->encode.mode == ENCODE_THRU || (out->encode.mode == ENCODE_PCM && out->codec == 'p')) {
 
-		// pcm needs alignement which is not guaranteed in THRU mode
+		// pcm needs alignment which is not guaranteed in THRU mode
 		if (out->encode.mode == ENCODE_THRU && !_buf_reset(ctx->outputbuf)) {
 			LOG_ERROR("[%p]: buffer should be empty", ctx);
 		}
@@ -1062,48 +1062,57 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 
 	} else if (out->encode.mode == ENCODE_PCM) {
 
-		/*
-		Cannot do raw PCM as channel, sample rate & size are unknown before
-		codec receives some data, unless they are forced in	<encode>, then we
-		need to also force channels to 2
-		*/
-		if (out->encode.sample_rate && out->encode.sample_size && stristr(ctx->config.raw_audio_format, "raw")) {
-			out->encode.channels = 2;
-			mimetype = find_pcm_mimetype(&out->encode.sample_size, ctx->config.L24_format == L24_TRUNC16_PCM,
-										 out->encode.sample_rate, out->encode.channels,
-										 ctx->mimetypes, ctx->config.raw_audio_format);
-		} else {
-			char format[16] = "";
+		if (out->encode.sample_rate && out->encode.sample_size) {
+			// everything is fixed
+			mimetype = find_pcm_mimetype(&out->encode.sample_size, ctx->config.L24_format == L24_TRUNC16_PCM,
+										 out->encode.sample_rate, 2, ctx->mimetypes, ctx->config.raw_audio_format);
+		} else if ((info.metadata.sample_size || out->encode.sample_size) &&
+				   (info.metadata.sample_rate || out->encode.sample_rate || out->supported_rates[0])) {
+			u8_t sample_size = out->encode.sample_size ? out->encode.sample_size : info.metadata.sample_size;
+			u32_t sample_rate;
 
-			if (stristr(ctx->config.raw_audio_format, "wav")) strcat(format, "wav");
+			// try to use source format, but return generic mimetype
+			if (out->encode.sample_rate) sample_rate = out->encode.sample_rate;
+			else if (out->supported_rates[0] < 0) sample_rate = abs(out->supported_rates[0]);
+			else sample_rate = info.metadata.sample_rate;
+
+			mimetype = find_pcm_mimetype(&sample_size, ctx->config.L24_format == L24_TRUNC16_PCM,
+										   sample_rate, 2, ctx->mimetypes, ctx->config.raw_audio_format);
+
+			 // if matching found, need to set generic format
+			 if (mimetype) strcpy(mimetype, "*");
+		} else {
+			char format[16] = "";
+
+			// really can't use raw format
+			if (stristr(ctx->config.raw_audio_format, "wav")) strcat(format, "wav");
 			if (stristr(ctx->config.raw_audio_format, "aif")) strcat(format, "aif");
 
-			mimetype = find_mimetype('p', ctx->mimetypes, format);
-		}
+			mimetype = find_mimetype('p', ctx->mimetypes, format);
+		}
+		
+	} else if (out->encode.mode == ENCODE_FLAC) {
 
-	} else if (out->encode.mode == ENCODE_FLAC) {
-
-		mimetype = find_mimetype('f', ctx->mimetypes, NULL);
+		mimetype = find_mimetype('f', ctx->mimetypes, NULL);
 		if (out->sample_size > 24) out->encode.sample_size = 24;
-		if ((p = stristr(mode, "flac:")) != NULL) out->encode.level = atoi(p+5);
-		if (out->encode.level > 9) out->encode.level = 0;
+		if ((p = stristr(mode, "flac:")) != NULL) out->encode.level = atoi(p+5);
+		if (out->encode.level > 9) out->encode.level = 0;
 
 	} else if (out->encode.mode == ENCODE_MP3) {
 
 		mimetype = find_mimetype('m', ctx->mimetypes, NULL);
-		out->encode.sample_size = 16;
+		out->encode.sample_size = 16;
 		// need to tweak a bit samples rates
-		if (!out->supported_rates[0] || out->supported_rates[0] < -48000 ) out->supported_rates[0] = -48000;
-		else if (out->supported_rates[0] > 48000) out->supported_rates[0] = out->encode.sample_rate = 48000;
+		if (!out->supported_rates[0] || out->supported_rates[0] < -48000 ) out->supported_rates[0] = -48000;
+		else if (out->supported_rates[0] > 48000) out->supported_rates[0] = out->encode.sample_rate = 48000;
 		if ((p = stristr(mode, "mp3:")) != NULL) {
-			out->encode.level = atoi(p+4);
-			if (out->encode.level > 320) out->encode.level = 320;
-		} else out->encode.level = 128;
+			out->encode.level = atoi(p+4);
+			if (out->encode.level > 320) out->encode.level = 320;
+		} else out->encode.level = 128;
 
 	}
-
 	// matching found in player
-	if (mimetype) {
+	if (mimetype) {
 		strcpy(out->mimetype, mimetype);
 		free(mimetype);
 

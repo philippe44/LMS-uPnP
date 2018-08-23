@@ -400,6 +400,11 @@ void _output_new_stream(struct buffer *obuf, struct thread_ctx_s *ctx) {
 				out->encode.buffer = malloc(2 * BYTES_PER_FRAME);
 				out->encode.count = 0;
 			}
+			// raw mode but did not get the full mimetype initially
+			if (out->mimetype[0] == '*') {
+				sprintf(out->mimetype, "audio/L%u;rate=%u;channels=%u", out->encode.sample_size,
+										out->encode.sample_rate, out->encode.channels);
+			}
 			break;
 		}
 
@@ -407,7 +412,7 @@ void _output_new_stream(struct buffer *obuf, struct thread_ctx_s *ctx) {
 		//FIXME ctx->output.length = length;
 		LOG_INFO("[%p]: encoding in PCM r:%u s:%u f:%c", ctx, out->encode.sample_rate,
 											out->encode.sample_size, out->format);
-		LOG_INFO("[%p]: estimated length %zu", ctx, length);
+		LOG_INFO("[%p]: HTTP %d, estimated len %zu", ctx, ctx->config.stream_length, length);
 	} else if (out->encode.mode == ENCODE_FLAC) {
 		FLAC__StreamEncoder *codec;
 		bool ok;
