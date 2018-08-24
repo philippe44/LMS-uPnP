@@ -1,8 +1,7 @@
 1.2.0
  - raw mode is tried (if enabled) in pcm mode even with incomplete sample size & rate by sending 'http-get:*:*' in UPnP header and send sending 
  the audio/L... with HTTP header. Sample size & rate are "guessed" from metadata, so might not work all the time
- - (2) only set generic http-get PCM mode when auio/L used, not if wav or aif
- 
+  
 1.1.2
  - (skipped 1.1.1)
  - re-encode mode for flac is named 'flc', not 'flac'
