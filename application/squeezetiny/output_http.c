@@ -317,7 +317,7 @@ static void output_http_thread(struct thread_param_s *param) {
 				size_t i = tpos % TAIL_SIZE;
 				space = min(space, TAIL_SIZE - i);
 				sent = send_with_icy(ctx, sock, tbuf + i, &space, 0);
-				LOG_DEBUG("[%p]: send from tail %zd ", ctx, space);
+				LOG_DEBUG("[%p]: send from tail %zu %zd", ctx, i, space);
 			} else sent = send_with_icy(ctx, sock, (void*) _buf_readp(obuf), &space, 0);
 
 			if (sent > 0) {
@@ -485,12 +485,17 @@ static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, int thread_index,
 	if (((str = kd_lookup(headers, "USER-AGENT")) != NULL) && !strcasecmp(str, "sonos")) {
 		Sonos = true;
 		if (!*tbuf) {
-		 *tbuf = malloc(TAIL_SIZE);
-		 LOG_INFO("[%p]: Entering Sonos mode", ctx);
+			*tbuf = malloc(TAIL_SIZE);
+			LOG_INFO("[%p]: Entering Sonos mode", ctx);
+		}
+	} else if (kd_lookup(headers, "CAST-DEVICE-CAPABILITIES")) {
+		if (!*tbuf) {
+			*tbuf = malloc(TAIL_SIZE);
+			 LOG_INFO("[%p]: Entering Chromecast mode", ctx);
 		}
 	} else if (*tbuf ) {
 		NFREE(*tbuf);
-		LOG_INFO("[%p]: Exiting Sonos mode", ctx);
+		LOG_INFO("[%p]: Exiting Sonos/Chromecast mode", ctx);
 	}
 
 	kd_add(resp, "Server", "squeezebox-bridge");
@@ -537,9 +542,13 @@ static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, int thread_index,
 		if ((str = kd_lookup(headers, "Range")) != NULL) {
 			int offset = 0;
 			sscanf(str, "bytes=%u", &offset);
-			if (offset) {
+			if (offset && tbuf) {
+				char *range;
+				asprintf(&range, "bytes %u-%zu/*", offset, bytes);
 				head = "HTTP/1.1 206 Partial Content";
+				kd_add(resp, "Content-Range", range);
 				res = offset + 1;
+				free(range);
 			}
 		} else if (bytes && Sonos) {
 			// Sonos client re-opening the connection, so make it believe we

@@ -546,8 +546,8 @@ int read_line(int fd, char *line, int maxlen, int timeout)
 		else return 0;
 
 		if (rval == -1) {
-			if (errno == EAGAIN) return 0;
-			LOG_ERROR("fd: %d read error: %s", fd, strerror(errno));
+			if (last_error() == EAGAIN) return 0;
+			LOG_ERROR("fd: %d read error: %u %s", fd, last_error(), strerror(last_error()));
 			return -1;
 		}
 
@@ -747,10 +747,10 @@ char* find_pcm_mimetype(u8_t *sample_size, bool truncable, u32_t sample_rate,
 
 		if (sscanf(options, "%[^,]", fmt) <= 0) return NULL;
 
-		// don't even try raw if we have no idea of sample size or rate
 		while (strstr(fmt, "raw")) {
 			char **p, a[16], r[16], c[16];
 
+			// find audio/Lxx
 			p = mimetypes;
 			sprintf(a, "audio/L%hhu", *sample_size);
 			sprintf(r, "rate=%u", sample_rate);

@@ -1,3 +1,6 @@
+1.2.1
+ - mode was still comapred to "flac" and not "flc" in slimproto.c!
+ 
 1.2.0
  - raw mode is tried (if enabled) in pcm mode even with incomplete sample size & rate by sending 'http-get:*:*' in UPnP header and send sending 
  the audio/L... with HTTP header. Sample size & rate are "guessed" from metadata, so might not work all the time

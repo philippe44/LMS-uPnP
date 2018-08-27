@@ -1,31 +1,22 @@
 <squeeze2upnp>
 	<stream_length>-3</stream_length>
+	<mode>thru</mode>
 	<flac_header>1</flac_header>
 	<accept_nexturi>1</accept_nexturi>
 	<seek_after_pause>0</seek_after_pause>
 	<codecs>aif,pcm,flc,mp3</codecs>
 	<sample_rate>48000</sample_rate>
 	<send_metadata>1</send_metadata>
-	<raw_audio_format>raw</raw_audio_format>
+	<raw_audio_format>raw,wav</raw_audio_format>
 	<L24_format>2</L24_format>
 	<max_volume>100</max_volume>
 	<profile name=''></profile>
 	<profile name='_safe mode'>
-	<stream_length>1000000000</stream_length>
 	<accept_nexturi>0</accept_nexturi>
-	<seek_after_pause>1</seek_after_pause>
-	<codecs>pcm</codecs>
-	<raw_audio_format>raw,wave,aiff</raw_audio_format>
-	<min_gapless>30</min_gapless>
+	<codecs>mp3</codecs>
+	<raw_audio_format>wav</raw_audio_format>
 	</profile>
-	<profile name='_normal mode'>
-	<stream_length>-3</stream_length>
-	<accept_nexturi>1</accept_nexturi>
-	<seek_after_pause>0</seek_after_pause>
-	<codecs>flc,mp3,pcm,aif</codecs>
-	<sample_rate>48000</sample_rate>
-	<raw_audio_format>wav,raw</raw_audio_format>
-	</profile>
+	<profile name='_normal mode'></profile>
 	<profile name='Jongo S3x'>
 		<stream_length>1000000000</stream_length>
 		<codecs>aac,pcm,flc,mp3</codecs>
@@ -33,7 +24,7 @@
 	</profile>	
 	<profile name='foobar 2000'></profile>
 	<profile name='Sonos'>
-		<raw_audio_format>wav,aiff</raw_audio_format>
+		<raw_audio_format>wav,aif</raw_audio_format>
 	</profile>
 	<profile name='Marantz'>
 		<sample_rate>96000</sample_rate>
