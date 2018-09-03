@@ -767,17 +767,17 @@ void wake_controller(struct thread_ctx_s *ctx) {
 void discover_server(struct thread_ctx_s *ctx) {
 	struct sockaddr_in d;
 	struct sockaddr_in s;
-	char buf[32], vers[] = "VERS", port[] = "JSON";
+	char buf[32], vers[] = "VERS", port[] = "JSON", clip[] = "CLIP";
 	struct pollfd pollinfo;
 	u8_t len;
-
 	int disc_sock = socket(AF_INET, SOCK_DGRAM, 0);
-
 	socklen_t enable = 1;
+
+	ctx->cli_port = 9090;
+
 	setsockopt(disc_sock, SOL_SOCKET, SO_BROADCAST, (const void *)&enable, sizeof(enable));
 
-	len = sprintf(buf,"e%s\xff%s", vers, port) + 1;
-	*strchr(buf, 0xff) = '\0';
+	len = sprintf(buf,"e%s%c%s%c%s", vers, '\0', port, '\0', clip) + 1;
 
 	memset(&d, 0, sizeof(d));
 	d.sin_family = AF_INET;
@@ -805,16 +805,19 @@ void discover_server(struct thread_ctx_s *ctx) {
 
 			if ((p = strstr(readbuf, vers)) != NULL) {
 				p += strlen(vers);
-				len = *p;
 				strncpy(ctx->server_version, p + 1, min(SERVER_VERSION_LEN, *p));
 				ctx->server_version[min(SERVER_VERSION_LEN, *p)] = '\0';
 			}
 
 			 if ((p = strstr(readbuf, port)) != NULL) {
 				p += strlen(port);
-				len = *p;
 				strncpy(ctx->server_port, p + 1, min(5, *p));
 				ctx->server_port[min(6, *p)] = '\0';
+			}
+
+			 if ((p = strstr(readbuf, clip)) != NULL) {
+				p += strlen(clip);
+				ctx->cli_port = atoi(p + 1);
 			}
 
 			strcpy(ctx->server_ip, inet_ntoa(s.sin_addr));
@@ -920,6 +923,7 @@ void slimproto_close(struct thread_ctx_s *ctx) {
 
 /*---------------------------------------------------------------------------*/
 void slimproto_thread_init(struct thread_ctx_s *ctx) {
+	char _codecs[_STR_LEN_] = "";
 
 	wake_create(ctx->wake_e);
 
@@ -937,7 +941,23 @@ void slimproto_thread_init(struct thread_ctx_s *ctx) {
 	ctx->new_server_cap = NULL;
 	ctx->new_server = 0;
 
-	sprintf(ctx->fixed_cap, ",MaxSampleRate=%u,%s", ctx->config.sample_rate, ctx->config.codecs);
+	// only use successfully loaded codecs in full processing mode
+	if (!stristr(ctx->config.mode, "thru")) {
+		char item[4], *p = ctx->config.codecs;
+		int i;
+
+		while (p && sscanf(p, "%3[^,]", item) > 0) {
+			for (i = 0; i < MAX_CODECS; i++) if (codecs[i] && stristr(codecs[i]->types, item)) {
+				if (*_codecs) strcat(_codecs, ",");
+				strcat(_codecs, item);
+				break;
+			}
+			p = strchr(p, ',');
+			if (p) p++;
+		}
+	} else strcpy(_codecs, ctx->config.codecs);
+
+	sprintf(ctx->fixed_cap, ",MaxSampleRate=%u,%s", ctx->config.sample_rate, _codecs);
 
 	memcpy(ctx->mac, ctx->config.mac, 6);
 
@@ -997,10 +1017,14 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 	}
 
 	// detect processing mode
-	if (stristr(mode, "thru")) out->encode.mode = ENCODE_THRU;
-	else if (stristr(mode, "pcm")) out->encode.mode = ENCODE_PCM;
+	if (stristr(mode, "pcm")) out->encode.mode = ENCODE_PCM;
 	else if (stristr(mode, "flc")) out->encode.mode = ENCODE_FLAC;
 	else if (stristr(mode, "mp3")) out->encode.mode = ENCODE_MP3;
+	else {
+		// make sure we have a stable default mode
+		strcpy(mode, "thru");
+		out->encode.mode = ENCODE_THRU;
+	}	
 
 	// force read of re-encoding parameters
 	if ((p = stristr(mode, "r:")) != NULL) sample_rate = atoi(p+2);
@@ -1100,7 +1124,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 
 	} else if (out->encode.mode == ENCODE_MP3) {
 
-		mimetype = find_mimetype('m', ctx->mimetypes, NULL);
+		mimetype = find_mimetype('m', ctx->mimetypes, NULL);
 		out->encode.sample_size = 16;
 		// need to tweak a bit samples rates
 		if (!out->supported_rates[0] || out->supported_rates[0] < -48000 ) out->supported_rates[0] = -48000;
@@ -1109,7 +1133,6 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 			out->encode.level = atoi(p+4);
 			if (out->encode.level > 320) out->encode.level = 320;
 		} else out->encode.level = 128;
-
 	}
 	// matching found in player
 	if (mimetype) {

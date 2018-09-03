@@ -170,7 +170,7 @@ bool cli_open_socket(struct thread_ctx_s *ctx) {
 
 	addr.sin_family = AF_INET;
 	addr.sin_addr.s_addr = ctx->slimproto_ip;
-	addr.sin_port = htons(9090);
+	addr.sin_port = htons(ctx->cli_port);
 
 	if (connect_timeout(ctx->cli_sock, (struct sockaddr *) &addr, sizeof(addr), 50))  {
 		LOG_ERROR("[%p] unable to connect to server with cli", ctx);

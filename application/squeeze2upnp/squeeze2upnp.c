@@ -1163,7 +1163,9 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 		return false;
 	}
 
-	CheckCodecs(Device->sq_config.codecs, *Sink, Device->Config.ForcedMimeTypes);
+	// only check codecs in thru mode
+	if (stristr(Device->sq_config.mode, "thru"))
+		CheckCodecs(Device->sq_config.codecs, *Sink, Device->Config.ForcedMimeTypes);
 
 	MakeMacUnique(Device);
 

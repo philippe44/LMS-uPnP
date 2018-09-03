@@ -1,3 +1,11 @@
+1.3.0
+ - get cli port from server
+ 
+1.2.2
+ - only check codecs with UPnP capabilities in thru mode
+ - make sure to default to thru if mode mispelled
+ - eliminate unloaded codecs in full processing mode
+ 
 1.2.1
  - mode was still comapred to "flac" and not "flc" in slimproto.c!
  
