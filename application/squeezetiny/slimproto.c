@@ -1119,7 +1119,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 
 		mimetype = find_mimetype('f', ctx->mimetypes, NULL);
 		if (out->sample_size > 24) out->encode.sample_size = 24;
-		if ((p = stristr(mode, "flc:")) != NULL) out->encode.level = atoi(p+5);
+		if ((p = stristr(mode, "flc:")) != NULL) out->encode.level = atoi(p+4);
 		if (out->encode.level > 9) out->encode.level = 0;
 
 	} else if (out->encode.mode == ENCODE_MP3) {
