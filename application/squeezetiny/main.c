@@ -664,19 +664,19 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 			context
 			*/
 			sscanf(uri, BRIDGE_URL "%u", &index);
-			if (ctx->render.index != index && ctx->output.index == index) {
-				LOCK_O;
+			LOCK_O;
+			if (ctx->output.state > OUTPUT_STOPPED && ctx->render.index != index && ctx->output.index == index) {
 				ctx->render.index = index;
 				ctx->render.ms_paused = ctx->render.ms_played = 0;
 				ctx->render.duration = ctx->output.duration;
 				if (ctx->render.state == RD_PLAYING) {
 					ctx->output.track_started = true;
 					ctx->render.track_start_time = gettime_ms();
-					UNLOCK_O;
 					LOG_INFO("[%p] track %u started at %u", ctx, index, ctx->render.track_start_time);
 					wake_controller(ctx);
-				} else UNLOCK_O;
+				}
 			}
+			UNLOCK_O;
 			break;
 		}
 		default:

@@ -211,7 +211,7 @@ PLUGIN_UPNPBRIDGE_ENCODEPARAMS
 PLUGIN_UPNPBRIDGE_ENCODEPARAMS_DESC
 	EN	The bridge can either simply passthrough audio data to the player (with minor alteration) or do a full transcoding which
 	EN	improves compatibility by sending controlled format and allows replay gain as well as fading in and out. It's also 
-	EN	possible to send audio in a continuous flow of data instead of tracks one-bye-one to enable true gapless and 
+	EN	possible to send audio in a continuous flow of data instead of tracks one-by-one to enable true gapless and 
 	EN	cross-fading. See user's guide for more details
 	EN	<br><i>- Transcode:</i> format sent to player. When left empty or set to 'none', audio is simply passed through to player
 	EN	<br><i>- Flow:</i> enable "flow" mode where playlists are sent as a continuous audio stream.

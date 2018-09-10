@@ -43,6 +43,7 @@ typedef struct {
 void 		QueueInit(tQueue *queue, bool mutex, void (*f)(void*));
 void 		QueueInsert(tQueue *queue, void *item);
 void 		*QueueExtract(tQueue *queue);
+void 		*QueueHead(tQueue *queue);
 void 		QueueFlush(tQueue *queue);
 
 int 		pthread_cond_reltimedwait(pthread_cond_t *cond, pthread_mutex_t *mutex,	u32_t msWait);

@@ -1,3 +1,6 @@
+1.3.2
+ - renderer index could be captured from a previous track in case of fast play/stop/play sessions
+ 
 1.3.1
  - flac compression level was not used from mode parameter
  
