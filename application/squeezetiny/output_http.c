@@ -46,7 +46,7 @@ struct thread_param_s {
 
 static void 	output_http_thread(struct thread_param_s *param);
 static ssize_t 	handle_http(struct thread_ctx_s *ctx, int sock, int thread_index,
-						   size_t bytes, u8_t **tbuf, size_t hsize);
+						   size_t bytes, struct buffer *obuf, bool *header);
 static void 	mirror_header(key_data_t *src, key_data_t *rsp, char *key);
 static ssize_t 	send_with_icy(struct thread_ctx_s *ctx, int sock, const void *buf,
 							 ssize_t *len, int flags);
@@ -92,9 +92,8 @@ static void output_http_thread(struct thread_param_s *param) {
 	int sock = -1;
 	char chunk_frame_buf[16] = "", *chunk_frame = chunk_frame_buf;
 	bool acquired = false;
-	size_t hpos = 0, bytes = 0, hsize = 0, tpos = 0;
+	size_t hpos = 0, bytes = 0, hsize = 0;
 	ssize_t chunk_count = 0;
-	u8_t *tbuf = NULL;
 	u8_t *hbuf = malloc(HEAD_SIZE);
 	fd_set rfds, wfds;
 	struct buffer __obuf, *obuf = &__obuf;
@@ -104,6 +103,7 @@ static void output_http_thread(struct thread_param_s *param) {
 	u32_t start = gettime_ms();
 
 	free(param);
+	buf_init(obuf, HTTP_STUB_DEPTH + 512*1024);
 
 	/*
 	This function is higly non-linear and painful to read at first, I agree
@@ -157,7 +157,7 @@ static void output_http_thread(struct thread_param_s *param) {
 		FD_SET(sock, &rfds);
 
 		// short wait if obuf has free space and there is something to process
-		timeout.tv_usec = _buf_used(ctx->outputbuf) && _buf_space(obuf) > obuf->size / 8 ?
+		timeout.tv_usec = _buf_used(ctx->outputbuf) && _buf_space(obuf) > HTTP_STUB_DEPTH ?
 									TIMEOUT*1000 / 10 : TIMEOUT*1000;
 
 		n = select(sock + 1, &rfds, &wfds, NULL, &timeout);
@@ -183,19 +183,20 @@ static void output_http_thread(struct thread_param_s *param) {
 
 		// should be the HTTP headers (works with non-blocking socket)
 		if (n > 0 && FD_ISSET(sock, &rfds)) {
-			ssize_t offset = handle_http(ctx, sock, thread->index, bytes, &tbuf, hsize);
+			bool header;
+			ssize_t offset = handle_http(ctx, sock, thread->index, bytes, obuf, &header);
+
 			http_ready = res = (offset >= 0 && offset <= bytes + 1);
 
-			// reset chunking and head/tails properly at every new connection
-			*chunk_frame = '\0';
-			chunk_count = hpos = 0;
+			// need to re-send header (Sonos)
+			if (http_ready && header) {
+				hpos = hsize;
+				LOG_INFO("[%p]: re-sending header %u bytes", ctx, hpos);
+			} else hpos = 0;
 
-			// this is a restart at a given position, send from tail
-			if (offset > 0) {
-				tpos = offset - 1;
-				LOG_INFO("[%p]: tail pos %zd (need %zd)", ctx, tpos, bytes - tpos);
-			// this is a restart a 0, send the head (Sonos) - never chunked!
-			} else if (!offset && bytes && tbuf) hpos = hsize;
+			// reset chunking and
+			*chunk_frame = '\0';
+			chunk_count = 0;
 		}
 
 		// something wrong happened or master connection closed
@@ -287,7 +288,7 @@ static void output_http_thread(struct thread_param_s *param) {
 		}
 
 		// now are surely running - socket is non blocking, so this is fast
-		if (_buf_used(obuf) || tpos < bytes) {
+		if (_buf_used(obuf)) {
 			ssize_t	sent, space;
 
 			// we cannot write, so don't bother
@@ -297,10 +298,7 @@ static void output_http_thread(struct thread_param_s *param) {
 				continue;
 			}
 
-			if (tpos < bytes) {
-				space = min(bytes - tpos, MAX_BLOCK);
-				LOG_DEBUG("[%p]: read from tail %zd ", ctx, space);
-			} else space = min(_buf_cont_read(obuf), MAX_BLOCK);
+			space = min(_buf_cont_read(obuf), MAX_BLOCK);
 
 			// if chunked mode start by sending the header
 			if (chunk_count) space = min(space, chunk_count);
@@ -312,13 +310,7 @@ static void output_http_thread(struct thread_param_s *param) {
 				continue;
 			}
 
-			// take data from cache or from normal buffer
-			if (tpos < bytes) {
-				size_t i = tpos % TAIL_SIZE;
-				space = min(space, TAIL_SIZE - i);
-				sent = send_with_icy(ctx, sock, tbuf + i, &space, 0);
-				LOG_DEBUG("[%p]: send from tail %zu %zd", ctx, i, space);
-			} else sent = send_with_icy(ctx, sock, (void*) _buf_readp(obuf), &space, 0);
+			sent = send_with_icy(ctx, sock, (void*) _buf_readp(obuf), &space, 0);
 
 			if (sent > 0) {
 				if (bytes < HEAD_SIZE) {
@@ -335,20 +327,11 @@ static void output_http_thread(struct thread_param_s *param) {
 					}
 				}
 
-				// store new data in tail buffer
-				if (tpos == bytes) {
-					if (tbuf) {
-						size_t i = tpos % TAIL_SIZE;
-						ssize_t n = min(space, TAIL_SIZE - i);
-						memcpy(tbuf + i, _buf_readp(obuf), n);
-						memcpy(tbuf, (u8_t*) _buf_readp(obuf) + n, space - n);
-					}
-					tpos = bytes += space;
-					_buf_inc_readp(obuf, space);
-				} else tpos += space;
+				_buf_inc_readp(obuf, space);
+				bytes += space;
 
 				LOG_SDEBUG("[%p] sent %u bytes (total: %u)", ctx, space, bytes);
-            }
+			}
 		} else {
 			// check if all sent
 			if (!drain_count) {
@@ -365,7 +348,6 @@ static void output_http_thread(struct thread_param_s *param) {
 		UNLOCK_O;
 	}
 
-	NFREE(tbuf);
 	NFREE(hbuf);
 	if (acquired) buf_destroy(obuf);
 
@@ -459,15 +441,16 @@ they request a range, we'll restart from where we were and mostly it will not be
 acceptable by the player, so then use the option seek_after_pause
 */
 static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, int thread_index,
-						   size_t bytes, u8_t **tbuf, size_t hsize)
+						   size_t bytes, struct buffer *obuf, bool *header)
 {
 	char *body = NULL, *request = NULL, *str = NULL;
 	key_data_t headers[64], resp[16] = { { NULL, NULL } };
 	char *head = "HTTP/1.1 200 OK";
 	int len, index;
 	ssize_t res = 0;
-	bool chunked = true, Sonos = false;
+	bool chunked = true;
 	char format;
+	enum { ANY, SONOS, CHROMECAST } type;
 
 	if (!http_parse(sock, &request, headers, &body, &len)) {
 		LOG_WARN("[%p]: http parsing error %s", ctx, request);
@@ -481,22 +464,13 @@ static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, int thread_index,
 	LOG_INFO("[%p]: HTTP headers\n%s", ctx, str = kd_dump(headers));
 	NFREE(str);
 
-	// for sonos devices, then need to have a tail of sent bytes ... crap
-	if (((str = kd_lookup(headers, "USER-AGENT")) != NULL) && !strcasecmp(str, "sonos")) {
-		Sonos = true;
-		if (!*tbuf) {
-			*tbuf = malloc(TAIL_SIZE);
-			LOG_INFO("[%p]: Entering Sonos mode", ctx);
-		}
+	if (((str = kd_lookup(headers, "USER-AGENT")) != NULL) && stristr(str, "sonos")) {
+		type = SONOS;
+		LOG_INFO("[%p]: Sonos mode", ctx);
 	} else if (kd_lookup(headers, "CAST-DEVICE-CAPABILITIES")) {
-		if (!*tbuf) {
-			*tbuf = malloc(TAIL_SIZE);
-			 LOG_INFO("[%p]: Entering Chromecast mode", ctx);
-		}
-	} else if (*tbuf ) {
-		NFREE(*tbuf);
-		LOG_INFO("[%p]: Exiting Sonos/Chromecast mode", ctx);
-	}
+		type = CHROMECAST;
+		LOG_INFO("[%p]: Chromecast mode", ctx);
+	} else type = ANY;
 
 	kd_add(resp, "Server", "squeezebox-bridge");
 	kd_add(resp, "Connection", "close");
@@ -539,24 +513,25 @@ static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, int thread_index,
 		}
 
 		// a range request - might happen even when we said NO RANGE !!!
+		*header = false;
 		if ((str = kd_lookup(headers, "Range")) != NULL) {
 			int offset = 0;
 			sscanf(str, "bytes=%u", &offset);
-			if (offset && tbuf) {
+			if (offset) {
 				char *range;
 				asprintf(&range, "bytes %u-%zu/*", offset, bytes);
 				head = "HTTP/1.1 206 Partial Content";
-				kd_add(resp, "Content-Range", range);
+				if (type == CHROMECAST) kd_add(resp, "Content-Range", range);
 				res = offset + 1;
 				free(range);
+				obuf->readp = obuf->buf + offset % obuf->size;
 			}
-		} else if (bytes && Sonos) {
+		} else if (bytes && type == SONOS) {
 			// Sonos client re-opening the connection, so make it believe we
 			// have a 2G length - thus it will sent a range-request
-			asprintf(&str, "%zu", hsize);
 			if (ctx->output.length < 0) kd_add(resp, "Content-Length", "2048000000");
-			NFREE(str);
 			chunked = false;
+			*header = true;
 		}
 	}
 

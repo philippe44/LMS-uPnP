@@ -372,6 +372,7 @@ void 		resample_end(struct thread_ctx_s *ctx);
 // output.c
 
 #define	OUTPUTBUF_IDLE_SIZE (256*1024)
+#define HTTP_STUB_DEPTH		(2048*1024)
 
 #define ICY_LEN_MAX		(255*16+1)
 #define ICY_UPDATE_TIME	5000

@@ -170,7 +170,7 @@ bool _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
 	Output buffer (buf) cannot have an alignement due to additon of header  for
 	wav and aif files
 	*/
-	if (bytes < BYTES_PER_FRAME) return true;
+	if (bytes < HTTP_STUB_DEPTH) return true;
 
 	// write header pending data if any and exit
 	if (p->header.buffer) {
@@ -345,8 +345,6 @@ void _output_new_stream(struct buffer *obuf, struct thread_ctx_s *ctx) {
 	if (out->encode.mode == ENCODE_PCM) {
 		size_t length;
 
-		buf_init(obuf, out->encode.sample_rate * out->encode.channels * out->encode.sample_size / 8 * DRAIN_LEN);
-
 		/*
 		do not create a size (content-length) when we really don't know it but
 		when we set a content-length (http_mode > 0) then at least the headers
@@ -410,14 +408,12 @@ void _output_new_stream(struct buffer *obuf, struct thread_ctx_s *ctx) {
 
 		if (ctx->config.stream_length > 0) ctx->output.length = length;
 		//FIXME ctx->output.length = length;
-		LOG_INFO("[%p]: encoding in PCM r:%u s:%u f:%c", ctx, out->encode.sample_rate,
+		LOG_INFO("[%p]: PCM encoding r:%u s:%u f:%c", ctx, out->encode.sample_rate,
 											out->encode.sample_size, out->format);
 		LOG_INFO("[%p]: HTTP %d, estimated len %zu", ctx, ctx->config.stream_length, length);
 	} else if (out->encode.mode == ENCODE_FLAC) {
 		FLAC__StreamEncoder *codec;
 		bool ok;
-
-		buf_init(obuf, max((out->encode.sample_rate * out->encode.channels * out->encode.sample_size / 8 * DRAIN_LEN) / 2, 10 * FLAC_MIN_SPACE));
 
 		codec = FLAC(f, stream_encoder_new);
 		ok = FLAC(f, stream_encoder_set_verify,codec, false);
@@ -430,7 +426,7 @@ void _output_new_stream(struct buffer *obuf, struct thread_ctx_s *ctx) {
 		ok &= !FLAC(f, stream_encoder_init_stream, codec, flac_write_callback, NULL, NULL, NULL, obuf);
 		if (ok) {
 			out->encode.codec = (void*) codec;
-			LOG_INFO("[%p]: encoding in FLAC-%u, r:%u s:%u", ctx, out->encode.level,
+			LOG_INFO("[%p]: FLAC-%u encoding r:%u s:%u", ctx, out->encode.level,
 										out->encode.sample_rate, out->encode.sample_size);
 		}
 		else {
@@ -457,7 +453,7 @@ void _output_new_stream(struct buffer *obuf, struct thread_ctx_s *ctx) {
 		out->encode.codec = (void*) shine_initialise(&config);
 		if (out->encode.codec) {
 			out->encode.buffer = malloc(shine_samples_per_pass(out->encode.codec) * out->encode.channels * 2);
-			LOG_INFO("[%p]: encoding in MP3-%u r:%u s:%u", ctx,
+			LOG_INFO("[%p]: MP3-%u encoding r:%u s:%u", ctx,
 										out->encode.level, out->encode.sample_rate,
 										out->encode.sample_size);
 		} else {
@@ -465,10 +461,6 @@ void _output_new_stream(struct buffer *obuf, struct thread_ctx_s *ctx) {
 								  out->encode.level, out->encode.sample_rate,
 								  out->encode.sample_size, out->encode.channels);
 		}
-
-		buf_init(obuf, (out->encode.level * 1024 / 8) * DRAIN_LEN);
-	} else {
-		buf_init(obuf, max((out->bitrate * DRAIN_LEN) / 8, 128*1024));
 	}
 }
 
