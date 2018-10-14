@@ -1,3 +1,6 @@
+1.5.0
+ - add alac support
+ 
 1.4.0
  - tail mode moved to obuf
  - obuf size fixed to 3MB with 2MB for tail

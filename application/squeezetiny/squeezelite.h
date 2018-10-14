@@ -578,6 +578,8 @@ struct codec*	register_faad(void);
 void		 	deregister_faad(void);
 struct codec*	register_mad(void);
 void		 	deregister_mad(void);
+struct codec*	register_alac(void);
+void		 	deregister_alac(void);
 
 #if RESAMPLE
 bool register_soxr(void);

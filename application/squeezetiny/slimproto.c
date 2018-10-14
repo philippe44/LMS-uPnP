@@ -1140,6 +1140,8 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 		free(mimetype);
 
 		out->format = mimetype2format(out->mimetype);
+		// there is a ambiguity for mp4 and m4a, so choose codec
+		if (out->format == '*') out->format = format;
 		out->out_endian = (out->format == 'w');
 		out->length = ctx->config.stream_length;
 

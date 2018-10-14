@@ -171,6 +171,7 @@ char *mimetype2ext(char *mimetype)
 	if (strstr(mimetype, "aif")) return "aif";
 	if (strstr(mimetype, "aac")) return "aac";
 	if (strstr(mimetype, "mp4")) return "mp4";
+	if (strstr(mimetype, "m4a")) return "m4a";
 
 	return "nil";
 
@@ -188,7 +189,8 @@ u8_t mimetype2format(char *mimetype)
 	if (strstr(mimetype, "ogg")) return 'o';
 	if (strstr(mimetype, "aif")) return 'i';
 	if (strstr(mimetype, "aac")) return 'a';
-	if (strstr(mimetype, "mp4")) return 'a';
+	if (strstr(mimetype, "mp4")) return '*';
+	if (strstr(mimetype, "m4a")) return '*';
 
 	return '*';
 }

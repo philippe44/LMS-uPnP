@@ -90,7 +90,7 @@ static log_level *loglevel = &decode_loglevel;
 // minimal code for mp4 file parsing to extract audio config and find media data
 
 // adapted from faad2/common/mp4ff
-u32_t mp4_desc_length(u8_t **buf) {
+static u32_t mp4_desc_length(u8_t **buf) {
 	u8_t b;
 	u8_t num_bytes = 0;
 	u32_t length = 0;
