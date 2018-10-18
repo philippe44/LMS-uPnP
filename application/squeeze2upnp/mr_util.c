@@ -335,7 +335,7 @@ void CheckCodecs(char *Codecs, char *Sink, char *Forced)
 		if (strstr(p,"wma")) _CheckCodecs(Codecs, Sink, Forced, "wma", 1, "wma");
 		if (strstr(p,"ogg")) _CheckCodecs(Codecs, Sink, Forced, "ogg", 1, "ogg");
 		if (strstr(p,"aac")) _CheckCodecs(Codecs, Sink, Forced, "aac", 3, "aac", "m4a", "mp4");
-		if (strstr(p,"alc")) _CheckCodecs(Codecs, Sink, Forced, "alc", 1, "m4a");
+		if (strstr(p,"alc")) _CheckCodecs(Codecs, Sink, Forced, "alc", 2, "m4a", "mp4");
 		if (strstr(p,"pcm")) _CheckCodecs(Codecs, Sink, Forced, "pcm", 2, "wav", "audio/L");
 		if (strstr(p,"aif")) _CheckCodecs(Codecs, Sink, Forced, "aif", 3, "aif", "wav", "audio/L");
 

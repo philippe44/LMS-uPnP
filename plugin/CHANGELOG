@@ -1,3 +1,8 @@
+1.6.0
+ - add m4a to adts decoding in 'thru' mode
+ - few alac issue correction
+ - exit output_thread on streaming error only when HTTP connection is closed, no bytes sent and decoding completed (noy in the select/accept waiting loop)
+ 
 1.5.0
  - add alac support
  

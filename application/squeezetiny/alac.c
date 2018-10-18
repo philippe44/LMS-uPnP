@@ -24,6 +24,8 @@
 #include <alac_wrapper.h>
 
 #define BLOCK_SIZE (4096 * BYTES_PER_FRAME)
+#define MIN_READ    BLOCK_SIZE
+#define MIN_SPACE  (MIN_READ * 4)
 
 struct chunk_table {
 	u32_t sample, offset;
@@ -277,14 +279,12 @@ static int read_mp4_header(struct thread_ctx_s *ctx) {
 
 static decode_state alac_decode(struct thread_ctx_s *ctx) {
 	struct alac *l = ctx->decode.handle;
+	size_t bytes;
+	bool endstream;
+	u8_t *iptr;
+	u32_t frames, block_size;
 
-	while (true) {
-		size_t bytes;
-		bool endstream;
-		u8_t *iptr;
-		u32_t frames, block_size;
-
-		LOCK_S;
+	LOCK_S;
 
 		// data not reached yet
 		if (l->consume) {
@@ -297,199 +297,196 @@ static decode_state alac_decode(struct thread_ctx_s *ctx) {
 			return DECODE_RUNNING;
 		}
 
-		if (ctx->decode.new_stream) {
-			int found = 0;
+	if (ctx->decode.new_stream) {
+		int found = 0;
+
+		LOG_INFO("[%p]: setting track_start", ctx);
+
+		// mp4 - read header
+		found = read_mp4_header(ctx);
+
+		if (found == 1) {
+			LOG_INFO("[%p]: sample_rate: %u channels: %u", ctx, l->sample_rate, l->channels);
+			bytes = min(_buf_used(ctx->streambuf), _buf_cont_read(ctx->streambuf));
 
 			LOG_INFO("[%p]: setting track_start", ctx);
+			LOCK_O;
 
-			// mp4 - read header
-			found = read_mp4_header(ctx);
+			ctx->output.direct_sample_rate = l->sample_rate;
+			ctx->output.sample_rate = decode_newstream(l->sample_rate, ctx->output.supported_rates, ctx);
+			ctx->output.sample_size = l->sample_size;
+			ctx->output.channels = l->channels;
+			ctx->output.track_start = ctx->outputbuf->writep;
 
-			if (found == 1) {
-				LOG_INFO("[%p]: sample_rate: %u channels: %u", ctx, l->sample_rate, l->channels);
-				bytes = min(_buf_used(ctx->streambuf), _buf_cont_read(ctx->streambuf));
+			if (ctx->output.fade_mode) _checkfade(true, ctx);
+			ctx->decode.new_stream = false;
 
-				LOG_INFO("[%p]: setting track_start", ctx);
-				LOCK_O;
-
-				ctx->output.direct_sample_rate = l->sample_rate;
-				ctx->output.sample_rate = decode_newstream(l->sample_rate, ctx->output.supported_rates, ctx);
-				ctx->output.sample_size = l->sample_size;
-				ctx->output.channels = l->channels;
-				ctx->output.track_start = ctx->outputbuf->writep;
-
-				if (ctx->output.fade_mode) _checkfade(true, ctx);
-				ctx->decode.new_stream = false;
-
-				UNLOCK_O;
-			} else if (found == -1) {
-				LOG_WARN("[%p]: error reading stream header", ctx);
-				UNLOCK_S;
-				return DECODE_ERROR;
-			} else {
-				// not finished header parsing come back next time
-				UNLOCK_S;
-				return DECODE_RUNNING;
-			}
-		}
-
-		bytes = _buf_used(ctx->streambuf);
-		block_size = l->default_block_size ? l->default_block_size : l->block_size[l->block_index];
-
-		// stream terminated
-		if (ctx->stream.state <= DISCONNECT && (bytes == 0 || block_size == 0)) {
+			UNLOCK_O;
+		} else if (found == -1) {
+			LOG_WARN("[%p]: error reading stream header", ctx);
 			UNLOCK_S;
-			LOG_DEBUG("[%p]: end of stream", ctx);
-			return DECODE_COMPLETE;
-		}
-
-		// enough data for coding
-		if (bytes < block_size) {
+			return DECODE_ERROR;
+		} else {
+			// not finished header parsing come back next time
 			UNLOCK_S;
 			return DECODE_RUNNING;
-		} else if (block_size != l->default_block_size) l->block_index++;
-
-		bytes = min(bytes, _buf_cont_read(ctx->streambuf));
-
-		// need to create a buffer with contiguous data
-		if (bytes < block_size) {
-			u8_t *buffer = malloc(block_size);
-			memcpy(buffer, ctx->streambuf->readp, bytes);
-			memcpy(buffer + bytes, ctx->streambuf->buf, block_size - bytes);
-			iptr = buffer;
-		} else iptr = ctx->streambuf->readp;
-
-		if (!alac_to_pcm(l->decoder, iptr, l->writebuf, 2, &frames)) {
-			LOG_ERROR("[%p]: decode error", ctx);
-			UNLOCK_S;
-			return DECODE_ERROR;
 		}
-
-		// and free it
-		if (bytes < block_size) free(iptr);
-
-		LOG_DEBUG("[%p]: block of %u bytes (%u frames)", ctx, block_size, frames);
-
-		endstream = false;
-		// mp4 end of chunk - skip to next offset
-		if (l->chunkinfo && l->chunkinfo[l->nextchunk].offset && l->sample++ == l->chunkinfo[l->nextchunk].sample) {
-			 if (l->chunkinfo[l->nextchunk].offset > l->pos) {
-				u32_t skip = l->chunkinfo[l->nextchunk].offset - l->pos;
-				if (_buf_used(ctx->streambuf) >= skip) {
-					_buf_inc_readp(ctx->streambuf, skip);
-					l->pos += skip;
-				} else {
-					l->consume = skip;
-				}
-				l->nextchunk++;
-			 } else {
-				LOG_ERROR("[%p]: error: need to skip backwards!", ctx);
-				endstream = true;
-			 }
-		// mp4 when not at end of chunk
-		} else if (frames) {
-			_buf_inc_readp(ctx->streambuf, block_size);
-			l->pos += block_size;
-		} else {
-			endstream = true;
-		}
-
-		UNLOCK_S;
-
-		if (endstream) {
-			LOG_WARN("[%p]: unable to decode further", ctx);
-			return DECODE_ERROR;
-		}
-
-		// now point at the beginning of decoded samples
-		iptr = l->writebuf;
-
-		if (l->skip) {
-			u32_t skip;
-			if (l->empty) {
-				l->empty = false;
-				l->skip -= frames;
-				LOG_DEBUG("[%p]: gapless: first frame empty, skipped %u frames at start", ctx, frames);
-			}
-			skip = min(frames, l->skip);
-			LOG_DEBUG("[%p]: gapless: skipping %u frames at start", ctx, skip);
-			frames -= skip;
-			l->skip -= skip;
-			iptr += skip * l->channels * l->sample_size;
-		}
-
-		if (l->samples) {
-			if (l->samples < frames) {
-				LOG_DEBUG("[%p]: gapless: trimming %u frames from end", ctx, frames - l->samples);
-				frames = (u32_t) l->samples;
-			}
-			l->samples -= frames;
-		}
-
-		LOCK_O_direct;
-
-		ctx->decode.frames += frames;
-
-		while (frames > 0) {
-			size_t f, count;
-			s32_t *optr;
-
-			IF_DIRECT(
-				f = min(frames, _buf_cont_write(ctx->outputbuf) / BYTES_PER_FRAME);
-				optr = (s32_t *)ctx->outputbuf->writep;
-			);
-			IF_PROCESS(
-				f = min(frames, ctx->process.max_in_frames - ctx->process.in_frames);
-				optr = (s32_t *)((u8_t *) ctx->process.inbuf + ctx->process.in_frames * BYTES_PER_FRAME);
-			);
-
-			f = min(f, frames);
-			count = f;
-
-			if (l->sample_size == 8) {
-				while (count--) {
-					*optr++ = (*(u32_t*) iptr) << 24;
-					*optr++ = (*(u32_t*) (iptr + 1)) << 24;
-					iptr += 2;
-				}
-			} else if (l->sample_size == 16) {
-				while (count--) {
-					*optr++ = (*(u32_t*) iptr) << 16;
-					*optr++ = (*(u32_t*) (iptr + 2)) << 16;
-					iptr += 4;
-				}
-			} else if (l->sample_size == 24) {
-				while (count--) {
-					*optr++ = (*(u32_t*) iptr) << 8;
-					*optr++ = (*(u32_t*) (iptr + 3)) << 8;
-					iptr += 6;
-				}
-			} else if (l->sample_size == 32) {
-				while (count--) {
-					*optr++ = (*(u32_t*) iptr);
-					*optr++ = (*(u32_t*) (iptr + 4));
-					iptr += 8;
-				}
-			} else {
-				LOG_ERROR("[%p]: unsupported bits per sample: %u", ctx, l->sample_size);
-			}
-
-			frames -= f;
-
-			IF_DIRECT(
-				_buf_inc_writep(ctx->outputbuf, f * BYTES_PER_FRAME);
-			);
-			IF_PROCESS(
-				ctx->process.in_frames = f;
-				// called only if there is enough space in process buffer
-				if (frames) LOG_ERROR("[%p]: unhandled case", ctx);
-			);
-		 }
-
-		UNLOCK_O_direct;
-
-		return DECODE_RUNNING;
 	}
+
+	bytes = _buf_used(ctx->streambuf);
+	block_size = l->default_block_size ? l->default_block_size : l->block_size[l->block_index];
+
+	// stream terminated
+	if (ctx->stream.state <= DISCONNECT && (bytes == 0 || block_size == 0)) {
+		UNLOCK_S;
+		LOG_DEBUG("[%p]: end of stream", ctx);
+		return DECODE_COMPLETE;
+	}
+
+	// enough data for coding
+	if (bytes < block_size) {
+		UNLOCK_S;
+		return DECODE_RUNNING;
+	} else if (block_size != l->default_block_size) l->block_index++;
+
+	bytes = min(bytes, _buf_cont_read(ctx->streambuf));
+
+	// need to create a buffer with contiguous data
+	if (bytes < block_size) {
+		u8_t *buffer = malloc(block_size);
+		memcpy(buffer, ctx->streambuf->readp, bytes);
+		memcpy(buffer + bytes, ctx->streambuf->buf, block_size - bytes);
+		iptr = buffer;
+	} else iptr = ctx->streambuf->readp;
+
+	if (!alac_to_pcm(l->decoder, iptr, l->writebuf, 2, &frames)) {
+		LOG_ERROR("[%p]: decode error", ctx);
+		UNLOCK_S;
+		return DECODE_ERROR;
+	}
+
+	// and free it
+	if (bytes < block_size) free(iptr);
+
+	LOG_SDEBUG("[%p]: block of %u bytes (%u frames)", ctx, block_size, frames);
+
+	endstream = false;
+	// mp4 end of chunk - skip to next offset
+	if (l->chunkinfo && l->chunkinfo[l->nextchunk].offset && l->sample++ == l->chunkinfo[l->nextchunk].sample) {
+		 if (l->chunkinfo[l->nextchunk].offset > l->pos) {
+			u32_t skip = l->chunkinfo[l->nextchunk].offset - l->pos;
+			if (_buf_used(ctx->streambuf) >= skip) {
+				_buf_inc_readp(ctx->streambuf, skip);
+				l->pos += skip;
+			} else {
+				l->consume = skip;
+			}
+			l->nextchunk++;
+		 } else {
+			LOG_ERROR("[%p]: error: need to skip backwards!", ctx);
+			endstream = true;
+		 }
+	// mp4 when not at end of chunk
+	} else if (frames) {
+		_buf_inc_readp(ctx->streambuf, block_size);
+		l->pos += block_size;
+	} else {
+		endstream = true;
+	}
+
+	UNLOCK_S;
+
+	if (endstream) {
+		LOG_WARN("[%p]: unable to decode further", ctx);
+		return DECODE_ERROR;
+	}
+
+	// now point at the beginning of decoded samples
+	iptr = l->writebuf;
+
+	if (l->skip) {
+		u32_t skip;
+		if (l->empty) {
+			l->empty = false;
+			l->skip -= frames;
+			LOG_DEBUG("[%p]: gapless: first frame empty, skipped %u frames at start", ctx, frames);
+		}
+		skip = min(frames, l->skip);
+		LOG_DEBUG("[%p]: gapless: skipping %u frames at start", ctx, skip);
+		frames -= skip;
+		l->skip -= skip;
+		iptr += skip * l->channels * l->sample_size;
+	}
+
+	if (l->samples) {
+		if (l->samples < frames) {
+			LOG_DEBUG("[%p]: gapless: trimming %u frames from end", ctx, frames - l->samples);
+			frames = (u32_t) l->samples;
+		}
+		l->samples -= frames;
+	}
+
+	LOCK_O_direct;
+
+	ctx->decode.frames += frames;
+
+	while (frames > 0) {
+		size_t f, count;
+		s32_t *optr;
+
+		IF_DIRECT(
+			f = min(frames, _buf_cont_write(ctx->outputbuf) / BYTES_PER_FRAME);
+			optr = (s32_t *)ctx->outputbuf->writep;
+		);
+		IF_PROCESS(
+			f = min(frames, ctx->process.max_in_frames - ctx->process.in_frames);
+			optr = (s32_t *)((u8_t *) ctx->process.inbuf + ctx->process.in_frames * BYTES_PER_FRAME);
+		);
+
+		f = min(f, frames);
+		count = f;
+
+		if (l->sample_size == 8) {
+			while (count--) {
+				*optr++ = (*(u32_t*) iptr) << 24;
+				*optr++ = (*(u32_t*) (iptr + 1)) << 24;
+				iptr += 2;
+			}
+		} else if (l->sample_size == 16) {
+			while (count--) {
+				*optr++ = (*(u32_t*) iptr) << 16;
+				*optr++ = (*(u32_t*) (iptr + 2)) << 16;
+				iptr += 4;
+			}
+		} else if (l->sample_size == 24) {
+			while (count--) {
+				*optr++ = (*(u32_t*) iptr) << 8;
+				*optr++ = (*(u32_t*) (iptr + 3)) << 8;
+				iptr += 6;
+			}
+		} else if (l->sample_size == 32) {
+			while (count--) {
+				*optr++ = (*(u32_t*) iptr);
+				*optr++ = (*(u32_t*) (iptr + 4));
+				iptr += 8;
+			}
+		} else {
+			LOG_ERROR("[%p]: unsupported bits per sample: %u", ctx, l->sample_size);
+		}
+
+		frames -= f;
+
+		IF_DIRECT(
+			_buf_inc_writep(ctx->outputbuf, f * BYTES_PER_FRAME);
+		);
+		IF_PROCESS(
+			ctx->process.in_frames = f;
+			// called only if there is enough space in process buffer
+			if (frames) LOG_ERROR("[%p]: unhandled case", ctx);
+		);
+	 }
+
+	UNLOCK_O_direct;
 
 	return DECODE_RUNNING;
 }
@@ -538,8 +535,8 @@ struct codec *register_alac(void) {
 	static struct codec ret = {
 		'l',            // id
 		"alc",          // types
-		BLOCK_SIZE,	    // min read
-		BLOCK_SIZE * 2, 	// min space assuming a ratio of 2
+		MIN_READ,	    // min read
+		MIN_SPACE,	 	// min space assuming a ratio of 2
 		alac_open,      // open
 		alac_close,     // close
 		alac_decode,    // decode

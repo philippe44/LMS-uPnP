@@ -1080,7 +1080,8 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 			out->encode.mode = ENCODE_PCM;
 		} else {
 			mimetype = find_mimetype(out->codec, ctx->mimetypes, NULL);
-			if (out->codec == 'f') out->codec ='c';
+			if (out->codec == 'a' && out->sample_size == '5' && mimetype && strstr(mimetype, "aac")) out->codec = '4';
+			else if (out->codec == 'f') out->codec ='c';
 			else out->codec = '*';
 		}
 
@@ -1140,8 +1141,6 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 		free(mimetype);
 
 		out->format = mimetype2format(out->mimetype);
-		// there is a ambiguity for mp4 and m4a, so choose codec
-		if (out->format == '*') out->format = format;
 		out->out_endian = (out->format == 'w');
 		out->length = ctx->config.stream_length;
 

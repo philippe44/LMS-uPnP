@@ -133,24 +133,7 @@ static void output_http_thread(struct thread_param_s *param) {
 
 			if (sock != -1 && ctx->running) {
 				LOG_INFO("[%p]: got HTTP connection %u", ctx, sock);
-			} else {
-				/*
-				When streaming fails, decode will be completed but new_stream
-				never happened, so output thread is blocked until the player
-				closes the connection at which point we must exit and release
-				slimproto (case where bytes == 0). Note that outputbuf must be
-				used as obuf has not been set yet
-				*/
-				LOCK_D; LOCK_O;
-				if (!_buf_used(ctx->outputbuf) && ctx->decode.state == DECODE_COMPLETE) {
-					ctx->output.completed = true;
-					LOG_ERROR("[%p]: streaming failed, exiting", ctx);
-					UNLOCK_O; UNLOCK_D;
-					break;
-				}
-				UNLOCK_O; UNLOCK_D;
-				continue;
-			}
+			} else continue;
 		}
 
 		FD_ZERO(&rfds);
@@ -204,6 +187,20 @@ static void output_http_thread(struct thread_param_s *param) {
 			LOG_INFO("[%p]: HTTP close %u (bytes %zd) (n:%d res:%d)", ctx, sock, bytes, n, res);
 			closesocket(sock);
 			sock = -1;
+			/*
+			When streaming fails, decode will be completed but new_stream
+			never happened, so output thread is blocked until the player
+			closes the connection at which point we must exit and release
+			slimproto (case where bytes == 0).
+			*/
+			LOCK_D;
+			if (!bytes && ctx->decode.state == DECODE_COMPLETE) {
+				ctx->output.completed = true;
+				LOG_ERROR("[%p]: streaming failed, exiting", ctx);
+				UNLOCK_D;
+				break;
+			}
+			UNLOCK_D;
 			continue;
 		}
 

@@ -570,6 +570,8 @@ struct codec*	register_flac(void);
 void		 	deregister_flac(void);
 struct codec*	register_flac_thru(void);
 void		 	deregister_flac_thru(void);
+struct codec*	register_m4a_thru(void);
+void		 	deregister_m4a_thru(void);
 struct codec*	register_pcm(void);
 void		 	deregister_pcm(void);
 struct codec*	register_vorbis(void);

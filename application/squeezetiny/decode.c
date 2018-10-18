@@ -122,6 +122,7 @@ static void *decode_thread(struct thread_ctx_s *ctx) {
 void decode_init(void) {
 	int i = 0;
 
+	codecs[i++] = register_m4a_thru();
 	codecs[i++] = register_alac();
 	codecs[i++] = register_mad();
 	codecs[i++] = register_faad();
@@ -145,6 +146,7 @@ void decode_end(void) {
 	deregister_mad();
 	deregister_pcm();
 	deregister_flac();
+	deregister_m4a_thru();
 	deregister_flac_thru();
 	deregister_thru();
 #if RESAMPLE

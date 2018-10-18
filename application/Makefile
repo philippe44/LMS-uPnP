@@ -42,7 +42,8 @@ INCLUDE = -I. \
 DEPS	= $(SQUEEZETINY)/squeezedefs.h
 				  
 SOURCES = 	slimproto.c buffer.c util.c output_http.c main.c \
-			stream.c decode.c pcm.c flac_thru.c thru.c process.c resample.c alac.c alac_wrapper.cpp \
+			stream.c decode.c pcm.c alac.c alac_wrapper.cpp process.c resample.c \
+			flac_thru.c thru.c m4a_thru.c \
 			ag_dec.c ALACBitUtilities.c ALACDecoder.cpp dp_dec.c EndianPortable.c matrix_dec.c \
 			util_common.c avt_util.c mr_util.c tinyutils.c squeeze2upnp.c \
 			log_util.c config_upnp.c

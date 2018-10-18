@@ -189,8 +189,7 @@ u8_t mimetype2format(char *mimetype)
 	if (strstr(mimetype, "ogg")) return 'o';
 	if (strstr(mimetype, "aif")) return 'i';
 	if (strstr(mimetype, "aac")) return 'a';
-	if (strstr(mimetype, "mp4")) return '*';
-	if (strstr(mimetype, "m4a")) return '*';
+	if (strstr(mimetype, "mp4") || strstr(mimetype, "m4a")) return '4';
 
 	return '*';
 }

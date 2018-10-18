@@ -710,7 +710,7 @@ char *kd_dump(key_data_t *kd)
 		case 'w': return _lookup(mimetypes, 2, "audio/x-wma", "audio/wma");
 		case 'o': return _lookup(mimetypes, 2, "audio/ogg", "audio/x-ogg");
 		case 'a': return _lookup(mimetypes, 4, "audio/x-aac", "audio/aac", "audio/m4a", "audio/mp4");
-		case 'l': return _lookup(mimetypes, 1, "audio/m4a");
+		case 'l': return _lookup(mimetypes, 2, "audio/m4a", "audio/mp4");
 		case 'p': {
 			char fmt[8];
 			char *mimetype;
