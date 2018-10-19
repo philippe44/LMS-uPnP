@@ -16,7 +16,9 @@ If you do not want to RTFM, at least do the following:
 - pay at least attention to the following parameters in the config.xml file 
 
 	<stream_length>    : if nothing is played
+	
 	<accept_nexturi>   : if playback is stuck in playlist
+	
 	<seek_after_pause> : if resume after pause does not restart
 
 Really, have a look at the user guide in /doc
