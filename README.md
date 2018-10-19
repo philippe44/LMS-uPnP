@@ -6,8 +6,7 @@ Packaged versions can found here https://sourceforge.net/projects/lms-plugins-ph
 
 See support thread here: http://forums.slimdevices.com/showthread.php?103728-Announce-UPnPBridge-integrate-UPnP-DLNA-players-with-LMS-(squeeze2upnp)&p=820082&viewfull=1#post820082
 
-
-#MINIMUM TO READ FOR ADVANCED USE
+# MINIMUM TO READ FOR ADVANCED USE
 If you do not want to RTFM, at least do the following:
 - put the application on a LOCAL disk where you have read/write access
 - launch it with "-i config.xml" on the command line, and wait 30s till it exits
@@ -22,7 +21,7 @@ If you do not want to RTFM, at least do the following:
 
 Really, have a look at the user guide in /doc
 
-#WHAT VERSION TO CHOOSE
+# WHAT VERSION TO CHOOSE
 Download UPnPBridge.zip and in /Bin, there are binaries for Windows, Linux 
 (x86 and ARM) and OSX. 
 
@@ -43,7 +42,7 @@ available - squeeze2upnp-x86 launch will fail)
 NB: Main tests are on Windows Vista+ and Linux x86 versions. OSX and Linux ARM 
 are "as is"
 
-#ADVANCED
+# ADVANCED
 REBUILDING IS NOT NEEDED, but if you want to rebuild, here is what should be 
 done. This can be built for Linux, OSX or Windows. My main Windows environment 
 is C++ builder, so I've not made a proper makefile. The Linux/OSX makefile is
