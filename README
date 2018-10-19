@@ -40,8 +40,8 @@ very hardcoded.
 DEPENDENCIES
  - pthread (pthread_win32 on Windows) and dynamically linked
  - libupnp, statically linked
- - flac, faad, mad, alac
-
+ - libflac, faad, libmad, alac, libsoxr, libogg, libvorbis
+ 
 LIBUPNP
  - Under Win32, libupnp is build with the following defines
         WIN32
@@ -49,11 +49,7 @@ LIBUPNP
         UPNP_USE_BCBPP (for C++ builder)
  - Under Linux : N/A
 
- - The are few changes in libupnp, so the file webserver.c, upnp.h and 
-httpreadwrite.c must be taken from here, not from libupnp main repository, 
-to rebuild the library
-
-- TCP blocking *must* be disabled otherwise when a upnp player disappears
+ - TCP blocking *must* be disabled otherwise when a upnp player disappears
 "non gracefully", it will block other communication for a long delay, creating
 a "too many job" log in libupnp and all sort of nasty side effects. When 
 launching ./configure, use --disable-blocking_tcp_connections to make sure that
@@ -72,20 +68,15 @@ Main application for Windows XP and above
         WIN32
         UPNP_STATIC_LIB
         UPNP_USE_BCBPP (for C++ builder)
-        NO_CODEC
- - Link with the generated libupnp static lib and ptrhead import lib
- - For runtime
+  - For runtime
         On C++ builder, requires cc32160mt.dll
         pthread.dll for all compilers
 
 ===========================================================================
 Main application for Linux and OSX
  - For compilation, use following defines
-        NO_CODEC
         _FILE_OFFSET_BITS=64
- - Put the 3 libraries of libupnp (found in ./libs) in the Makefile directory
- - For runtime : N/A
-
+ 
 
 
 
