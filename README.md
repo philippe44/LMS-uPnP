@@ -8,16 +8,16 @@ See support thread here: http://forums.slimdevices.com/showthread.php?103728-Ann
 
 # MINIMUM TO READ FOR ADVANCED USE
 If you do not want to RTFM, at least do the following:
-* put the application on a LOCAL disk where you have read/write access
-* launch it with "-i config.xml" on the command line, and wait 30s till it exits
-* launch the application without parameters (type exit to stop it)
-* if it does not work try again with firewall disabled 
-* ALWAYS start with a very low volume in LMS (some players might play very loud)
-* pay at least attention to the following parameters in the config.xml file 
+- put the application on a LOCAL disk where you have read/write access
+- launch it with "-i config.xml" on the command line, and wait 30s till it exits
+- launch the application without parameters (type exit to stop it)
+- if it does not work try again with firewall disabled 
+- ALWAYS start with a very low volume in LMS (some players might play very loud)
+- pay at least attention to the following parameters in the config.xml file 
 
-	<stream_length>    : if nothing is played
-	<accept_nexturi>   : if playback is stuck in playlist
-	<seek_after_pause> : if resume after pause does not restart
+	* <stream_length>    : if nothing is played
+	* <accept_nexturi>   : if playback is stuck in playlist
+	* <seek_after_pause> : if resume after pause does not restart
 
 Really, have a look at the user guide in /doc
 
