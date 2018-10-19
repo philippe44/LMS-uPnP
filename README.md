@@ -8,12 +8,12 @@ See support thread here: http://forums.slimdevices.com/showthread.php?103728-Ann
 
 # MINIMUM TO READ FOR ADVANCED USE
 If you do not want to RTFM, at least do the following:
-- put the application on a LOCAL disk where you have read/write access
-- launch it with "-i config.xml" on the command line, and wait 30s till it exits
-- launch the application without parameters (type exit to stop it)
-- if it does not work try again with firewall disabled 
-- ALWAYS start with a very low volume in LMS (some players might play very loud)
-- pay at least attention to the following parameters in the config.xml file 
+ - put the application on a LOCAL disk where you have read/write access
+ - launch it with "-i config.xml" on the command line, and wait 30s till it exits
+ - launch the application without parameters (type exit to stop it)
+ - if it does not work try again with firewall disabled 
+ - ALWAYS start with a very low volume in LMS (some players might play very loud)
+ - pay at least attention to the following parameters in the config.xml file 
 
 	<stream_length>    : if nothing is played
 	<accept_nexturi>   : if playback is stuck in playlist
@@ -23,23 +23,9 @@ Really, have a look at the user guide in /doc
 
 # WHAT VERSION TO CHOOSE
 Download UPnPBridge.zip and in /Bin, there are binaries for Windows, Linux 
-(x86 and ARM) and OSX. 
+(x86, x86_64, arm, ppc and sparc) and OSX. 
 
-- squeeze2upnp-win.exe, pthreadbc2.dll, cc32160mt.dll : Windows Vista and above
-- squeeze2upnp-x86 : Linux (Intel CPU) 32 or 64 bits (see user guide for 64 bits)
-- squeeze2upnp-x86-static : same as above, but libc librairies are statically 
-linked (must be used on some NAS e.g. Atom-base, that don't have the right libc
-available - squeeze2upnp-x86 launch will fail)
-- squeeze2upnp-x86-64 : Linux (Intel CPU) 64 bits ONLY
-- squeeze2upnp-armv6hf : Linux (ARM v6 CPU, hard float)
-- squeeze2upnp-armv6hf-static : same as above, with static libraries
-- squeeze2upnp-armv5 : Linux (ARM v5 CPU)
-- squeeze2upnp-armv5-static : same as above, with static libraries
-- squeeze2upnp-osx-multi: binaries for OSX 10.5+
-
-(Thanks Ralphy for ARM and OSX binaries)
-
-NB: Main tests are on Windows Vista+ and Linux x86 versions. OSX and Linux ARM 
+NB: Main tests are on Windows 7 and Linux x86 versions. OSX and Linux ARM 
 are "as is"
 
 # ADVANCED
