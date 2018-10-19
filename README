@@ -29,23 +29,6 @@ WHAT VERSION TO CHOOSE
 Download UPnPBridge.zip and in /Bin, there are binaries for Windows, Linux 
 (x86 and ARM) and OSX. 
 
-- squeeze2upnp-win.exe, pthreadbc2.dll, cc32160mt.dll : Windows Vista and above
-- squeeze2upnp-x86 : Linux (Intel CPU) 32 or 64 bits (see user guide for 64 bits)
-- squeeze2upnp-x86-static : same as above, but libc librairies are statically 
-linked (must be used on some NAS e.g. Atom-base, that don't have the right libc
-available - squeeze2upnp-x86 launch will fail)
-- squeeze2upnp-x86-64 : Linux (Intel CPU) 64 bits ONLY
-- squeeze2upnp-armv6hf : Linux (ARM v6 CPU, hard float)
-- squeeze2upnp-armv6hf-static : same as above, with static libraries
-- squeeze2upnp-armv5 : Linux (ARM v5 CPU)
-- squeeze2upnp-armv5-static : same as above, with static libraries
-- squeeze2upnp-osx-multi: binaries for OSX 10.5+
-
-(Thanks Ralphy for ARM and OSX binaries)
-
-NB: Main tests are on Windows Vista+ and Linux x86 versions. OSX and Linux ARM 
-are "as is"
-
 ===========================================================================
 ADVANCED
 ===========================================================================
@@ -57,6 +40,7 @@ very hardcoded.
 DEPENDENCIES
  - pthread (pthread_win32 on Windows) and dynamically linked
  - libupnp, statically linked
+ - flac, faad, mad, alac
 
 LIBUPNP
  - Under Win32, libupnp is build with the following defines
