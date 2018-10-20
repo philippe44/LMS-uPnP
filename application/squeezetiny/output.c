@@ -20,8 +20,10 @@
  */
 
 #include "squeezelite.h"
+#if CODECS
 #include "FLAC/stream_encoder.h"
 #include "shine/src/lib/layer3.h"
+#endif
 
 extern log_level	output_loglevel;
 static log_level 	*loglevel = &output_loglevel;
@@ -31,17 +33,18 @@ static log_level 	*loglevel = &output_loglevel;
 
 static size_t 	gain_and_fade(size_t frames, u8_t shift, struct thread_ctx_s *ctx);
 static void 	lpcm_pack(u8_t *dst, u8_t *src, size_t bytes, u8_t channels, int endian);
-static void apply_gain(s32_t *iptr, u32_t fade, u32_t gain, u8_t shift, size_t frames);
+static void 	apply_gain(s32_t *iptr, u32_t fade, u32_t gain, u8_t shift, size_t frames);
 static void 	apply_cross(struct buffer *outputbuf, s32_t *cptr, u32_t fade,
 							u32_t gain_in, u32_t gain_out, u8_t shift, size_t frames);
-static void 	to_mono(s32_t *iptr,  size_t frames);
 static void 	scale_and_pack(void *dst, u32_t *src, size_t frames, u8_t channels,
 							   u8_t sample_size, int endian);
+#if CODECS
+static void 	to_mono(s32_t *iptr,  size_t frames);
 static int 		shine_make_config_valid(int freq, int *bitr);
-
 static FLAC__StreamEncoderWriteStatus flac_write_callback(const FLAC__StreamEncoder *encoder, const FLAC__byte buffer[], size_t bytes, unsigned samples, unsigned current_frame, void *client_data);
+#endif
 
-#if !LINKALL
+#if !LINKALL && CODECS
 void *handle = NULL;
 static struct {
 	// FLAC symbols to be dynamically loaded
@@ -75,7 +78,6 @@ static struct {
 #define FLAC(h, fn, ...) (h).FLAC__##fn(__VA_ARGS__)
 #define FLAC_A(h, a)     (h).FLAC__ ## a
 #endif
-
 
 /*---------------------------------- WAVE ------------------------------------*/
 static struct wave_header_s {
@@ -264,7 +266,7 @@ bool _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
 			// take the data from temporary buffer if needed
 			if (optr == obuf) _buf_write(buf, optr, bytes_per_frame * process);
 			else _buf_inc_writep(buf, process * bytes_per_frame);
-
+#if CODECS
 		} else if (p->encode.mode == ENCODE_FLAC) {
 			if (!p->encode.codec) return false;
 
@@ -321,6 +323,7 @@ bool _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
 
 				_buf_write(buf, data, bytes);
 			}
+#endif
 		}
 
 		_buf_inc_readp(ctx->outputbuf, frames * BYTES_PER_FRAME);
@@ -411,6 +414,7 @@ void _output_new_stream(struct buffer *obuf, struct thread_ctx_s *ctx) {
 		LOG_INFO("[%p]: PCM encoding r:%u s:%u f:%c", ctx, out->encode.sample_rate,
 											out->encode.sample_size, out->format);
 		LOG_INFO("[%p]: HTTP %d, estimated len %zu", ctx, ctx->config.stream_length, length);
+#if CODECS
 	} else if (out->encode.mode == ENCODE_FLAC) {
 		FLAC__StreamEncoder *codec;
 		bool ok;
@@ -461,6 +465,7 @@ void _output_new_stream(struct buffer *obuf, struct thread_ctx_s *ctx) {
 								  out->encode.level, out->encode.sample_rate,
 								  out->encode.sample_size, out->encode.channels);
 		}
+#endif
 	}
 }
 
@@ -468,6 +473,7 @@ void _output_new_stream(struct buffer *obuf, struct thread_ctx_s *ctx) {
 void _output_end_stream(struct buffer *buf, struct thread_ctx_s *ctx) {
 	struct outputstate *out = &ctx->output;
 
+#if CODECS
 	if (out->encode.codec) {
 		if (out->encode.mode == ENCODE_FLAC) {
 			// FLAC is a pain and requires a last encode call
@@ -497,6 +503,7 @@ void _output_end_stream(struct buffer *buf, struct thread_ctx_s *ctx) {
 			out->encode.codec = NULL;
 		}
 	}
+#endif
 
 	// free any buffer
 	NFREE(out->encode.buffer);
@@ -561,7 +568,7 @@ bool output_init(struct thread_ctx_s *ctx) {
 	ctx->output_thread[0].http = ctx->output_thread[1].http = -1;
 	ctx->render.index = -1;
 
-#if !LINKALL
+#if !LINKALL && CODECS
 	// load share dlibrary and symbols if necessary
 	if (!handle) {
 		handle = dlopen(LIBFLAC, RTLD_NOW);
@@ -592,7 +599,7 @@ bool output_init(struct thread_ctx_s *ctx) {
 void output_close(struct thread_ctx_s *ctx) {
 	LOG_INFO("[%p] close media renderer", ctx);
 	buf_destroy(ctx->outputbuf);
-#if !LINKALL
+#if !LINKALL && CODECS
 	if (handle) dlclose(handle);
 #endif
 }
@@ -647,6 +654,7 @@ void _checkduration(u32_t frames, struct thread_ctx_s *ctx) {
 }
 
 /*---------------------------------------------------------------------------*/
+#if CODECS
 static FLAC__StreamEncoderWriteStatus flac_write_callback(const FLAC__StreamEncoder *encoder, const FLAC__byte buffer[], size_t bytes, unsigned samples, unsigned current_frame, void *client_data) {
 	struct buffer *obuf = (struct buffer*) client_data;
 	unsigned out = _buf_space(obuf);
@@ -667,6 +675,7 @@ static FLAC__StreamEncoderWriteStatus flac_write_callback(const FLAC__StreamEnco
 
 	return FLAC__STREAM_ENCODER_WRITE_STATUS_OK;
 }
+#endif
 
 /*---------------------------------------------------------------------------*/
 void lpcm_pack(u8_t *dst, u8_t *src, size_t bytes, u8_t channels, int endian) {
@@ -809,6 +818,7 @@ void scale_and_pack(void *dst, u32_t *src, size_t frames, u8_t channels, u8_t sa
 }
 
 /*---------------------------------------------------------------------------*/
+#if CODECS
 static void to_mono(s32_t *iptr,  size_t frames) {
 	s32_t *optr = iptr;
 
@@ -817,6 +827,7 @@ static void to_mono(s32_t *iptr,  size_t frames) {
 		iptr += 2;
   }
 }
+#endif
 
 /*---------------------------------------------------------------------------*/
 void _checkfade(bool start, struct thread_ctx_s *ctx) {
@@ -1056,6 +1067,7 @@ void apply_cross(struct buffer *outputbuf, s32_t *cptr, u32_t fade, u32_t gain_i
 }
 
 /*---------------------------------------------------------------------------*/
+#if CODECS
 static int shine_make_config_valid(int freq, int *bitr) {
 	int i, bitrates[] = { 0, 8, 16, 24, 32, 48, 56, 64, 80, 96, 112, 128,
 						 144, 160, 192, 224, 245, 320 };
@@ -1078,6 +1090,7 @@ static int shine_make_config_valid(int freq, int *bitr) {
 
 	return mpeg_version;
 }
+#endif
 
 /*---------------------------------------------------------------------------*/
 static void little16(void *dst, u16_t src)

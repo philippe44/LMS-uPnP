@@ -756,6 +756,10 @@ bool sq_run_device(sq_dev_handle_t handle, sq_dev_param_t *param)
 
 	memcpy(&ctx->config, param, sizeof(sq_dev_param_t));
 
+#if !CODECS
+	strcpy(ctx->config.mode, "thru");
+#endif
+
 	sprintf(ctx->cli_id, "%02x:%02x:%02x:%02x:%02x:%02x",
 										  ctx->config.mac[0], ctx->config.mac[1], ctx->config.mac[2],
 										  ctx->config.mac[3], ctx->config.mac[4], ctx->config.mac[5]);

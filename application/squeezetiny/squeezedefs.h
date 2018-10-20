@@ -22,9 +22,38 @@
 #ifndef __SQUEEZEDEFS_H
 #define __SQUEEZEDEFS_H
 
-#define VERSION "v1.6.0"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v1.6.1"" ("__DATE__" @ "__TIME__")"
 
 #include "platform.h"
+
+#if defined(RESAMPLE) || defined(RESAMPLE_MP)
+#undef  RESAMPLE
+#define RESAMPLE  1 // resampling
+#define PROCESS   1 // any sample processing (only resampling at present)
+#else
+#define RESAMPLE  0
+#define PROCESS   0
+#endif
+#if defined(RESAMPLE_MP)
+#undef RESAMPLE_MP
+#define RESAMPLE_MP 1
+#else
+#define RESAMPLE_MP 0
+#endif
+
+#if defined(CODECS)
+#undef CODECS
+#define CODECS    1
+#else
+#define CODECS	  0
+#endif
+
+#if defined(FFMPEG)
+#undef FFMPEG
+#define FFMPEG    1
+#else
+#define FFMPEG    0
+#endif
 
 #if LINUX || OSX || FREEBSD
 #include <sys/types.h>
