@@ -368,7 +368,7 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 				Device->Muted = false;
 			}
 
-			if (Device->Config.VolumeOnPlay == 1)
+			if (Device->Config.VolumeOnPlay == 1 && Device->Volume != -1)
 				CtrlSetVolume(Device, Device->Volume, Device->seqN++);
 			break;
 		case SQ_STOP:
@@ -1097,7 +1097,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	Device->WaitCookie 		= Device->StartCookie = NULL;
 	Device->seqN			= NULL;
 	Device->TrackPoll 		= Device->StatePoll = 0;
-	Device->Volume 			= 0;
+	Device->Volume 			= -1;
 	Device->Actions 		= NULL;
 	Device->NextURI 		= Device->NextProtoInfo = NULL;
 	Device->TrackPoll 		= Device->StatePoll = 0;

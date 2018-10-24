@@ -1,5 +1,4 @@
 BASE		= ..
-OS 			:= $(shell uname)
 CFLAGS		+= -Wno-multichar
 
 ifeq ($(OS),Darwin)

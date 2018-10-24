@@ -1,3 +1,7 @@
+1.6.2
+ - do not send any volume unless a real command has been sent by LMS
+ - full cross-compiling
+ 
 1.6.1
  - CODECS flags to allow compilation in thru mode only
  
