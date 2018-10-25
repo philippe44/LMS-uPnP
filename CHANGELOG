@@ -1,3 +1,6 @@
+1.6.3 
+ - getsockoption for SO_REUSEPORT was resetting parameter
+ 
 1.6.2
  - do not send any volume unless a real command has been sent by LMS
  - full cross-compiling
