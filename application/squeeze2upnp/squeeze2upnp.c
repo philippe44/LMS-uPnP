@@ -451,15 +451,15 @@ static void *MRThread(void *args)
 		for an action to be performed
 		*/
 
+		// exception is to poll extended informations if any for battery
+		if (p->on && !p->WaitCookie && p->InfoExPoll > INFOEX_POLL) {
+			p->InfoExPoll = 0;
+			AVTCallAction(p, "GetInfoEx", p->seqN++);
+		}
+
 		if (!p->on || (p->sqState == SQ_STOP && p->State == STOPPED) ||
 			 p->ErrorCount > MAX_ACTION_ERRORS ||
 			 p->WaitCookie) {
-
-			// exception is to poll extended informations if any for battery
-			if (!p->WaitCookie && p->InfoExPoll > INFOEX_POLL) {
-				p->InfoExPoll = 0;
-				AVTCallAction(p, "GetInfoEx", p->seqN++);
-			}
 
 			pthread_mutex_unlock(&p->Mutex);
 			last = gettime_ms();
