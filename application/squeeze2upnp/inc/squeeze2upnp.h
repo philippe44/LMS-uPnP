@@ -90,6 +90,7 @@ struct sMR {
 	void			*WaitCookie, *StartCookie;
 	tQueue			ActionQueue;
 	unsigned		TrackPoll, StatePoll;
+	int				InfoExPoll;
 	int	 			SqueezeHandle;
 	struct sService Service[NB_SRV];
 	struct sAction	*Actions;

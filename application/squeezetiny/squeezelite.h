@@ -473,6 +473,7 @@ typedef struct {
 	stream_state stream_state;
 	u32_t	ms_played;
 	u32_t	duration;
+	u16_t	voltage;
 	bool	output_ready;
 } status_t;
 
@@ -517,6 +518,7 @@ struct thread_ctx_s {
 	u16_t		cli_port;
 	sockfd 		sock, fd, cli_sock;
 	u8_t 		mac[6];
+	u16_t		voltage;
 	char		cli_id[18];		// (6*2)+(5*':')+NULL
 	mutex_type	cli_mutex;
 	u32_t		cli_timestamp;

@@ -679,6 +679,13 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 			UNLOCK_O;
 			break;
 		}
+		case SQ_BATTERY: {
+			LOCK_O;
+			ctx->voltage = *(u16_t*) param;
+			LOG_INFO("[%p]: battery %#hx", ctx, ctx->voltage);
+			UNLOCK_O;
+			break;
+		}
 		default:
 			LOG_WARN("[%p]: unknown notification %u", event);
 			break;

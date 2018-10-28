@@ -47,6 +47,7 @@
 
 #define TRACK_POLL  (1000)
 #define STATE_POLL  (500)
+#define INFOEX_POLL (60*1000)
 #define MAX_ACTION_ERRORS (5)
 
 /*----------------------------------------------------------------------------*/
@@ -443,14 +444,23 @@ static void *MRThread(void *args)
 
 		p->StatePoll += elapsed;
 		p->TrackPoll += elapsed;
+		if (p->InfoExPoll != -1) p->InfoExPoll += elapsed;
 
 		/*
 		should not request any status update if we are stopped, off or waiting
 		for an action to be performed
 		*/
+
 		if (!p->on || (p->sqState == SQ_STOP && p->State == STOPPED) ||
 			 p->ErrorCount > MAX_ACTION_ERRORS ||
 			 p->WaitCookie) {
+
+			// exception is to poll extended informations if any for battery
+			if (!p->WaitCookie && p->InfoExPoll > INFOEX_POLL) {
+				p->InfoExPoll = 0;
+				AVTCallAction(p, "GetInfoEx", p->seqN++);
+			}
+
 			pthread_mutex_unlock(&p->Mutex);
 			last = gettime_ms();
 			continue;
@@ -655,6 +665,7 @@ int ActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 	switch ( EventType ) {
 		case UPNP_CONTROL_ACTION_COMPLETE: 	{
 			struct Upnp_Action_Complete *Action = (struct Upnp_Action_Complete *)Event;
+			const char *Resp = XMLGetLocalName(Action->ActionResult, 1);
 			char   *r;
 
 			p = CURL2Device(Action->CtrlUrl);
@@ -666,8 +677,6 @@ int ActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 
 			// If waited action has been completed, proceed to next one if any
 			if (p->WaitCookie)  {
-				const char *Resp = XMLGetLocalName(Action->ActionResult, 1);
-
 				LOG_DEBUG("[%p]: Waited action %s", p, Resp ? Resp : "<none>");
 
 				// discard everything else except waiting action
@@ -694,6 +703,24 @@ int ActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 
 			// don't proceed anything that is too old
 			if (Cookie < p->StartCookie) break;
+
+			// extended informations, don't do anything else
+			if (!strcasecmp(Resp, "GetInfoExResponse")) {
+				// Battery information for devices that have one
+				LOG_DEBUG("[%p]: extended info %s", p, ixmlDocumenttoString(Action->ActionResult));
+				r = XMLGetFirstDocumentItem(Action->ActionResult, "BatteryFlag");
+				if (r) {
+					u16_t Level = atoi(r) << 8;
+					NFREE(r);
+					r = XMLGetFirstDocumentItem(Action->ActionResult, "BatteryPercent");
+					if (r) {
+						Level |= (u8_t) atoi(r);
+						sq_notify(p->SqueezeHandle, p, SQ_BATTERY, NULL, &Level);
+				   }
+				}
+				NFREE(r);
+				break;
+			}
 
 			// transport state response
 			r = XMLGetFirstDocumentItem(Action->ActionResult, "CurrentTransportState");
@@ -1097,10 +1124,10 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	Device->WaitCookie 		= Device->StartCookie = NULL;
 	Device->seqN			= NULL;
 	Device->TrackPoll 		= Device->StatePoll = 0;
+	Device->InfoExPoll 		= -1;
 	Device->Volume 			= -1;
 	Device->Actions 		= NULL;
 	Device->NextURI 		= Device->NextProtoInfo = NULL;
-	Device->TrackPoll 		= Device->StatePoll = 0;
 	Device->LastSeen		= gettime_ms() / 1000;
 	Device->Delete			= false;
 	Device->Busy			= 0;
@@ -1141,6 +1168,9 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 
 		if (ServiceURL && cSearchedSRV[i].idx == AVT_SRV_IDX && !XMLFindAction(location, ServiceURL, "SetNextAVTransportURI"))
 			Device->Config.AcceptNextURI = false;
+
+		if (ServiceURL && cSearchedSRV[i].idx == AVT_SRV_IDX && XMLFindAction(location, ServiceURL, "GetInfoEx"))
+			Device->InfoExPoll = INFOEX_POLL;
 
 		NFREE(ServiceURL);
 	}

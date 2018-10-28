@@ -1,3 +1,6 @@
+1.7.0
+ - (1) add battery information
+ 
 1.6.3 
  - getsockoption for SO_REUSEPORT was resetting parameter
  

@@ -152,7 +152,7 @@ static void sendSTAT(const char *event, u32_t server_timestamp, struct thread_ct
 	packN(&pkt.output_buffer_size, ctx->status.output_size);
 	packN(&pkt.output_buffer_fullness, ctx->status.output_full);
 	packN(&pkt.elapsed_seconds, ctx->status.ms_played / 1000);
-	// voltage;
+	packn(&pkt.voltage, ctx->status.voltage);
 	packN(&pkt.elapsed_milliseconds, ctx->status.ms_played);
 	pkt.server_timestamp = server_timestamp; // keep this is server format - don't unpack/pack
 
@@ -644,6 +644,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			ctx->status.output_ready = ctx->output.completed || ctx->output.encode.flow;
 			ctx->status.duration = ctx->render.duration;
 			ctx->status.ms_played = ctx->render.ms_played;
+			ctx->status.voltage = ctx->voltage;
 
 			// streaming properly started
 			if (ctx->output.track_started) {
