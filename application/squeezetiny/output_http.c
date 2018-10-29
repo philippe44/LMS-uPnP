@@ -415,8 +415,8 @@ static ssize_t send_with_icy(struct thread_ctx_s *ctx, int sock, const void *buf
 		else p->icy.count -= bytes;
 	}
 
-	// write data if remaining space
-	if (bytes < *len) {
+	// write data if remaining space and no icy to send (if icy send was partial)
+	if (!p->icy.count && bytes < *len) {
 		*len = min(*len - bytes, p->icy.remain);
 		*len = send(sock, buf, *len, flags);
 		// socket is non-blocking

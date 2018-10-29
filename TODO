@@ -5,7 +5,7 @@
 	it claims the file is not seekable ... 
 
 UNLIKELY
-- enhance metadata management: add albumart and filesize (LMS won't give it)
+- enhance metadata management: add filesize (LMS won't give it)
 - add matching pattern in config file to allow configuration by group
 - add option to call an external program when upnp player is locked 
 

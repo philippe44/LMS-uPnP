@@ -1,5 +1,6 @@
 1.7.0
  - (1) add battery information
+ - (2) if ICY send is partial, do not try to send audio data
  
 1.6.3 
  - getsockoption for SO_REUSEPORT was resetting parameter
