@@ -705,7 +705,7 @@ int ActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 			if (Cookie < p->StartCookie) break;
 
 			// extended informations, don't do anything else
-			if (!strcasecmp(Resp, "GetInfoExResponse")) {
+			if (Resp && !strcasecmp(Resp, "GetInfoExResponse")) {
 				// Battery information for devices that have one
 				LOG_DEBUG("[%p]: extended info %s", p, ixmlDocumenttoString(Action->ActionResult));
 				r = XMLGetFirstDocumentItem(Action->ActionResult, "BatteryFlag");
