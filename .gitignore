@@ -87,7 +87,10 @@ config.xml
 tests/
 sonos/
 misc/
-application/bin/
+application/bin/Win32/Debug
+application/bin/*.xml*
+*.obj
+*.o
 bin.old/
 #plugin/Bin
 /repo*.xml

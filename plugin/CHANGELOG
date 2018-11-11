@@ -1,3 +1,6 @@
+1.7.1
+ - sparc and ppc compiler required kernel > 3.2.0 due to glibc being 2.23+ ==> moved back cross-compiler to use glibc 2.19 (need OBSOLETE enabled)
+ 
 1.7.0
  - (1) add battery information
  - (2) if ICY send is partial, do not try to send audio data
