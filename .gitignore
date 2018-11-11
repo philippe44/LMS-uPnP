@@ -14,8 +14,6 @@
 # Compiled Static libraries
 *.lai
 *.la
-*.a
-*.lib
 
 # Executables
 *.out
@@ -89,8 +87,7 @@ sonos/
 misc/
 application/bin/Win32/Debug
 application/bin/*.xml*
-*.obj
-*.o
+*.o??
 bin.old/
 #plugin/Bin
 /repo*.xml
