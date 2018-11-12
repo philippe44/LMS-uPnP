@@ -1,3 +1,6 @@
+1.7.2
+ - mad and flac correction, following squeezelite
+ 
 1.7.1
  - sparc and ppc compiler required kernel > 3.2.0 due to glibc being 2.23+ ==> moved back cross-compiler to use glibc 2.19 (need OBSOLETE enabled)
  

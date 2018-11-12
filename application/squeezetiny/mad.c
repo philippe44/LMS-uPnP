@@ -219,7 +219,7 @@ static decode_state mad_decode(struct thread_ctx_s *ctx) {
 			decode_state ret;
 			if (!eos && m->stream.error == MAD_ERROR_BUFLEN) {
 				ret = DECODE_RUNNING;
-			} else if (eos && (m->stream.error == MAD_ERROR_BUFLEN || m->stream.error == MAD_ERROR_LOSTSYNC)) {
+			} else if (eos && (m->stream.error == MAD_ERROR_BUFLEN || m->stream.error == MAD_ERROR_LOSTSYNC || m->stream.error == MAD_ERROR_BADBITRATE)) {
 				ret = DECODE_COMPLETE;
 			} else if (!MAD_RECOVERABLE(m->stream.error)) {
 				LOG_INFO("[%p]: mad_frame_decode error: %s - stopping decoder", ctx, MAD(&gm, stream_errorstr, &m->stream));
