@@ -43,6 +43,7 @@ DEPENDENCIES
  - libflac: https://xiph.org/flac/
  - libsoxr: https://sourceforge.net/p/soxr/wiki/Home/
  - libogg & libvorbis: https://xiph.org/vorbis/
+ - shine: https://github.com/philippe44/shine
 
 LIBUPNP
  - Under Win32, libupnp is build with the following defines
