@@ -50,11 +50,7 @@ LIBUPNP
         WIN32
         UPNP_STATIC_LIB
         UPNP_USE_BCBPP (for C++ builder)
- - Under Linux : N/A
- - The are few changes in libupnp, so the file webserver.c, upnp.h and 
-httpreadwrite.c must be taken from here, not from libupnp main repository, 
-to rebuild the library
-- TCP blocking *must* be disabled otherwise when a upnp player disappears
+ - TCP blocking *must* be disabled otherwise when a upnp player disappears
 "non gracefully", it will block other communication for a long delay, creating
 a "too many job" log in libupnp and all sort of nasty side effects. When 
 launching ./configure, use --disable-blocking_tcp_connections to make sure that
@@ -82,7 +78,7 @@ Main application for Linux and OSX
         NO_CODEC
         _FILE_OFFSET_BITS=64
  - Put the 3 libraries of libupnp (found in ./libs) in the Makefile directory
- - For runtime : N/A
+
 
 
 
