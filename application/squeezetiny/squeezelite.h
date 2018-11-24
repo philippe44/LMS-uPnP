@@ -444,8 +444,10 @@ struct renderstate {
 };
 
 // function starting with _ must be called with mutex locked
-bool		output_init(struct thread_ctx_s *ctx);
+bool		output_thread_init(struct thread_ctx_s *ctx);
 void 		output_close(struct thread_ctx_s *ctx);
+bool		output_init(void);
+void		output_end(void);
 void 		output_set_icy(struct metadata_s *metadata, bool init, u32_t now, struct thread_ctx_s *ctx);
 void 		output_free_icy(struct thread_ctx_s *ctx);
 

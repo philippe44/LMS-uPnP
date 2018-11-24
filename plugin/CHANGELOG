@@ -1,3 +1,6 @@
+1.7.3
+ - output_close was calling dl_close for each player termination
+ 
 1.7.2
  - mad and flac correction, following squeezelite
  

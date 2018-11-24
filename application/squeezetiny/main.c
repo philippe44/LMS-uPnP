@@ -701,6 +701,7 @@ void sq_init(char *ip, u16_t port)
 	strcpy(sq_ip, ip);
 	sq_port = port;
 
+	output_init();
 	decode_init();
 }
 
@@ -715,6 +716,7 @@ void sq_stop() {
 	}
 
 	decode_end();
+	output_end();
 }
 
 /*---------------------------------------------------------------------------*/
@@ -775,7 +777,7 @@ bool sq_run_device(sq_dev_handle_t handle, sq_dev_param_t *param)
 
 	if (!stream_thread_init(ctx)) return false;
 
-	if (output_init(ctx)) {
+	if (output_thread_init(ctx)) {
 		decode_thread_init(ctx);
 		slimproto_thread_init(ctx);
 #if RESAMPLE

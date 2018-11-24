@@ -45,7 +45,7 @@ static FLAC__StreamEncoderWriteStatus flac_write_callback(const FLAC__StreamEnco
 #endif
 
 #if !LINKALL && CODECS
-void *handle = NULL;
+static void *handle = NULL;
 static struct {
 	// FLAC symbols to be dynamically loaded
 	FLAC__StreamEncoder* (*FLAC__stream_encoder_new)(void);
@@ -548,7 +548,7 @@ void output_flush(struct thread_ctx_s *ctx) {
 }
 
 /*---------------------------------------------------------------------------*/
-bool output_init(struct thread_ctx_s *ctx) {
+bool output_thread_init(struct thread_ctx_s *ctx) {
 	LOG_DEBUG("[%p] init output media renderer", ctx);
 
 	if (ctx->config.outputbuf_size <= OUTPUTBUF_IDLE_SIZE) ctx->config.outputbuf_size = OUTPUTBUF_SIZE;
@@ -568,30 +568,6 @@ bool output_init(struct thread_ctx_s *ctx) {
 	ctx->output_thread[0].http = ctx->output_thread[1].http = -1;
 	ctx->render.index = -1;
 
-#if !LINKALL && CODECS
-	// load share dlibrary and symbols if necessary
-	if (!handle) {
-		handle = dlopen(LIBFLAC, RTLD_NOW);
-
-		if (handle) {
-			f.FLAC__stream_encoder_new = dlsym(handle, "FLAC__stream_encoder_new");
-			f.FLAC__stream_encoder_finish = dlsym(handle, "FLAC__stream_encoder_finish");
-			f.FLAC__stream_encoder_delete = dlsym(handle, "FLAC__stream_encoder_delete");
-			f.FLAC__stream_encoder_set_verify = dlsym(handle, "FLAC__stream_encoder_set_verify");
-			f.FLAC__stream_encoder_set_compression_level = dlsym(handle, "FLAC__stream_encoder_set_compression_level");
-			f.FLAC__stream_encoder_set_channels = dlsym(handle, "FLAC__stream_encoder_set_channels");
-			f.FLAC__stream_encoder_set_bits_per_sample = dlsym(handle, "FLAC__stream_encoder_set_bits_per_sample");
-			f.FLAC__stream_encoder_set_sample_rate = dlsym(handle, "FLAC__stream_encoder_set_sample_rate");
-			f.FLAC__stream_encoder_set_blocksize = dlsym(handle, "FLAC__stream_encoder_set_blocksize");
-			f.FLAC__stream_encoder_set_streamable_subset = dlsym(handle, "FLAC__stream_encoder_set_streamable_subset");
-			f.FLAC__stream_encoder_init_stream = dlsym(handle, "FLAC__stream_encoder_init_stream");
-			f.FLAC__stream_encoder_process_interleaved = dlsym(handle, "FLAC__stream_encoder_process_interleaved");
-		} else {
-			LOG_INFO("loading flac: %s", dlerror());
-		}
-	}
-#endif
-
 	return true;
 }
 
@@ -599,6 +575,39 @@ bool output_init(struct thread_ctx_s *ctx) {
 void output_close(struct thread_ctx_s *ctx) {
 	LOG_INFO("[%p] close media renderer", ctx);
 	buf_destroy(ctx->outputbuf);
+}
+
+/*---------------------------------------------------------------------------*/
+bool output_init(void) {
+#if !LINKALL && CODECS
+	handle = dlopen(LIBFLAC, RTLD_NOW);
+
+	if (handle) {
+		LOG_INFO("success loading FLAC encoder", NULL);
+		f.FLAC__stream_encoder_new = dlsym(handle, "FLAC__stream_encoder_new");
+		f.FLAC__stream_encoder_finish = dlsym(handle, "FLAC__stream_encoder_finish");
+		f.FLAC__stream_encoder_delete = dlsym(handle, "FLAC__stream_encoder_delete");
+		f.FLAC__stream_encoder_set_verify = dlsym(handle, "FLAC__stream_encoder_set_verify");
+		f.FLAC__stream_encoder_set_compression_level = dlsym(handle, "FLAC__stream_encoder_set_compression_level");
+		f.FLAC__stream_encoder_set_channels = dlsym(handle, "FLAC__stream_encoder_set_channels");
+		f.FLAC__stream_encoder_set_bits_per_sample = dlsym(handle, "FLAC__stream_encoder_set_bits_per_sample");
+		f.FLAC__stream_encoder_set_sample_rate = dlsym(handle, "FLAC__stream_encoder_set_sample_rate");
+		f.FLAC__stream_encoder_set_blocksize = dlsym(handle, "FLAC__stream_encoder_set_blocksize");
+		f.FLAC__stream_encoder_set_streamable_subset = dlsym(handle, "FLAC__stream_encoder_set_streamable_subset");
+		f.FLAC__stream_encoder_init_stream = dlsym(handle, "FLAC__stream_encoder_init_stream");
+		f.FLAC__stream_encoder_process_interleaved = dlsym(handle, "FLAC__stream_encoder_process_interleaved");
+		return true;
+	} else {
+		LOG_INFO("failed loading FLAC: %s", dlerror());
+		return false;
+	}
+#else
+	return true;
+#endif
+}
+
+/*---------------------------------------------------------------------------*/
+void output_end(void) {
 #if !LINKALL && CODECS
 	if (handle) dlclose(handle);
 #endif
