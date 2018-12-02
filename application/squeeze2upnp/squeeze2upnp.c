@@ -72,7 +72,6 @@ tMRConfig			glMRConfig = {
 							false,      // SeekAfterPause
 							false,		// ByteSeek
 							true,		// Enabled
-							"",      	// Name
 							1,          // VolumeOnPlay
 							true,		// VolumeFeedback
 							true,		// AcceptNextURI
@@ -982,12 +981,12 @@ static void *UpdateThread(void *args)
 						// special case for Sonos: remove non-master players
 						if (!isMaster(Device->UDN, &Device->Service[TOPOLOGY_IDX], NULL)) {
 							pthread_mutex_lock(&Device->Mutex);
-							LOG_INFO("[%p]: remove Sonos slave: %s", Device, Device->Config.Name);
+							LOG_INFO("[%p]: remove Sonos slave: %s", Device, Device->friendlyName);
 							sq_delete_device(Device->SqueezeHandle);
 							DelMRDevice(Device);
 						} else {
 							Device->LastSeen = now;
-							LOG_DEBUG("[%p] UPnP keep alive: %s", Device, Device->Config.Name);
+							LOG_DEBUG("[%p] UPnP keep alive: %s", Device, Device->friendlyName);
 						}
 						goto cleanup;
 					}
@@ -1590,7 +1589,7 @@ int main(int argc, char *argv[])
 				if (!Locked) pthread_mutex_unlock(&p->Mutex);
 				if (!p->Running && !all) continue;
 				printf("%20.20s [r:%u] [l:%u] [s:%u] Last:%u eCnt:%u [%p::%p]\n",
-						p->Config.Name, p->Running, Locked, p->State,
+						p->friendlyName, p->Running, Locked, p->State,
 						now - p->LastSeen, p->ErrorCount,
 						p, sq_get_ptr(p->SqueezeHandle));
 			}

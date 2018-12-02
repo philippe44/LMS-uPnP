@@ -190,7 +190,6 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "send_metadata")) Conf->SendMetaData = atol(val);
 	if (!strcmp(name, "send_coverart")) Conf->SendCoverArt = atol(val);
 	if (!strcmp(name, "name")) strcpy(sq_conf->name, val);
-	if (!strcmp(name, "friendly_name")) strcpy(Conf->Name, val);
 	if (!strcmp(name, "server")) strcpy(sq_conf->server, val);
 	if (!strcmp(name, "mac"))  {
 		unsigned mac[6];

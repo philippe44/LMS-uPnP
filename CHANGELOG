@@ -1,3 +1,6 @@
+1.7.4
+ - merge FriendlyName and Name in main context (FriendlyName is not a config item as such)
+
 1.7.3
  - output_close was calling dlclose for each player termination
  
