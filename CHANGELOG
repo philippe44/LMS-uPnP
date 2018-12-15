@@ -1,3 +1,7 @@
+1.7.5
+ - Move mutex and cli_mutex creation/deletion out of the slimprot thread as Volume detection to make sure cli_send_cmd (volume) is not called before
+ - cli_sock initialization must be done beofre slimproto thread starts (running set) and reset when switching/losing server must be mutex_protected
+
 1.7.4
  - merge FriendlyName and Name in main context (FriendlyName is not a config item as such)
 

@@ -519,7 +519,6 @@ struct thread_ctx_s {
 	char		server_ip[4*(3+1)+1];
 	u16_t		cli_port;
 	sockfd 		sock, fd, cli_sock;
-	u8_t 		mac[6];
 	u16_t		voltage;
 	char		cli_id[18];		// (6*2)+(5*':')+NULL
 	mutex_type	cli_mutex;
