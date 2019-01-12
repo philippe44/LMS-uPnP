@@ -207,7 +207,7 @@ bool cli_open_socket(struct thread_ctx_s *ctx) {
 	else len = sprintf(packet, "%s\n", cmd);
 
 	LOG_SDEBUG("[%p]: cmd %s", ctx, packet);
-	send_packet((u8_t*) packet, len, ctx->cli_sock);
+	send_packet((u8_t*) packet, len, ctx->cli_sock);
 	// first receive the tag and then point to the last '\n'
 	len = 0;
 	while (wait)	{
@@ -227,7 +227,7 @@ bool cli_open_socket(struct thread_ctx_s *ctx) {
 
 		if (k < 0) break;
 
-		k = recv(ctx->cli_sock, packet + len, CLI_LEN-1 - len, 0);
+		k = recv(ctx->cli_sock, packet + len, CLI_LEN - 1 - len, 0);
 		if (k <= 0) break;
 
 		len += k;
@@ -244,8 +244,8 @@ bool cli_open_socket(struct thread_ctx_s *ctx) {
 
 	LOG_SDEBUG("[%p]: rsp %s", ctx, rsp);
 
-	if (rsp && ((rsp = stristr(rsp, cmd)) != NULL)) {
-		rsp += strlen(cmd);
+	if (rsp) {
+		rsp = stristr(rsp, cmd) + strlen(cmd);
 		while (*rsp && *rsp == ' ') rsp++;
 
 		if (decode) rsp = cli_decode(rsp);
@@ -772,8 +772,8 @@ bool sq_run_device(sq_dev_handle_t handle, sq_dev_param_t *param)
 #endif
 
 	sprintf(ctx->cli_id, "%02x:%02x:%02x:%02x:%02x:%02x",
-										  ctx->config.mac[0], ctx->config.mac[1], ctx->config.mac[2],
-										  ctx->config.mac[3], ctx->config.mac[4], ctx->config.mac[5]);
+						  ctx->config.mac[0], ctx->config.mac[1], ctx->config.mac[2],
+				   		  ctx->config.mac[3], ctx->config.mac[4], ctx->config.mac[5]);
 
 	if (!stream_thread_init(ctx)) return false;
 

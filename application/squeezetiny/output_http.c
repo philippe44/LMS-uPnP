@@ -67,7 +67,7 @@ bool output_start(struct thread_ctx_s *ctx) {
 	// find a free port
 	ctx->output.port = sq_port;
 	param->thread->http = bind_socket(&ctx->output.port, SOCK_STREAM);
-	while (param->thread->http < 0 && ctx->output.port++ && i++ < MAX_PLAYER) {
+	while (param->thread->http < 0 && ctx->output.port++ && i++ < 2 * MAX_PLAYER) {
 		param->thread->http = bind_socket(&ctx->output.port, SOCK_STREAM);
 	}
 

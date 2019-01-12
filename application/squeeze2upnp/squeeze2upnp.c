@@ -336,6 +336,7 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 				free(uri);
 				sq_free_metadata(&p->metadata);
 			}
+
 			break;
 		}
 		case SQ_UNPAUSE:
