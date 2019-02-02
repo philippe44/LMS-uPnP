@@ -1,3 +1,6 @@
+1.8.0
+ - (1) add DSD support in thru mode
+ 
 1.7.6
  - Search for available HTTP port must be 2x MAX_PLAYERS
  - QueueFlush correction

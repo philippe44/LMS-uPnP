@@ -1081,7 +1081,16 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 										 ctx->mimetypes, ctx->config.raw_audio_format);
 			out->encode.mode = ENCODE_PCM;
 		} else {
-			mimetype = find_mimetype(out->codec, ctx->mimetypes, NULL);
+			char *options;
+
+			if (out->codec == 'd') {
+				if (out->sample_size == '0') options = "dsf";
+				else if (out->sample_size == '1') options = "dff";
+				else options = "dsd";
+			} else options = NULL;
+
+			mimetype = find_mimetype(out->codec, ctx->mimetypes, options);
+
 			if (out->codec == 'a' && out->sample_size == '5' && mimetype && strstr(mimetype, "aac")) out->codec = '4';
 			else if (out->codec == 'f') out->codec ='c';
 			else out->codec = '*';

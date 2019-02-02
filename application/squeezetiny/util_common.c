@@ -172,6 +172,9 @@ char *mimetype2ext(char *mimetype)
 	if (strstr(mimetype, "aac")) return "aac";
 	if (strstr(mimetype, "mp4")) return "mp4";
 	if (strstr(mimetype, "m4a")) return "m4a";
+	if (strstr(mimetype, "dsd")) return "dsd";
+	if (strstr(mimetype, "dsf")) return "dsf";
+	if (strstr(mimetype, "dff")) return "dff";
 
 	return "nil";
 
@@ -190,6 +193,7 @@ u8_t mimetype2format(char *mimetype)
 	if (strstr(mimetype, "aif")) return 'i';
 	if (strstr(mimetype, "aac")) return 'a';
 	if (strstr(mimetype, "mp4") || strstr(mimetype, "m4a")) return '4';
+	if (strstr(mimetype, "dsd") || strstr(mimetype, "dsf") || strstr(mimetype, "dff")) return 'd';
 
 	return '*';
 }

@@ -711,6 +711,23 @@ char *kd_dump(key_data_t *kd)
 		case 'o': return _lookup(mimetypes, 2, "audio/ogg", "audio/x-ogg");
 		case 'a': return _lookup(mimetypes, 4, "audio/x-aac", "audio/aac", "audio/m4a", "audio/mp4");
 		case 'l': return _lookup(mimetypes, 2, "audio/m4a", "audio/mp4");
+		case 'd': {
+			char *mimetype;
+
+			if (strstr(options, "dsf")) {
+				mimetype = _lookup(mimetypes, 2, "audio/dsf", "audio/x-dsf");
+				if (mimetype) return mimetype;
+			}
+
+			if (strstr(options, "dff")) {
+				mimetype = _lookup(mimetypes, 2, "audio/dff", "audio/x-dff");
+				if (mimetype) return mimetype;
+			}
+
+			mimetype = _lookup(mimetypes, 2, "audio/dsd", "audio/x-dsd");
+			if (mimetype) return mimetype;
+			else return strdup("audio/dsd");
+		}
 		case 'p': {
 			char fmt[8];
 			char *mimetype;
