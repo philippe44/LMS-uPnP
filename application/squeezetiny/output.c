@@ -778,8 +778,7 @@ void scale_and_pack(void *dst, u32_t *src, size_t frames, u8_t channels, u8_t sa
 				src++;
 			}
 		}
-
-	} else if (channels == 1) {
+ 	} else if (channels == 1) {
 		if (sample_size == 8) {
 			u8_t *optr = (u8_t*) dst;
 			if (endian) while (count--) {

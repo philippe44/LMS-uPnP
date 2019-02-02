@@ -81,7 +81,6 @@ tMRConfig			glMRConfig = {
 							100,		// MaxVolume
 							false,		// AutoPlay
 							"",      	// ForcedMimeTypes
-							false,      // RoonMode
 					};
 
 static u8_t LMSVolumeMap[101] = {
@@ -114,6 +113,7 @@ sq_dev_param_t glDeviceParam = {
 #ifdef RESAMPLE
 					"",						// resample_options
 #endif
+					false,      			// roon_mode
 					{ 	true,				// use_cli
 						"",     			// server
 					},
@@ -1132,7 +1132,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	Device->Delete			= false;
 	Device->Busy			= 0;
 
-	if (Device->Config.RoonMode) {
+	if (Device->sq_config.roon_mode) {
 		Device->on = true;
 		Device->sq_config.dynamic.use_cli = false;
 	}

@@ -58,7 +58,8 @@ static decode_state pcm_decode(struct thread_ctx_s *ctx) {
 	iptr = (u8_t *)ctx->streambuf->readp;
 
 	if (ctx->decode.new_stream && ctx->output.in_endian && !(*((u64_t*) iptr)) &&
-		   (strstr(ctx->server_version, "7.7") || strstr(ctx->server_version, "7.8"))) {
+		   (strstr(ctx->server_version, "7.7") || strstr(ctx->server_version, "7.8")) &&
+		   !ctx->config.roon_mode) {
 		/*
 		LMS < 7.9 does not remove 8 bytes when sending aiff files but it does
 		when it is a transcoding ... so this does not matter for 16 bits samples

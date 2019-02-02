@@ -83,6 +83,7 @@ typedef	struct sq_dev_param_s {
 #ifdef RESAMPLE
 	char		resample_options[_STR_LEN_];
 #endif
+	bool		roon_mode;
 	// set at runtime, not from config
 	struct {
 		bool		use_cli;

@@ -67,7 +67,6 @@ struct sService {
 	int			MaxVolume;
 	bool		AutoPlay;
 	char		ForcedMimeTypes[_STR_LEN_];
-	bool		RoonMode;
 } tMRConfig;
 
 struct sMR {
