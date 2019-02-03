@@ -359,7 +359,7 @@ void MakeMacUnique(struct sMR *Device)
 			u32_t hash = hash32(Device->UDN);
 
 			LOG_INFO("[%p]: duplicated mac ... updating", Device);
-			memset(&Device->sq_config.mac[0], 0xcc, 2);
+			memset(&Device->sq_config.mac[0], 0xbb, 2);
 			memcpy(&Device->sq_config.mac[0] + 2, &hash, 4);
 		}
 	}

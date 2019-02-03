@@ -1,5 +1,6 @@
 1.8.2
  - (1) move Roon Mode to squeezelite config size as Roon does report LMS version 7.7.5 but does not have tha AIFF header issue
+ - (1) fake MAC was set to "cc" instead of "bb"
  
 1.8.0
  - (1) add DSD support in thru mode
