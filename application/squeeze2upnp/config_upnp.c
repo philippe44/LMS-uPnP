@@ -176,6 +176,7 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "mode")) strcpy(sq_conf->mode, val);
 	if (!strcmp(name, "roon_mode")) sq_conf->roon_mode = atol(val);
 	if (!strcmp(name, "raw_audio_format")) strcpy(sq_conf->raw_audio_format, val);
+	if (!strcmp(name, "store_prefix")) strcpy(sq_conf->store_prefix, val);			//RO
 	if (!strcmp(name, "sample_rate")) sq_conf->sample_rate = atol(val);
 	if (!strcmp(name, "L24_format")) sq_conf->L24_format = atol(val);
 	if (!strcmp(name, "flac_header")) sq_conf->flac_header = atol(val);

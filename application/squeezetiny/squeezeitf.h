@@ -62,12 +62,13 @@ typedef struct metadata_s {
 	u32_t file_size;
 	bool  remote;
 	u32_t bitrate;
-	u32_t sample_rate;
-	u8_t  sample_size;
+	u32_t sample_rate, pcm_rate;
+	u8_t  sample_size, pcm_size;
+	u8_t  channels, pcm_channels;
 } metadata_t;
 
 typedef	struct sq_dev_param_s {
-	enum { HTTP_INFINITE = -1, HTTP_CHUNKED = -3, HTTP_LARGE = MAX_FILE_SIZE } stream_length;
+	enum { HTTP_NO_LENGTH = -1, HTTP_PCM_LENGTH = -2, HTTP_CHUNKED = -3, HTTP_LARGE = MAX_FILE_SIZE } stream_length;
 	unsigned 	streambuf_size;
 	unsigned 	outputbuf_size;
 	char		codecs[_STR_LEN_];
@@ -84,9 +85,10 @@ typedef	struct sq_dev_param_s {
 	char		resample_options[_STR_LEN_];
 #endif
 	bool		roon_mode;
+	char		store_prefix[_STR_LEN_];
 	// set at runtime, not from config
 	struct {
-		bool		use_cli;
+		bool	use_cli;
 		char 	server[_STR_LEN_];
 	} dynamic;
 } sq_dev_param_t;

@@ -94,5 +94,6 @@ bin.old/
 /package*.*
 alpha/
 _backup/
+*bridge-*
 
 

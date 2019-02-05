@@ -1,6 +1,12 @@
 1.8.2
  - (1) move Roon Mode to squeezelite config size as Roon does report LMS version 7.7.5 but does not have tha AIFF header issue
  - (1) fake MAC was set to "cc" instead of "bb"
+ - (2) cleanup profiles.xml
+ - (2) set range-request to none, although some client still require ranges
+ - (2) set optional sample rate, sample size, channels and size in DIDL-lite
+ - (2) get channel from metadata
+ - (2) hidden 'c' parameter
+ - (2) add <stream_length> -2 which sets length only for PCM (when known)
  
 1.8.0
  - (1) add DSD support in thru mode

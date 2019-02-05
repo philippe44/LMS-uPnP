@@ -706,10 +706,10 @@ char *kd_dump(key_data_t *kd)
 	switch (codec) {
 		case 'm': return _lookup(mimetypes, 3, "audio/mp3", "audio/mpeg", "audio/mpeg3");
 		case 'c':
-		case 'f': return _lookup(mimetypes, 2, "audio/x-flac", "audio/flac");
-		case 'w': return _lookup(mimetypes, 2, "audio/x-wma", "audio/wma");
+		case 'f': return _lookup(mimetypes, 2, "audio/flac", "audio/x-flac");
+		case 'w': return _lookup(mimetypes, 2, "audio/wma", "audio/x-wma");
 		case 'o': return _lookup(mimetypes, 2, "audio/ogg", "audio/x-ogg");
-		case 'a': return _lookup(mimetypes, 4, "audio/x-aac", "audio/aac", "audio/m4a", "audio/mp4");
+		case 'a': return _lookup(mimetypes, 4, "audio/aac", "audio/x-aac", "audio/m4a", "audio/mp4");
 		case 'l': return _lookup(mimetypes, 2, "audio/m4a", "audio/mp4");
 		case 'd': {
 			char *mimetype;

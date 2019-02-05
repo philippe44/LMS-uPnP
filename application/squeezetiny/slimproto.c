@@ -1115,8 +1115,8 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 			mimetype = find_pcm_mimetype(&sample_size, ctx->config.L24_format == L24_TRUNC16_PCM,
 										   sample_rate, 2, ctx->mimetypes, ctx->config.raw_audio_format);
 
-			 // if matching found, set generic format "*" if audio/L used
-			 if (strstr(mimetype, "audio/L")) strcpy(mimetype, "*");
+			// if matching found, set generic format "*" if audio/L used
+			if (strstr(mimetype, "audio/L")) strcpy(mimetype, "*");
 		} else {
 			char format[16] = "";
 
@@ -1146,6 +1146,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 			if (out->encode.level > 320) out->encode.level = 320;
 		} else out->encode.level = 128;
 	}
+
 	// matching found in player
 	if (mimetype) {
 		strcpy(out->mimetype, mimetype);
@@ -1159,8 +1160,17 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 			out->in_endian, ctx) &&	output_start(ctx)) {
 
 			strcpy(info.mimetype, out->mimetype);
-			sprintf(info.uri, "http://%s:%hu/" BRIDGE_URL "%d.%s", sq_ip,
+			sprintf(info.uri, "http://%s:%hu/" BRIDGE_URL "%u.%s", sq_ip,
 					out->port, out->index, mimetype2ext(out->mimetype));
+
+			/*
+			in THRU/PCM mode these values are known when we receive pcm and in
+			PCM, they are known if values are forced. Otherwise we can't know
+			*/
+			info.metadata.pcm_rate = out->encode.sample_rate;
+			info.metadata.pcm_size = out->encode.sample_size;
+			// non-encoded version is needed as encoded one is always reset
+			info.metadata.pcm_channels= out->channels ? out->channels : info.metadata.channels;
 
 			ret = ctx_callback(ctx, SQ_SET_TRACK, NULL, &info);
 

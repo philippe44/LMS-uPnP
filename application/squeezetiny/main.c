@@ -365,7 +365,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, unsigned offs
 
 	sq_init_metadata(metadata);
 
-	sprintf(cmd, "%s status - %d tags:xcfldatgrKNoIT", ctx->cli_id, offset + 1);
+	sprintf(cmd, "%s status - %d tags:xcfldatgrKNoITH", ctx->cli_id, offset + 1);
 	rsp = cli_send_cmd(cmd, false, false, ctx);
 
 	if (!rsp || !*rsp) {
@@ -427,6 +427,11 @@ bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, unsigned offs
 			metadata->sample_rate = atol(p);
 			free(p);
 		} else metadata->sample_rate = 0;
+
+		if ((p = cli_find_tag(cur, "channels")) != NULL) {
+			metadata->channels = atol(p);
+			free(p);
+		} else metadata->channels = 0;
 
 		if ((p = cli_find_tag(cur, "tracknum")) != NULL) {
 			metadata->track = atol(p);

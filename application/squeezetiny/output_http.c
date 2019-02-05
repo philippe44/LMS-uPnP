@@ -101,9 +101,17 @@ static void output_http_thread(struct thread_param_s *param) {
 	struct thread_ctx_s *ctx = param->ctx;
 	unsigned drain_count = DRAIN_MAX;
 	u32_t start = gettime_ms();
+	FILE *store = NULL;
 
 	free(param);
 	buf_init(obuf, HTTP_STUB_DEPTH + 512*1024);
+
+	if (*ctx->config.store_prefix) {
+		char name[_STR_LEN_];
+		sprintf(name, "%s/#%u#" BRIDGE_URL "%u.%s", ctx->config.store_prefix, thread->http,
+					  thread->index, mimetype2ext(ctx->output.mimetype));
+		store = fopen(name, "wb");
+	}
 
 	/*
 	This function is higly non-linear and painful to read at first, I agree
@@ -273,9 +281,9 @@ static void output_http_thread(struct thread_param_s *param) {
 
 		if (ctx->output.encode.flow) {
 			// drain_count is not really time, but close enough
-			if (!_output_fill(obuf, ctx) && ctx->decode.state == DECODE_STOPPED) drain_count--;
+			if (!_output_fill(obuf, store, ctx) && ctx->decode.state == DECODE_STOPPED) drain_count--;
 			else drain_count = DRAIN_MAX;
-		} else if (drain_count && !_output_fill(obuf, ctx) && ctx->decode.state > DECODE_RUNNING) {
+		} else if (drain_count && !_output_fill(obuf, store, ctx) && ctx->decode.state > DECODE_RUNNING) {
 			// full track pulled from outputbuf, draining from obuf
 			_output_end_stream(obuf, ctx);
 			ctx->output.completed = true;
@@ -351,6 +359,7 @@ static void output_http_thread(struct thread_param_s *param) {
 	// in chunked mode, a full chunk might not have been sent (due to TCP)
 	if (sock != -1) shutdown_socket(sock);
 	shutdown_socket(thread->http);
+	if (store) fclose(store);
 
 	LOCK_O;
 	thread->http = -1;
@@ -376,7 +385,7 @@ static ssize_t send_with_icy(struct thread_ctx_s *ctx, int sock, const void *buf
 		bytes = send(sock, buf, *len, flags);
 		if (bytes > 0) *len = bytes;
 		else *len = 0;
-		return bytes;
+		return *len;
 	}
 
 	/*
@@ -494,7 +503,7 @@ static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, int thread_index,
 		res = -1;
 	} else {
 		kd_add(resp, "Content-Type", ctx->output.mimetype);
-		//kd_add(resp, "Accept-Ranges", "none");
+		kd_add(resp, "Accept-Ranges", "none");
 		if (ctx->output.length > 0) {
 			asprintf(&str, "%zu", ctx->output.length);
 			kd_add(resp, "Content-Length", str);

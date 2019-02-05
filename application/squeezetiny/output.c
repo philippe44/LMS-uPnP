@@ -154,8 +154,9 @@ static void big32(void *dst, u32_t src);
 
 
 /*---------------------------------------------------------------------------*/
-bool _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
+bool _output_fill(struct buffer *buf, FILE *store, struct thread_ctx_s *ctx) {
 	size_t bytes = _buf_space(buf);
+	u8_t *writep = buf->writep;
 	struct outputstate *p = &ctx->output;
 
 	/*
@@ -179,12 +180,14 @@ bool _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
 		bytes = min(p->header.count, _buf_cont_write(buf));
 		memcpy(buf->writep, p->header.buffer + p->header.size - p->header.count, bytes);
 		_buf_inc_writep(buf, bytes);
+		if (store) fwrite(p->header.buffer + p->header.size - p->header.count, bytes, 1, store);
 		p->header.count -= bytes;
 
 		if (!p->header.count) {
 			LOG_INFO("[%p] PCM header sent (%u bytes)", ctx, p->header.size);
 			NFREE(p->header.buffer);
 		}
+
 		return true;
 	}
 
@@ -331,6 +334,13 @@ bool _output_fill(struct buffer *buf, struct thread_ctx_s *ctx) {
 		LOG_SDEBUG("[%p]: processed %u frames", ctx, frames);
 	}
 
+	if (store) {
+		size_t out, bytes = (buf->writep - writep) % buf->size;
+		out = min(bytes, buf->wrap - writep);
+		fwrite(writep, out, 1, store);
+		fwrite(buf->buf, bytes - out, 1, store);
+	}
+
 	return (bytes != 0);
 }
 
@@ -409,8 +419,8 @@ void _output_new_stream(struct buffer *obuf, struct thread_ctx_s *ctx) {
 			break;
 		}
 
-		if (ctx->config.stream_length > 0) ctx->output.length = length;
-		//FIXME ctx->output.length = length;
+		if (ctx->config.stream_length > 0 || ctx->config.stream_length == HTTP_PCM_LENGTH) ctx->output.length = length;
+
 		LOG_INFO("[%p]: PCM encoding r:%u s:%u f:%c", ctx, out->encode.sample_rate,
 											out->encode.sample_size, out->format);
 		LOG_INFO("[%p]: HTTP %d, estimated len %zu", ctx, ctx->config.stream_length, length);

@@ -158,8 +158,8 @@ PLUGIN_UPNPBRIDGE_STREAMOPTIONS
 
 PLUGIN_UPNPBRIDGE_STREAMOPTIONS_DESC
 	EN	Options for streaming to UPnP player (see user guide)
-	EN	<br>- LMS does not provide the file size to be sent. The best HTTP mode is to use "chunked encoding" but some
-	EN	UPnP players require no-length to be used.
+	EN	<br>- LMS does not provide the file size to be sent. The best HTTP mode is to use 'chunked' but some UPnP players require
+	EN	'no-length' to be used. Use 'if known' to send size only when using pcm audio and duration is known 
 	EN	<br>- Some players support gapless playback and thus automatically move to next track in playlist. This is automatically
 	EN	detected, but you can force it disabled
 	EN	<br>- UPnP players can use different methods to restart from paused position. If your player does not pause or resume, 

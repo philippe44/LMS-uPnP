@@ -104,7 +104,7 @@
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_STREAMOPTIONS" desc="PLUGIN_UPNPBRIDGE_STREAMOPTIONS_DESC" %]
 		[% "PLUGIN_UPNPBRIDGE_HTTPMODE" | string %]
 		<select class="stdedit" id="stream_length" name="stream_length">
-		[% FOREACH entry IN [ ['',''], ['chunked','-3'], ['no length','-1'], ['fixed', '2048000000'] ] %]
+		[% FOREACH entry IN [ ['',''], ['chunked','-3'], ['if known', '-2'], ['no length','-1'], ['fixed', '2048000000'] ] %]
 			<option label="[% entry.0 %]" [% IF entry.1 == stream_length %]selected[% END %] value="[% entry.1 %]">
 		[% END %]
 		</select>
