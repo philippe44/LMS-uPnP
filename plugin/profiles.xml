@@ -4,17 +4,19 @@
 	<flac_header>1</flac_header>
 	<accept_nexturi>1</accept_nexturi>
 	<seek_after_pause>0</seek_after_pause>
-	<codecs>aif,pcm,flc,mp3</codecs>
+	<codecs>dsf,dff,aif,pcm,flc,mp3,ogg,aac,alc</codecs>
 	<sample_rate>48000</sample_rate>
 	<send_metadata>1</send_metadata>
 	<raw_audio_format>raw,wav</raw_audio_format>
 	<L24_format>2</L24_format>
 	<max_volume>100</max_volume>
+	<send_icy>1</send_icy>
 	<profile name=''></profile>
 	<profile name='_safe mode'>
-	<accept_nexturi>0</accept_nexturi>
-	<codecs>mp3</codecs>
-	<raw_audio_format>wav</raw_audio_format>
+		<accept_nexturi>0</accept_nexturi>
+		<codecs>mp3</codecs>
+		<raw_audio_format>wav</raw_audio_format>
+		<send_metadata>0</send_metadata>
 	</profile>
 	<profile name='_normal mode'></profile>
 	<profile name='Jongo S3x'>
@@ -30,18 +32,11 @@
 		<sample_rate>96000</sample_rate>
 		<profile name=''></profile>	
 		<L24_format>1</L24_format>
-		<profile name='NR1603'>
-			<raw_audio_format>raw,wav</raw_audio_format>
-		</profile>	
+		<profile name='NR1603'></profile>	
 		<profile name='CR603'>
 			<codecs>aac,pcm,flc,mp3</codecs>
 			<raw_audio_format>wav</raw_audio_format>
 		</profile>	
-	</profile>
-	<profile name='JRiver'>
-		<codecs>aif,pcm,mp3</codecs>
-		<sample_rate>192000</sample_rate>
-		<raw_audio_format>raw,aiff,wav</raw_audio_format>
 	</profile>
 	<profile name='M1Clic'>
 		<codecs>pcm,flc,mp3</codecs>
@@ -55,7 +50,6 @@
 	<profile name='Revo'>
 		<send_metadata>1</send_metadata>
 		<send_coverart>0</send_coverart>
-		<send_icy>1</send_icy>
 	</profile>
 	<profile name='Naim Uniti2'>
 		<seek_after_pause>1</seek_after_pause>
@@ -65,7 +59,6 @@
 	<profile name='XBox'>
 		<stream_length>-2</stream_length>
 		<codecs>pcm,mp3</codecs>
-		<sample_rate>48000</sample_rate>
 	</profile>
 	<profile name='Raumfeld'>
 		<codecs>pcm,flc,mp3</codecs>
@@ -74,9 +67,7 @@
 		<sample_rate>192000</sample_rate>
 		<raw_audio_format>raw,wav,aiff</raw_audio_format>
 		<profile name='N30'></profile>	
-		<profile name='XW-SMA'>
-			<sample_rate>48000</sample_rate>
-		</profile>
+		<profile name='XW-SMA'></profile>
 	</profile>
 	<profile name='PlugPlayer'>
 		<codecs>flc,mp3</codecs>
@@ -93,7 +84,6 @@
 		<codecs>aac,pcm,flc,mp3</codecs>
 		<stream_length>1000000000</stream_length>
 		<raw_audio_format>wav,aiff</raw_audio_format>
-		<sample_rate>48000</sample_rate>
 	</profile>
 	<profile name='GGMM E5'>
 		<send_metadata>0</send_metadata>
@@ -102,7 +92,16 @@
 	<profile name='Denon'>
 		<send_coverart>1</send_coverart>
 		<sample_rate>192000</sample_rate>
-		<raw_audio_format>wav,raw</raw_audio_format>
 	</profile>		
+	<profile name='JRiver'>
+		<!-- no flac -->
+		<codecs>dsd,dff,alc,aac,ogg,mp3,pcm</codecs>
+		<!-- ogg is set as application/ogg -->
+		<!-- dsf/dff are not reported and should set at dsd -->
+		<forced_mimetypes>audio/ogg,audio/dsd</forced_mimetypes>
+		<stream_length>-2</stream_length>
+		<sample_rate>192000</sample_rate>
+		<L24_format>0</L24_format>
+	</profile>				
 </squeeze2upnp>
 
