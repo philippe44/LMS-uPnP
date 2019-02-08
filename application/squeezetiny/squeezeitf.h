@@ -62,9 +62,9 @@ typedef struct metadata_s {
 	u32_t file_size;
 	bool  remote;
 	u32_t bitrate;
-	u32_t sample_rate, pcm_rate;
-	u8_t  sample_size, pcm_size;
-	u8_t  channels, pcm_channels;
+	u32_t sample_rate;
+	u8_t  sample_size;
+	u8_t  channels;
 } metadata_t;
 
 typedef	struct sq_dev_param_s {

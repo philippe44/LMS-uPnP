@@ -1167,10 +1167,10 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 			in THRU/PCM mode these values are known when we receive pcm and in
 			PCM, they are known if values are forced. Otherwise we can't know
 			*/
-			info.metadata.pcm_rate = out->encode.sample_rate;
-			info.metadata.pcm_size = out->encode.sample_size;
+			info.metadata.sample_rate = out->encode.sample_rate;
+			info.metadata.sample_size = out->encode.sample_size;
 			// non-encoded version is needed as encoded one is always reset
-			info.metadata.pcm_channels= out->channels ? out->channels : info.metadata.channels;
+			if (out->channels) info.metadata.channels = out->channels;
 
 			ret = ctx_callback(ctx, SQ_SET_TRACK, NULL, &info);
 
