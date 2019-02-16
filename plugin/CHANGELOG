@@ -1,6 +1,7 @@
 1.8.3
  - (1) xml_GetFirstItem descends through list until it finds something
  - (2) return NULL not "" in xml_GetFirstItem when nothing found
+ - (2) remove range-request 
  
 1.8.2
  - (1) move Roon Mode to squeezelite config size as Roon does report LMS version 7.7.5 but does not have tha AIFF header issue
