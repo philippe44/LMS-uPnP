@@ -503,7 +503,7 @@ static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, int thread_index,
 		res = -1;
 	} else {
 		kd_add(resp, "Content-Type", ctx->output.mimetype);
-		kd_add(resp, "Accept-Ranges", "none");
+		//kd_add(resp, "Accept-Ranges", "none");
 		if (ctx->output.length > 0) {
 			asprintf(&str, "%zu", ctx->output.length);
 			kd_add(resp, "Content-Length", str);

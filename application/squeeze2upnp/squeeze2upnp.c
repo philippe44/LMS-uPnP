@@ -633,7 +633,7 @@ static void ProcessEvent(Upnp_EventType EventType, void *_Event, void *Cookie)
 	// this is async, so need to check context's validity
 	if (!CheckAndLock(Device)) return;
 
-	LastChange = XMLGetFirstDocumentItem(VarDoc, "LastChange");
+	LastChange = XMLGetFirstDocumentItem(VarDoc, "LastChange", true);
 
 	if (!Device->on || !Device->SqueezeHandle || !LastChange) {
 		LOG_SDEBUG("device off, no squeezebox device (yet) or not change for %s", Event->Sid);
@@ -709,11 +709,11 @@ int ActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 			if (Resp && !strcasecmp(Resp, "GetInfoExResponse")) {
 				// Battery information for devices that have one
 				LOG_DEBUG("[%p]: extended info %s", p, ixmlDocumenttoString(Action->ActionResult));
-				r = XMLGetFirstDocumentItem(Action->ActionResult, "BatteryFlag");
+				r = XMLGetFirstDocumentItem(Action->ActionResult, "BatteryFlag", true);
 				if (r) {
 					u16_t Level = atoi(r) << 8;
 					NFREE(r);
-					r = XMLGetFirstDocumentItem(Action->ActionResult, "BatteryPercent");
+					r = XMLGetFirstDocumentItem(Action->ActionResult, "BatteryPercent", true);
 					if (r) {
 						Level |= (u8_t) atoi(r);
 						sq_notify(p->SqueezeHandle, p, SQ_BATTERY, NULL, &Level);
@@ -724,14 +724,14 @@ int ActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 			}
 
 			// transport state response
-			r = XMLGetFirstDocumentItem(Action->ActionResult, "CurrentTransportState");
+			r = XMLGetFirstDocumentItem(Action->ActionResult, "CurrentTransportState", true);
 			if (r) _SyncNotifState(r, p);
 			NFREE(r);
 
 			// When not playing, position is not reliable
 			if (p->State == PLAYING) {
 				u32_t Elapsed;
-				r = XMLGetFirstDocumentItem(Action->ActionResult, "RelTime");
+				r = XMLGetFirstDocumentItem(Action->ActionResult, "RelTime", true);
 				if (r) {
 					Elapsed = Time2Int(r) * 1000;
 					LOG_DEBUG("[%p]: position %d (cookie %p)", p, Elapsed, Cookie);
@@ -741,14 +741,14 @@ int ActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 			NFREE(r);
 
 			// URI detection response
-			r = XMLGetFirstDocumentItem(Action->ActionResult, "TrackURI");
+			r = XMLGetFirstDocumentItem(Action->ActionResult, "TrackURI", true);
 			if (r && (*r == '\0' || !strstr(r, BRIDGE_URL))) {
 				char *s;
 				IXML_Document *doc;
 				IXML_Node *node;
 
 				NFREE(r);
-				s = XMLGetFirstDocumentItem(Action->ActionResult, "TrackMetaData");
+				s = XMLGetFirstDocumentItem(Action->ActionResult, "TrackMetaData", true);
 				doc = ixmlParseBuffer(s);
 				NFREE(s);
 
@@ -1005,8 +1005,8 @@ static void *UpdateThread(void *args)
 					goto cleanup;
 				}
 
-				ModelName = XMLGetFirstDocumentItem(DescDoc, "modelName");
-				UDN = XMLGetFirstDocumentItem(DescDoc, "UDN");
+				ModelName = XMLGetFirstDocumentItem(DescDoc, "modelName", true);
+				UDN = XMLGetFirstDocumentItem(DescDoc, "UDN", true);
 
 				// excluded device
 				if (isExcluded(ModelName)) {
@@ -1111,7 +1111,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	if (!Device->Config.Enabled) return false;
 
 	// Read key elements from description document
-	friendlyName = XMLGetFirstDocumentItem(DescDoc, "friendlyName");
+	friendlyName = XMLGetFirstDocumentItem(DescDoc, "friendlyName", true);
 	if (!friendlyName || !*friendlyName) friendlyName = strdup(UDN);
 
 	LOG_SDEBUG("UDN:\t%s\nFriendlyName:\t%s", UDN, friendlyName);

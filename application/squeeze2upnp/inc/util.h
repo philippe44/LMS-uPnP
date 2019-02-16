@@ -62,7 +62,7 @@ IXML_Node  	*XMLUpdateNode(IXML_Document *doc, IXML_Node *parent, bool refresh,
 						   char *name, char *fmt, ...);
 int 	   	XMLAddAttribute(IXML_Document *doc, IXML_Node *parent, char *name,
 							char *fmt, ...);
-char 	   	*XMLGetFirstDocumentItem(IXML_Document *doc, const char *item);
+char 	   	*XMLGetFirstDocumentItem(IXML_Document *doc, const char *item, bool strict);
 int 	   	XMLFindAndParseService(IXML_Document *DescDoc, const char *location,
 								   const char *serviceTypeBase, char **serviceId,
 								   char **serviceType, char **eventURL,

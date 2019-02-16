@@ -63,7 +63,7 @@ bool isMaster(char *UDN, struct sService *Service, char **Name)
 
 	if (ActionNode) ixmlDocument_free(ActionNode);
 
-	Body = XMLGetFirstDocumentItem(Response, "ZoneGroupState");
+	Body = XMLGetFirstDocumentItem(Response, "ZoneGroupState", true);
 	if (Response) ixmlDocument_free(Response);
 
 	Response = ixmlParseBuffer(Body);

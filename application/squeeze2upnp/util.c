@@ -106,35 +106,40 @@ in_addr_t ExtractIP(const char *URL)
 
 
 /*----------------------------------------------------------------------------*/
-char *XMLGetFirstDocumentItem(IXML_Document *doc, const char *item)
+char *XMLGetFirstDocumentItem(IXML_Document *doc, const char *item, bool strict)
 {
 	IXML_NodeList *nodeList = NULL;
 	IXML_Node *textNode = NULL;
 	IXML_Node *tmpNode = NULL;
 	char *ret = NULL;
+	int i;
 
 	nodeList = ixmlDocument_getElementsByTagName(doc, (char *)item);
-	if (nodeList) {
-		tmpNode = ixmlNodeList_item(nodeList, 0);
+
+	for (i = 0; nodeList && i < (int) ixmlNodeList_length(nodeList); i++) {
+		tmpNode = ixmlNodeList_item(nodeList, i);
+
 		if (tmpNode) {
 			textNode = ixmlNode_getFirstChild(tmpNode);
-			if (!textNode) {
-				LOG_WARN("(BUG) ixmlNode_getFirstChild(tmpNode) returned NULL", NULL);
-				ret = strdup("");
-			}
-			else {
+			if (textNode) {
 				ret = strdup(ixmlNode_getNodeValue(textNode));
-				if (!ret) {
-					LOG_WARN("ixmlNode_getNodeValue returned NULL", NULL);
-					ret = strdup("");
-				}
+				if (ret) break;
+				LOG_WARN("ixmlNode_getNodeValue returned NULL", NULL);
+			} else {
+				LOG_WARN("(BUG) ixmlNode_getFirstChild(tmpNode) returned NULL", NULL);
 			}
-		} else
-			LOG_WARN("ixmlNodeList_item(nodeList, 0) returned NULL", NULL);
-	} else
-		LOG_SDEBUG("Error finding %s in XML Node", item);
+		} else {
+			LOG_WARN("ixmlNodeList_item(nodeList, %d) returned NULL", i, NULL);
+		}
 
-	if (nodeList) ixmlNodeList_free(nodeList);
+		if (strict) break;
+	}
+
+	if (nodeList) {
+		ixmlNodeList_free(nodeList);
+    } else {
+		LOG_SDEBUG("Error finding %s in XML Node", item);
+    }
 
 	return ret;
 }
@@ -261,7 +266,7 @@ int XMLFindAndParseService(IXML_Document *DescDoc, const char *location,
 	IXML_Element *service = NULL;
 	bool contd = true;
 
-	baseURL = XMLGetFirstDocumentItem(DescDoc, "URLBase");
+	baseURL = XMLGetFirstDocumentItem(DescDoc, "URLBase", true);
 	if (baseURL) base = baseURL;
 	else base = location;
 
