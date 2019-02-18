@@ -78,6 +78,7 @@ tMRConfig			glMRConfig = {
 							10,			// min_gapless
 							true,		// SendMetaData
 							true,		// SendCoverArt
+							ICY_FULL,	// SendIcy
 							100,		// MaxVolume
 							false,		// AutoPlay
 							"",      	// ForcedMimeTypes
@@ -109,15 +110,21 @@ sq_dev_param_t glDeviceParam = {
 					FLAC_NORMAL_HEADER,		// flac_header
 					"",						// name
 					{ 0x00,0x00,0x00,0x00,0x00,0x00 },
-					true,	  				// send_icy
 #ifdef RESAMPLE
 					"",						// resample_options
 #endif
 					false,      			// roon_mode
 					"",						// store_prefix
-					{ 	true,				// use_cli
+					// parameters not from read from config file
+#if !WIN
+					{
+#endif
+						true,				// use_cli
 						"",     			// server
+						ICY_FULL,			// send_icy;
+#if !WIN
 					},
+#endif
 				} ;
 
 /*----------------------------------------------------------------------------*/
@@ -370,7 +377,7 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 				Device->Muted = false;
 			}
 
-			if (Device->Config.VolumeOnPlay == 1 && Device->Volume != -1)
+			if (Device->Config.VolumeOnPlay == 1 && Device->Volume != 0xff)
 				CtrlSetVolume(Device, Device->Volume, Device->seqN++);
 			break;
 		case SQ_STOP:
@@ -417,7 +424,7 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 			strcpy(Device->sq_config.name, param);
 			break;
 		case SQ_SETSERVER:
-			strcpy(Device->sq_config.dynamic.server, inet_ntoa(*(struct in_addr*) param));
+			strcpy(Device->sq_config.set_server, inet_ntoa(*(struct in_addr*) param));
 			break;
 		default:
 			break;
@@ -1126,7 +1133,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	Device->seqN			= NULL;
 	Device->TrackPoll 		= Device->StatePoll = 0;
 	Device->InfoExPoll 		= -1;
-	Device->Volume 			= -1;
+	Device->Volume 			= 0xff;
 	Device->Actions 		= NULL;
 	Device->NextURI 		= Device->NextProtoInfo = NULL;
 	Device->LastSeen		= gettime_ms() / 1000;
@@ -1135,8 +1142,11 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 
 	if (Device->sq_config.roon_mode) {
 		Device->on = true;
-		Device->sq_config.dynamic.use_cli = false;
+		Device->sq_config.use_cli = false;
 	}
+
+	Device->sq_config.send_icy = Device->Config.SendMetaData ? Device->Config.SendIcy : ICY_NONE;
+	if (Device->sq_config.send_icy && !Device->Config.SendCoverArt) Device->sq_config.send_icy = ICY_TEXT;
 
 	strcpy(Device->UDN, UDN);
 	strcpy(Device->DescDocURL, location);

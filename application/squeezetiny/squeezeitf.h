@@ -37,6 +37,7 @@ typedef enum {SQ_NONE, SQ_SET_TRACK, SQ_PLAY, SQ_TRANSITION, SQ_PAUSE, SQ_UNPAUS
 			  SQ_NEXT, SQ_SETNAME, SQ_SETSERVER, SQ_BATTERY} sq_action_t;
 typedef enum {SQ_STREAM = 2, SQ_FULL = 3} sq_mode_t;
 typedef	sq_action_t sq_event_t;
+typedef enum { ICY_NONE, ICY_FULL, ICY_TEXT } sq_icy_e;
 
 typedef enum { SQ_RATE_384000 = 384000, SQ_RATE_352000 = 352000,
 			   SQ_RATE_192000 = 192000, SQ_RATE_176400 = 176400,
@@ -80,7 +81,6 @@ typedef	struct sq_dev_param_s {
 	sq_flac_header_t	flac_header;
 	char		name[_STR_LEN_];
 	u8_t		mac[6];
-	bool		send_icy;
 #ifdef RESAMPLE
 	char		resample_options[_STR_LEN_];
 #endif
@@ -89,8 +89,9 @@ typedef	struct sq_dev_param_s {
 	// set at runtime, not from config
 	struct {
 		bool	use_cli;
-		char 	server[_STR_LEN_];
-	} dynamic;
+		char 	set_server[_STR_LEN_];
+		sq_icy_e send_icy;
+	};
 } sq_dev_param_t;
 
 

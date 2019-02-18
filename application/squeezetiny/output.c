@@ -643,7 +643,7 @@ void output_set_icy(struct metadata_s *metadata, bool init, u32_t now, struct th
 		output_free_icy(ctx);
 		ctx->output.icy.artist = strdupn(metadata->artist);
 		ctx->output.icy.title = strdupn(metadata->title);
-		ctx->output.icy.artwork = strdupn(metadata->artwork);
+		ctx->output.icy.artwork = (ctx->config.send_icy != ICY_TEXT) ? strdupn(metadata->artwork) : NULL;
 		UNLOCK_O;
 	}
 }

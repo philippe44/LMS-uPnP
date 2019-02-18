@@ -401,8 +401,11 @@ static ssize_t send_with_icy(struct thread_ctx_s *ctx, int sock, const void *buf
 		LOG_SDEBUG("[%p]: ICY checking", ctx);
 
 		if (p->icy.updated) {
+			char *format = (p->icy.artwork && *p->icy.artwork) ?
+							"NStreamTitle='%s%s%s';StreamURL='%s';" :
+							"NStreamTitle='%s%s%s';";
 			// there is room for 1 extra byte at the beginning for length
-			len_16 = sprintf(p->icy.buffer, "NStreamTitle='%s%s%s';StreamURL='%s';",
+			len_16 = sprintf(p->icy.buffer, format,
 							 p->icy.artist, *p->icy.artist ? " - " : "",
 							 p->icy.title, p->icy.artwork) - 1;
 			LOG_INFO("[%p]: ICY update\n\t%s\n\t%s\n\t%s", ctx, p->icy.artist, p->icy.title, p->icy.artwork);

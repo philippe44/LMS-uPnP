@@ -1,6 +1,6 @@
 [% PROCESS settings/header.html %]
 
-	[% YESNOBOX = [['',''], ['yes','1'], ['no','0']] %]
+	[% YESNOBOX = [['',''], ['PLUGIN_UPNPBRIDGE_YES','1'], ['no','0']] %]
 		
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_AUTORUN" desc="PLUGIN_UPNPBRIDGE_AUTORUN_DESC" %]
 		<input name="autorun" type="checkbox" [% IF autorun %] checked [% END %]> [% "PLUGIN_UPNPBRIDGE_RUNNING_$running" | string %] [% IF binary %] ([% binary %]) [% END %]
@@ -111,13 +111,13 @@
 		[% "PLUGIN_UPNPBRIDGE_ACCEPTNEXTURI" | string %]
 		&nbsp<select class="stdedit" name="accept_nexturi" id="accept_nexturi">
 		[% FOREACH entry IN YESNOBOX %] 
-			<option [% IF entry.1 == accept_nexturi %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+			<option [% IF entry.1 == accept_nexturi %]selected[% END %] value="[% entry.1 %]">[% entry.0 | string %]</option>
 		[% END %]
 		</select>
 		[% "PLUGIN_UPNPBRIDGE_SEEKAFTERPAUSE" | string %]&nbsp
 		<select class="stdedit" name="seek_after_pause" id="seek_after_pause">
 		[% FOREACH entry IN YESNOBOX %] 
-			<option [% IF entry.1 == seek_after_pause %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+			<option [% IF entry.1 == seek_after_pause %]selected[% END %] value="[% entry.1 %]">[% entry.0 | string %]</option>
 		[% END %]
 		</select>
 	[% END %]
@@ -247,7 +247,7 @@
 		&nbsp[% "PLUGIN_UPNPBRIDGE_ENABLEDEFS" | string %]
 		<select class="stdedit" name="enabled" id="enabled">
 		[% FOREACH entry IN YESNOBOX %] 
-			<option [% IF entry.1 == enabled %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+			<option [% IF entry.1 == enabled %]selected[% END %] value="[% entry.1 %]">[% entry.0 | string %]</option>
 		[% END %]
 		</select>
 	[% END %]
@@ -262,7 +262,7 @@
 		&nbsp&nbsp[% "PLUGIN_UPNPBRIDGE_VOLUMEFEEDBACK" | string %]&nbsp
 		<select class="stdedit" name="volume_feedback" id="volume_feedback">
 		[% FOREACH entry IN YESNOBOX %] 
-			<option [% IF entry.1 == volume_feedback %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+			<option [% IF entry.1 == volume_feedback %]selected[% END %] value="[% entry.1 %]">[% entry.0 | string %]</option>
 		[% END %]
 		</select>
 	[% END %]
@@ -270,19 +270,24 @@
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_SENDMETADATA" desc="PLUGIN_UPNPBRIDGE_SENDMETADATA_DESC" %]
 		<select class="stdedit" name="send_metadata" id="send_metadata">
 		[% FOREACH entry IN YESNOBOX %] 
-			<option [% IF entry.1 == send_metadata %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+			<option [% IF entry.1 == send_metadata %]selected[% END %] value="[% entry.1 %]">[% entry.0 | string %]</option>
 		[% END %]
 		</select>
 		&nbsp&nbsp[% "PLUGIN_UPNPBRIDGE_SEND_COVERART" | string %]&nbsp
 		<select class="stdedit" name="send_coverart" id="send_coverart">
 		[% FOREACH entry IN YESNOBOX %] 
-			<option [% IF entry.1 == send_coverart %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+			<option [% IF entry.1 == send_coverart %]selected[% END %] value="[% entry.1 %]">[% entry.0 | string %]</option>
 		[% END %]
 		</select>
 		&nbsp&nbsp[% "PLUGIN_UPNPBRIDGE_SENDICY" | string %]&nbsp
 		<select class="stdedit" name="send_icy" id="send_icy">
-		[% FOREACH entry IN YESNOBOX %] 
-			<option [% IF entry.1 == send_icy %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+		[% FOREACH entry IN {
+				''  => '',
+				'0' => 'PLUGIN_UPNPBRIDGE_NO',
+				'1' => 'PLUGIN_UPNPBRIDGE_YES',
+				'2' => 'PLUGIN_UPNPBRIDGE_ICYTEXT',
+				} %] 
+			<option [% IF entry.key == send_icy %]selected[% END %] value="[% entry.key %]">[% entry.value | string %]</option>
 		[% END %]
 		</select>
 	[% END %]

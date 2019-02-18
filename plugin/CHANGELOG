@@ -1,3 +1,8 @@
+1.9.1
+ - disable icy metadata when no send metadata disabled
+ - add icy mode 2 to send only text, no artwork
+ - use translation from strings.txt for Yes/No 
+ 
 1.8.3
  - (1) xml_GetFirstItem descends through list until it finds something
  - (2) return NULL not "" in xml_GetFirstItem when nothing found

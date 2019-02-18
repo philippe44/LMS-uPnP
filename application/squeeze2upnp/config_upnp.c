@@ -94,7 +94,7 @@ void SaveConfig(char *name, void *ref, bool full)
 	XMLUpdateNode(doc, common, false, "roon_mode", "%d", (int) glDeviceParam.roon_mode);
 	XMLUpdateNode(doc, common, false, "forced_mimetypes", "%s", glMRConfig.ForcedMimeTypes);
 	XMLUpdateNode(doc, common, false, "seek_after_pause", "%d", (int) glMRConfig.SeekAfterPause);
-	XMLUpdateNode(doc, common, false, "send_icy", "%d", (int) glDeviceParam.send_icy);
+	XMLUpdateNode(doc, common, false, "send_icy", "%d", (int) glMRConfig.SendIcy);
 	XMLUpdateNode(doc, common, false, "volume_on_play", "%d", (int) glMRConfig.VolumeOnPlay);
 	XMLUpdateNode(doc, common, false, "volume_feedback", "%d", (int) glMRConfig.VolumeFeedback);
 	XMLUpdateNode(doc, common, false, "send_metadata", "%d", (int) glMRConfig.SendMetaData);
@@ -121,7 +121,7 @@ void SaveConfig(char *name, void *ref, bool full)
 
 			XMLUpdateNode(doc, dev_node, false, "friendly_name", p->friendlyName);
 			XMLUpdateNode(doc, dev_node, true, "name", p->sq_config.name);
-			if (*p->sq_config.dynamic.server) XMLUpdateNode(doc, dev_node, true, "server", p->sq_config.dynamic.server);
+			if (*p->sq_config.set_server) XMLUpdateNode(doc, dev_node, true, "server", p->sq_config.set_server);
 		}
 		// new device, add nodes
 		else {
@@ -129,7 +129,7 @@ void SaveConfig(char *name, void *ref, bool full)
 			XMLAddNode(doc, dev_node, "udn", p->UDN);
 			XMLAddNode(doc, dev_node, "name", p->friendlyName);
 			XMLAddNode(doc, dev_node, "friendly_name", p->friendlyName);
-			if (*p->sq_config.dynamic.server) XMLAddNode(doc, dev_node, "server", p->sq_config.dynamic.server);
+			if (*p->sq_config.set_server) XMLAddNode(doc, dev_node, "server", p->sq_config.set_server);
 			XMLAddNode(doc, dev_node, "mac", "%02x:%02x:%02x:%02x:%02x:%02x", p->sq_config.mac[0],
 						p->sq_config.mac[1], p->sq_config.mac[2], p->sq_config.mac[3], p->sq_config.mac[4], p->sq_config.mac[5]);
 			XMLAddNode(doc, dev_node, "enabled", "%d", (int) p->Config.Enabled);
@@ -170,7 +170,7 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "streambuf_size")) sq_conf->streambuf_size = atol(val);
 	if (!strcmp(name, "output_size")) sq_conf->outputbuf_size = atol(val);
 	if (!strcmp(name, "stream_length")) sq_conf->stream_length = atol(val);
-	if (!strcmp(name, "send_icy")) sq_conf->send_icy = atol(val);
+	if (!strcmp(name, "send_icy")) Conf->SendIcy = atol(val);
 	if (!strcmp(name, "enabled")) Conf->Enabled = atol(val);
 	if (!strcmp(name, "codecs")) strcpy(sq_conf->codecs, val);
 	if (!strcmp(name, "mode")) strcpy(sq_conf->mode, val);

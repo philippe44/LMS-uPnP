@@ -295,10 +295,14 @@ PLUGIN_UPNPBRIDGE_SEND_COVERART
 
 PLUGIN_UPNPBRIDGE_SENDICY
 	EN	Send ICY metadata
+	
+PLUGIN_UPNPBRIDGE_ICYTEXT
+	EN	Text only
 
 PLUGIN_UPNPBRIDGE_SENDMETADATA_DESC
 	EN	When a UPnP player has a display, LMS can send metadata (title, artist, album) to it. ICY metadata is an option to send live
-	EN	title when playing webradio. This <b>DOES NOT</b> work if you have set a password for LMS command access
+	EN	title when playing webradio. Use 'Text only' with players that don't support artwork in ICY.
+	EN	This <b>DOES NOT</b> work if you have set a password for LMS command access
 	
 PLUGIN_UPNPBRIDGE_VOLUMEMGMT
 	EN	Player volume management

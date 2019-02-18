@@ -64,6 +64,7 @@ struct sService {
 	int			MinGapless;
 	bool		SendMetaData;
 	bool		SendCoverArt;
+	sq_icy_e	SendIcy;
 	int			MaxVolume;
 	bool		AutoPlay;
 	char		ForcedMimeTypes[_STR_LEN_];

@@ -581,7 +581,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 		now = gettime_ms();
 
 		// check for metadata update (LOCK_O not really necessary here)
-		if (ctx->output.state == OUTPUT_RUNNING && ctx->config.send_icy && 
+		if (ctx->output.state == OUTPUT_RUNNING && ctx->config.send_icy &&
 			ctx->output.icy.interval && (ctx->output.icy.last + ICY_UPDATE_TIME) - now > ICY_UPDATE_TIME) {
 			struct metadata_s metadata;
 
