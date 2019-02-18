@@ -1,6 +1,6 @@
 [% PROCESS settings/header.html %]
 
-	[% YESNOBOX = [['',''], ['PLUGIN_UPNPBRIDGE_YES','1'], ['no','0']] %]
+	[% YESNOBOX = [['',''], ['PLUGIN_UPNPBRIDGE_YES','1'], ['PLUGIN_UPNPBRIDGE_NO','0']] %]
 		
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_AUTORUN" desc="PLUGIN_UPNPBRIDGE_AUTORUN_DESC" %]
 		<input name="autorun" type="checkbox" [% IF autorun %] checked [% END %]> [% "PLUGIN_UPNPBRIDGE_RUNNING_$running" | string %] [% IF binary %] ([% binary %]) [% END %]
