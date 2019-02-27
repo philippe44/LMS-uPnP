@@ -1,3 +1,7 @@
+1.9.2
+ - move all strings from basic.html to strings<.txt
+ - when getprotocolinfo fails, return an empty string to allow player creation
+ 
 1.9.1
  - disable icy metadata when no send metadata disabled
  - add icy mode 2 to send only text, no artwork

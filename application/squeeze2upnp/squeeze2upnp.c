@@ -1212,25 +1212,22 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 
 	// get the protocol info
 	if ((*Sink = GetProtocolInfo(Device)) == NULL) {
-		LOG_WARN("[%p] unable to get protocol info, device not added", Device);
-		return false;
+		LOG_WARN("[%p] unable to get protocol info, set <forced_mimetypes>", Device);
+		*Sink = strdup("");
 	}
-
 	// only check codecs in thru mode
 	if (stristr(Device->sq_config.mode, "thru"))
-		CheckCodecs(Device->sq_config.codecs, *Sink, Device->Config.ForcedMimeTypes);
+		CheckCodecs(Device->sq_config.codecs, *Sink, Device->Config.ForcedMimeTypes);
 
-	MakeMacUnique(Device);
+	MakeMacUnique(Device);
 
 	pthread_cond_init(&Device->Cond, 0);
 	pthread_create(&Device->Thread, NULL, &MRThread, Device);
-
 	/* subscribe here, not before */
 	for (i = 0; i < NB_SRV; i++) if (Device->Service[i].TimeOut)
 		UpnpSubscribeAsync(glControlPointHandle, Device->Service[i].EventURL,
 						   Device->Service[i].TimeOut, MasterHandler,
 						   (void*) strdup(UDN));
-
 	return true;
 }
 

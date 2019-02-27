@@ -104,8 +104,8 @@
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_STREAMOPTIONS" desc="PLUGIN_UPNPBRIDGE_STREAMOPTIONS_DESC" %]
 		[% "PLUGIN_UPNPBRIDGE_HTTPMODE" | string %]
 		<select class="stdedit" id="stream_length" name="stream_length">
-		[% FOREACH entry IN [ ['',''], ['chunked','-3'], ['if known', '-2'], ['no length','-1'], ['fixed', '2048000000'] ] %]
-			<option label="[% entry.0 %]" [% IF entry.1 == stream_length %]selected[% END %] value="[% entry.1 %]">
+		[% FOREACH entry IN [ ['',''], ['PLUGIN_UPNPBRIDGE_HTTPMODECHUNKED','-3'], ['PLUGIN_UPNPBRIDGE_HTTPMODEIFKNOWN', '-2'], ['PLUGIN_UPNPBRIDGE_HTTPMODENOLENGTH','-1'], ['PLUGIN_UPNPBRIDGE_HTTPMODEFIXED', '2048000000'] ] %]
+			<option label="[% entry.0 | string %]" [% IF entry.1 == stream_length %]selected[% END %] value="[% entry.1 %]">
 		[% END %]
 		</select>
 		[% "PLUGIN_UPNPBRIDGE_ACCEPTNEXTURI" | string %]
@@ -185,8 +185,8 @@
 		</span>
 		[% "PLUGIN_UPNPBRIDGE_L24FORMAT" | string %]
 		<select class="stdedit" name="L24_format" id="L24_format">
-		[% FOREACH entry IN [ ['',''], ['plain 24 bits','0'], ['packed type 1','1'] ['16 bits always','2'] ['16 bits raw only', '3'] ] %]
-			<option [% IF entry.1 == L24_format %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+		[% FOREACH entry IN [ ['',''], ['PLUGIN_UPNPBRIDGE_L24PLAIN','0'], ['PLUGIN_UPNPBRIDGE_L24PACKED1','1'] ['PLUGIN_UPNPBRIDGE_L24ALWAYS16','2'] ['PLUGIN_UPNPBRIDGE_L24RAWONLY16', '3'] ] %]
+			<option [% IF entry.1 == L24_format %]selected[% END %] value="[% entry.1 %]">[% entry.0 | string %]</option>
 		[% END %]
 		</select>&nbsp&nbsp
 		<input name="advanced_encode_flag" type="checkbox" onchange="showadvanced(this,'advanced_encode')" [% IF advanced_encode_flag %]checked [% END %]>&nbsp[% "PLUGIN_UPNPBRIDGE_ADVANCED" | string %]
@@ -255,8 +255,8 @@
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_VOLUMEMGMT" desc="PLUGIN_UPNPBRIDGE_VOLUMEMGMT_DESC" %]
 		[% "PLUGIN_UPNPBRIDGE_MAXVOLUME" | string %]&nbsp</th><input type="text" class="stdedit" name="max_volume" id="max_volume" value="[% max_volume %]" size="3">
 		&nbsp&nbsp[% "PLUGIN_UPNPBRIDGE_VOLUMEONPLAY" | string %]&nbsp<select class="stdedit" name="volume_on_play" id="volume_on_play">
-		[% FOREACH entry IN [ ['',''], ['only when playing','1'], ['ignore all changes','-1'], ['transparent forward','0'] ] %]
-			<option [% IF entry.1 == volume_on_play %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+		[% FOREACH entry IN [ ['',''], ['PLUGIN_UPNPBRIDGE_VOLUMEWHENPLAYING','1'], ['PLUGIN_UPNPBRIDGE_VOLUMEIGNORE','-1'], ['PLUGIN_UPNPBRIDGE_VOLUMEFORWARD','0'] ] %]
+			<option [% IF entry.1 == volume_on_play %]selected[% END %] value="[% entry.1 %]">[% entry.0 | string %]</option>
 		[% END %]
 		</select>
 		&nbsp&nbsp[% "PLUGIN_UPNPBRIDGE_VOLUMEFEEDBACK" | string %]&nbsp
