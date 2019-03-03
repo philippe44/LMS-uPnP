@@ -142,7 +142,11 @@ void DelMRDevice(struct sMR *p)
 	}
 
 	p->Running = false;
+
 	sq_free_metadata(&p->NextMetaData);
+
+	// kick-up all sleepers
+	WakeAll();
 
 	pthread_mutex_unlock(&p->Mutex);
 	pthread_join(p->Thread, NULL);

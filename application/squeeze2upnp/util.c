@@ -34,10 +34,52 @@
 /*----------------------------------------------------------------------------*/
 extern log_level util_loglevel;
 static log_level *loglevel = &util_loglevel;
+static pthread_mutex_t	wakeMutex;
+static pthread_cond_t	wakeCond;
 
 static IXML_Node *_getAttributeNode(IXML_Node *node, char *SearchAttr);
 
-#if WIN
+
+/*----------------------------------------------------------------------------*/
+void InitUtils(void)
+{
+	pthread_mutex_init(&wakeMutex, 0);
+	pthread_cond_init(&wakeCond, 0);
+}
+
+
+/*----------------------------------------------------------------------------*/
+void EndUtils(void)
+{
+	pthread_mutex_destroy(&wakeMutex);
+	pthread_cond_destroy(&wakeCond);
+}
+
+
+/*----------------------------------------------------------------------------*/
+/* 																			  */
+/* system-wide sleep & wakeup												  */
+/* 																			  */
+/*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*/
+void WakeableSleep(u32_t ms) {
+	pthread_mutex_lock(&wakeMutex);
+	if (ms) pthread_cond_reltimedwait(&wakeCond, &wakeMutex, ms);
+	else pthread_cond_wait(&wakeCond, &wakeMutex);
+	pthread_mutex_unlock(&wakeMutex);
+}
+
+/*----------------------------------------------------------------------------*/
+void WakeAll(void) {
+	pthread_mutex_lock(&wakeMutex);
+	pthread_cond_broadcast(&wakeCond);
+	pthread_mutex_unlock(&wakeMutex);
+}
+
+
+
+#if WIN
 /*----------------------------------------------------------------------------*/
 void winsock_init(void) {
 	WSADATA wsaData;
@@ -56,9 +98,14 @@ void winsock_close(void) {
 }
 #endif
 
-
+/*----------------------------------------------------------------------------*/
+/* 																			  */
+/* pthread utils															  */
+/* 																			  */
 /*----------------------------------------------------------------------------*/
-int pthread_cond_reltimedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, u32_t msWait)
+
+/*----------------------------------------------------------------------------*/
+int pthread_cond_reltimedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, u32_t msWait)
 {
 	struct timespec ts;
 	u32_t	nsec;

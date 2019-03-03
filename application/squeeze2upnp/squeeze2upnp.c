@@ -48,6 +48,7 @@
 #define TRACK_POLL  (1000)
 #define STATE_POLL  (500)
 #define INFOEX_POLL (60*1000)
+#define MIN_POLL 	(min(TRACK_POLL, STATE_POLL))
 #define MAX_ACTION_ERRORS (5)
 
 /*----------------------------------------------------------------------------*/
@@ -162,8 +163,8 @@ bool					glDaemonize = false;
 pthread_t				glUpdateMRThread;
 static bool				glMainRunning = true;
 static bool				glInteractive = true;
-static pthread_mutex_t 	glMainMutex, glUpdateMutex;
-static pthread_cond_t  	glMainCond, glUpdateCond;
+static pthread_mutex_t 	glUpdateMutex;
+static pthread_cond_t  	glUpdateCond;
 static pthread_t 		glMainThread, glUpdateThread;
 static tQueue			glUpdateQueue;
 static char				*glLogFile;
@@ -439,16 +440,19 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 /*----------------------------------------------------------------------------*/
 static void *MRThread(void *args)
 {
-	int elapsed;
+	int elapsed, wakeTimer = MIN_POLL;
 	unsigned last;
 	struct sMR *p = (struct sMR*) args;
 
 	last = gettime_ms();
 
-	for (; p->Running;  usleep(500000)) {
+	for (; p->Running; WakeableSleep(wakeTimer)) {
 		elapsed = gettime_ms() - last;
 
 		pthread_mutex_lock(&p->Mutex);
+
+		wakeTimer = (p->State != STOPPED) ? MIN_POLL : MIN_POLL * 10;
+		LOG_SDEBUG("[%p]: UPnP thread timer %d %d", p, elapsed, wakeTimer);
 
 		p->StatePoll += elapsed;
 		p->TrackPoll += elapsed;
@@ -460,7 +464,7 @@ static void *MRThread(void *args)
 		*/
 
 		// exception is to poll extended informations if any for battery
-		if (p->on && !p->WaitCookie && p->InfoExPoll > INFOEX_POLL) {
+		if (p->on && !p->WaitCookie && p->InfoExPoll >= INFOEX_POLL) {
 			p->InfoExPoll = 0;
 			AVTCallAction(p, "GetInfoEx", p->seqN++);
 		}
@@ -475,7 +479,7 @@ static void *MRThread(void *args)
 		}
 
 		// get track position & CurrentURI
-		if (p->TrackPoll > TRACK_POLL) {
+		if (p->TrackPoll >= TRACK_POLL) {
 			p->TrackPoll = 0;
 			if (p->sqState != SQ_STOP && p->sqState != SQ_PAUSE) {
 				AVTCallAction(p, "GetPositionInfo", p->seqN++);
@@ -483,7 +487,7 @@ static void *MRThread(void *args)
 		}
 
 		// do polling as event is broken in many uPNP devices
-		if (p->StatePoll > STATE_POLL) {
+		if (p->StatePoll >= STATE_POLL) {
 			p->StatePoll = 0;
 			AVTCallAction(p, "GetTransportInfo", p->seqN++);
 		}
@@ -1069,9 +1073,8 @@ static void *MainThread(void *args)
 {
 	while (glMainRunning) {
 
-		pthread_mutex_lock(&glMainMutex);
-		pthread_cond_reltimedwait(&glMainCond, &glMainMutex, 30*1000);
-		pthread_mutex_unlock(&glMainMutex);
+		WakeableSleep(30*1000);
+		if (!glMainRunning) break;
 
 		if (glLogFile && glLogLimit != -1) {
 			u32_t size = ftell(stderr);
@@ -1255,6 +1258,8 @@ static bool Start(void)
 {
 	int i, rc;
 
+	InitUtils();
+
 	// device mutexes are always initialized
 	memset(&glMRDevices, 0, sizeof(glMRDevices));
 	for (i = 0; i < MAX_RENDERERS; i++) {
@@ -1293,8 +1298,6 @@ static bool Start(void)
 	LOG_INFO("Binding to %s:%d", glIPaddress, glPort);
 
 	// init mutex & cond no matter what
-	pthread_mutex_init(&glMainMutex, 0);
-	pthread_cond_init(&glMainCond, 0);
 	pthread_mutex_init(&glUpdateMutex, 0);
 	pthread_cond_init(&glUpdateCond, 0);
 
@@ -1323,7 +1326,7 @@ static bool Stop(void)
 
 	// simple log size management thread ... should be remove done day
 	LOG_INFO("terminate main thread ...", NULL);
-	pthread_cond_signal(&glMainCond);
+	WakeAll();
 	pthread_join(glMainThread, NULL);
 
 	LOG_INFO("stopping UPnP devices ...", NULL);
@@ -1336,8 +1339,6 @@ static bool Stop(void)
 
 	// wait for UPnP to terminate to not have callbacks issues
 	pthread_mutex_destroy(&glUpdateMutex);
-	pthread_mutex_destroy(&glMainMutex);
-	pthread_cond_destroy(&glMainCond);
 	pthread_cond_destroy(&glUpdateCond);
 	for (i = 0; i < MAX_RENDERERS; i++)	{
 		pthread_mutex_destroy(&glMRDevices[i].Mutex);
@@ -1346,6 +1347,8 @@ static bool Stop(void)
 
 	// remove discovered items
 	QueueFlush(&glUpdateQueue);
+
+	EndUtils();
 
 	if (glConfigID) ixmlDocument_free(glConfigID);
 

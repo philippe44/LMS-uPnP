@@ -40,6 +40,12 @@ typedef struct {
 	} list;
 } tQueue;
 
+void 		InitUtils(void);
+void		EndUtils(void);
+
+void		WakeableSleep(u32_t ms);
+void		WakeAll(void);
+
 void 		QueueInit(tQueue *queue, bool mutex, void (*f)(void*));
 void 		QueueInsert(tQueue *queue, void *item);
 void 		*QueueExtract(tQueue *queue);
