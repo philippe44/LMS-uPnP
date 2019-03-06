@@ -1,5 +1,5 @@
-1.10.0.1
- - (1) remove sleep timers for conditions
+1.10.0
+ - remove sleep timers for conditions
  
 1.9.2
  - move all strings from basic.html to strings<.txt
