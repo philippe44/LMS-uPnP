@@ -124,14 +124,12 @@ static void output_http_thread(struct thread_param_s *param) {
 		bool res = true;
 		int n;
 
-		if (sock == -1 && drain_count) {
+		if (sock == -1) {
 			struct timeval timeout = {0, TIMEOUT*1000};
 
 			FD_ZERO(&rfds);
 			FD_SET(thread->http, &rfds);
 
-			// FIXME: need to add something if connection opening is re-attempted
-			// while we are "draining" - need to refuse it.
 			if (select(thread->http + 1, &rfds, NULL, NULL, &timeout) > 0) {
 				sock = accept(thread->http, NULL, NULL);
 				set_nonblock(sock);
@@ -192,7 +190,7 @@ static void output_http_thread(struct thread_param_s *param) {
 
 		// something wrong happened or master connection closed
 		if (n < 0 || !res) {
-			LOG_INFO("[%p]: HTTP close %u (bytes %zd) (n:%d res:%d)", ctx, sock, bytes, n, res);
+			LOG_INFO("[%p]: HTTP close %d (bytes %zd) (n:%d res:%d)", ctx, sock, bytes, n, res);
 			closesocket(sock);
 			sock = -1;
 			/*
@@ -202,7 +200,7 @@ static void output_http_thread(struct thread_param_s *param) {
 			slimproto (case where bytes == 0).
 			*/
 			LOCK_D;
-			if (!bytes && ctx->decode.state == DECODE_COMPLETE) {
+			if (n < 0 && !bytes && ctx->decode.state == DECODE_COMPLETE) {
 				ctx->output.completed = true;
 				LOG_ERROR("[%p]: streaming failed, exiting", ctx);
 				UNLOCK_D;

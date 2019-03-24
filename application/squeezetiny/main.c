@@ -139,10 +139,9 @@ static char *cli_decode(char *str) {
 static char *cli_find_tag(char *str, char *tag)
 {
 	char *p, *res = NULL;
-	char *buf = malloc(max(strlen(str), strlen(tag)) + 4);
+	char *buf = malloc(max(strlen(str), strlen(tag)) + 5);
 
-	strcpy(buf, tag);
-	strcat(buf, "%3a");
+	sprintf(buf, " %s%%3a", tag);
 	if ((p = stristr(str, buf)) != NULL) {
 		int i = 0;
 		p += strlen(buf);
@@ -462,6 +461,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, unsigned offs
 			free(metadata->artwork);
 			metadata->artwork = artwork;
 		}
+
 	} else {
 		LOG_ERROR("[%p]: track not found %u %s", ctx, metadata->index, rsp);
 	}
@@ -557,7 +557,7 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 					ctx->output.track_started = true;
 					ctx->render.track_start_time = gettime_ms();
 					LOG_INFO("[%p] track %u started at %u", ctx, ctx->render.index, ctx->render.track_start_time);
-            } else {
+            	} else {
 					LOG_INFO("[%p] play notification", ctx );
 				}
 				UNLOCK_O;

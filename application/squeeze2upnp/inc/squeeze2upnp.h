@@ -61,7 +61,6 @@ struct sService {
 	int 		VolumeOnPlay;		// change only volume when playing has started or disable volume commands
 	bool		VolumeFeedback;
 	bool		AcceptNextURI;
-	int			MinGapless;
 	bool		SendMetaData;
 	bool		SendCoverArt;
 	sq_icy_e	SendIcy;
@@ -84,6 +83,8 @@ struct sMR {
 	char			*NextURI;
 	char			*NextProtoInfo;
 	metadata_t		NextMetaData;
+	bool			ShortTrack;
+	s16_t			ShortTrackWait;
 	sq_action_t		sqState;
 	u8_t			*seqN;
 	void			*WaitCookie, *StartCookie;

@@ -40,6 +40,8 @@ decoder is running at that time
 #include "squeezelite.h"
 #include "slimproto.h"
 
+#define SHORT_TRACK	(2*1000)
+
 #define PORT 3483
 #define MAXBUF 4096
 
@@ -728,7 +730,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			if ((ctx->decode.state == DECODE_COMPLETE && ctx->canSTMdu && ctx->status.output_ready &&
 				(ctx->output.encode.flow || !ctx->output.remote ||
 				 (ctx->status.duration && ctx->status.duration - ctx->status.ms_played < STREAM_DELAY))) ||
-				ctx->decode.state == DECODE_ERROR) {
+				ctx->decode.state == DECODE_ERROR || _sendSTMu) {
 
 				if (ctx->decode.state == DECODE_COMPLETE) _sendSTMd = true;
 				if (ctx->decode.state == DECODE_ERROR)    _sendSTMn = true;
@@ -737,7 +739,10 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 					ctx->status.stream_state == STREAMING_FILE) {
 					_stream_disconnect = true;
 				}
-
+				// remote party closed the connection while still streaming
+				if (_sendSTMu) {
+					LOG_WARN("[%p]: stream closed before end of track (%d/%d)", ctx, ctx->status.ms_played, ctx->status.duration);
+				}
 			}
 
 			UNLOCK_D;
@@ -990,6 +995,13 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 
 	// get metadata - they must be freed by callee whenever he wants
 	sq_get_metadata(ctx->self, &info.metadata, info.offset);
+
+	// skip tracks that are too short
+	if (info.offset && info.metadata.duration && info.metadata.duration < SHORT_TRACK) {
+		LOG_WARN("[%p]: track too short (%d)", ctx, info.metadata.duration);
+		sq_free_metadata(&info.metadata);
+		return false;
+	}
 
 	// set key parameters
 	out->completed = false;
