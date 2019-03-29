@@ -739,8 +739,12 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 					ctx->status.stream_state == STREAMING_FILE) {
 					_stream_disconnect = true;
 				}
+
 				// remote party closed the connection while still streaming
 				if (_sendSTMu) {
+					ctx->status.ms_played = 0;
+					output_flush(ctx);
+					_sendSTMu = false;
 					LOG_WARN("[%p]: stream closed before end of track (%d/%d)", ctx, ctx->status.ms_played, ctx->status.duration);
 				}
 			}
@@ -1050,9 +1054,6 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 	out->encode.channels = 0;
 	// reset time offset for new tracks
 	out->offset = 0;
-	// set ICY metadata if possible
-	if (ctx->config.send_icy && (!out->duration || out->encode.flow))
-		output_set_icy(&info.metadata, true, gettime_ms(), ctx);
 
 	// in case of flow, all parameters shall be set
 	if (stristr(mode, "flow") && out->encode.mode != ENCODE_THRU) {

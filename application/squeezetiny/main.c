@@ -141,7 +141,8 @@ static char *cli_decode(char *str) {
 	char *p, *res = NULL;
 	char *buf = malloc(max(strlen(str), strlen(tag)) + 5);
 
-	sprintf(buf, " %s%%3a", tag);
+	//FIXME: need a leading space
+	sprintf(buf, "%s%%3a", tag);
 	if ((p = stristr(str, buf)) != NULL) {
 		int i = 0;
 		p += strlen(buf);
@@ -353,6 +354,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, unsigned offs
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
 	char cmd[1024];
 	char *rsp, *p, *cur;
+	bool repeating = false;
 
 	if (!handle || !ctx->in_use || !ctx->config.use_cli) {
 		if (ctx->config.use_cli) {
@@ -373,22 +375,44 @@ bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, unsigned offs
 		return true;
 	}
 
-	// find the current index
-	if ((p = cli_find_tag(rsp, "playlist_cur_index")) != NULL) {
-		metadata->index = atoi(p) + offset;
+	// detect repeating streams
+	if ((p = cli_find_tag(rsp, "repeating_stream")) != NULL) {
+		repeating = atoi(p);
 		free(p);
 	}
 
-	// need to make sure we rollover if end of list
-	if ((p = cli_find_tag(rsp, "playlist_tracks")) != NULL) {
-		int len = atoi(p);
-		if (len) metadata->index %= len;
-		free(p);
+	if (repeating) {
+		free(rsp);
+
+		sprintf(cmd, "%s repeatingsonginfo tags:xcfldatgrKNoITH", ctx->cli_id);
+		rsp = cli_send_cmd(cmd, false, false, ctx);
+
+		if (!rsp || !*rsp) {
+			sq_default_metadata(metadata, false);
+			LOG_WARN("[%p]: cannot get repeating stream metadata", ctx);
+			return true;
+		}
+
+		cur = rsp;
+	} else {
+		// find the current index
+		if ((p = cli_find_tag(rsp, "playlist_cur_index")) != NULL) {
+			metadata->index = atoi(p) + offset;
+			free(p);
+		}
+
+		// need to make sure we rollover if end of list
+		if ((p = cli_find_tag(rsp, "playlist_tracks")) != NULL) {
+			int len = atoi(p);
+			if (len) metadata->index %= len;
+			free(p);
+		}
+
+		sprintf(cmd, "playlist%%20index%%3a%d ", metadata->index);
+		cur = stristr(rsp, cmd);
 	}
 
-	sprintf(cmd, "playlist%%20index%%3a%d ", metadata->index);
-
-	if ((cur = stristr(rsp, cmd)) != NULL) {
+	if (cur) {
 		metadata->title = cli_find_tag(cur, "title");
 		metadata->artist = cli_find_tag(cur, "artist");
 		metadata->album = cli_find_tag(cur, "album");
@@ -403,7 +427,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, unsigned offs
 		/*
 		at this point, LMS sends the original filesize, not the transcoded
 		so it simply does not work
-		if ((p = cli_find_tag(rsp, "filesize")) != NULL) {
+		if ((p = cli_find_tag(cur, "filesize")) != NULL) {
 			metadata->file_size = atol(p);
 			free(p);
 		}
@@ -452,12 +476,11 @@ bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, unsigned offs
 			}
 		}
 
-		if (metadata->artwork && !strncmp(metadata->artwork, IMAGEPROXY, strlen(IMAGEPROXY))) {
+		if (metadata->artwork && strncmp(metadata->artwork, "http", 4)) {
 			char *artwork = malloc(_STR_LEN_);
 
-			snprintf(artwork, _STR_LEN_, "http://%s:%s%s", ctx->server_ip, ctx->server_port, metadata->artwork);
-			// why the f... does LMS use .png extension in image proxy, where IT IS jpeg?
-			if ((p = strstr(artwork, ".png")) != NULL) strcpy(p, ".jpg");
+			snprintf(artwork, _STR_LEN_, "http://%s:%s/%s", ctx->server_ip, ctx->server_port,
+							*(metadata->artwork) == '/' ? metadata->artwork + 1 : metadata->artwork);
 			free(metadata->artwork);
 			metadata->artwork = artwork;
 		}

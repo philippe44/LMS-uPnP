@@ -4,6 +4,10 @@
  - (1) exit output thread on 0 bytes only when player closes connection on failure (not on HEAD)
  - (2) accept to re-open socket even when draining (obuf management now allows it) - needed for CC and short tracks
  - (2) send STMd if STMu arrives while decoder is COMPLETE but not STOPPED (case where remote server closes the connection early)
+ - (3) add repeatingstream option
+ - (3) when url is missing fqdn, test "http" instead of IMAGE_PROXY and do not replace .png by .jpg
+ - (3) remove superfluous send_icy_metadata
+ - (3) if STMu is received when Stmd not sent yet but should have, flush player and ignore STMu (this should trigger restart hopefully)
   
 1.10.0
  - remove sleep timers for conditions

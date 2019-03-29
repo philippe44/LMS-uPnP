@@ -399,7 +399,7 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 			sq_free_metadata(&Device->NextMetaData);
 			Device->sqState = action;
 			Device->ShortTrack = false;
-   			Device->ShortTrackWait = 0;
+			Device->ShortTrackWait = 0;
 			break;
 		case SQ_PAUSE:
 			AVTBasic(Device, "Pause");

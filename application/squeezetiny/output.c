@@ -553,7 +553,6 @@ void output_flush(struct thread_ctx_s *ctx) {
 
 	UNLOCK_O;
 
-
 	LOG_DEBUG("[%p]: flush output buffer", ctx);
 }
 
