@@ -63,6 +63,7 @@ my %tagMap = (
 	  't' => ['tracknum',         'TRACK',         'tracknum'],         #tracknum
 	  'i' => ['disc',             'DISC',          'disc'],             #disc
 	  'j' => ['coverart',         'SHOW_ARTWORK',  'coverArtExists'],   #cover
+	  'x' => ['remote',           '',              'remote'],           #remote
 	  'd' => ['duration',         'LENGTH',        'secs'],             #secs
 	  'r' => ['bitrate',          'BITRATE',       'prettyBitRate'],    #bitrate
 	  'T' => ['samplerate',       'SAMPLERATE',    'samplerate'],       #samplerate
@@ -132,6 +133,10 @@ sub _songData {
 				$returnHash{artist} = $meta;
 			}
 		}	
+		
+		elsif ($tag eq 'x') {
+			$returnHash{$tagref->[0]} = 1;
+		}
 
 		# if we have a method/relationship for the tag
 		elsif (defined(my $method = $tagref->[2])) {

@@ -155,6 +155,7 @@ void DelMRDevice(struct sMR *p)
 
 	NFREE(p->NextProtoInfo);
 	NFREE(p->NextURI);
+	NFREE(p->ExpectedURI);
 }
 
 

@@ -728,9 +728,9 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			 when codec of next track starts)
 			*/
 			if ((ctx->decode.state == DECODE_COMPLETE && ctx->canSTMdu && ctx->status.output_ready &&
-				(ctx->output.encode.flow || !ctx->output.remote ||
+				(ctx->output.encode.flow || !ctx->output.remote || _sendSTMu ||
 				 (ctx->status.duration && ctx->status.duration - ctx->status.ms_played < STREAM_DELAY))) ||
-				ctx->decode.state == DECODE_ERROR || _sendSTMu) {
+				ctx->decode.state == DECODE_ERROR) {
 
 				if (ctx->decode.state == DECODE_COMPLETE) _sendSTMd = true;
 				if (ctx->decode.state == DECODE_ERROR)    _sendSTMn = true;
@@ -742,10 +742,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 
 				// remote party closed the connection while still streaming
 				if (_sendSTMu) {
-					ctx->status.ms_played = 0;
-					output_flush(ctx);
-					_sendSTMu = false;
-					LOG_WARN("[%p]: stream closed before end of track (%d/%d)", ctx, ctx->status.ms_played, ctx->status.duration);
+					LOG_WARN("[%p]: Track shorter than expected (%d/%d)", ctx, ctx->status.ms_played, ctx->status.duration);
 				}
 			}
 

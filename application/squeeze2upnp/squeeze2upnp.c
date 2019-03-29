@@ -328,7 +328,7 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 			 if (p->offset) {
 				if (Device->State == STOPPED) {
 					// could not get next URI before track stopped, restart
-					LOG_WARN("[%p]: next URI (stopped) (s:%u) %s", Device, Device->ShortTrack, uri);
+					LOG_WARN("[%p]: set current URI (*) (s:%u) %s", Device, Device->ShortTrack, uri);
 					Device->ShortTrackWait = 0;
 					AVTSetURI(Device, uri, &p->metadata, ProtoInfo);
 					AVTPlay(Device);
@@ -348,6 +348,12 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 				if (p->metadata.duration < SHORT_TRACK) Device->ShortTrack = true;
 				LOG_INFO("[%p]: set current URI (s:%u) %s", Device, Device->ShortTrack, uri);
 				AVTSetURI(Device, uri, &p->metadata, ProtoInfo);
+			}
+
+			// don't bother with missed NextURI if player don't support it
+			if (Device->Config.AcceptNextURI) {
+				NFREE(Device->ExpectedURI);
+				Device->ExpectedURI = strdup(uri);
 			}
 
 			// Gapless or direct URI used, free ressources
@@ -396,6 +402,7 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 			AVTStop(Device);
 			NFREE(Device->NextURI);
 			NFREE(Device->NextProtoInfo);
+			NFREE(Device->ExpectedURI);
 			sq_free_metadata(&Device->NextMetaData);
 			Device->sqState = action;
 			Device->ShortTrack = false;
@@ -549,6 +556,10 @@ static void _SyncNotifState(char *State, struct sMR* Device)
 				// might not even have received next LMS's request, wait a bit
 				Device->ShortTrackWait = 5000;
 				LOG_WARN("[%p]: stop on short track (wait %hd ms for next URI)", Device, Device->ShortTrackWait);
+			} else if (Device->sqState == SQ_PLAY && Device->ExpectedURI && Device->Config.AcceptNextURI) {
+				// gapless player but something went wrong, try to nudge it
+				AVTBasic(Device, "Next");
+				LOG_INFO("[%p]: guessing missed nextURI %s ", Device, Device->NextURI);
 			} else {
 				// could generate an overrun event or an underrun
 				Event = SQ_STOP;
@@ -564,10 +575,6 @@ static void _SyncNotifState(char *State, struct sMR* Device)
 			NFREE(Device->NextURI);
 			sq_free_metadata(&Device->NextMetaData);
 			AVTPlay(Device);
-		} else {
-			// gapless player but something went wrong, try to nudge it
-			AVTBasic(Device, "Next");
-			LOG_INFO("[%p]: guessing missed nextURI %s ", Device, Device->NextURI);
 		}
 
 		Device->State = STOPPED;
@@ -801,7 +808,10 @@ int ActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 				if (doc) ixmlDocument_free(doc);
 			}
 
-			if (r) sq_notify(p->SqueezeHandle, p, SQ_TRACK_INFO, NULL, r);
+			if (r) {
+				if (p->ExpectedURI && !strcasecmp(r, p->ExpectedURI)) NFREE(p->ExpectedURI);
+				sq_notify(p->SqueezeHandle, p, SQ_TRACK_INFO, NULL, r);
+			}
 			NFREE(r);
 
 			LOG_SDEBUG("Action complete : %i (cookie %p)", EventType, Cookie);
