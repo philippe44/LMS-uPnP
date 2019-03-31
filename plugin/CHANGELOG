@@ -10,6 +10,9 @@
  - (3) if STMu is received when STMd not sent yet but should have, flush player and ignore STMu (this should trigger restart hopefully)
  - (3) undo right above mod as it's player's duty to restart
  - (3) detect URI change missed to nudge gapless players
+ - (4) do not use the "repeating" metadata gathering for icy update (add -1 as offest option)
+ - (4) remove SQ_SEEK in both domain as it's not used
+ - (4) some clients (foobar2000 > 1.4.x) opens 2 sockets immediately and do a GET on both, then close the first one. That causes it to fail if some bytes have already been sent. In case of simple re-opening (not the CC or SOnos mode), reset the obuf pointer at the beginning. This should work as the obuf uses a large STUB which garantees that new data are not written unless at least the STUB amount has been sent to player
   
 1.10.0
  - remove sleep timers for conditions

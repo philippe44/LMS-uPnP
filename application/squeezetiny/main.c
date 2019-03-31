@@ -349,12 +349,12 @@ void sq_default_metadata(metadata_t *metadata, bool init)
 
 
 /*--------------------------------------------------------------------------*/
-bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, unsigned offset)
+bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, int offset)
 {
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
 	char cmd[1024];
 	char *rsp, *p, *cur;
-	bool repeating = false;
+	bool repeating = offset != -1;
 
 	if (!handle || !ctx->in_use || !ctx->config.use_cli) {
 		if (ctx->config.use_cli) {
@@ -366,6 +366,9 @@ bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, unsigned offs
 
 	sq_init_metadata(metadata);
 
+	// use -1 to avoid repeating stream request
+	if (offset == -1) offset = 0;
+
 	sprintf(cmd, "%s status - %d tags:xcfldatgrKNoITH", ctx->cli_id, offset + 1);
 	rsp = cli_send_cmd(cmd, false, false, ctx);
 
@@ -375,11 +378,11 @@ bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, unsigned offs
 		return true;
 	}
 
-	// detect repeating streams
-	if ((p = cli_find_tag(rsp, "repeating_stream")) != NULL) {
-		repeating = atoi(p);
+	if (repeating && (p = cli_find_tag(rsp, "repeating_stream")) != NULL) {
+		// detect repeating streams
+		repeating = atoi(p) != 0;
 		free(p);
-	}
+	} else repeating = false;
 
 	if (repeating) {
 		free(rsp);
@@ -637,8 +640,6 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 				LOG_INFO("[%p] notify STOP", ctx);
 				wake_controller(ctx);
 			}
-			break;
-		case SQ_SEEK:
 			break;
 		case SQ_VOLUME: {
 			sprintf(cmd, "%s mixer volume %d", ctx->cli_id, *((u16_t*) param));

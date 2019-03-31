@@ -33,7 +33,7 @@
 #define BRIDGE_URL	 	"bridge-"
 
 typedef enum {SQ_NONE, SQ_SET_TRACK, SQ_PLAY, SQ_TRANSITION, SQ_PAUSE, SQ_UNPAUSE,
-			  SQ_STOP, SQ_SEEK, SQ_VOLUME, SQ_TIME, SQ_TRACK_INFO, SQ_ONOFF,
+			  SQ_STOP, SQ_VOLUME, SQ_TIME, SQ_TRACK_INFO, SQ_ONOFF,
 			  SQ_NEXT, SQ_SETNAME, SQ_SETSERVER, SQ_BATTERY} sq_action_t;
 typedef enum {SQ_STREAM = 2, SQ_FULL = 3} sq_mode_t;
 typedef	sq_action_t sq_event_t;
@@ -117,7 +117,7 @@ void				sq_release_device(sq_dev_handle_t);
 void				sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *cookie, void *param);
 u32_t 				sq_get_time(sq_dev_handle_t handle);
 u32_t 				sq_self_time(sq_dev_handle_t handle);
-bool				sq_get_metadata(sq_dev_handle_t handle, struct metadata_s *metadata, unsigned offset);
+bool				sq_get_metadata(sq_dev_handle_t handle, struct metadata_s *metadata, int offset);
 void				sq_default_metadata(struct metadata_s *metadata, bool init);
 void 				sq_free_metadata(struct metadata_s *metadata);
 bool 				sq_set_time(sq_dev_handle_t handle, char *pos);

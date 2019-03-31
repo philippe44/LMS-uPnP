@@ -539,6 +539,13 @@ static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, int thread_index,
 			if (ctx->output.length < 0) kd_add(resp, "Content-Length", "2048000000");
 			chunked = false;
 			*header = true;
+		} else if (bytes) {
+			// re-opening an existing connection, resend from beginning
+			obuf->readp = obuf->buf;
+			LOG_INFO("[%p]: re-opening a connection at %zu", ctx, bytes);
+			if (bytes > HTTP_STUB_DEPTH) {
+				LOG_WARN("[%p]: head is lost %zu", ctx, bytes);
+			}
 		}
 	}
 

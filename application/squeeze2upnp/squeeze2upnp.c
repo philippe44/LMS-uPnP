@@ -412,11 +412,6 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 			AVTBasic(Device, "Pause");
 			Device->sqState = action;
 			break;
-		case SQ_NEXT:
-			AVTBasic(Device, "Next");
-			break;
-		case SQ_SEEK:
-			break;
 		case SQ_VOLUME: {
 			u32_t Volume = *(u16_t*)param;
 			int i;
@@ -742,8 +737,7 @@ int ActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 				*/
 				if (Resp && ((!strcasecmp(Resp, "StopResponse") && p->State == STOPPED) ||
 							 (!strcasecmp(Resp, "PlayResponse") && p->State == PLAYING) ||
-							 (!strcasecmp(Resp, "PauseResponse") && p->State == PAUSED) ||
-					 		 (!strcasecmp(Resp, "NextResponse") && p->State == STOPPED))) {
+							 (!strcasecmp(Resp, "PauseResponse") && p->State == PAUSED))) {
 					p->State = UNKNOWN;
 				}
 

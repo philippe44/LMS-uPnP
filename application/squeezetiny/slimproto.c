@@ -587,7 +587,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			ctx->output.icy.interval && (ctx->output.icy.last + ICY_UPDATE_TIME) - now > ICY_UPDATE_TIME) {
 			struct metadata_s metadata;
 
-			sq_get_metadata(ctx->self, &metadata, 0);
+			sq_get_metadata(ctx->self, &metadata, -1);
 			output_set_icy(&metadata, false, now, ctx);
 			sq_free_metadata(&metadata);
 		}
