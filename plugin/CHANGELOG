@@ -1,3 +1,6 @@
+1.11.1
+ - short track shall workaround shall not be activated for 0 duration tracks
+
 1.11.0
  - (1) refuse tracks less than 2s and gap tracks less than 10s
  - (1) cli_tag compare includes leading space

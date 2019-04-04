@@ -332,7 +332,7 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 					Device->ShortTrackWait = 0;
 					AVTSetURI(Device, uri, &p->metadata, ProtoInfo);
 					AVTPlay(Device);
-				 } else if (!Device->Config.AcceptNextURI || Device->ShortTrack || p->metadata.duration < SHORT_TRACK) {
+				 } else if (!Device->Config.AcceptNextURI || Device->ShortTrack || (p->metadata.duration && p->metadata.duration < SHORT_TRACK)) {
 					// can't use UPnP NextURI capability
 					LOG_INFO("[%p]: next URI gapped (s:%u) %s", Device, Device->ShortTrack, uri);
 					Device->NextURI = uri;
@@ -345,7 +345,7 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 					AVTSetNextURI(Device, uri, &p->metadata, ProtoInfo);
 				}
 			} else {
-				if (p->metadata.duration < SHORT_TRACK) Device->ShortTrack = true;
+				if (p->metadata.duration && p->metadata.duration < SHORT_TRACK) Device->ShortTrack = true;
 				LOG_INFO("[%p]: set current URI (s:%u) %s", Device, Device->ShortTrack, uri);
 				AVTSetURI(Device, uri, &p->metadata, ProtoInfo);
 			}
@@ -562,7 +562,7 @@ static void _SyncNotifState(char *State, struct sMR* Device)
 			}
 		} else if (Device->NextProtoInfo) {
 			// non-gapless player or gapped track, manually set next track
-			if (Device->NextMetaData.duration < SHORT_TRACK) Device->ShortTrack = true;
+			if (Device->NextMetaData.duration && Device->NextMetaData.duration < SHORT_TRACK) Device->ShortTrack = true;
 			else Device->ShortTrack = false;
 			LOG_INFO("[%p]: gapped transition %s", Device, Device->NextURI);
 			AVTSetURI(Device, Device->NextURI, &Device->NextMetaData, Device->NextProtoInfo);
