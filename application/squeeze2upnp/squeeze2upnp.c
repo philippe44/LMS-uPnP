@@ -427,10 +427,17 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 
 			// only transmit while playing
 			if (!Device->Config.VolumeOnPlay || Device->sqState == SQ_PLAY) {
-				if (Device->Volume) {
-					if (Device->Muted) CtrlSetMute(Device, false, Device->seqN++);
-					CtrlSetVolume(Device, Device->Volume, Device->seqN++);
-				} else CtrlSetMute(Device, true, Device->seqN++);
+				u32_t now = gettime_ms();
+				// do not re-send echo commands
+
+				if (now > Device->VolumeStampRx + 1000) {
+					Device->VolumeStampTx = now;
+					if (Device->Volume) {
+						if (Device->Muted) CtrlSetMute(Device, false, Device->seqN++);
+						CtrlSetVolume(Device, Device->Volume, Device->seqN++);
+					} else CtrlSetMute(Device, true, Device->seqN++);
+				}
+
 				Device->Muted = (Device->Volume == 0);
 			}
 
@@ -646,6 +653,7 @@ static void _ProcessVolume(char *Volume, struct sMR* Device)
 {
 	u16_t UPnPVolume;
 	int GroupVolume = GetGroupVolume(Device);
+	u32_t now = gettime_ms();
 
 	/*
 	ASSUMING DEVICE'S MUTEX LOCKED
@@ -655,9 +663,10 @@ static void _ProcessVolume(char *Volume, struct sMR* Device)
 
 	LOG_SDEBUG("[%p]: Volume %s", Device, Volume);
 
-	if (UPnPVolume != Device->Volume) {
+	if (UPnPVolume != Device->Volume && now > Device->VolumeStampTx + 1000) {
 		LOG_INFO("[%p]: UPnP Volume local change %d", Device, UPnPVolume);
 		UPnPVolume =  (UPnPVolume * 100) / Device->Config.MaxVolume;
+		Device->VolumeStampRx = gettime_ms();
 		// candidate for busyraise/drop due to call to cli
 		sq_notify(Device->SqueezeHandle, Device, SQ_VOLUME, NULL, &UPnPVolume);
 	}
@@ -1171,6 +1180,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	Device->TrackPoll 		= Device->StatePoll = 0;
 	Device->InfoExPoll 		= -1;
 	Device->Volume 			= 0xff;
+	Device->VolumeStampRx 	= Device->VolumeStampTx = gettime_ms() - 2000;
 	Device->Actions 		= NULL;
 	Device->NextURI 		= Device->NextProtoInfo = NULL;
 	Device->LastSeen		= gettime_ms() / 1000;

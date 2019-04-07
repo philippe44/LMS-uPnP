@@ -101,6 +101,7 @@ struct sMR {
 	u32_t			Busy;
 	pthread_t 		Thread;
 	u8_t			Volume;
+	u32_t			VolumeStampRx, VolumeStampTx;
 	bool			Muted;
 	u16_t			ErrorCount;
 	u32_t			LastSeen;
