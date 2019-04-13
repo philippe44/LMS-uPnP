@@ -520,6 +520,7 @@ void sq_free_metadata(metadata_t *metadata)
 	NFREE(metadata->genre);
 	NFREE(metadata->artwork);
 	NFREE(metadata->remote_title);
+	memset(metadata, 0, sizeof(metadata_t));
 }
 
 

@@ -675,7 +675,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 				ctx->output.state = OUTPUT_STOPPED;
 			}
 
-			// if there is still data to be sent, try an overrun
+			// if there is still data to be sent, try an underrun
 			if (ctx->output.state == OUTPUT_RUNNING && !ctx->sentSTMo &&
 				ctx->status.stream_state == STREAMING_HTTP &&
 				ctx->render.state == RD_STOPPED && ctx->canSTMdu) {

@@ -64,6 +64,7 @@ struct sService {
 	bool		SendMetaData;
 	bool		SendCoverArt;
 	sq_icy_e	SendIcy;
+	int			Nudge;
 	int			MaxVolume;
 	bool		AutoPlay;
 	char		ForcedMimeTypes[_STR_LEN_];

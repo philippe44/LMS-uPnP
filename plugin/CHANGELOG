@@ -1,3 +1,7 @@
+1.13.0
+ - (1) if track ends up earlier than expected and next track is short, ShortTrack was not set
+ - (1) add <nudge> parameter for Bose player to force a "next" when tracktime is > duration + nudge
+ 
 1.12.0
  - Bi-directionnal volume filtering
  

@@ -95,6 +95,7 @@ void SaveConfig(char *name, void *ref, bool full)
 	XMLUpdateNode(doc, common, false, "forced_mimetypes", "%s", glMRConfig.ForcedMimeTypes);
 	XMLUpdateNode(doc, common, false, "seek_after_pause", "%d", (int) glMRConfig.SeekAfterPause);
 	XMLUpdateNode(doc, common, false, "send_icy", "%d", (int) glMRConfig.SendIcy);
+	XMLUpdateNode(doc, common, false, "nudge", "%d", (int) glMRConfig.Nudge);
 	XMLUpdateNode(doc, common, false, "volume_on_play", "%d", (int) glMRConfig.VolumeOnPlay);
 	XMLUpdateNode(doc, common, false, "volume_feedback", "%d", (int) glMRConfig.VolumeFeedback);
 	XMLUpdateNode(doc, common, false, "send_metadata", "%d", (int) glMRConfig.SendMetaData);
@@ -170,6 +171,7 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "output_size")) sq_conf->outputbuf_size = atol(val);
 	if (!strcmp(name, "stream_length")) sq_conf->stream_length = atol(val);
 	if (!strcmp(name, "send_icy")) Conf->SendIcy = atol(val);
+	if (!strcmp(name, "nudge")) Conf->Nudge = atol(val);
 	if (!strcmp(name, "enabled")) Conf->Enabled = atol(val);
 	if (!strcmp(name, "codecs")) strcpy(sq_conf->codecs, val);
 	if (!strcmp(name, "mode")) strcpy(sq_conf->mode, val);
