@@ -350,7 +350,7 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 				}
 			} else {
 				if (p->metadata.duration && p->metadata.duration < SHORT_TRACK) Device->ShortTrack = true;
-				Device->Duration = p->metadata.duration / 1000 - 2;
+				Device->Duration = p->metadata.duration / 1000;
 				LOG_INFO("[%p]: set current URI (s:%u) %s", Device, Device->ShortTrack, uri);
 				AVTSetURI(Device, uri, &p->metadata, ProtoInfo);
 			}
@@ -576,7 +576,7 @@ static void _SyncNotifState(char *State, struct sMR* Device)
 			// non-gapless player or gapped track, manually set next track
 			if (Device->NextMetaData.duration && Device->NextMetaData.duration < SHORT_TRACK) Device->ShortTrack = true;
 			else Device->ShortTrack = false;
-			Device->Duration = Device->NextMetaData.duration / 1000 - 2;
+			Device->Duration = Device->NextMetaData.duration / 1000;
 			// does not make sense to set Duration in gap mode
 			LOG_INFO("[%p]: gapped transition %s", Device, Device->NextURI);
 			AVTSetURI(Device, Device->NextURI, &Device->NextMetaData, Device->NextProtoInfo);
