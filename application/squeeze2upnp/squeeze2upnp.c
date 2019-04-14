@@ -77,10 +77,11 @@ tMRConfig			glMRConfig = {
 							true,		// Enabled
 							1,          // VolumeOnPlay
 							true,		// VolumeFeedback
-							true,		// AcceptNextURI
+							1,			// AcceptNextURI
 							true,		// SendMetaData
 							true,		// SendCoverArt
 							ICY_FULL,	// SendIcy
+							0,			// Nudge
 							100,		// MaxVolume
 							false,		// AutoPlay
 							"",      	// ForcedMimeTypes
@@ -330,9 +331,11 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 					// could not get next URI before track stopped, restart
 					LOG_WARN("[%p]: set current URI (*) (s:%u) %s", Device, Device->ShortTrack, uri);
 					Device->ShortTrackWait = 0;
+					Device->Duration = p->metadata.duration / 1000;
+					if (p->metadata.duration && p->metadata.duration < SHORT_TRACK) Device->ShortTrack = true;
 					AVTSetURI(Device, uri, &p->metadata, ProtoInfo);
 					AVTPlay(Device);
-				 } else if (!Device->Config.AcceptNextURI || Device->ShortTrack || (p->metadata.duration && p->metadata.duration < SHORT_TRACK)) {
+				 } else if (Device->Config.AcceptNextURI != 1 || Device->ShortTrack || (p->metadata.duration && p->metadata.duration < SHORT_TRACK)) {
 					// can't use UPnP NextURI capability
 					LOG_INFO("[%p]: next URI gapped (s:%u) %s", Device, Device->ShortTrack, uri);
 					Device->NextURI = uri;
@@ -342,16 +345,18 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 				} else {
 					// nominal case, use UPnP NextURI feature
 					LOG_INFO("[%p]: next URI gapless %s", Device, uri);
+					Device->NextMetaData.duration = p->metadata.duration;
 					AVTSetNextURI(Device, uri, &p->metadata, ProtoInfo);
 				}
 			} else {
 				if (p->metadata.duration && p->metadata.duration < SHORT_TRACK) Device->ShortTrack = true;
+				Device->Duration = p->metadata.duration / 1000 - 2;
 				LOG_INFO("[%p]: set current URI (s:%u) %s", Device, Device->ShortTrack, uri);
 				AVTSetURI(Device, uri, &p->metadata, ProtoInfo);
 			}
 
 			// don't bother with missed NextURI if player don't support it
-			if (Device->Config.AcceptNextURI) {
+			if (Device->Config.AcceptNextURI == 1) {
 				NFREE(Device->ExpectedURI);
 				Device->ExpectedURI = strdup(uri);
 			}
@@ -558,7 +563,7 @@ static void _SyncNotifState(char *State, struct sMR* Device)
 				// might not even have received next LMS's request, wait a bit
 				Device->ShortTrackWait = 5000;
 				LOG_WARN("[%p]: stop on short track (wait %hd ms for next URI)", Device, Device->ShortTrackWait);
-			} else if (Device->sqState == SQ_PLAY && Device->ExpectedURI && Device->Config.AcceptNextURI) {
+			} else if (Device->sqState == SQ_PLAY && Device->ExpectedURI && Device->Config.AcceptNextURI == 1) {
 				// gapless player but something went wrong, try to nudge it
 				AVTBasic(Device, "Next");
 				LOG_INFO("[%p]: guessing missed nextURI %s ", Device, Device->NextURI);
@@ -571,6 +576,8 @@ static void _SyncNotifState(char *State, struct sMR* Device)
 			// non-gapless player or gapped track, manually set next track
 			if (Device->NextMetaData.duration && Device->NextMetaData.duration < SHORT_TRACK) Device->ShortTrack = true;
 			else Device->ShortTrack = false;
+			Device->Duration = Device->NextMetaData.duration / 1000 - 2;
+			// does not make sense to set Duration in gap mode
 			LOG_INFO("[%p]: gapped transition %s", Device, Device->NextURI);
 			AVTSetURI(Device, Device->NextURI, &Device->NextMetaData, Device->NextProtoInfo);
 			NFREE(Device->NextProtoInfo);
@@ -781,12 +788,16 @@ int ActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 
 			// When not playing, position is not reliable
 			if (p->State == PLAYING) {
-				u32_t Elapsed;
 				r = XMLGetFirstDocumentItem(Action->ActionResult, "RelTime", true);
 				if (r) {
-					Elapsed = Time2Int(r) * 1000;
-					LOG_DEBUG("[%p]: position %d (cookie %p)", p, Elapsed, Cookie);
+					u32_t Elapsed = Time2Int(r);
+					if (p->Config.AcceptNextURI == 2 && p->Duration && Elapsed >= p->Duration) {
+						LOG_INFO("[%p]: end of song reached => stopping %u/%u", p, Elapsed, p->Duration);
+						AVTBasic(p, "Stop");
+					}
+					Elapsed *= 1000;
 					sq_notify(p->SqueezeHandle, p, SQ_TIME, NULL, &Elapsed);
+					LOG_DEBUG("[%p]: position %d (cookie %p)", p, Elapsed, Cookie);
 				}
 			}
 			NFREE(r);
@@ -1224,8 +1235,8 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 		NFREE(EventURL);
 		NFREE(ControlURL);
 
-		if (ServiceURL && cSearchedSRV[i].idx == AVT_SRV_IDX && !XMLFindAction(location, ServiceURL, "SetNextAVTransportURI"))
-			Device->Config.AcceptNextURI = false;
+		if (ServiceURL && cSearchedSRV[i].idx == AVT_SRV_IDX && !XMLFindAction(location, ServiceURL, "SetNextAVTransportURI") && Device->Config.AcceptNextURI == 1)
+			Device->Config.AcceptNextURI = 0;
 
 		if (ServiceURL && cSearchedSRV[i].idx == AVT_SRV_IDX && XMLFindAction(location, ServiceURL, "GetInfoEx"))
 			Device->InfoExPoll = INFOEX_POLL;

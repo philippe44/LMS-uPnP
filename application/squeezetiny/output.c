@@ -31,6 +31,14 @@ static log_level 	*loglevel = &output_loglevel;
 #define LOCK_O 	 mutex_lock(ctx->outputbuf->mutex)
 #define UNLOCK_O mutex_unlock(ctx->outputbuf->mutex)
 
+#if PROCESS
+#define IF_DIRECT(x)    if (ctx->decode.direct) { x }
+#define IF_PROCESS(x)   if (!ctx->decode.direct) { x }
+#else
+#define IF_DIRECT(x)    { x }
+#define IF_PROCESS(x)
+#endif
+
 static size_t 	gain_and_fade(size_t frames, u8_t shift, struct thread_ctx_s *ctx);
 static void 	lpcm_pack(u8_t *dst, u8_t *src, size_t bytes, u8_t channels, int endian);
 static void 	apply_gain(s32_t *iptr, u32_t fade, u32_t gain, u8_t shift, size_t frames);
@@ -892,9 +900,17 @@ void _checkfade(bool start, struct thread_ctx_s *ctx) {
 		// condition will always be false except in flow mode
 		if (_buf_used(ctx->outputbuf) != 0) {
 			bytes = min(bytes, _buf_used(ctx->outputbuf));
+			// leave room so that process can add samples when not enough
+			IF_DIRECT(
+				bytes = min(bytes, ctx->outputbuf->size - ctx->codec->min_space - BYTES_PER_FRAME);
+			);
+			IF_PROCESS(
+				bytes = min(bytes, ctx->outputbuf->size - ctx->process.max_out_frames * BYTES_PER_FRAME - BYTES_PER_FRAME);
+			);
 			// max of 90% of outputbuf as we consume additional buffer during crossfade
-			bytes = min(bytes, (((9 * ctx->outputbuf->size) / 10) / BYTES_PER_FRAME) * BYTES_PER_FRAME);
-			LOG_INFO("[%p]: CROSSFADE: %u frames", ctx, bytes / BYTES_PER_FRAME);
+			bytes = min(bytes, (9 * ctx->outputbuf->size) / 10);
+			bytes = (bytes / BYTES_PER_FRAME) * BYTES_PER_FRAME;
+			LOG_INFO("[%p]: CROSSFADE: %u frames (%ums)", ctx, bytes / BYTES_PER_FRAME, ((bytes * 1000) / BYTES_PER_FRAME) / out->encode.sample_rate);
 			out->fade = FADE_DUE;
 			out->fade_dir = FADE_CROSS;
 			out->fade_start = ctx->outputbuf->writep - bytes;
@@ -989,7 +1005,8 @@ size_t gain_and_fade(size_t frames, u8_t shift, struct thread_ctx_s *ctx) {
 				gain = ((u64_t) cur_f << 16) / dur_f;
 			} else if (out->fade_dir == FADE_CROSS) {
 				// cross fade requires special treatment done below
-				if (_buf_used(ctx->outputbuf) / BYTES_PER_FRAME > dur_f + frames) {
+				if (_buf_used(ctx->outputbuf) / BYTES_PER_FRAME > dur_f) {
+					frames = min(frames, _buf_used(ctx->outputbuf) / BYTES_PER_FRAME - dur_f);
 					gain  = ((u64_t) cur_f << 16) / dur_f;
 					cptr = (s32_t *)(out->fade_end + cur_f * BYTES_PER_FRAME);
 				} else {
@@ -997,13 +1014,13 @@ size_t gain_and_fade(size_t frames, u8_t shift, struct thread_ctx_s *ctx) {
 					need more data in buffer to be able to proceed. The caller
 					can either respond to its own caller that he needs more data
 					or tell it's done. So it's about risk of stopping the flow
-					vs risk of being trap in an output_thread loop. Both require
-					user's intervention. Assuming that short tracks are rare
-					and that cross-fade does not happen for last track, then the
-					risk of being stuck is low & preferred.
+					versus risk of being trapped in an output_thread loop. Both
+					require	user's intervention. Assuming that short tracks are
+					rare and that cross-fade does not happen for last track,
+					then the risk of being stuck is low & preferred.
 					*/
 					frames = 0;
-					LOG_INFO("[%p]: need more frames for cross-fade %u", ctx, dur_f + frames - _buf_used(ctx->outputbuf) / BYTES_PER_FRAME);
+					LOG_INFO("[%p]: need more frames for cross-fade %u", ctx, dur_f - _buf_used(ctx->outputbuf) / BYTES_PER_FRAME);
 				}
 			}
 		} else if (out->fade_writep) {
