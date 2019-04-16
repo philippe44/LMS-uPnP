@@ -3,6 +3,7 @@
  - (1) add <nudge> parameter for Bose player to force a "next" when tracktime is > duration + nudge
  - (1) crossfade all we can at every step (don't need the whole fade buffer) and make room for process
  - (2) remove <nudge> and replace it by accept_nexturi == 2 to force gapped and stop when overtime
+ - (3) add accept_nexturi -1 (stop and nudge) and 2 (next) for Bose anf faulty devices
  
 1.12.0
  - Bi-directionnal volume filtering

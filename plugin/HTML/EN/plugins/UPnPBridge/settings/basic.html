@@ -110,7 +110,7 @@
 		</select>
 		[% "PLUGIN_UPNPBRIDGE_ACCEPTNEXTURI" | string %]
 		&nbsp<select class="stdedit" name="accept_nexturi" id="accept_nexturi">
-		[% FOREACH entry IN YESNOBOX %] 
+		[% FOREACH entry IN [ ['PLUGIN_UPNPBRIDGE_YES','1'], ['PLUGIN_UPNPBRIDGE_NO', '0'], ['PLUGIN_UPNPBRIDGE_NEXTNEXT','2'], ['PLUGIN_UPNPBRIDGE_NEXTSTOP','-1'] ] %]
 			<option [% IF entry.1 == accept_nexturi %]selected[% END %] value="[% entry.1 %]">[% entry.0 | string %]</option>
 		[% END %]
 		</select>

@@ -18,6 +18,9 @@
 		<raw_audio_format>wav</raw_audio_format>
 		<send_metadata>0</send_metadata>
 	</profile>
+	<profile name='Bose soundtouch'>
+		<accept_nexturi>2</accept_nexturi>
+	</profile>
 	<profile name='_normal mode'></profile>
 	<profile name='Jongo S3x'>
 		<stream_length>1000000000</stream_length>
