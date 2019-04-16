@@ -53,7 +53,7 @@
 
 #define SHORT_TRACK		(10*1000)
 
-enum { NEXT_STOP = -1, NEXT_GAPPED = 0, NEXT_GAPLESS = 1, NEXT_NEXT = 2 };
+enum { NEXT_FORCE = -1, NEXT_GAPPED = 0, NEXT_GAPLESS = 1 };
 
 /*----------------------------------------------------------------------------*/
 /* globals initialized */
@@ -263,6 +263,7 @@ static void 	*MRThread(void *args);
 static 	void*	UpdateThread(void *args);
 static bool 	AddMRDevice(struct sMR *Device, char * UDN, IXML_Document *DescDoc,	const char *location, char **ProtoInfo);
 static bool		isExcluded(char *Model);
+static void 	NextTrack(struct sMR *Device);
 
 // functions with _ prefix means that the device mutex is expected to be locked
 static bool 	_ProcessQueue(struct sMR *Device);
@@ -336,7 +337,7 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 					if (p->metadata.duration && p->metadata.duration < SHORT_TRACK) Device->ShortTrack = true;
 					AVTSetURI(Device, uri, &p->metadata, ProtoInfo);
 					AVTPlay(Device);
-				 } else if (Device->Config.AcceptNextURI < NEXT_GAPLESS || Device->ShortTrack || (p->metadata.duration && p->metadata.duration < SHORT_TRACK)) {
+				 } else if (Device->Config.AcceptNextURI != NEXT_GAPLESS || Device->ShortTrack || (p->metadata.duration && p->metadata.duration < SHORT_TRACK)) {
 					// can't use UPnP NextURI capability
 					LOG_INFO("[%p]: next URI gapped (s:%u) %s", Device, Device->ShortTrack, uri);
 					Device->NextURI = uri;
@@ -346,7 +347,6 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 				} else {
 					// nominal case, use UPnP NextURI feature
 					LOG_INFO("[%p]: next URI gapless %s", Device, uri);
-					Device->NextMetaData.duration = p->metadata.duration / 1000;
 					AVTSetNextURI(Device, uri, &p->metadata, ProtoInfo);
 				}
 			} else {
@@ -357,7 +357,7 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 			}
 
 			// don't bother with missed NextURI if player don't support it
-			if (Device->Config.AcceptNextURI > NEXT_GAPPED) {
+			if (Device->Config.AcceptNextURI == NEXT_GAPLESS) {
 				NFREE(Device->ExpectedURI);
 				Device->ExpectedURI = strdup(uri);
 			}
@@ -564,7 +564,7 @@ static void _SyncNotifState(char *State, struct sMR* Device)
 				// might not even have received next LMS's request, wait a bit
 				Device->ShortTrackWait = 5000;
 				LOG_WARN("[%p]: stop on short track (wait %hd ms for next URI)", Device, Device->ShortTrackWait);
-			} else if (Device->sqState == SQ_PLAY && Device->ExpectedURI && Device->Config.AcceptNextURI > NEXT_GAPPED) {
+			} else if (Device->sqState == SQ_PLAY && Device->ExpectedURI && Device->Config.AcceptNextURI == NEXT_GAPLESS) {
 				// gapless player but something went wrong, try to nudge it
 				AVTBasic(Device, "Next");
 				LOG_INFO("[%p]: guessing missed nextURI %s ", Device, Device->NextURI);
@@ -575,15 +575,8 @@ static void _SyncNotifState(char *State, struct sMR* Device)
 			}
 		} else if (Device->NextProtoInfo) {
 			// non-gapless player or gapped track, manually set next track
-			if (Device->NextMetaData.duration && Device->NextMetaData.duration < SHORT_TRACK) Device->ShortTrack = true;
-			else Device->ShortTrack = false;
-			Device->Duration = Device->NextMetaData.duration / 1000;
+			NextTrack(Device);
 			LOG_INFO("[%p]: gapped transition %s", Device, Device->NextURI);
-			AVTSetURI(Device, Device->NextURI, &Device->NextMetaData, Device->NextProtoInfo);
-			NFREE(Device->NextProtoInfo);
-			NFREE(Device->NextURI);
-			sq_free_metadata(&Device->NextMetaData);
-			AVTPlay(Device);
 		}
 
 		Device->State = STOPPED;
@@ -681,6 +674,19 @@ static void _ProcessVolume(char *Volume, struct sMR* Device)
 
 
 /*----------------------------------------------------------------------------*/
+static void NextTrack(struct sMR *Device) {
+	if (Device->NextMetaData.duration && Device->NextMetaData.duration < SHORT_TRACK) Device->ShortTrack = true;
+	else Device->ShortTrack = false;
+	Device->Duration = Device->NextMetaData.duration / 1000;
+	AVTSetURI(Device, Device->NextURI, &Device->NextMetaData, Device->NextProtoInfo);
+	NFREE(Device->NextProtoInfo);
+	NFREE(Device->NextURI);
+	sq_free_metadata(&Device->NextMetaData);
+	AVTPlay(Device);
+}
+
+
+/*----------------------------------------------------------------------------*/
 static void ProcessEvent(Upnp_EventType EventType, void *_Event, void *Cookie)
 {
 	struct Upnp_Event *Event = (struct Upnp_Event*) _Event;
@@ -757,12 +763,6 @@ int ActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 					p->State = UNKNOWN;
 				}
 
-				if (p->Config.AcceptNextURI == NEXT_NEXT && Resp && !strcasecmp(Resp, "NextResponse")) {
-					p->Duration = p->NextMetaData.duration;
-					p->NextMetaData.duration = 0;
-					LOG_INFO("[%p]: overtime next detected (%u)", p, p->Duration);
-				}
-
 				break;
 			}
 
@@ -797,10 +797,14 @@ int ActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 				r = XMLGetFirstDocumentItem(Action->ActionResult, "RelTime", true);
 				if (r) {
 					u32_t Elapsed = Time2Int(r);
-					if ((p->Config.AcceptNextURI == NEXT_STOP || p->Config.AcceptNextURI == NEXT_NEXT) && p->Duration && Elapsed >= p->Duration) {
-						LOG_INFO("[%p]: end of song reached => stop/next %u/%u", p, Elapsed, p->Duration);
-						if (p->Config.AcceptNextURI == NEXT_STOP || p->ShortTrack || !p->NextMetaData.duration) AVTBasic(p, "Stop");
-						else AVTBasic(p, "Next");
+					if (p->Config.AcceptNextURI == NEXT_FORCE && p->Duration && Elapsed >= p->Duration) {
+						if (p->NextProtoInfo) {
+							LOG_INFO("[%p]: end of song reached => force next %u/%u", p, Elapsed, p->Duration);
+							NextTrack(p);
+						} else {
+							LOG_INFO("[%p]: end of song reached => force stop %u/%u", p, Elapsed, p->Duration);
+							AVTBasic(p, "Stop");
+						}
 					}
 					Elapsed *= 1000;
 					sq_notify(p->SqueezeHandle, p, SQ_TIME, NULL, &Elapsed);
@@ -1242,8 +1246,8 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 		NFREE(EventURL);
 		NFREE(ControlURL);
 
-		if (ServiceURL && cSearchedSRV[i].idx == AVT_SRV_IDX && !XMLFindAction(location, ServiceURL, "SetNextAVTransportURI") && Device->Config.AcceptNextURI != NEXT_GAPPED)
-			Device->Config.AcceptNextURI = Device->Config.AcceptNextURI == NEXT_NEXT ? NEXT_STOP : NEXT_GAPPED;
+		if (ServiceURL && cSearchedSRV[i].idx == AVT_SRV_IDX && !XMLFindAction(location, ServiceURL, "SetNextAVTransportURI") && Device->Config.AcceptNextURI == NEXT_GAPLESS)
+			Device->Config.AcceptNextURI = NEXT_GAPPED;
 
 		if (ServiceURL && cSearchedSRV[i].idx == AVT_SRV_IDX && XMLFindAction(location, ServiceURL, "GetInfoEx"))
 			Device->InfoExPoll = INFOEX_POLL;
