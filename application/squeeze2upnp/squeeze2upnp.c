@@ -495,6 +495,12 @@ static void *MRThread(void *args)
 			sq_notify(p->SqueezeHandle, p, SQ_STOP, NULL, &p->ShortTrack);
 		}
 
+		// hack to deal with players that do not report end of track
+		if (p->Duration < 0 && ((p->Duration += elapsed) >= 0)) {
+			LOG_INFO("[%p] moving to next track", p);
+			NextTrack(p);
+		}
+
 		/*
 		should not request any status update if we are stopped, off or waiting
 		for an action to be performed
@@ -797,10 +803,10 @@ int ActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 				r = XMLGetFirstDocumentItem(Action->ActionResult, "RelTime", true);
 				if (r) {
 					u32_t Elapsed = Time2Int(r);
-					if (p->Config.AcceptNextURI == NEXT_FORCE && p->Duration && Elapsed >= p->Duration) {
+					if (p->Config.AcceptNextURI == NEXT_FORCE && p->Duration > 0 && Elapsed >= p->Duration) {
 						if (p->NextProtoInfo) {
-							LOG_INFO("[%p]: end of song reached => force next %u/%u", p, Elapsed, p->Duration);
-							NextTrack(p);
+							p->Duration = -2000;
+							LOG_INFO("[%p]: end of song reached (next in 2s) %u/%u", p, Elapsed, p->Duration);
 						} else {
 							LOG_INFO("[%p]: end of song reached => force stop %u/%u", p, Elapsed, p->Duration);
 							AVTBasic(p, "Stop");

@@ -5,6 +5,7 @@
  - (2) remove <nudge> and replace it by accept_nexturi == 2 to force gapped and stop when overtime
  - (3) add accept_nexturi -1 (stop and nudge) and 2 (next) for Bose and faulty devices
  - (4) go back to 'force' mode where play is enforced when overtime is detected
+ - (5) wait 2s before playing next in 'force' mode
  
 1.12.0
  - Bi-directionnal volume filtering
