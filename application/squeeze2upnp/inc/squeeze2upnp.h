@@ -84,7 +84,7 @@ struct sMR {
 	char			*NextProtoInfo;
 	metadata_t		NextMetaData;
 	char			*ExpectedURI;
-	u32_t			Duration;
+	s32_t			Duration;
 	bool			ShortTrack;
 	s16_t			ShortTrackWait;
 	sq_action_t		sqState;

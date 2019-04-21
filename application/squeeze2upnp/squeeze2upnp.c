@@ -333,7 +333,7 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 					// could not get next URI before track stopped, restart
 					LOG_WARN("[%p]: set current URI (*) (s:%u) %s", Device, Device->ShortTrack, uri);
 					Device->ShortTrackWait = 0;
-					Device->Duration = p->metadata.duration / 1000;
+					Device->Duration = p->metadata.duration;
 					if (p->metadata.duration && p->metadata.duration < SHORT_TRACK) Device->ShortTrack = true;
 					AVTSetURI(Device, uri, &p->metadata, ProtoInfo);
 					AVTPlay(Device);
@@ -351,7 +351,7 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 				}
 			} else {
 				if (p->metadata.duration && p->metadata.duration < SHORT_TRACK) Device->ShortTrack = true;
-				Device->Duration = p->metadata.duration / 1000;
+				Device->Duration = p->metadata.duration;
 				LOG_INFO("[%p]: set current URI (s:%u) %s", Device, Device->ShortTrack, uri);
 				AVTSetURI(Device, uri, &p->metadata, ProtoInfo);
 			}
@@ -493,6 +493,17 @@ static void *MRThread(void *args)
 			LOG_WARN("[%p]: stopping on short track timeout", p);
 			p->ShortTrack = false;
 			sq_notify(p->SqueezeHandle, p, SQ_STOP, NULL, &p->ShortTrack);
+		}
+
+		// hack to deal with players that do not report end of track
+		if (p->Duration < 0 && ((p->Duration += elapsed) >= 0)) {
+			if (p->NextProtoInfo) {
+				LOG_INFO("[%p] overtime next track", p);
+				NextTrack(p);
+			} else {
+				LOG_INFO("[%p] overtime last track", p);
+				AVTBasic(p, "Stop");
+			}
 		}
 
 		/*
@@ -677,7 +688,7 @@ static void _ProcessVolume(char *Volume, struct sMR* Device)
 static void NextTrack(struct sMR *Device) {
 	if (Device->NextMetaData.duration && Device->NextMetaData.duration < SHORT_TRACK) Device->ShortTrack = true;
 	else Device->ShortTrack = false;
-	Device->Duration = Device->NextMetaData.duration / 1000;
+	Device->Duration = Device->NextMetaData.duration;
 	AVTSetURI(Device, Device->NextURI, &Device->NextMetaData, Device->NextProtoInfo);
 	NFREE(Device->NextProtoInfo);
 	NFREE(Device->NextURI);
@@ -796,17 +807,8 @@ int ActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 			if (p->State == PLAYING) {
 				r = XMLGetFirstDocumentItem(Action->ActionResult, "RelTime", true);
 				if (r) {
-					u32_t Elapsed = Time2Int(r);
-					if (p->Config.AcceptNextURI == NEXT_FORCE && p->Duration && Elapsed >= p->Duration) {
-						if (p->NextProtoInfo) {
-							NextTrack(p);
-							LOG_INFO("[%p]: end of song reached (next in 2s) %u/%u", p, Elapsed, p->Duration);
-						} else {
-							LOG_INFO("[%p]: end of song reached => force stop %u/%u", p, Elapsed, p->Duration);
-							AVTBasic(p, "Stop");
-						}
-					}
-					Elapsed *= 1000;
+					u32_t Elapsed = Time2Int(r)*1000;
+					if (p->Config.AcceptNextURI == NEXT_FORCE && p->Duration > 0 && p->Duration - Elapsed <= 2000) p->Duration = Elapsed - p->Duration;
 					sq_notify(p->SqueezeHandle, p, SQ_TIME, NULL, &Elapsed);
 					LOG_DEBUG("[%p]: position %d (cookie %p)", p, Elapsed, Cookie);
 				}

@@ -1,3 +1,6 @@
+1.13.1
+ - continuing SoundTouch saga ... player might not always reach duration, so need to add a timeout when close to end of track
+ 
 1.13.0
  - (1) if track ends up earlier than expected and next track is short, ShortTrack was not set
  - (1) add <nudge> parameter for Bose player to force a "next" when tracktime is > duration + nudge
@@ -37,7 +40,7 @@
  - remove sleep timers for conditions
  
 1.9.2
- - move all strings from basic.html to strings<.txt
+ - move all strings from basic.html to strings.txt
  - when getprotocolinfo fails, return an empty string to allow player creation
  
 1.9.1
