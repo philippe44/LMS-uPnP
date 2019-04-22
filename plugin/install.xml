@@ -1,17 +1,17 @@
 <?xml version='1.0' standalone='yes'?>
 <extensions>
-  <targetApplication>
-    <id>SlimServer</id>
-    <maxVersion>*.*</maxVersion>
-    <minVersion>7.7</minVersion>
-  </targetApplication>
+  <creator>Philippe</creator>
   <optionsURL>plugins/UPnPBridge/settings/basic.html</optionsURL>
   <module>Plugins::UPnPBridge::Plugin</module>
-  <profilesURL>http://sourceforge.net/projects/lms-to-upnp/files/profiles.xml/download</profilesURL>
-  <creator>Philippe</creator>
   <name>PLUGIN_UPNPBRIDGE</name>
   <version>1.14.0</version>
-  <email>philippe_44@outlook.com</email>
-  <defaultState>enabled</defaultState>
   <description>PLUGIN_UPNPBRIDGE_DESC</description>
+  <defaultState>enabled</defaultState>
+  <targetApplication>
+    <maxVersion>*.*</maxVersion>
+    <id>SlimServer</id>
+    <minVersion>7.7</minVersion>
+  </targetApplication>
+  <email>philippe_44@outlook.com</email>
+  <profilesURL>http://sourceforge.net/projects/lms-to-upnp/files/profiles.xml/download</profilesURL>
 </extensions>
