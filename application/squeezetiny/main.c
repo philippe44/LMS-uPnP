@@ -469,18 +469,11 @@ bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, int offset)
 			free(p);
 		}
 
-		/*
-		if (metadata->remote && !metadata->duration)
-			metadata->artwork = cli_find_tag(cur, "base_icon");
-		else
-		*/
-
-		// a non repeating stream with a remote title ia a webradio
-		if (!repeating && metadata->remote_title) {
-			metadata->duration = 0;
-		}
-
-		metadata->artwork = cli_find_tag(cur, "artwork_url");
+		// remote_title is present, webradio if not repeating
+		if (metadata->remote_title) {
+			if (!repeating) metadata->duration = 0;
+			metadata->artwork = cli_find_tag(cur, "browse_icon");
+		} else metadata->artwork = cli_find_tag(cur, "artwork_url");
 
 		if (!metadata->artwork || !strlen(metadata->artwork)) {
 			NFREE(metadata->artwork);

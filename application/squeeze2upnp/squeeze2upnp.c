@@ -502,6 +502,7 @@ static void *MRThread(void *args)
 				NextTrack(p);
 			} else {
 				LOG_INFO("[%p] overtime last track", p);
+				p->Duration= 0;
 				AVTBasic(p, "Stop");
 			}
 		}

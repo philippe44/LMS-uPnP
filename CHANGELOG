@@ -1,5 +1,6 @@
 1.13.1
  - continuing SoundTouch saga ... player might not always reach duration, so need to add a timeout when close to end of track
+ - add 'E' tag parameter to get the browse url
  
 1.13.0
  - (1) if track ends up earlier than expected and next track is short, ShortTrack was not set

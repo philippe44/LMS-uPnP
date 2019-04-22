@@ -8,6 +8,30 @@ my $log = logger('plugin.upnpbridge');
 my $statusHandler;
 my $imageProxy = 1;
 
+my %tagMap = (
+	# Tag    Tag name             Token            Track method         Track field
+	#------------------------------------------------------------------------------
+	  'u' => ['url',              'LOCATION',      'url'],              #url
+	  'o' => ['type',             'TYPE',          'content_type'],     #content_type
+	  'a' => ['artist',           'ARTIST',        'artistName'],       #->contributors
+	  'l' => ['album',            'ALBUM',         'albumname'],        #->album.title
+	  't' => ['tracknum',         'TRACK',         'tracknum'],         #tracknum
+	  'i' => ['disc',             'DISC',          'disc'],             #disc
+	  'j' => ['coverart',         'SHOW_ARTWORK',  'coverArtExists'],   #cover
+	  'x' => ['remote',           '',              'remote'],           #remote
+	  'd' => ['duration',         'LENGTH',        'secs'],             #secs
+	  'r' => ['bitrate',          'BITRATE',       'prettyBitRate'],    #bitrate
+	  'T' => ['samplerate',       'SAMPLERATE',    'samplerate'],       #samplerate
+	  'I' => ['samplesize',       'SAMPLESIZE',    'samplesize'],       #samplesize
+	  'H' => ['channels',         'CHANNELS',      'channels'],         #channels
+	  'c' => ['coverid',          'COVERID',       'coverid'],          # coverid
+	  'K' => ['artwork_url',      '',              'coverurl'],         # artwork URL, not in db
+	  'B' => ['buttons',          '',              'buttons'],          # radio stream special buttons	  
+	  'L' => ['info_link',        '',              'info_link'],        # special trackinfo link for i.e. Pandora
+	  'N' => ['remote_title'],                                          # remote stream title
+	  'E' => ['browse_icon'],                                          	# icon in browsing menu
+);
+
 sub initQueries {
 	eval { 
 		require Slim::Web::ImageProxy;
@@ -30,7 +54,15 @@ sub statusQuery {
 	return if !$song;
 	
 	my $handler = $song->currentTrackHandler;
-	$request->addResult("repeating_stream", 1) if $handler && $handler->can('isRepeatingStream') && $handler->isRepeatingStream($song);
+	return if !$handler;
+	
+	$request->addResult("repeating_stream", 1) if $handler->can('isRepeatingStream') && $handler->isRepeatingStream($song);
+	
+	if ($request->getParam('tags') =~ /E/) {
+		my $icon = Slim::Utils::Cache->new->get("remote_image_" . $song->track->url);
+		$icon ||= $handler->getIcon($song->track->url) if $handler->can('getIcon');
+		$request->addResult($tagMap{E}->[0], $icon) if $icon;
+	}	
 }
 
 sub repeatingSonginfoQuery {
@@ -61,29 +93,6 @@ sub repeatingSonginfoQuery {
 	
 	$request->setStatusDone();
 }
-
-my %tagMap = (
-	# Tag    Tag name             Token            Track method         Track field
-	#------------------------------------------------------------------------------
-	  'u' => ['url',              'LOCATION',      'url'],              #url
-	  'o' => ['type',             'TYPE',          'content_type'],     #content_type
-	  'a' => ['artist',           'ARTIST',        'artistName'],       #->contributors
-	  'l' => ['album',            'ALBUM',         'albumname'],        #->album.title
-	  't' => ['tracknum',         'TRACK',         'tracknum'],         #tracknum
-	  'i' => ['disc',             'DISC',          'disc'],             #disc
-	  'j' => ['coverart',         'SHOW_ARTWORK',  'coverArtExists'],   #cover
-	  'x' => ['remote',           '',              'remote'],           #remote
-	  'd' => ['duration',         'LENGTH',        'secs'],             #secs
-	  'r' => ['bitrate',          'BITRATE',       'prettyBitRate'],    #bitrate
-	  'T' => ['samplerate',       'SAMPLERATE',    'samplerate'],       #samplerate
-	  'I' => ['samplesize',       'SAMPLESIZE',    'samplesize'],       #samplesize
-	  'H' => ['channels',         'CHANNELS',      'channels'],         #channels
-	  'c' => ['coverid',          'COVERID',       'coverid'],          # coverid
-	  'K' => ['artwork_url',      '',              'coverurl'],         # artwork URL, not in db
-	  'B' => ['buttons',          '',              'buttons'],          # radio stream special buttons	  
-	  'L' => ['info_link',        '',              'info_link'],        # special trackinfo link for i.e. Pandora
-	  'N' => ['remote_title'],                                          # remote stream title
-);
 
 sub _songData {
 	my ($request, $tags) = @_;
@@ -135,6 +144,12 @@ sub _songData {
 					$returnHash{$tagref->[0]} = $meta;
 				}
 			}
+		}
+		
+		elsif ($tag eq 'E') {
+			my $icon = Slim::Utils::Cache->new->get("remote_image_" . $track->url);
+			$icon ||= $handler->getIcon($track->url) if $handler && $handler->can('getIcon');
+			$returnHash{$tagref->[0]} = $icon if $icon;
 		}
 
 		elsif ($tag eq 'A') {
