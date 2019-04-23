@@ -226,15 +226,6 @@ struct sMR* UDN2Device(char *UDN)
 
 
 /*----------------------------------------------------------------------------*/
-void BusyRaise(struct sMR *Device)
-{
-	LOG_DEBUG("[%p]: busy raise %u", Device, Device->Busy);
-	Device->Busy++;
-	pthread_mutex_unlock(&Device->Mutex);
-}
-
-
-/*----------------------------------------------------------------------------*/
 bool CheckAndLock(struct sMR *Device)
 {
 	bool Checked = false;
@@ -251,17 +242,6 @@ bool CheckAndLock(struct sMR *Device)
 	pthread_mutex_unlock(&Device->Mutex);
 
 	return Checked;
-}
-
-
-/*----------------------------------------------------------------------------*/
-void BusyDrop(struct sMR *Device)
-{
-	pthread_mutex_lock(&Device->Mutex);
-	Device->Busy--;
-	if (!Device->Busy && Device->Delete) pthread_cond_signal(&Device->Cond);
-	LOG_DEBUG("[%p]: busy drop %u", Device, Device->Busy);
-	pthread_mutex_unlock(&Device->Mutex);
 }
 
 

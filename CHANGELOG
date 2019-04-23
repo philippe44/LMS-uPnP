@@ -1,3 +1,10 @@
+1.14.1
+  - add time counter offset for players (Sonos) which reset elapsed time when icy data is received
+  - remove some unused code/data (BusyDrop)
+
+1.14.0
+ - add 'E' tag parameter to get the browse url 
+ 
 1.13.1
  - continuing SoundTouch saga ... player might not always reach duration, so need to add a timeout when close to end of track
  - add 'E' tag parameter to get the browse url
