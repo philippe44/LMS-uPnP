@@ -282,9 +282,7 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 	if (action == SQ_ONOFF) {
 		Device->on = *((bool*) param);
 
-		// this is probably now safe against inter-domains deadlock, but a watch
-		// item if such issue occur - could also use busyraise/drop as this uses
-		// cli so it might take a while
+		// this is probably now safe against inter-domains deadlock
 		if (Device->on && Device->Config.AutoPlay)
 			sq_notify(Device->SqueezeHandle, Device, SQ_PLAY, NULL, &Device->on);
 
@@ -308,6 +306,7 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 			// when this is received the next track has been processed
 			NFREE(Device->NextURI);
 			NFREE(Device->NextProtoInfo);
+			Device->ElapsedLast = Device->ElapsedOffset = 0;
 			sq_free_metadata(&Device->NextMetaData);
 			if (!Device->Config.SendCoverArt) NFREE(p->metadata.artwork);
 
@@ -623,9 +622,7 @@ static void _SyncNotifState(char *State, struct sMR* Device)
 		Device->State = PAUSED;
 	}
 
-	// seems that now the inter-domain lock does not exist anymore but that where
-	// BusyRaise/BusyDrop could be use to avoid locking the device's mutex for
-	// too long
+	// seems that now the inter-domain lock does not exist anymore
 	if (Event != SQ_NONE)
 		sq_notify(Device->SqueezeHandle, Device, Event, NULL, &Param);
 }
@@ -679,7 +676,6 @@ static void _ProcessVolume(char *Volume, struct sMR* Device)
 		LOG_INFO("[%p]: UPnP Volume local change %d", Device, UPnPVolume);
 		UPnPVolume =  (UPnPVolume * 100) / Device->Config.MaxVolume;
 		Device->VolumeStampRx = gettime_ms();
-		// candidate for busyraise/drop due to call to cli
 		sq_notify(Device->SqueezeHandle, Device, SQ_VOLUME, NULL, &UPnPVolume);
 	}
 }
@@ -810,6 +806,11 @@ int ActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 				if (r) {
 					u32_t Elapsed = Time2Int(r)*1000;
 					if (p->Config.AcceptNextURI == NEXT_FORCE && p->Duration > 0 && p->Duration - Elapsed <= 2000) p->Duration = Elapsed - p->Duration;
+					if (!p->Duration) {
+						if (p->ElapsedLast > Elapsed) p->ElapsedOffset += p->ElapsedLast;
+						p->ElapsedLast = Elapsed;
+						Elapsed += p->ElapsedOffset;
+					}
 					sq_notify(p->SqueezeHandle, p, SQ_TIME, NULL, &Elapsed);
 					LOG_DEBUG("[%p]: position %d (cookie %p)", p, Elapsed, Cookie);
 				}
@@ -1209,8 +1210,6 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	Device->Actions 		= NULL;
 	Device->NextURI 		= Device->NextProtoInfo = NULL;
 	Device->LastSeen		= gettime_ms() / 1000;
-	Device->Delete			= false;
-	Device->Busy			= 0;
 
 	if (Device->sq_config.roon_mode) {
 		Device->on = true;
@@ -1293,7 +1292,6 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 
 	MakeMacUnique(Device);
 
-	pthread_cond_init(&Device->Cond, 0);
 	pthread_create(&Device->Thread, NULL, &MRThread, Device);
 	/* subscribe here, not before */
 	for (i = 0; i < NB_SRV; i++) if (Device->Service[i].TimeOut)
@@ -1333,7 +1331,6 @@ static bool Start(void)
 	memset(&glMRDevices, 0, sizeof(glMRDevices));
 	for (i = 0; i < MAX_RENDERERS; i++) {
 		pthread_mutex_init(&glMRDevices[i].Mutex, 0);
-		pthread_cond_init(&glMRDevices[i].Cond, 0);
 	}
 
 	UpnpSetLogLevel(UPNP_ALL);
@@ -1411,7 +1408,6 @@ static bool Stop(void)
 	pthread_cond_destroy(&glUpdateCond);
 	for (i = 0; i < MAX_RENDERERS; i++)	{
 		pthread_mutex_destroy(&glMRDevices[i].Mutex);
-		pthread_cond_destroy(&glMRDevices[i].Cond);
 	}
 
 	// remove discovered items

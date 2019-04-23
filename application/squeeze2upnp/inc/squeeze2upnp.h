@@ -70,7 +70,7 @@ struct sService {
 } tMRConfig;
 
 struct sMR {
-	u32_t Magic;
+	u32_t Magic;									// just a marker to trace context in memeory
 	bool  Running;
 	tMRConfig Config;
 	sq_dev_param_t	sq_config;
@@ -79,14 +79,14 @@ struct sMR {
 	char UDN			[RESOURCE_LENGTH];
 	char DescDocURL		[RESOURCE_LENGTH];
 	enum eMRstate 	State;
-	// all the items for next track if any
-	char			*NextURI;
-	char			*NextProtoInfo;
-	metadata_t		NextMetaData;
-	char			*ExpectedURI;
-	s32_t			Duration;
-	bool			ShortTrack;
-	s16_t			ShortTrackWait;
+	char			*NextURI;                  		// gapped next URI
+	char			*NextProtoInfo;					// gapped next protocolInfo
+	metadata_t		NextMetaData;					// gapped next metadata
+	char			*ExpectedURI;					// to detect track change
+	s32_t			Duration;       			 	// for players that don't report end of track (Bose)
+	u32_t 			ElapsedLast, ElapsedOffset;     // for players that reset counter on icy changes
+	bool			ShortTrack;    					// current or next track is short
+	s16_t			ShortTrackWait;					// stop timeout when short track is last track
 	sq_action_t		sqState;
 	u8_t			*seqN;
 	void			*WaitCookie, *StartCookie;
@@ -97,15 +97,12 @@ struct sMR {
 	struct sService Service[NB_SRV];
 	struct sAction	*Actions;
 	pthread_mutex_t Mutex;
-	pthread_cond_t	Cond;
-	bool			Delete;
-	u32_t			Busy;
 	pthread_t 		Thread;
 	u8_t			Volume;
-	u32_t			VolumeStampRx, VolumeStampTx;
+	u32_t			VolumeStampRx, VolumeStampTx;	// timestamps to filter volume loopbacks
 	bool			Muted;
-	u16_t			ErrorCount;
-	u32_t			LastSeen;
+	u16_t			ErrorCount;                     // UPnP protocol error count
+	u32_t			LastSeen;						// presence timeout for player which went dark
 };
 
 extern UpnpClient_Handle   	glControlPointHandle;
