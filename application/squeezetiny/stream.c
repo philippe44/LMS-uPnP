@@ -2,7 +2,7 @@
  *  Squeezelite - lightweight headless squeezebox emulator
  *
  *  (c) Adrian Smith 2012-2015, triode1@btinternet.com
- *  (c) Philippe, philippe_44@outlook.com 
+ *  (c) Philippe, philippe_44@outlook.com
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,11 +25,63 @@
 
 #include <fcntl.h>
 
+#if USE_SSL
+#include "openssl/ssl.h"
+#include "openssl/err.h"
+#endif
+
 extern log_level	stream_loglevel;
 static log_level 	*loglevel = &stream_loglevel;
 
 #define LOCK_S   mutex_lock(ctx->streambuf->mutex)
 #define UNLOCK_S mutex_unlock(ctx->streambuf->mutex)
+
+#if USE_SSL
+static SSL_CTX *SSLctx = NULL;
+static int SSLcount = 0;
+#endif
+
+#if !USE_SSL
+#define _recv(ctx, buf, n, opt) recv(ctx->fd, buf, n, opt)
+#define _send(ctx, buf, n, opt) send(ctx->fd, buf, n, opt)
+#define _poll(ctx, pollinfo, timeout) poll(pollinfo, 1, timeout)
+#define _last_error() last_error()
+#else
+#define _last_error() ERROR_WOULDBLOCK
+static int _recv(struct thread_ctx_s *ctx, void *buffer, size_t bytes, int options) {
+	int n;
+	if (!ctx->ssl) return recv(ctx->fd, buffer, bytes, options);
+	n = SSL_read(ctx->ssl, (u8_t*) buffer, bytes);
+	if (n <= 0 && SSL_get_error(ctx->ssl, n) == SSL_ERROR_ZERO_RETURN) return 0;
+	return n;
+}
+
+static int _send(struct thread_ctx_s *ctx, void *buffer, size_t bytes, int options) {
+	int n;
+	if (!ctx->ssl) return send(ctx->fd, buffer, bytes, options);
+	while ((n = SSL_write(ctx->ssl, (u8_t*) buffer, bytes)) < 0) {
+		int err = SSL_get_error(ctx->ssl, n);
+		if (err != SSL_ERROR_WANT_READ && err != SSL_ERROR_WANT_WRITE) break;
+	}
+	return n;
+}
+
+/*
+can't mimic exactly poll as SSL is a real pain. Even if SSL_pending returns
+0, there might be bytes to read but when select (poll) return > 0, there might
+be no frame available. As well select (poll) < 0 does not mean that there is
+no data pending
+*/
+static int _poll(struct thread_ctx_s *ctx, struct pollfd *pollinfo, int timeout) {
+	if (!ctx->ssl) return poll(pollinfo, 1, timeout);
+	if (pollinfo->events & POLLIN && SSL_pending(ctx->ssl)) {
+		if (pollinfo->events & POLLOUT) poll(pollinfo, 1, 0);
+		pollinfo->revents = POLLIN;
+		return 1;
+	}
+	return poll(pollinfo, 1, timeout);
+}
+#endif
 
 static void send_header(struct thread_ctx_s *ctx) {
 	char *ptr = ctx->stream.header;
@@ -39,7 +91,7 @@ static void send_header(struct thread_ctx_s *ctx) {
 	ssize_t n;
 
 	while (len) {
-		n = send(ctx->fd, ptr, len, MSG_NOSIGNAL);
+		n = _send(ctx, ptr, len, MSG_NOSIGNAL);
 		if (n <= 0) {
 			if (n < 0 && last_error() == ERROR_WOULDBLOCK && try < 10) {
 				LOG_SDEBUG("[%p] retrying (%d) writing to socket", ctx, ++try);
@@ -62,6 +114,13 @@ static void send_header(struct thread_ctx_s *ctx) {
 bool stream_disconnect(struct thread_ctx_s *ctx) {
 	bool disc = false;
 	LOCK_S;
+#if USE_SSL
+	if (ctx->ssl) {
+		SSL_shutdown(ctx->ssl);
+		SSL_free(ctx->ssl);
+		ctx->ssl = NULL;
+	}
+#endif
 	if (ctx->fd != -1) {
 		closesocket(ctx->fd);
 		ctx->fd = -1;
@@ -75,6 +134,13 @@ bool stream_disconnect(struct thread_ctx_s *ctx) {
 static void _disconnect(stream_state state, disconnect_code disconnect, struct thread_ctx_s *ctx) {
 	ctx->stream.state = state;
 	ctx->stream.disconnect = disconnect;
+#if USE_SSL
+	if (ctx->ssl) {
+		SSL_shutdown(ctx->ssl);
+		SSL_free(ctx->ssl);
+		ctx->ssl = NULL;
+	}
+#endif
 	closesocket(ctx->fd);
 	ctx->fd = -1;
 	wake_controller(ctx);
@@ -137,7 +203,7 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 
 		UNLOCK_S;
 
-		if (poll(&pollinfo, 1, 100)) {
+		if (_poll(ctx, &pollinfo, 100)) {
 
 			LOCK_S;
 
@@ -163,7 +229,7 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 					// read one byte at a time to catch end of header
 					char c;
 
-					int n = recv(ctx->fd, &c, 1, 0);
+					int n = _recv(ctx, &c, 1, 0);
 					if (n <= 0) {
 						if (n < 0 && last_error() == ERROR_WOULDBLOCK) {
 							UNLOCK_S;
@@ -205,7 +271,7 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 					if (ctx->stream.meta_left == 0) {
 						// read meta length
 						u8_t c;
-						int n = recv(ctx->fd, &c, 1, 0);
+						int n = _recv(ctx, &c, 1, 0);
 						if (n <= 0) {
 							if (n < 0 && last_error() == ERROR_WOULDBLOCK) {
 								UNLOCK_S;
@@ -222,7 +288,7 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 					}
 
 					if (ctx->stream.meta_left) {
-						int n = recv(ctx->fd, ctx->stream.header + ctx->stream.header_len, ctx->stream.meta_left, 0);
+						int n = _recv(ctx, ctx->stream.header + ctx->stream.header_len, ctx->stream.meta_left, 0);
 						if (n <= 0) {
 							if (n < 0 && last_error() == ERROR_WOULDBLOCK) {
 								UNLOCK_S;
@@ -259,7 +325,7 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 						space = min(space, ctx->stream.meta_next);
 					}
 
-					n = recv(ctx->fd, ctx->streambuf->writep, space, 0);
+					n = _recv(ctx, ctx->streambuf->writep, space, 0);
 					if (n == 0) {
 						LOG_INFO("[%p] end of stream (t:%lld)", ctx, ctx->stream.bytes);
 						_disconnect(DISCONNECT, DISCONNECT_OK, ctx);
@@ -276,6 +342,9 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 						if (ctx->stream.meta_interval) {
 							ctx->stream.meta_next -= n;
 						}
+					} else {
+						UNLOCK_S;
+						continue;
 					}
 
 					if (ctx->stream.state == STREAMING_BUFFERING && ctx->stream.bytes > ctx->stream.threshold) {
@@ -295,6 +364,13 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 		}
 	}
 
+#if USE_SSL
+	if (!--SSLcount) {
+		SSL_CTX_free(SSLctx);
+		SSLctx = NULL;
+	}
+#endif
+
 	return 0;
 }
 
@@ -313,6 +389,15 @@ bool stream_thread_init(struct thread_ctx_s *ctx) {
 		LOG_ERROR("[%p] unable to malloc buffer", ctx);
 		return false;
 	}
+
+#if USE_SSL
+	if (!SSLctx) {
+		SSLctx = SSL_CTX_new(SSLv23_client_method());
+		if (SSLctx) SSL_CTX_set_options(SSLctx, SSL_OP_NO_SSLv2);
+	}
+	SSLcount++;
+	ctx->ssl = NULL;
+#endif
 
 	ctx->stream_running = true;
 	ctx->stream.state = STOPPED;
@@ -407,6 +492,27 @@ void stream_sock(u32_t ip, u16_t port, const char *header, size_t header_len, un
 		UNLOCK_S;
 		return;
 	}
+
+#if USE_SSL
+	if (ntohs(port) == 443) {
+		int err;
+		ctx->ssl = SSL_new(SSLctx);
+		SSL_set_fd(ctx->ssl, sock);
+
+		if (!(err = SSL_connect(ctx->ssl))) {
+			err = SSL_get_error(ctx->ssl, err);
+			LOG_WARN("[%p] unable to open SSL socket", ctx);
+			closesocket(sock);
+			SSL_free(ctx->ssl);
+			ctx->ssl = NULL;
+			LOCK_S;
+			ctx->stream.state = DISCONNECT;
+			ctx->stream.disconnect = UNREACHABLE;
+			UNLOCK_S;
+			return;
+		}
+	} else ctx->ssl = NULL;
+#endif
 
 	buf_flush(ctx->streambuf);
 

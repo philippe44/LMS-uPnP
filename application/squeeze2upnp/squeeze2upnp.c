@@ -24,9 +24,15 @@
 #include <sys/stat.h>
 
 #include "squeezedefs.h"
+
+#if USE_SSL
+#include <openssl/ssl.h>
+#endif
+
 #if WIN
 #include <process.h>
 #endif
+
 #include "squeeze2upnp.h"
 #include "upnpdebug.h"
 #include "upnptools.h"
@@ -231,6 +237,9 @@ static char usage[] =
 #endif
 #if CODECS
 		   " CODECS"
+#endif
+#if USE_SSL
+		   " SSL"
 #endif
 #if LINKALL
 		   " LINKALL"
@@ -1324,6 +1333,10 @@ static bool isExcluded(char *Model)
 static bool Start(void)
 {
 	int i, rc;
+
+#if USE_SSL
+	SSL_library_init();
+#endif
 
 	InitUtils();
 

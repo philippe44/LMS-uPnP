@@ -1,3 +1,6 @@
+1.15.0
+ - add SSL support
+ 
 1.14.1
   - add time counter offset for players (Sonos) which reset elapsed time when icy data is received
   - remove some unused code/data (BusyDrop)

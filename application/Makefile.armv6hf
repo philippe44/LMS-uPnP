@@ -1,6 +1,6 @@
 CC		=	armv6j-cross-linux-gnueabihf-gcc
 CFLAGS  ?= -Wall -fPIC -ggdb -O2 $(OPTS) $(INCLUDE) $(DEFINES)
-LDFLAGS ?= -s -lpthread -lm -lrt -ldl -lstdc++ -L. 
+LDFLAGS ?= -s -lssl -lcrypto -lpthread -lm -lrt -ldl -lstdc++ -L. 
 
 # for LD debug -s
 

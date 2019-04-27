@@ -19,7 +19,7 @@
 		<send_metadata>0</send_metadata>
 	</profile>
 	<profile name='Bose soundtouch'>
-		<accept_nexturi>2</accept_nexturi>
+		<accept_nexturi>-1</accept_nexturi>
 	</profile>
 	<profile name='_normal mode'></profile>
 	<profile name='Jongo S3x'>

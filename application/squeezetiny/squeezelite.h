@@ -519,6 +519,9 @@ struct thread_ctx_s {
 	char		server_ip[4*(3+1)+1];
 	u16_t		cli_port;
 	sockfd 		sock, fd, cli_sock;
+#if USE_SSL
+	void		*ssl;  			// void to no include openssl headers
+#endif
 	u16_t		voltage;
 	char		cli_id[18];		// (6*2)+(5*':')+NULL
 	mutex_type	cli_mutex;

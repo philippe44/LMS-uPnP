@@ -10,7 +10,7 @@ LDFLAGS 	+= -Wl,--gc-sections
 endif
 
 TOOLS		= ./tools
-SRC			= ./squeeze2upnp
+SRC		= ./squeeze2upnp
 SQUEEZETINY	= ./squeezetiny
 ALAC		= $(BASE)/alac
 
@@ -18,7 +18,7 @@ VALGRIND	= $(BASE)/valgrind
 UPNP 		= $(BASE)/libupnp/1.6.19
 FETCHER		= $(BASE)/http_fetcher
 
-DEFINES 	= -D_FILE_OFFSET_BITS=64 -DRESAMPLE -DCODECS
+DEFINES 	= -D_FILE_OFFSET_BITS=64 -DRESAMPLE -DCODECS -DUSE_SSL
 CFLAGS 		+= -fdata-sections -ffunction-sections 
 
 vpath %.c $(TOOLS):$(SRC):$(SQUEEZETINY):$(ALAC)
@@ -27,6 +27,7 @@ vpath %.cpp $(TOOLS):$(SRC):$(SQUEEZETINY):$(ALAC)
 INCLUDE = -I. \
 		  -I$(BASE)\
 		  -I$(VALGRIND)/memcheck -I$(VALGRIND)/include \
+		  -I$(BASE)/openssl/inc \
 		  -I$(SQUEEZETINY) \
 		  -I$(TOOLS) \
 		  -I$(SRC) -I$(SRC)/inc \

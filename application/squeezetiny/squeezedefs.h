@@ -22,7 +22,7 @@
 #ifndef __SQUEEZEDEFS_H
 #define __SQUEEZEDEFS_H
 
-#define VERSION "v1.14.1"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v1.15.0"" ("__DATE__" @ "__TIME__")"
 
 #include "platform.h"
 
@@ -53,6 +53,13 @@
 #define FFMPEG    1
 #else
 #define FFMPEG    0
+#endif
+
+#if defined(USE_SSL)
+#undef USE_SSL
+#define USE_SSL 1
+#else
+#define USE_SSL 0
 #endif
 
 #if LINUX || OSX || FREEBSD

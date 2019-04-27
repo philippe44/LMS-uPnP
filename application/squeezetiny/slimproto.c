@@ -112,7 +112,11 @@ void send_packet(u8_t *packet, size_t len, sockfd sock) {
 
 /*---------------------------------------------------------------------------*/
 static void sendHELO(bool reconnect, const char *fixed_cap, const char *var_cap, u8_t mac[6], struct thread_ctx_s *ctx) {
-	const char *base_cap = "Model=squeezelite,ModelName=SqueezeLite,AccuratePlayPoints=0,HasDigitalOut=1";
+	const char *base_cap =
+#if USE_SSL
+	"CanHTTPS=1,"
+#endif
+	"Model=squeezelite,ModelName=SqueezeLite,AccuratePlayPoints=0,HasDigitalOut=1";
 	struct HELO_packet pkt;
 
 	memset(&pkt, 0, sizeof(pkt));

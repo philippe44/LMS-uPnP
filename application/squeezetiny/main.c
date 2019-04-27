@@ -32,8 +32,6 @@
 #include <signal.h>
 #include <ctype.h>
 
-#define IMAGEPROXY "/imageproxy/"
-
 #define LOCK_S   mutex_lock(ctx->streambuf->mutex)
 #define UNLOCK_S mutex_unlock(ctx->streambuf->mutex)
 #define LOCK_O	 mutex_lock(ctx->outputbuf->mutex)
