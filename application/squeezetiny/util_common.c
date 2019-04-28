@@ -305,6 +305,41 @@ char *toxml(char *src)
 
 /*----------------------------------------------------------------------------*/
 /* 																			  */
+/* MISC																  	      */
+/* 																			  */
+/*----------------------------------------------------------------------------*/
+
+/*---------------------------------------------------------------------------*/
+void delta_options(char *ref, char *src) {
+	char item[4], *p;
+
+	if (!strchr(src, '+') && !strchr(src, '-')) return;
+	ref = strdup(ref);
+
+	for (p = src; *p && (p = strchr(p, '+')) != NULL; p++) {
+		if (sscanf(p, "+%3[^,]", item) <= 0) break;
+		if (!strstr(ref, item)) {
+			strcat(ref, ",");
+			strcat(ref, item);
+		}
+	}
+
+	for (p = src; *p && (p = strchr(p, '-')) != NULL; p++) {
+		char *pos;
+		if (sscanf(p, "-%3[^,]", item) <= 0) break;
+		if ((pos = strstr(ref, item)) != NULL) {
+		   int n = strlen(item);
+		   if (pos[n]) n++;
+		   memmove(pos, pos + n, strlen(pos + n) + 1);
+		}
+	}
+
+	strcpy(src, ref);
+	free(ref);
+}
+
+/*----------------------------------------------------------------------------*/
+/* 																			  */
 /* STDLIB															  	      */
 /* 																			  */
 /*----------------------------------------------------------------------------*/

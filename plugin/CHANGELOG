@@ -1,3 +1,6 @@
+1.16.0
+ - device specific <codecs> and <raw_audio_format> cna use + or - in front of option to add or remove compared to default
+ 
 1.15.1
  - add libeay.dll and ssleay.dll to the package
  

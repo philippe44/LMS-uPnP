@@ -43,4 +43,6 @@ char*		make_dlna_content(char *mimetype, u32_t duration);
 char*		mimetype2ext(char *mimetype);
 u8_t 		mimetype2format(char *mimetype);
 
+void 		delta_options(char *ref, char *src);
+
 #endif

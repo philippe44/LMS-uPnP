@@ -1196,7 +1196,10 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	memcpy(&Device->sq_config, &glDeviceParam, sizeof(sq_dev_param_t));
 	LoadMRConfig(glConfigID, UDN, &Device->Config, &Device->sq_config);
 
-	if (!Device->Config.Enabled) return false;
+	if (!Device->Config.Enabled) return false;
+
+	delta_options(glDeviceParam.codecs, Device->sq_config.codecs);
+	delta_options(glDeviceParam.raw_audio_format, Device->sq_config.raw_audio_format);
 
 	// Read key elements from description document
 	friendlyName = XMLGetFirstDocumentItem(DescDoc, "friendlyName", true);
