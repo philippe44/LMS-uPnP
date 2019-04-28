@@ -1,3 +1,6 @@
+1.15.1
+ - add libeay.dll and ssleay.dll to the package
+ 
 1.15.0
  - add SSL support
  
