@@ -70,7 +70,7 @@ struct sService {
 } tMRConfig;
 
 struct sMR {
-	u32_t Magic;									// just a marker to trace context in memeory
+	u32_t Magic;									// just a marker to trace context in memory
 	bool  Running;
 	tMRConfig Config;
 	sq_dev_param_t	sq_config;

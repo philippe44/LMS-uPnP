@@ -141,7 +141,7 @@ static char *cli_decode(char *str) {
 
 	//FIXME: need a leading space
 	sprintf(buf, "%s%%3a", tag);
-	if ((p = stristr(str, buf)) != NULL) {
+	if ((p = strcasestr(str, buf)) != NULL) {
 		int i = 0;
 		p += strlen(buf);
 		while (*(p+i) != ' ' && *(p+i) != '\n' && *(p+i)) i++;
@@ -230,7 +230,7 @@ bool cli_open_socket(struct thread_ctx_s *ctx) {
 
 		len += k;
 		packet[len] = '\0';
-		if (strchr(packet, '\n') && stristr(packet, cmd)) {
+		if (strchr(packet, '\n') && strcasestr(packet, cmd)) {
 			rsp = packet;
 			break;
 		}
@@ -243,7 +243,7 @@ bool cli_open_socket(struct thread_ctx_s *ctx) {
 	LOG_SDEBUG("[%p]: rsp %s", ctx, rsp);
 
 	if (rsp) {
-		rsp = stristr(rsp, cmd) + strlen(cmd);
+		rsp = strcasestr(rsp, cmd) + strlen(cmd);
 		while (*rsp && *rsp == ' ') rsp++;
 
 		if (decode) rsp = cli_decode(rsp);
@@ -410,7 +410,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, int offset)
 		}
 
 		sprintf(cmd, "playlist%%20index%%3a%d ", metadata->index);
-		cur = stristr(rsp, cmd);
+		cur = strcasestr(rsp, cmd);
 	}
 
 	if (cur) {

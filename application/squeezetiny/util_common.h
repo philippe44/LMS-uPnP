@@ -31,7 +31,6 @@ char*		url_encode(char *str);
 char*		url_decode(char *str);
 char*		toxml(char *src);
 
-char*		stristr(char *s1, char *s2);
 char*		strdupn(char *p);
 u32_t 		hash32(char *str);
 

@@ -1,3 +1,8 @@
+1.16.1
+ - support SNI for SSL
+ - use strcasestr instead of stristr
+ - add help for + and - codecs syntax
+ 
 1.16.0
  - device specific <codecs> and <raw_audio_format> cna use + or - in front of option to add or remove compared to default
  

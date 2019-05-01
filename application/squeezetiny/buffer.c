@@ -21,8 +21,6 @@
 
 // fifo bufffers
 
-#define _GNU_SOURCE
-
 #include "squeezelite.h"
 
 // _* called with muxtex locked

@@ -48,6 +48,7 @@ static int SSLcount = 0;
 #define _last_error() last_error()
 #else
 #define _last_error() ERROR_WOULDBLOCK
+
 static int _recv(struct thread_ctx_s *ctx, void *buffer, size_t bytes, int options) {
 	int n;
 	if (!ctx->ssl) return recv(ctx->fd, buffer, bytes, options);
@@ -59,11 +60,14 @@ static int _recv(struct thread_ctx_s *ctx, void *buffer, size_t bytes, int optio
 static int _send(struct thread_ctx_s *ctx, void *buffer, size_t bytes, int options) {
 	int n;
 	if (!ctx->ssl) return send(ctx->fd, buffer, bytes, options);
-	while ((n = SSL_write(ctx->ssl, (u8_t*) buffer, bytes)) < 0) {
-		int err = SSL_get_error(ctx->ssl, n);
-		if (err != SSL_ERROR_WANT_READ && err != SSL_ERROR_WANT_WRITE) break;
-	}
-	return n;
+	while (1) {
+		int err;
+		ERR_clear_error();
+		if ((n = SSL_write(ctx->ssl, (u8_t*) buffer, bytes)) >= 0) return n;
+		err = SSL_get_error(ctx->ssl, n);
+		if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE) continue;
+		LOG_INFO("[%p]: SSL write error %d", ctx, err );
+		return n;	}
 }
 
 /*
@@ -83,7 +87,7 @@ static int _poll(struct thread_ctx_s *ctx, struct pollfd *pollinfo, int timeout)
 }
 #endif
 
-static void send_header(struct thread_ctx_s *ctx) {
+static bool send_header(struct thread_ctx_s *ctx) {
 	char *ptr = ctx->stream.header;
 	int len = ctx->stream.header_len;
 
@@ -102,13 +106,14 @@ static void send_header(struct thread_ctx_s *ctx) {
 			ctx->stream.disconnect = LOCAL_DISCONNECT;
 			ctx->stream.state = DISCONNECT;
 			wake_controller(ctx);
-			return;
+			return false;
 		}
 		LOG_SDEBUG("[%p] wrote %d bytes to socket", ctx, n);
 		ptr += n;
 		len -= n;
 	}
 	LOG_SDEBUG("[%p] wrote header", ctx);
+	return true;
 }
 
 bool stream_disconnect(struct thread_ctx_s *ctx) {
@@ -214,9 +219,8 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 			}
 
 			if ((pollinfo.revents & POLLOUT) && ctx->stream.state == SEND_HEADERS) {
-				send_header(ctx);
+				if (send_header(ctx)) ctx->stream.state = RECV_HEADERS;
 				ctx->stream.header_len = 0;
-				ctx->stream.state = RECV_HEADERS;
 				UNLOCK_S;
 				continue;
 			}
@@ -495,13 +499,38 @@ void stream_sock(u32_t ip, u16_t port, const char *header, size_t header_len, un
 
 #if USE_SSL
 	if (ntohs(port) == 443) {
-		int err;
+		char *server = strcasestr(header, "Host:");
+
 		ctx->ssl = SSL_new(SSLctx);
 		SSL_set_fd(ctx->ssl, sock);
 
-		if (!(err = SSL_connect(ctx->ssl))) {
-			err = SSL_get_error(ctx->ssl, err);
-			LOG_WARN("[%p] unable to open SSL socket", ctx);
+		// add SNI
+		if (server) {
+			char *p, *servername = malloc(1024);
+
+			sscanf(server, "Host:%255[^:]s", servername);
+			for (p = servername; *p == ' '; p++);
+			SSL_set_tlsext_host_name(ctx->ssl, p);
+			free(servername);
+		}
+
+		// try to connect (socket is non-blocking)
+		while (1) {
+			int status, err = 0;
+
+			ERR_clear_error();
+			status = SSL_connect(ctx->ssl);
+
+			// successful negotiation
+			if (status == 1) break;
+
+			// error or non-blocking requires more time
+			if (status < 0) {
+				err = SSL_get_error(ctx->ssl, status);
+				if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE) continue;
+			}
+
+			LOG_WARN("[%p] unable to open SSL socket %d (%d)", ctx, status, err);
 			closesocket(sock);
 			SSL_free(ctx->ssl);
 			ctx->ssl = NULL;
@@ -509,6 +538,7 @@ void stream_sock(u32_t ip, u16_t port, const char *header, size_t header_len, un
 			ctx->stream.state = DISCONNECT;
 			ctx->stream.disconnect = UNREACHABLE;
 			UNLOCK_S;
+
 			return;
 		}
 	} else ctx->ssl = NULL;

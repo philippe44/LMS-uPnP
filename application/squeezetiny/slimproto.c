@@ -956,12 +956,12 @@ void slimproto_thread_init(struct thread_ctx_s *ctx) {
 	ctx->new_server = 0;
 
 	// only use successfully loaded codecs in full processing mode
-	if (!stristr(ctx->config.mode, "thru")) {
+	if (!strcasestr(ctx->config.mode, "thru")) {
 		char item[4], *p = ctx->config.codecs;
 		int i;
 
 		while (p && sscanf(p, "%3[^,]", item) > 0) {
-			for (i = 0; i < MAX_CODECS; i++) if (codecs[i] && stristr(codecs[i]->types, item)) {
+			for (i = 0; i < MAX_CODECS; i++) if (codecs[i] && strcasestr(codecs[i]->types, item)) {
 				if (*_codecs) strcat(_codecs, ",");
 				strcat(_codecs, item);
 				break;
@@ -1036,9 +1036,9 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 	}
 
 	// detect processing mode
-	if (stristr(mode, "pcm")) out->encode.mode = ENCODE_PCM;
-	else if (stristr(mode, "flc")) out->encode.mode = ENCODE_FLAC;
-	else if (stristr(mode, "mp3")) out->encode.mode = ENCODE_MP3;
+	if (strcasestr(mode, "pcm")) out->encode.mode = ENCODE_PCM;
+	else if (strcasestr(mode, "flc")) out->encode.mode = ENCODE_FLAC;
+	else if (strcasestr(mode, "mp3")) out->encode.mode = ENCODE_MP3;
 	else {
 		// make sure we have a stable default mode
 		strcpy(mode, "thru");
@@ -1046,9 +1046,9 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 	}	
 
 	// force read of re-encoding parameters
-	if ((p = stristr(mode, "r:")) != NULL) sample_rate = atoi(p+2);
+	if ((p = strcasestr(mode, "r:")) != NULL) sample_rate = atoi(p+2);
 	else sample_rate = 0;
-	if ((p = stristr(mode, "s:")) != NULL) out->encode.sample_size = atoi(p+2);
+	if ((p = strcasestr(mode, "s:")) != NULL) out->encode.sample_size = atoi(p+2);
 	else out->encode.sample_size = 0;
 
 	// force re-encoding channels to be re-read
@@ -1057,7 +1057,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 	out->offset = 0;
 
 	// in case of flow, all parameters shall be set
-	if (stristr(mode, "flow") && out->encode.mode != ENCODE_THRU) {
+	if (strcasestr(mode, "flow") && out->encode.mode != ENCODE_THRU) {
 		if (ctx->config.send_icy) output_set_icy(&info.metadata, true, gettime_ms(), ctx);
 		sq_free_metadata(&info.metadata);
 		sq_default_metadata(&info.metadata, true);
@@ -1135,8 +1135,8 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 			char format[16] = "";
 
 			// really can't use raw format
-			if (stristr(ctx->config.raw_audio_format, "wav")) strcat(format, "wav");
-			if (stristr(ctx->config.raw_audio_format, "aif")) strcat(format, "aif");
+			if (strcasestr(ctx->config.raw_audio_format, "wav")) strcat(format, "wav");
+			if (strcasestr(ctx->config.raw_audio_format, "aif")) strcat(format, "aif");
 
 			mimetype = find_mimetype('p', ctx->mimetypes, format);
 		}
@@ -1145,7 +1145,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 
 		mimetype = find_mimetype('f', ctx->mimetypes, NULL);
 		if (out->sample_size > 24) out->encode.sample_size = 24;
-		if ((p = stristr(mode, "flc:")) != NULL) out->encode.level = atoi(p+4);
+		if ((p = strcasestr(mode, "flc:")) != NULL) out->encode.level = atoi(p+4);
 		if (out->encode.level > 9) out->encode.level = 0;
 
 	} else if (out->encode.mode == ENCODE_MP3) {
@@ -1155,7 +1155,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 		// need to tweak a bit samples rates
 		if (!out->supported_rates[0] || out->supported_rates[0] < -48000 ) out->supported_rates[0] = -48000;
 		else if (out->supported_rates[0] > 48000) out->supported_rates[0] = out->encode.sample_rate = 48000;
-		if ((p = stristr(mode, "mp3:")) != NULL) {
+		if ((p = strcasestr(mode, "mp3:")) != NULL) {
 			out->encode.level = atoi(p+4);
 			if (out->encode.level > 320) out->encode.level = 320;
 		} else out->encode.level = 128;

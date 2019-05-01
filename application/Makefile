@@ -18,7 +18,7 @@ VALGRIND	= $(BASE)/valgrind
 UPNP 		= $(BASE)/libupnp/1.6.19
 FETCHER		= $(BASE)/http_fetcher
 
-DEFINES 	= -D_FILE_OFFSET_BITS=64 -DRESAMPLE -DCODECS -DUSE_SSL
+DEFINES 	= -D_FILE_OFFSET_BITS=64 -DRESAMPLE -DCODECS -DUSE_SSL -D_GNU_SOURCE
 CFLAGS 		+= -fdata-sections -ffunction-sections 
 
 vpath %.c $(TOOLS):$(SRC):$(SQUEEZETINY):$(ALAC)

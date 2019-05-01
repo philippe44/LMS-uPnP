@@ -27,9 +27,12 @@
 		<codecs>aac,pcm,flc,mp3</codecs>
 		<forced_mimetypes>audio/flac</forced_mimetypes>
 	</profile>	
-	<profile name='foobar 2000'></profile>
+	<profile name='foobar 2000'>
+		<forced_mimetypes>audio/aac</forced_mimetypes>
+	</profile>
 	<profile name='Sonos'>
 		<raw_audio_format>wav,aif</raw_audio_format>
+		<forced_mimetypes>audio/aac</forced_mimetypes>
 	</profile>
 	<profile name='Marantz'>
 		<sample_rate>96000</sample_rate>

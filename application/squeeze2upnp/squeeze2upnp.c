@@ -1299,7 +1299,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 		*Sink = strdup("");
 	}
 	// only check codecs in thru mode
-	if (stristr(Device->sq_config.mode, "thru"))
+	if (strcasestr(Device->sq_config.mode, "thru"))
 		CheckCodecs(Device->sq_config.codecs, *Sink, Device->Config.ForcedMimeTypes);
 
 	MakeMacUnique(Device);
@@ -1324,7 +1324,7 @@ static bool isExcluded(char *Model)
 
 	do {
 		sscanf(p, "%[^,]", item);
-		if (stristr(Model, item)) return true;
+		if (strcasestr(Model, item)) return true;
 		p += strlen(item);
 	} while (*p++);
 

@@ -471,7 +471,7 @@ static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, int thread_index,
 	LOG_INFO("[%p]: HTTP headers\n%s", ctx, str = kd_dump(headers));
 	NFREE(str);
 
-	if (((str = kd_lookup(headers, "USER-AGENT")) != NULL) && stristr(str, "sonos")) {
+	if (((str = kd_lookup(headers, "USER-AGENT")) != NULL) && strcasestr(str, "sonos")) {
 		type = SONOS;
 		LOG_INFO("[%p]: Sonos mode", ctx);
 	} else if (kd_lookup(headers, "CAST-DEVICE-CAPABILITIES")) {
