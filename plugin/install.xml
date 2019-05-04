@@ -1,10 +1,6 @@
 <?xml version='1.0' standalone='yes'?>
 <extensions>
   <email>philippe_44@outlook.com</email>
-  <creator>Philippe</creator>
-  <module>Plugins::UPnPBridge::Plugin</module>
-  <version>1.16.1</version>
-  <optionsURL>plugins/UPnPBridge/settings/basic.html</optionsURL>
   <name>PLUGIN_UPNPBRIDGE</name>
   <targetApplication>
     <maxVersion>*.*</maxVersion>
@@ -13,5 +9,9 @@
   </targetApplication>
   <profilesURL>http://sourceforge.net/projects/lms-to-upnp/files/profiles.xml/download</profilesURL>
   <description>PLUGIN_UPNPBRIDGE_DESC</description>
+  <creator>Philippe</creator>
+  <module>Plugins::UPnPBridge::Plugin</module>
+  <version>1.16.2</version>
   <defaultState>enabled</defaultState>
+  <optionsURL>plugins/UPnPBridge/settings/basic.html</optionsURL>
 </extensions>

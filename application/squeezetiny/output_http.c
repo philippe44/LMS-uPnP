@@ -528,7 +528,7 @@ static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, int thread_index,
 				char *range;
 				asprintf(&range, "bytes %u-%zu/*", offset, bytes);
 				head = "HTTP/1.1 206 Partial Content";
-				if (type == CHROMECAST) kd_add(resp, "Content-Range", range);
+				if (type != SONOS) kd_add(resp, "Content-Range", range);
 				res = offset + 1;
 				free(range);
 				obuf->readp = obuf->buf + offset % obuf->size;

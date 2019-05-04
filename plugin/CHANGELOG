@@ -1,3 +1,6 @@
+1.16.2
+ - partial-reponse (206) include range with /* except for Sonos (instead of ONLY for Chromecast)
+ 
 1.16.1
  - support SNI for SSL
  - use strcasestr instead of stristr
