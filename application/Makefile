@@ -48,13 +48,13 @@ SOURCES = 	slimproto.c buffer.c util.c output_http.c main.c \
 			util_common.c avt_util.c mr_util.c tinyutils.c squeeze2upnp.c \
 			log_util.c config_upnp.c
 		
-SOURCES_LIBS = flac.c mad.c faad.c vorbis.c output.c
+SOURCES_LIBS = flac.c mad.c faad.c vorbis.c output.c sslsym.c
 		
 OBJECTS 		= $(patsubst %.c,$(OBJ)/%.o,$(filter %.c,$(SOURCES))) $(patsubst %.cpp,$(OBJ)/%.o,$(filter %.cpp,$(SOURCES))) $(patsubst %.c,$(OBJ)/%.o,$(SOURCES_LIBS)) 
 OBJECTS_STATIC 	= $(patsubst %.c,$(OBJ)/%.o,$(filter %.c,$(SOURCES))) $(patsubst %.cpp,$(OBJ)/%.o,$(filter %.cpp,$(SOURCES))) $(patsubst %.c,$(OBJ)/%-static.o,$(SOURCES_LIBS)) 
 
 LIBRARY 	= $(OBJ)/libupnp.a $(OBJ)/libixml.a $(OBJ)/libthreadutil.a $(OBJ)/libsoxr.a $(OBJ)/libshine.a
-LIBRARY_STATIC 	= $(LIBRARY) $(OBJ)/libfaad.a $(OBJ)/libFLAC.a $(OBJ)/libmad.a $(OBJ)/libvorbisfile.a $(OBJ)/libvorbis.a $(OBJ)/libogg.a 
+LIBRARY_STATIC 	= $(LIBRARY) $(OBJ)/libfaad.a $(OBJ)/libFLAC.a $(OBJ)/libmad.a $(OBJ)/libvorbisfile.a $(OBJ)/libvorbis.a $(OBJ)/libogg.a -lssl -lcrypto
 
 all: $(EXECUTABLE) $(EXECUTABLE_STATIC)
 

@@ -1,3 +1,6 @@
+1.17.0
+ - openSSL loaded manually for compatibility 
+ 
 1.16.2
  - partial-reponse (206) include range with /* except for Sonos (instead of ONLY for Chromecast)
  

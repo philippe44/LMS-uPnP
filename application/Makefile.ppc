@@ -1,6 +1,6 @@
 CC=powerpc-cross-linux-gnu-gcc
 CFLAGS  ?= -Wall -fPIC -ggdb -O2 $(OPTS) $(INCLUDE) $(DEFINES)
-LDFLAGS ?= -s -lssl -lcrypto -lgomp -lpthread -lm -lrt -ldl -lstdc++ -L. 
+LDFLAGS ?= -s -lgomp -lpthread -lm -lrt -ldl -lstdc++ -L. 
 
 OBJ					= bin/ppc
 EXECUTABLE 			= bin/squeeze2upnp-ppc

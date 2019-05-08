@@ -27,6 +27,7 @@
 
 #if USE_SSL
 #include <openssl/ssl.h>
+#include "sslsym.h"
 #endif
 
 #if WIN
@@ -1338,6 +1339,11 @@ static bool Start(void)
 	int i, rc;
 
 #if USE_SSL
+	// manually load openSSL symbols to accept multiple versions
+	if (!load_ssl_symbols()) {
+		LOG_ERROR("Cannot load SSL libraries", NULL);
+		return false;
+	}
 	SSL_library_init();
 #endif
 
@@ -1435,6 +1441,10 @@ static bool Stop(void)
 
 #if WIN
 	winsock_close();
+#endif
+
+#if USE_SSL
+	free_ssl_symbols();
 #endif
 
 	return true;
