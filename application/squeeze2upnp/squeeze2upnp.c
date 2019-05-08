@@ -1344,8 +1344,10 @@ static bool Start(void)
 		LOG_ERROR("Cannot load SSL libraries", NULL);
 		return false;
 	}
+	printf("calling SSL\n");;
 	SSL_library_init();
 #endif
+	printf("done\n");;
 
 	InitUtils();
 
