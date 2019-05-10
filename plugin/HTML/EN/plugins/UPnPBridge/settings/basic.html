@@ -250,6 +250,8 @@
 			<option [% IF entry.1 == enabled %]selected[% END %] value="[% entry.1 %]">[% entry.0 | string %]</option>
 		[% END %]
 		</select>
+		&nbsp&nbsp[% "PLUGIN_UPNPBRIDGE_REMOVETIMEOUT" | string %]
+		<input type="text" class="stdedit" name="remove_timeout" id="remove_timeout" value="[% remove_timeout %]" size="2">
 	[% END %]
 	
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_VOLUMEMGMT" desc="PLUGIN_UPNPBRIDGE_VOLUMEMGMT_DESC" %]

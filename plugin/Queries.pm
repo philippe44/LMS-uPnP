@@ -48,7 +48,7 @@ sub initQueries {
 
 sub statusQuery {
 	my ($request) = @_;
-	my $song = $request->client->playingSong;
+	my $song = $request->client ? $request->client->playingSong : undef;
 	
 	$statusHandler->($request);
 	return if !$song;

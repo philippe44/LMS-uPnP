@@ -290,6 +290,9 @@ PLUGIN_UPNPBRIDGE_SERVER
 PLUGIN_UPNPBRIDGE_ENABLED
 	EN	Enabled
 	
+PLUGIN_UPNPBRIDGE_REMOVETIMEOUT
+	EN	Remove timeout
+	
 PLUGIN_UPNPBRIDGE_PLAYERINFO
 	EN	Player information
 	
@@ -313,6 +316,7 @@ PLUGIN_UPNPBRIDGE_UPNPMGMT_DESC
 	EN	<br>- For the default list newly discovered players can be automatically added to LMS 
 	EN	<br>– For individual players a player can be enabled or disabled
 	EN	<br>- Force LMS server (? for auto-discovery)
+	EN	<br>- Remove timeout sets the time (s) to keep a player in LMS after is has missed a keep-alive (-1 = never)
 
 PLUGIN_UPNPBRIDGE_ENABLEDEFS
 	EN	Player is enabled

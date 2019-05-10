@@ -85,6 +85,7 @@ void SaveConfig(char *name, void *ref, bool full)
 	XMLUpdateNode(doc, common, false, "output_size", "%d", (u32_t) glDeviceParam.outputbuf_size);
 	XMLUpdateNode(doc, common, false, "stream_length", "%d", (u32_t) glDeviceParam.stream_length);
 	XMLUpdateNode(doc, common, false, "enabled", "%d", (int) glMRConfig.Enabled);
+	XMLUpdateNode(doc, common, false, "remove_timeout", "%d", (int) glMRConfig.RemoveTimeout);
 	XMLUpdateNode(doc, common, false, "codecs", glDeviceParam.codecs);
 	XMLUpdateNode(doc, common, false, "mode", glDeviceParam.mode);
 	XMLUpdateNode(doc, common, false, "raw_audio_format", glDeviceParam.raw_audio_format);
@@ -171,6 +172,7 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "stream_length")) sq_conf->stream_length = atol(val);
 	if (!strcmp(name, "send_icy")) Conf->SendIcy = atol(val);
 	if (!strcmp(name, "enabled")) Conf->Enabled = atol(val);
+	if (!strcmp(name, "remove_timeout")) Conf->RemoveTimeout = atol(val);
 	if (!strcmp(name, "codecs")) strcpy(sq_conf->codecs, val);
 	if (!strcmp(name, "mode")) strcpy(sq_conf->mode, val);
 	if (!strcmp(name, "roon_mode")) sq_conf->roon_mode = atol(val);

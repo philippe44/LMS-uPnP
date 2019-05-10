@@ -58,6 +58,7 @@ struct sService {
 	bool		SeekAfterPause;
 	bool		ByteSeek;
 	bool		Enabled;
+	int			RemoveTimeout;
 	int 		VolumeOnPlay;		// change only volume when playing has started or disable volume commands
 	bool		VolumeFeedback;
 	int			AcceptNextURI;

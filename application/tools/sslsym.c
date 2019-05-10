@@ -164,7 +164,7 @@ static void *dlopen_try(char **filenames, int flag) {
 	return handle;
 }
 
-static int return_true(void) {
+static int lambda(void) {
 	return true;
 }
 
@@ -216,7 +216,7 @@ bool load_ssl_symbols(void) {
 
 	// managed deprecated functions
 	if (!SYM(SSLv23_client_method)) SYM(SSLv23_client_method) = SYM(TLS_client_method);
-	if (!SYM(SSL_library_init)) SYM(SSL_library_init) = &return_true;
+	if (!SYM(SSL_library_init)) SYM(SSL_library_init) = &lambda;
 
 	return true;
 }

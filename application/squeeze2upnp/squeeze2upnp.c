@@ -84,6 +84,7 @@ tMRConfig			glMRConfig = {
 							false,      	// SeekAfterPause
 							false,			// ByteSeek
 							true,			// Enabled
+							PRESENCE_TIMEOUT, // Removal timeout
 							1,         		// VolumeOnPlay
 							true,			// VolumeFeedback
 							NEXT_GAPLESS,	// AcceptNextURI
@@ -1026,7 +1027,8 @@ static void *UpdateThread(void *args)
 				for (i = 0; i < MAX_RENDERERS; i++) {
 					Device = glMRDevices + i;
 					if (Device->Running &&
-						((Device->LastSeen + PRESENCE_TIMEOUT) - now > PRESENCE_TIMEOUT	||
+						((Device->Config.RemoveTimeout != -1 &&
+						(Device->LastSeen + Device->Config.RemoveTimeout) - now > Device->Config.RemoveTimeout) ||
 						Device->ErrorCount > MAX_ACTION_ERRORS)) {
 
 						pthread_mutex_lock(&Device->Mutex);

@@ -1,3 +1,7 @@
+1.18.0
+ - Add back removal timeout
+ - (P) return if query is missing client
+ 
 1.17.0
  - openSSL loaded manually for compatibility 
  
