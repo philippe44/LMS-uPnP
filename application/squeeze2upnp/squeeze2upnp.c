@@ -1346,10 +1346,8 @@ static bool Start(void)
 		LOG_ERROR("Cannot load SSL libraries", NULL);
 		return false;
 	}
-	printf("calling SSL\n");;
 	SSL_library_init();
 #endif
-	printf("done\n");;
 
 	InitUtils();
 
@@ -1652,8 +1650,8 @@ int main(int argc, char *argv[])
 	}
 
 	if (!Start()) {
-		LOG_ERROR("Cannot start UPnP", NULL);
-		strcpy(resp, "exit");
+		LOG_ERROR("Cannot start, exiting", NULL);
+		exit(0);
 	}
 
 	while (strcmp(resp, "exit")) {
