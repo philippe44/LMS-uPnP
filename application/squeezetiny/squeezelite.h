@@ -24,7 +24,12 @@
 // build detection
 #include "squeezedefs.h"
 
-#if LINUX && !defined(SELFPIPE)
+#if !defined(LOOPBACK)
+#if SUN
+#define EVENTFD   0
+#define WINEVENT  0
+#define SELFPIPE  1
+#elif LINUX && !defined(SELFPIPE)
 #define EVENTFD   1
 #define SELFPIPE  0
 #define WINEVENT  0
@@ -38,6 +43,13 @@
 #define EVENTFD   0
 #define SELFPIPE  0
 #define WINEVENT  1
+#endif
+#else
+#define EVENTFD   0
+#define SELFPIPE  0
+#define WINEVENT  0
+#undef LOOPBACK
+#define LOOPBACK  1
 #endif
 
 #if defined(LINKALL)
@@ -148,6 +160,20 @@ typedef int sockfd;
 struct wake {
 	int fds[2];
 };
+#endif
+
+#if LOOPBACK
+#define event_handle struct pollfd
+#define event_event struct wake
+#define wake_create(e) _wake_create(&e)
+#define wake_signal(e) send(e.fds[1], ".", 1, 0)
+#define wake_clear(e) char c; recv(e, &c, 1, 0)
+#define wake_close(e) closesocket(e.mfds); closesocket(e.fds[0]); closesocket(e.fds[1])
+struct wake {
+	int mfds;
+	int fds[2];
+};
+bool _wake_create(event_event*);
 #endif
 
 #if WINEVENT

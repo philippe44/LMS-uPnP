@@ -144,6 +144,42 @@ event_type wait_readwake(event_handle handles[], int timeout) {
 #endif
 }
 
+#if LOOPBACK
+void _wake_create(event_event* e) {
+	struct sockaddr_in addr;
+	short port;
+	socklen_t len;
+
+	e->mfds = e->fds[0] = e->fds[1] = -1;
+	addr.sin_family = AF_INET;
+	addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+
+	// create sending socket - will wait for connections
+	addr.sin_port = 0;
+	e->mfds = socket(AF_INET, SOCK_STREAM, 0);
+	bind(e->mfds, (struct sockaddr*) &addr, sizeof(addr));
+	len = sizeof(struct sockaddr);
+
+	// get assigned port & listen
+	getsockname(e->mfds, (struct sockaddr *) &addr, &len);
+	port = addr.sin_port;
+	listen(e->mfds, 1);
+
+	// create receiving socket
+	addr.sin_port = 0;
+	e->fds[0] = socket(AF_INET, SOCK_STREAM, 0);
+	bind(e->fds[0], (struct sockaddr*) &addr, sizeof(addr));
+
+	// connect to sender (we listen so it can be blocking)
+	addr.sin_port = port;
+	connect(e->fds[0], (struct sockaddr*) &addr, sizeof(addr));
+
+	// this one will work or fail, but not block
+	len = sizeof(struct sockaddr);
+	e->fds[1] = accept(e->mfds, (struct sockaddr*) &addr, &len);
+}
+#endif
+
 // pack/unpack to network byte order
 void packN(u32_t *dest, u32_t val) {
 	u8_t *ptr = (u8_t *)dest;
@@ -198,32 +234,35 @@ char *dlerror(void) {
 	return NULL;
 }
 
-// this only implements numfds == 1
 int poll(struct pollfd *fds, unsigned long numfds, int timeout) {
 	fd_set r, w;
 	struct timeval tv;
-	int ret;
-	
+	int ret, i, max_fds = fds[0].fd;
+
 	FD_ZERO(&r);
 	FD_ZERO(&w);
-	
-	if (fds[0].events & POLLIN) FD_SET(fds[0].fd, &r);
-	if (fds[0].events & POLLOUT) FD_SET(fds[0].fd, &w);
-	
+
+	for (i = 0; i < numfds; i++) {
+		if (fds[i].events & POLLIN) FD_SET(fds[i].fd, &r);
+		if (fds[i].events & POLLOUT) FD_SET(fds[i].fd, &w);
+		if (max_fds < fds[i].fd) max_fds = fds[i].fd;
+	}
+
 	tv.tv_sec = timeout / 1000;
 	tv.tv_usec = 1000 * (timeout % 1000);
-	
-	ret = select(fds[0].fd + 1, &r, &w, NULL, &tv);
-    
+
+	ret = select(max_fds + 1, &r, &w, NULL, &tv);
+
 	if (ret < 0) return ret;
-	
-	fds[0].revents = 0;
-	if (FD_ISSET(fds[0].fd, &r)) fds[0].revents |= POLLIN;
-	if (FD_ISSET(fds[0].fd, &w)) fds[0].revents |= POLLOUT;
-	
+
+	for (i = 0; i < numfds; i++) {
+		fds[i].revents = 0;
+		if (FD_ISSET(fds[i].fd, &r)) fds[i].revents |= POLLIN;
+		if (FD_ISSET(fds[i].fd, &w)) fds[i].revents |= POLLOUT;
+	}
+
 	return ret;
 }
-
 #endif
 
 #if LINUX || FREEBSD
