@@ -22,6 +22,7 @@
 #ifndef __SQUEEZEDEFS_H
 #define __SQUEEZEDEFS_H
 
+#define VERSION "v1.19.0"" ("__DATE__" @ "__TIME__")"
 
 #include "platform.h"
 
@@ -59,6 +60,11 @@
 #define USE_SSL 1
 #else
 #define USE_SSL 0
+#endif
+
+#if defined(LOOPBACK)
+#undef LOOPBACK
+#define LOOPBACK 1
 #endif
 
 #if LINUX || OSX || FREEBSD

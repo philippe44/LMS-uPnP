@@ -173,7 +173,7 @@ struct wake {
 	int mfds;
 	int fds[2];
 };
-bool _wake_create(event_event*);
+void _wake_create(event_event*);
 #endif
 
 #if WINEVENT
