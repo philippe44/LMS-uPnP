@@ -229,7 +229,7 @@ static char usage[] =
 		   " SELFPIPE"
 #endif
 #if LOOPBACK
-		   " LOOPBACK
+		   " LOOPBACK"
 #endif
 #if WINEVENT
 		   " WINEVENT"

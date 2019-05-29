@@ -1,5 +1,5 @@
 BASE		= ..
-CFLAGS		+= -Wno-multichar
+CFLAGS		+= -Wno-multichar -Wno-unused-result
 
 ifeq ($(OS),Darwin)
 LINKSTATIC	=

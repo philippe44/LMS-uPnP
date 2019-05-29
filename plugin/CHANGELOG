@@ -1,4 +1,11 @@
-1.8.3
+1.19.0
+ - alac.c did not set blocksize to NULL
+ - faad should shift samles by 8 bits for mono channel
+ - add LOOPBACK option
+ - update Windows dll to remove msvc dependencies
+ - (P) add -static version first
+ 
+1.18.3
  - loopack option
  - free_ssl_symbol() does not do anything when LINAKLL set to avoid dlclose() link error
  

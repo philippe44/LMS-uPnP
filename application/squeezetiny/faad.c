@@ -511,8 +511,8 @@ static decode_state faad_decode(struct thread_ctx_s *ctx) {
 			}
 		} else if (info.channels == 1) {
 			while (count--) {
-				*optr++ = *iptr;
-				*optr++ = *iptr++;
+				*optr++ = *iptr << 8;
+				*optr++ = *iptr++ << 8;
 			}
 		} else {
 			LOG_WARN("[%^p]: unsupported number of channels", ctx);

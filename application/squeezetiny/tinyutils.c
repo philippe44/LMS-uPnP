@@ -170,7 +170,7 @@ void _wake_create(event_event* e) {
 	e->fds[0] = socket(AF_INET, SOCK_STREAM, 0);
 	bind(e->fds[0], (struct sockaddr*) &addr, sizeof(addr));
 
-	// connect to sender (we listen so it can be blocking)
+	// connect to sender (we listen so it can't be blocking)
 	addr.sin_port = port;
 	connect(e->fds[0], (struct sockaddr*) &addr, sizeof(addr));
 

@@ -23,25 +23,25 @@ sub binaries {
 	if ($os->{'os'} eq 'Linux') {
 
 		if ($os->{'osArch'} =~ /x86_64/) {
-			return qw(squeeze2upnp-x86-64 squeeze2upnp-x86-64-static);
+			return qw( squeeze2upnp-x86-64-static squeeze2upnp-x86-64);
 		}
 		if ($os->{'binArch'} =~ /i386/) {
-			return qw(squeeze2upnp-x86 squeeze2upnp-x86-static);
+			return qw(squeeze2upnp-x86-static squeeze2upnp-x86);
 		}
 		if ($os->{'osArch'} =~ /aarch64/) {
-			return qw(squeeze2upnp-aarch64 squeeze2upnp-aarch64_static squeeze2upnp-armv6hf squeeze2upnp-armv6hf-static);
+			return qw(squeeze2upnp-aarch64_static squeeze2upnp-aarch64 squeeze2upnp-armv6hf-static squeeze2upnp-armv6hf);
 		}
 		if ($os->{'binArch'} =~ /armhf/) {
-			return qw(squeeze2upnp-armv6hf squeeze2upnp-armv6hf-static);
+			return qw( squeeze2upnp-armv6hf-static squeeze2upnp-armv6hf);
 		}
 		if ($os->{'binArch'} =~ /arm/) {
-			return qw(squeeze2upnp-armv5te squeeze2upnp-armv5te-static);
+			return qw( squeeze2upnp-armv5te-static squeeze2upnp-armv5te);
 		}
 		if ($os->{'binArch'} =~ /powerpc/) {
-			return qw(squeeze2upnp-ppc squeeze2upnp-ppc-static);
+			return qw( squeeze2upnp-ppc-static squeeze2upnp-ppc);
 		}
 		if ($os->{'binArch'} =~ /sparc/) {
-			return qw(squeeze2upnp-sparc squeeze2upnp-sparc-static);
+			return qw( squeeze2upnp-sparc-static squeeze2upnp-sparc);
 		}
 		
 		# fallback to offering all linux options for case when architecture detection does not work
@@ -50,7 +50,7 @@ sub binaries {
 	}
 	
 	if ($os->{'os'} eq 'Darwin') {
-		return qw(squeeze2upnp-osx-multi squeeze2upnp-osx-multi-static);
+		return qw( squeeze2upnp-osx-multi-static squeeze2upnp-osx-multi);
 	}
 	
 	if ($os->{'os'} eq 'Windows') {
