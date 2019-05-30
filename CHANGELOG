@@ -1,3 +1,6 @@
+1.19.1
+ - mad was using new decoder structure but librariy was not updated
+ 
 1.19.0
  - alac.c did not set blocksize to NULL
  - faad should shift samles by 8 bits for mono channel
