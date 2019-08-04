@@ -167,6 +167,7 @@ char *mimetype2ext(char *mimetype)
 	if (strstr(mimetype, "flac")) return "flac";
 	if (strstr(mimetype, "flc")) return "flc";
 	if (strstr(mimetype, "mp3") || strstr(mimetype, "mpeg")) return "mp3";
+	if (strstr(mimetype, "ogg") && strstr(mimetype, "codecs=opus")) return "ops";
 	if (strstr(mimetype, "ogg")) return "ogg";
 	if (strstr(mimetype, "aif")) return "aif";
 	if (strstr(mimetype, "aac")) return "aac";
@@ -189,6 +190,7 @@ u8_t mimetype2format(char *mimetype)
 	if (strstr(mimetype, "audio/L") || mimetype[0] == '*') return 'p';
 	if (strstr(mimetype, "flac") || strstr(mimetype, "flc")) return 'f';
 	if (strstr(mimetype, "mp3") || strstr(mimetype, "mpeg")) return 'm';
+	if (strstr(mimetype, "ogg") && strstr(mimetype, "codecs=opus")) return 'u';
 	if (strstr(mimetype, "ogg")) return 'o';
 	if (strstr(mimetype, "aif")) return 'i';
 	if (strstr(mimetype, "aac")) return 'a';

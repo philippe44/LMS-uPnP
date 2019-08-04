@@ -56,7 +56,7 @@
 extern log_level 	util_loglevel;
 static log_level 	*loglevel = &util_loglevel;
 
-static char *_lookup(char *mimetypes[], int n, ...);
+static char *_lookup(char *mimetypes[], char *details, int n, ...);
 
 // cmdline parsing
 char *next_param(char *src, char c) {
@@ -717,7 +717,7 @@ char *kd_dump(key_data_t *kd)
 /*----------------------------------------------------------------------------*/
 
 /*---------------------------------------------------------------------------*/
-static char *_lookup(char *mimetypes[], int n, ...) {
+static char *_lookup(char *mimetypes[], char *details, int n, ...) {
 	char *mimetype, **p;
 	va_list args;
 
@@ -727,7 +727,7 @@ char *kd_dump(key_data_t *kd)
 		mimetype = va_arg(args, char*);
 		p = mimetypes;
 		while (*p) {
-			if (!strcmp(mimetype, *p)) {
+			if (strstr(*p, mimetype) && (!details || strstr(*p, details))) {
 				va_end(args);
 				return strdup(*p);
 			}
@@ -743,27 +743,28 @@ char *kd_dump(key_data_t *kd)
 /*---------------------------------------------------------------------------*/
 char *find_mimetype(char codec, char *mimetypes[], char *options) {
 	switch (codec) {
-		case 'm': return _lookup(mimetypes, 3, "audio/mp3", "audio/mpeg", "audio/mpeg3");
+		case 'm': return _lookup(mimetypes, NULL, 3, "audio/mp3", "audio/mpeg", "audio/mpeg3");
 		case 'c':
-		case 'f': return _lookup(mimetypes, 2, "audio/flac", "audio/x-flac");
-		case 'w': return _lookup(mimetypes, 2, "audio/wma", "audio/x-wma");
-		case 'o': return _lookup(mimetypes, 2, "audio/ogg", "audio/x-ogg");
-		case 'a': return _lookup(mimetypes, 4, "audio/aac", "audio/x-aac", "audio/m4a", "audio/mp4");
-		case 'l': return _lookup(mimetypes, 2, "audio/m4a", "audio/mp4");
+		case 'f': return _lookup(mimetypes, NULL, 2, "audio/flac", "audio/x-flac");
+		case 'w': return _lookup(mimetypes, NULL, 2, "audio/wma", "audio/x-wma");
+		case 'o': return _lookup(mimetypes, NULL, 2, "audio/ogg", "audio/x-ogg");
+		case 'u': return _lookup(mimetypes, "codecs=opus", 2, "audio/ogg", "audio/x-ogg");
+		case 'a': return _lookup(mimetypes, NULL, 4, "audio/aac", "audio/x-aac", "audio/m4a", "audio/mp4");
+		case 'l': return _lookup(mimetypes, NULL, 2, "audio/m4a", "audio/mp4");
 		case 'd': {
 			char *mimetype;
 
 			if (strstr(options, "dsf")) {
-				mimetype = _lookup(mimetypes, 2, "audio/dsf", "audio/x-dsf");
+				mimetype = _lookup(mimetypes, NULL, 2, "audio/dsf", "audio/x-dsf");
 				if (mimetype) return mimetype;
 			}
 
 			if (strstr(options, "dff")) {
-				mimetype = _lookup(mimetypes, 2, "audio/dff", "audio/x-dff");
+				mimetype = _lookup(mimetypes, NULL, 2, "audio/dff", "audio/x-dff");
 				if (mimetype) return mimetype;
 			}
 
-			mimetype = _lookup(mimetypes, 2, "audio/dsd", "audio/x-dsd");
+			mimetype = _lookup(mimetypes, NULL, 2, "audio/dsd", "audio/x-dsd");
 			if (mimetype) return mimetype;
 			else return strdup("audio/dsd");
 		}
@@ -775,12 +776,12 @@ char *kd_dump(key_data_t *kd)
 				if (sscanf(options, "%[^,]", fmt) <= 0) return NULL;
 
 				if (strstr(fmt, "wav")) {
-					mimetype = _lookup(mimetypes, 3, "audio/wav", "audio/x-wav", "audio/wave");
+					mimetype = _lookup(mimetypes, NULL, 3, "audio/wav", "audio/x-wav", "audio/wave");
 					if (mimetype) return mimetype;
 				}
 
 				if (strstr(fmt, "aif")) {
-					mimetype = _lookup(mimetypes, 4, "audio/aiff", "audio/x-aiff", "audio/aif", "audio/x-aif");
+					mimetype = _lookup(mimetypes, NULL, 4, "audio/aiff", "audio/x-aiff", "audio/aif", "audio/x-aif");
 					if (mimetype) return mimetype;
 				}
 
@@ -831,12 +832,12 @@ char* find_pcm_mimetype(u8_t *sample_size, bool truncable, u32_t sample_rate,
 		}
 
 		if (strstr(fmt, "wav")) {
-			mimetype = _lookup(mimetypes, 3, "audio/wav", "audio/x-wav", "audio/wave");
+			mimetype = _lookup(mimetypes, NULL, 3, "audio/wav", "audio/x-wav", "audio/wave");
 			if (mimetype) return mimetype;
 		}
 
 		if (strstr(fmt, "aif")) {
-			mimetype = _lookup(mimetypes, 4, "audio/aiff", "audio/x-aiff", "audio/aif", "audio/x-aif");
+			mimetype = _lookup(mimetypes, NULL, 4, "audio/aiff", "audio/x-aiff", "audio/aif", "audio/x-aif");
 			if (mimetype) return mimetype;
 		}
 

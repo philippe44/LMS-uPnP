@@ -1,3 +1,8 @@
+1.20.0
+ - add opus decoder
+ - change vorbis codec min input
+ - vorbis does not exit on no frame decoded
+ 
 1.19.1
  - mad was using new decoder structure but librariy was not updated
  

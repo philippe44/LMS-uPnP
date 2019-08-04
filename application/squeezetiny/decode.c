@@ -129,6 +129,7 @@ void decode_init(void) {
 	codecs[i++] = register_vorbis();
 	codecs[i++] = register_pcm();
 	codecs[i++] = register_flac();
+	codecs[i++] = register_opus();
 #endif
 	codecs[i++] = register_m4a_thru();
 	codecs[i++] = register_flac_thru();
@@ -149,6 +150,7 @@ void decode_end(void) {
 	deregister_mad();
 	deregister_pcm();
 	deregister_flac();
+	deregister_opus();
 #endif
 	deregister_m4a_thru();
 	deregister_flac_thru();
