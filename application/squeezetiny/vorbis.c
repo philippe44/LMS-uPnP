@@ -122,7 +122,6 @@ static decode_state vorbis_decode( struct thread_ctx_s *ctx) {
 	if (!frames && ctx->stream.state <= DISCONNECT) {
 		UNLOCK_O_direct;
 		UNLOCK_S;
-		LOG_INFO("[%p]: end of stream", ctx);
 		return DECODE_COMPLETE;
 	}
 
@@ -236,7 +235,14 @@ static decode_state vorbis_decode( struct thread_ctx_s *ctx) {
 
 	} else if (n == 0) {
 
-		LOG_INFO("[%p]: no frame decoded", ctx);
+		if (ctx->stream.state <= DISCONNECT) {
+			LOG_INFO("[%p]: partial decode", ctx);
+			UNLOCK_O_direct;
+			UNLOCK_S;
+			return DECODE_COMPLETE;
+		} else {
+			LOG_INFO("[%p]: no frame decoded", ctx);
+		}
 
 	} else if (n == OV_HOLE) {
 
