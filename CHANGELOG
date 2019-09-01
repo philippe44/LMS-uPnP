@@ -1,3 +1,6 @@
+1.20.1
+ - offer freebsd helper as well
+ 
 1.20.0
  - add opus decoder
  - change vorbis codec min input

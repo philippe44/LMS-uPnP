@@ -49,13 +49,18 @@ sub binaries {
 		squeeze2upnp-sparc squeeze2upnp-sparc-static squeeze2upnp-aarch64 squeeze2upnp-aarch64_static);
 	}
 	
+	if ($os->{'os'} eq 'freebsd') {
+		return qw( squeeze2upnp-bsd-x64 squeeze2upnp-bsd-x64-static);
+	}	
+	
 	if ($os->{'os'} eq 'Darwin') {
 		return qw( squeeze2upnp-osx-multi-static squeeze2upnp-osx-multi);
 	}
-	
+		
 	if ($os->{'os'} eq 'Windows') {
 		return qw(squeeze2upnp-win.exe);
 	}	
+	
 }
 
 sub bin {
