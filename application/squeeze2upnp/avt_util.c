@@ -237,35 +237,25 @@ bool AVTStop(struct sMR *Device)
 int CtrlSetVolume(struct sMR *Device, u8_t Volume, void *Cookie)
 {
 	IXML_Document *ActionNode = NULL;
-	struct sService *Service;
-	char params[8], *cmd;
+	struct sService *Service = &Device->Service[REND_SRV_IDX];
+	char params[8];
 	int rc;
-
-	if (*Device->Service[GRP_REND_SRV_IDX].ControlURL) {
-		Service = &Device->Service[GRP_REND_SRV_IDX];
-		cmd = "SetGroupVolume";
-	} else {
-		Service = &Device->Service[REND_SRV_IDX];
-		cmd = "SetVolume";
-	}
 
 	LOG_INFO("[%p]: uPNP volume %d (cookie %p)", Device, Volume, Cookie);
 
-	ActionNode =  UpnpMakeAction(cmd, Service->Type, 0, NULL);
-	UpnpAddToAction(&ActionNode, cmd, Service->Type, "InstanceID", "0");
-	if (!*Device->Service[GRP_REND_SRV_IDX].ControlURL)
-		UpnpAddToAction(&ActionNode, cmd, Service->Type, "Channel", "Master");
+	ActionNode =  UpnpMakeAction("SetVolume", Service->Type, 0, NULL);
+	UpnpAddToAction(&ActionNode, "SetVolume", Service->Type, "InstanceID", "0");
+	UpnpAddToAction(&ActionNode, "SetVolume", Service->Type, "Channel", "Master");
 	sprintf(params, "%d", (int) Volume);
-	UpnpAddToAction(&ActionNode, cmd, Service->Type, "DesiredVolume", params);
+	UpnpAddToAction(&ActionNode, "SetVolume", Service->Type, "DesiredVolume", params);
 
 	rc = UpnpSendActionAsync(glControlPointHandle, Service->ControlURL, Service->Type, NULL,
-							 ActionNode, ActionHandler, Cookie);
-
-	if (ActionNode) ixmlDocument_free(ActionNode);
-
+								 ActionNode, ActionHandler, Cookie);
 	if (rc != UPNP_E_SUCCESS) {
 		LOG_ERROR("[%p]: Error in UpnpSendActionAsync -- %d", Device, rc);
 	}
+
+	if (ActionNode) ixmlDocument_free(ActionNode);
 
 	return rc;
 }
@@ -298,14 +288,14 @@ int CtrlSetMute(struct sMR *Device, bool Mute, void *Cookie)
 
 
 /*----------------------------------------------------------------------------*/
-int GetGroupVolume(struct sMR *Device)
+int CtrlGetGroupVolume(struct sMR *Device)
 {
 	IXML_Document *ActionNode, *Response = NULL;
 	struct sService *Service = &Device->Service[GRP_REND_SRV_IDX];
 	char *Item;
 	int Volume = -1;
 
-	if (!*Service->ControlURL) return Volume;
+	if (!Service->ControlURL) return Volume;
 
 	ActionNode = UpnpMakeAction("GetGroupVolume", Service->Type, 0, NULL);
 	UpnpAddToAction(&ActionNode, "GetGroupVolume", Service->Type, "InstanceID", "0");
@@ -317,9 +307,39 @@ int GetGroupVolume(struct sMR *Device)
 	Item = XMLGetFirstDocumentItem(Response, "CurrentVolume", true);
 	if (Response) ixmlDocument_free(Response);
 
+	// master / slave relation might not be set yet, so GetGroupVolume will fail
 	if (Item) {
 		Volume = atoi(Item);
 		free(Item);
+	}
+
+	return Volume;
+}
+
+
+/*----------------------------------------------------------------------------*/
+int CtrlGetVolume(struct sMR *Device)
+{
+	IXML_Document *ActionNode, *Response = NULL;
+	struct sService *Service = &Device->Service[REND_SRV_IDX];
+	char *Item;
+	int Volume = -1;
+
+	if (!Service->ControlURL) return Volume;
+
+	ActionNode = UpnpMakeAction("GetVolume", Service->Type, 0, NULL);
+	UpnpAddToAction(&ActionNode, "GetVolume", Service->Type, "InstanceID", "0");
+	UpnpAddToAction(&ActionNode, "GetVolume", Service->Type, "Channel", "Master");
+	UpnpSendAction(glControlPointHandle, Service->ControlURL, Service->Type,
+								 NULL, ActionNode, &Response);
+
+	if (ActionNode) ixmlDocument_free(ActionNode);
+
+	if (Response) {
+		Item = XMLGetFirstDocumentItem(Response, "CurrentVolume", true);
+		Volume = atoi(Item);
+		free(Item);
+		ixmlDocument_free(Response);
 	}
 
 	return Volume;

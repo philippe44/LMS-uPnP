@@ -275,7 +275,7 @@ static char license[] =
 /*----------------------------------------------------------------------------*/
 static void 	*MRThread(void *args);
 static 	void*	UpdateThread(void *args);
-static bool 	AddMRDevice(struct sMR *Device, char * UDN, IXML_Document *DescDoc,	const char *location, char **ProtoInfo);
+static bool 	AddMRDevice(struct sMR *Device, char * UDN, IXML_Document *DescDoc,	const char *location);
 static bool		isExcluded(char *Model);
 static void 	NextTrack(struct sMR *Device);
 
@@ -283,6 +283,7 @@ static void 	NextTrack(struct sMR *Device);
 static bool 	_ProcessQueue(struct sMR *Device);
 static void 	_SyncNotifState(char *State, struct sMR* Device);
 static void 	_ProcessVolume(char *Volume, struct sMR* Device);
+
 
 /*----------------------------------------------------------------------------*/
 bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t *cookie, void *param)
@@ -393,15 +394,10 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 				break;
 			}
 
-			if (Device->Muted && Device->Config.VolumeOnPlay != -1) {
-				CtrlSetMute(Device, false, Device->seqN++);
-				Device->Muted = false;
-			}
-
 			AVTPlay(Device);
 			Device->sqState = SQ_PLAY;
 			break;
-		case SQ_PLAY:
+		case SQ_PLAY: {
 			// should not be in stopped mode at this point unless it's a short track
 			if (Device->sqState == SQ_PLAY) break;
 
@@ -409,14 +405,22 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 			AVTPlay(Device);
 			Device->sqState = SQ_PLAY;
 
-			if (Device->Muted && Device->Config.VolumeOnPlay != -1) {
-				CtrlSetMute(Device, false, Device->seqN++);
-				Device->Muted = false;
+			// send volume to master + slaves
+			if (Device->Config.VolumeOnPlay == 1 && Device->Volume != -1) {
+				int i;
+
+				// don't want echo, even if sending onPlay
+				Device->VolumeStampTx = gettime_ms();
+
+				// update all devices (master & slaves)
+				for (i = 0; i < MAX_RENDERERS; i++) {
+					struct sMR *p = glMRDevices + i;
+					if (p->Running && (p->Master == Device || p == Device)) CtrlSetVolume(p, p->Volume, p->seqN++);
+				}
 			}
 
-			if (Device->Config.VolumeOnPlay == 1 && Device->Volume != 0xff)
-				CtrlSetVolume(Device, Device->Volume, Device->seqN++);
 			break;
+		}
 		case SQ_STOP:
 			AVTStop(Device);
 			NFREE(Device->NextURI);
@@ -427,39 +431,69 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 			Device->ShortTrack = false;
 			Device->ShortTrackWait = 0;
 			break;
-		case SQ_PAUSE:
+		case SQ_PAUSE: {
+			int i;
 			AVTBasic(Device, "Pause");
 			Device->sqState = action;
+
+			// restore volume as/when it has been set to 0 before by LMS
+			for (i = 0; i < MAX_RENDERERS; i++) {
+				struct sMR *p = glMRDevices + i;
+				if (p->Running && (p->Master == Device || p == Device) && p->PauseVolume != -1) {
+					p->Volume = p->PauseVolume;
+					p->PauseVolume = -1;
+					CtrlSetVolume(p, p->Volume, p->seqN++);
+				}
+			}
 			break;
+		}
 		case SQ_VOLUME: {
-			u32_t Volume = *(u16_t*)param;
-			int i;
+			u32_t Volume = *(u16_t*)param, now = gettime_ms();
+			int GroupVolume, i;
+
+			// discard echo commands
+			if (now < Device->VolumeStampRx + 1000) break;
 
 			// calculate volume and check for change
 			for (i = 100; Volume < LMSVolumeMap[i] && i; i--);
-			Volume = (i * Device->Config.MaxVolume) / 100;
-			if (Device->Volume == Volume) break;
-			Device->Volume = Volume;
+			if ((int) Device->Volume == (i * Device->Config.MaxVolume) / 100) break;
+			Volume = i;
 
-			// memorise but do not transmit so that we can compare
-			if (Device->Config.VolumeOnPlay == -1) break;
+			// Sonos group volume API is unreliable, need to create our own
+			GroupVolume = CalcGroupVolume(Device);
 
-			// only transmit while playing
-			if (!Device->Config.VolumeOnPlay || Device->sqState == SQ_PLAY) {
-				u32_t now = gettime_ms();
-				// do not re-send echo commands
+			/* Volume is kept as a double in device's context to avoid relative
+			values going to 0 and being stuck there. This works because although
+			volume is echoed from UPnP event as an integer, timing check allows
+			that echo to be discarded, so until volume is changed locally, it
+			remains a floating value */
 
-				if (now > Device->VolumeStampRx + 1000) {
-					Device->VolumeStampTx = now;
-					if (Device->Volume) {
-						if (Device->Muted) CtrlSetMute(Device, false, Device->seqN++);
-						CtrlSetVolume(Device, Device->Volume, Device->seqN++);
-					} else CtrlSetMute(Device, true, Device->seqN++);
+			// we will send now
+			if (Device->Config.VolumeOnPlay != -1 && (!Device->Config.VolumeOnPlay || Device->sqState == SQ_PLAY))
+				Device->VolumeStampTx = now;
+
+			// update context, and set volume only if authorized
+			if (GroupVolume < 0) {
+				if (!Volume) Device->PauseVolume = Device->Volume;
+				Device->Volume = (Volume * Device->Config.MaxVolume) / 100;
+				if (Device->VolumeStampTx == now) CtrlSetVolume(Device, Device->Volume, Device->seqN++);
+			} else {
+				double Ratio = GroupVolume ? (double) Volume / GroupVolume : 0;
+
+				// for standalone master, GroupVolume equals Device->Volume
+				for (i = 0; i < MAX_RENDERERS; i++) {
+					struct sMR *p = glMRDevices + i;
+					if (!p->Running || (p != Device && p->Master != Device)) continue;
+
+					// when setting to 0, memorize in case this is a pause
+					if (!Volume) p->PauseVolume = p->Volume;
+
+					if (p->Volume && GroupVolume) p->Volume = min(p->Volume * Ratio, p->Config.MaxVolume);
+					else p->Volume = (Volume * p->Config.MaxVolume) / 100;
+
+					if (Device->VolumeStampTx == now) CtrlSetVolume(p, p->Volume, p->seqN++);
 				}
-
-				Device->Muted = (Device->Volume == 0);
 			}
-
 			break;
 		}
 		case SQ_SETNAME:
@@ -501,6 +535,9 @@ static void *MRThread(void *args)
 		p->TrackPoll += elapsed;
 		if (p->InfoExPoll != -1) p->InfoExPoll += elapsed;
 
+		// do nothing if we are a slave
+		if (p->Master) goto sleep;
+
 		// was just waiting for a short track to end
 		if (p->ShortTrackWait > 0 && ((p->ShortTrackWait -= elapsed) < 0)) {
 			LOG_WARN("[%p]: stopping on short track timeout", p);
@@ -532,13 +569,7 @@ static void *MRThread(void *args)
 		}
 
 		if (!p->on || (p->sqState == SQ_STOP && p->State == STOPPED) ||
-			 p->ErrorCount > MAX_ACTION_ERRORS ||
-			 p->WaitCookie) {
-
-			pthread_mutex_unlock(&p->Mutex);
-			last = gettime_ms();
-			continue;
-		}
+			 p->ErrorCount > MAX_ACTION_ERRORS || p->WaitCookie) goto sleep;
 
 		// get track position & CurrentURI
 		if (p->TrackPoll >= TRACK_POLL) {
@@ -554,6 +585,7 @@ static void *MRThread(void *args)
 			AVTCallAction(p, "GetTransportInfo", p->seqN++);
 		}
 
+sleep:
 		pthread_mutex_unlock(&p->Mutex);
 		last = gettime_ms();
 	}
@@ -674,23 +706,22 @@ static bool _ProcessQueue(struct sMR *Device)
 /*----------------------------------------------------------------------------*/
 static void _ProcessVolume(char *Volume, struct sMR* Device)
 {
-	u16_t UPnPVolume;
-	int GroupVolume = GetGroupVolume(Device);
+	int UPnPVolume = atoi(Volume), GroupVolume;
 	u32_t now = gettime_ms();
+	struct sMR *Master = Device->Master ? Device->Master : Device;
 
 	/*
 	ASSUMING DEVICE'S MUTEX LOCKED
 	*/
 
-	UPnPVolume = (GroupVolume > 0) ? GroupVolume : atoi(Volume);
-
-	LOG_SDEBUG("[%p]: Volume %s", Device, Volume);
-
-	if (UPnPVolume != Device->Volume && now > Device->VolumeStampTx + 1000) {
-		LOG_INFO("[%p]: UPnP Volume local change %d", Device, UPnPVolume);
-		UPnPVolume =  (UPnPVolume * 100) / Device->Config.MaxVolume;
-		Device->VolumeStampRx = gettime_ms();
-		sq_notify(Device->SqueezeHandle, Device, SQ_VOLUME, NULL, &UPnPVolume);
+	if (UPnPVolume != (int) Device->Volume && now > Master->VolumeStampTx + 1000) {
+		u16_t ScaledVolume;
+		Device->Volume = UPnPVolume;
+		Master->VolumeStampRx = now;
+		GroupVolume = CalcGroupVolume(Master);
+		LOG_INFO("[%p]: UPnP Volume local change %d:%d (%s)", Device, UPnPVolume, GroupVolume, Device->Master ? "slave": "master");
+		ScaledVolume = GroupVolume < 0 ? (UPnPVolume * 100) / Device->Config.MaxVolume : GroupVolume;
+		sq_notify(Master->SqueezeHandle, Master, SQ_VOLUME, NULL, &ScaledVolume);
 	}
 }
 
@@ -722,7 +753,7 @@ static void ProcessEvent(Upnp_EventType EventType, void *_Event, void *Cookie)
 
 	LastChange = XMLGetFirstDocumentItem(VarDoc, "LastChange", true);
 
-	if (!Device->on || !Device->SqueezeHandle || !LastChange) {
+	if (((!Device->on || !Device->SqueezeHandle) && !Device->Master) || !LastChange) {
 		LOG_SDEBUG("device off, no squeezebox device (yet) or not change for %s", Event->Sid);
 		pthread_mutex_unlock(&Device->Mutex);
 		NFREE(LastChange);
@@ -1058,7 +1089,7 @@ static void *UpdateThread(void *args)
 			// device keepalive or search response
 			} else if (Update->Type == DISCOVERY) {
 				IXML_Document *DescDoc = NULL;
-				char *UDN = NULL, *ModelName = NULL, *ProtoInfo = NULL;
+				char *UDN = NULL, *ModelName = NULL;
 				int i, rc;
 
 				// it's a Sonos group announce, just do a targeted search and exit
@@ -1075,16 +1106,44 @@ static void *UpdateThread(void *args)
 				for (i = 0; i < MAX_RENDERERS; i++) {
 					Device = glMRDevices + i;
 					if (Device->Running && !strcmp(Device->DescDocURL, Update->Data)) {
-						// special case for Sonos: remove non-master players
-						if (!isMaster(Device->UDN, &Device->Service[TOPOLOGY_IDX], NULL)) {
+						char *friendlyName = NULL;
+						struct sMR *Master = GetMaster(Device, &friendlyName);
+
+						Device->LastSeen = now;
+						LOG_DEBUG("[%p] UPnP keep alive: %s", Device, Device->friendlyName);
+
+						// we are a master (or not a Sonos)
+						if (!Master && Device->Master) {
+							// leaving a group
+							char **MimeTypes = ParseProtocolInfo(Device->Sink, Device->Config.ForcedMimeTypes);
+
+							LOG_INFO("[%p]: Sonos %s is now master", Device, Device->friendlyName);
+
 							pthread_mutex_lock(&Device->Mutex);
-							LOG_INFO("[%p]: remove Sonos slave: %s", Device, Device->friendlyName);
+
+							Device->Master = NULL;
+							Device->SqueezeHandle = sq_reserve_device(Device, Device->on, MimeTypes, &sq_callback);
+							if (!*(Device->sq_config.name)) strcpy(Device->sq_config.name, Device->friendlyName);
+							sq_run_device(Device->SqueezeHandle, &Device->sq_config);
+
+							for (i = 0; MimeTypes[i]; i++) free(MimeTypes[i]);
+							free(MimeTypes);
+
+							pthread_mutex_unlock(&Device->Mutex);
+						} else if (Master && (!Device->Master || Device->Master == Device)) {
+							// joining a group as slave
+							LOG_INFO("[%p]: Sonos %s is now slave", Device, Device->friendlyName);
+
+							pthread_mutex_lock(&Device->Mutex);
+
+							Device->Master = Master;
 							sq_delete_device(Device->SqueezeHandle);
-							DelMRDevice(Device);
-						} else {
-							Device->LastSeen = now;
-							LOG_DEBUG("[%p] UPnP keep alive: %s", Device, Device->friendlyName);
+							Device->SqueezeHandle = 0;
+
+							pthread_mutex_unlock(&Device->Mutex);
 						}
+
+						NFREE(friendlyName);
 						goto cleanup;
 					}
 				}
@@ -1120,8 +1179,8 @@ static void *UpdateThread(void *args)
 
 				Device = &glMRDevices[i];
 
-				if (AddMRDevice(Device, UDN, DescDoc, Update->Data, &ProtoInfo) && !glDiscovery) {
-					char **MimeTypes = ParseProtocolInfo(ProtoInfo, Device->Config.ForcedMimeTypes);
+				if (AddMRDevice(Device, UDN, DescDoc, Update->Data) && !glDiscovery) {
+					char **MimeTypes = ParseProtocolInfo(Device->Sink, Device->Config.ForcedMimeTypes);
 					// create a new slimdevice
 					Device->SqueezeHandle = sq_reserve_device(Device, Device->on, MimeTypes, &sq_callback);
 					if (!*(Device->sq_config.name)) strcpy(Device->sq_config.name, Device->friendlyName);
@@ -1140,7 +1199,6 @@ static void *UpdateThread(void *args)
 					SaveConfig(glConfigName, glConfigID, false);
 				}
 cleanup:
-				NFREE(ProtoInfo);
 				NFREE(UDN);
 				NFREE(ModelName);
 				if (DescDoc) ixmlDocument_free(DescDoc);
@@ -1190,7 +1248,7 @@ static void *MainThread(void *args)
 
 
 /*----------------------------------------------------------------------------*/
-static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, const char *location, char **Sink)
+static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, const char *location)
 {
 	char *friendlyName = NULL;
 	unsigned long mac_size = 6;
@@ -1213,21 +1271,25 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 
 	LOG_SDEBUG("UDN:\t%s\nFriendlyName:\t%s", UDN, friendlyName);
 
-	Device->SqueezeHandle 	= 0;
-	Device->ErrorCount 		= 0;
 	Device->Magic 			= MAGIC;
-	Device->Muted 			= true;	//assume device is muted
 	Device->sqState 		= SQ_STOP;
 	Device->State			= STOPPED;
+	Device->InfoExPoll 		= -1;
+	Device->Volume 			= -1;
+	Device->PauseVolume		= -1;
+	Device->VolumeStampRx 	= Device->VolumeStampTx = gettime_ms() - 2000;
+	Device->LastSeen		= gettime_ms() / 1000;
+
+	// all this is set to 0 by memset ...
+	Device->SqueezeHandle 	= 0;
+	Device->ErrorCount 		= 0;
 	Device->WaitCookie 		= Device->StartCookie = NULL;
 	Device->seqN			= NULL;
 	Device->TrackPoll 		= Device->StatePoll = 0;
-	Device->InfoExPoll 		= -1;
-	Device->Volume 			= 0xff;
-	Device->VolumeStampRx 	= Device->VolumeStampTx = gettime_ms() - 2000;
 	Device->Actions 		= NULL;
 	Device->NextURI 		= Device->NextProtoInfo = NULL;
-	Device->LastSeen		= gettime_ms() / 1000;
+	Device->Master			= NULL;
+	Device->Sink 			= NULL;
 
 	if (Device->sq_config.roon_mode) {
 		Device->on = true;
@@ -1275,13 +1337,13 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 		NFREE(ServiceURL);
 	}
 
-	if (!isMaster(UDN, &Device->Service[TOPOLOGY_IDX], &friendlyName) ) {
-		LOG_DEBUG("[%p] skipping Sonos slave %s", Device, friendlyName);
-		NFREE(friendlyName);
-		return false;
-	}
+	Device->Master = GetMaster(Device, &friendlyName);
 
-	LOG_INFO("[%p]: adding renderer (%s)", Device, friendlyName);
+	if (Device->Master) {
+		LOG_INFO("[%p] skipping Sonos slave %s", Device, friendlyName);
+	} else {
+		LOG_INFO("[%p]: adding renderer (%s)", Device, friendlyName);
+	}
 
 	// set remaining items now that we are sure
 	Device->Running 	= true;
@@ -1300,13 +1362,13 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	}
 
 	// get the protocol info
-	if ((*Sink = GetProtocolInfo(Device)) == NULL) {
+	if ((Device->Sink = GetProtocolInfo(Device)) == NULL) {
 		LOG_WARN("[%p] unable to get protocol info, set <forced_mimetypes>", Device);
-		*Sink = strdup("");
+		Device->Sink = strdup("");
 	}
 	// only check codecs in thru mode
 	if (strcasestr(Device->sq_config.mode, "thru"))
-		CheckCodecs(Device->sq_config.codecs, *Sink, Device->Config.ForcedMimeTypes);
+		CheckCodecs(Device->sq_config.codecs, Device->Sink, Device->Config.ForcedMimeTypes);
 
 	MakeMacUnique(Device);
 
@@ -1316,7 +1378,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 		UpnpSubscribeAsync(glControlPointHandle, Device->Service[i].EventURL,
 						   Device->Service[i].TimeOut, MasterHandler,
 						   (void*) strdup(UDN));
-	return true;
+	return (Device->Master == NULL);
 }
 
 

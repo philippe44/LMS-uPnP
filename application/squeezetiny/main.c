@@ -646,7 +646,7 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 			}
 			break;
 		case SQ_VOLUME: {
-			sprintf(cmd, "%s mixer volume %d", ctx->cli_id, *((u16_t*) param));
+			sprintf(cmd, "%s mixer volume %d", ctx->cli_id, *(u16_t*) param);
 			rsp = cli_send_cmd(cmd, false, true, ctx);
 			NFREE(rsp);
 			break;

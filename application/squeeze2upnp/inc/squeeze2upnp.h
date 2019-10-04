@@ -97,13 +97,14 @@ struct sMR {
 	int	 			SqueezeHandle;
 	struct sService Service[NB_SRV];
 	struct sAction	*Actions;
+	struct sMR		*Master;
 	pthread_mutex_t Mutex;
 	pthread_t 		Thread;
-	u8_t			Volume;
+	double			Volume, PauseVolume;
 	u32_t			VolumeStampRx, VolumeStampTx;	// timestamps to filter volume loopbacks
-	bool			Muted;
 	u16_t			ErrorCount;                     // UPnP protocol error count
 	u32_t			LastSeen;						// presence timeout for player which went dark
+	char			*Sink;
 };
 
 extern UpnpClient_Handle   	glControlPointHandle;

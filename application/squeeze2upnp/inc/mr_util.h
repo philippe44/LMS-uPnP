@@ -26,7 +26,8 @@
 
 void 			FlushMRDevices(void);
 void 			DelMRDevice(struct sMR *p);
-bool 			isMaster(char *UDN, struct sService *Service, char **Name);
+struct sMR*		GetMaster(struct sMR *Device, char **Name);
+int 			CalcGroupVolume(struct sMR *Master);
 void 			BusyRaise(struct sMR *Device);
 void 			BusyDrop(struct sMR *Device);
 bool 			CheckAndLock(struct sMR *Device);

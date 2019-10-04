@@ -1,3 +1,8 @@
+1.25.0
+ - do not delete Sonos context when group is created to manage volume
+ - volume is now a double to allow scaling in groups
+ - do not use mute anymore when paused, let volume go to 0 and then restore it
+  
 1.20.2
  - use correct 'os' and 'osName' for freebsd
  
