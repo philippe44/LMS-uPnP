@@ -96,18 +96,8 @@ tMRConfig			glMRConfig = {
 							"",      		// ForcedMimeTypes
 					};
 
-static u8_t LMSVolumeMap[101] = {
-				0, 1, 1, 1, 2, 2, 2, 3,  3,  4,
-				5, 5, 6, 6, 7, 8, 9, 9, 10, 11,
-				12, 13, 14, 15, 16, 16, 17, 18, 19, 20,
-				22, 23, 24, 25, 26, 27, 28, 29, 30, 32,
-				33, 34, 35, 37, 38, 39, 40, 42, 43, 44,
-				46, 47, 48, 50, 51, 53, 54, 56, 57, 59,
-				60, 61, 63, 65, 66, 68, 69, 71, 72, 74,
-				75, 77, 79, 80, 82, 84, 85, 87, 89, 90,
-				92, 94, 96, 97, 99, 101, 103, 104, 106, 108, 110,
-				112, 113, 115, 117, 119, 121, 123, 125, 127, 128
-			};
+static u8_t LMSVolumeMap[129] = {
+		};
 
 sq_dev_param_t glDeviceParam = {
 					HTTP_CHUNKED, 	 		// stream_length
@@ -448,16 +438,14 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 			break;
 		}
 		case SQ_VOLUME: {
-			u32_t Volume = *(u16_t*)param, now = gettime_ms();
+			u32_t Volume = LMSVolumeMap[*(u16_t*)param], now = gettime_ms();
 			int GroupVolume, i;
 
 			// discard echo commands
 			if (now < Device->VolumeStampRx + 1000) break;
 
 			// calculate volume and check for change
-			for (i = 100; Volume < LMSVolumeMap[i] && i; i--);
-			if ((int) Device->Volume == (i * Device->Config.MaxVolume) / 100) break;
-			Volume = i;
+			if ((int) Device->Volume == (Volume * Device->Config.MaxVolume) / 100) break;
 
 			// Sonos group volume API is unreliable, need to create our own
 			GroupVolume = CalcGroupVolume(Device);
