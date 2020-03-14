@@ -1161,7 +1161,7 @@ static void *UpdateThread(void *args)
 				UDN = XMLGetFirstDocumentItem(DescDoc, "UDN", true);
 
 				// excluded device
-				if (isExcluded(ModelName)) {
+				if (ModelName && isExcluded(ModelName)) {
 					goto cleanup;
 				}
 

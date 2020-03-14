@@ -1,5 +1,8 @@
+1.26.1
+ - protect a few XMLFirstItem sdearch against faulty players that return NULL
+ 
 1.26.0
- - Increase LMS max version
+ - increase LMS max version
 
 1.25.1
  - tabulate volume conversion

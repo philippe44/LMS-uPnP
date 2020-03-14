@@ -68,7 +68,12 @@
 	</profile>
 	<profile name='Raumfeld'>
 		<codecs>pcm,flc,mp3</codecs>
-	</profile>	<profile name='Roku SoundBridge'>		<stream_length>-1</stream_length>		<codecs>pcm,mp3</codecs>		<raw_audio_format>raw,wav,aiff</raw_audio_format>	</profile>
+	</profile>
+	<profile name='Roku SoundBridge'>
+		<stream_length>-1</stream_length>
+		<codecs>pcm,mp3</codecs>
+		<raw_audio_format>raw,wav,aiff</raw_audio_format>
+	</profile>
 	<profile name='Pioneer'>
 		<sample_rate>192000</sample_rate>
 		<raw_audio_format>raw,wav,aiff</raw_audio_format>
@@ -110,4 +115,3 @@
 		<L24_format>0</L24_format>
 	</profile>				
 </squeeze2upnp>
-
