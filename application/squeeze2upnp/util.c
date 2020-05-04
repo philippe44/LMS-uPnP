@@ -530,13 +530,14 @@ int XMLAddAttribute(IXML_Document *doc, IXML_Node *parent, char *name, char *fmt
 
 
 /*----------------------------------------------------------------------------*/
-bool XMLMatchDocumentItem(IXML_Document *doc, const char *item, const char *s)
+bool XMLMatchDocumentItem(IXML_Document *doc, const char *item, const char *s, bool match)
 {
 	IXML_NodeList *nodeList = NULL;
 	IXML_Node *textNode = NULL;
 	IXML_Node *tmpNode = NULL;
 	int i;
 	bool ret = false;
+	const char *value;
 
 	nodeList = ixmlDocument_getElementsByTagName(doc, (char *)item);
 
@@ -545,7 +546,8 @@ bool XMLMatchDocumentItem(IXML_Document *doc, const char *item, const char *s)
 		if (!tmpNode) continue;
 		textNode = ixmlNode_getFirstChild(tmpNode);
 		if (!textNode) continue;
-		if (!strcmp(ixmlNode_getNodeValue(textNode), s)) {
+		value = ixmlNode_getNodeValue(textNode);
+		if ((match && !strcmp(value, s)) || (!match && strcasestr(value, s))) {
 			ret = true;
 			break;
 		}

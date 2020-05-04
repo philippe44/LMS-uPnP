@@ -1,5 +1,8 @@
+1.27.0
+ - search for mediarenderer:2 as well (x2 number of searches)
+
 1.26.1
- - protect a few XMLFirstItem sdearch against faulty players that return NULL
+ - protect a few XMLFirstItem search against faulty players that return NULL
  
 1.26.0
  - increase LMS max version

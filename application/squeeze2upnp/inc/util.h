@@ -73,7 +73,7 @@ int 	   	XMLFindAndParseService(IXML_Document *DescDoc, const char *location,
 								   const char *serviceTypeBase, char **serviceId,
 								   char **serviceType, char **eventURL,
 								   char **controlURL, char **serviceURL);
-bool 		XMLMatchDocumentItem(IXML_Document *doc, const char *item, const char *s);
+bool 		XMLMatchDocumentItem(IXML_Document *doc, const char *item, const char *s, bool match);
 bool 		XMLFindAction(const char *base, char *service, char *action);
 
 void 	   	uPNPLogLevel(log_level level);

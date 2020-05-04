@@ -150,7 +150,7 @@ typedef struct sUpdate {
 /*----------------------------------------------------------------------------*/
 /* consts or pseudo-const*/
 /*----------------------------------------------------------------------------*/
-static const char 	MEDIA_RENDERER[] 	= "urn:schemas-upnp-org:device:MediaRenderer:1";
+#define MEDIA_RENDERER "urn:schemas-upnp-org:device:MediaRenderer"
 
 static const struct cSearchedSRV_s
 {
@@ -953,8 +953,14 @@ int MasterHandler(Upnp_EventType EventType, void *_Event, void *Cookie)
 			pthread_cond_signal(&glUpdateCond);
 
 			// if there is a cookie, it's a targeted Sonos search
-			if (!Cookie)
-				UpnpSearchAsync(glControlPointHandle, DISCOVERY_TIME, MEDIA_RENDERER, NULL);
+			if (!Cookie) {
+				static int Version;
+				char *SearchTopic;
+
+				asprintf(&SearchTopic, "%s:%i", MEDIA_RENDERER, (Version++ & 0x01) + 1);
+				UpnpSearchAsync(glControlPointHandle, DISCOVERY_TIME, SearchTopic, NULL);
+				free(SearchTopic);
+			}
 
 			break;
 		}
@@ -1153,7 +1159,7 @@ static void *UpdateThread(void *args)
 				}
 
 				// not a media renderer but maybe a Sonos group update
-				if (!XMLMatchDocumentItem(DescDoc, "deviceType", MEDIA_RENDERER)) {
+				if (!XMLMatchDocumentItem(DescDoc, "deviceType", MEDIA_RENDERER, false)) {
 					goto cleanup;
 				}
 
@@ -1460,7 +1466,8 @@ static bool Start(void)
 	pthread_create(&glMainThread, NULL, &MainThread, NULL);
 	pthread_create(&glUpdateThread, NULL, &UpdateThread, NULL);
 
-	UpnpSearchAsync(glControlPointHandle, DISCOVERY_TIME, MEDIA_RENDERER, NULL);
+	UpnpSearchAsync(glControlPointHandle, DISCOVERY_TIME, MEDIA_RENDERER ":1", NULL);
+	UpnpSearchAsync(glControlPointHandle, DISCOVERY_TIME, MEDIA_RENDERER ":2", NULL);
 
 	return true;
 }
