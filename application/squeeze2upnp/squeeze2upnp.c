@@ -496,6 +496,11 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 		}
 		case SQ_SETNAME:
 			strcpy(Device->sq_config.name, param);
+			if (glAutoSaveConfigFile) {
+				pthread_mutex_lock(&glUpdateMutex);
+				SaveConfig(glConfigName, glConfigID, false);
+				pthread_mutex_unlock(&glUpdateMutex);
+			}
 			break;
 		case SQ_SETSERVER:
 			strcpy(Device->sq_config.set_server, inet_ntoa(*(struct in_addr*) param));
@@ -1047,10 +1052,10 @@ static void *UpdateThread(void *args)
 {
 	while (glMainRunning) {
 		tUpdate *Update;
+		bool updated = false;
 
 		pthread_mutex_lock(&glUpdateMutex);
 		pthread_cond_wait(&glUpdateCond, &glUpdateMutex);
-		pthread_mutex_unlock(&glUpdateMutex);
 
 		for (; glMainRunning && (Update = QueueExtract(&glUpdateQueue)) != NULL; FreeUpdate(Update)) {
 			struct sMR *Device;
@@ -1116,6 +1121,23 @@ static void *UpdateThread(void *args)
 						Device->LastSeen = now;
 						LOG_DEBUG("[%p] UPnP keep alive: %s", Device, Device->friendlyName);
 
+						// check for name change
+						UpnpDownloadXmlDoc(Update->Data, &DescDoc);
+						if (!friendlyName) friendlyName = XMLGetFirstDocumentItem(DescDoc, "friendlyName", true);
+						if (friendlyName && strcmp(friendlyName, Device->friendlyName)) {
+							// only update if LMS has not set its own name
+							if (!strcmp(Device->sq_config.name, Device->friendlyName)) {
+								// by notifying LMS, we'll get an update later
+								sq_notify(Device->SqueezeHandle, Device, SQ_SETNAME, NULL, friendlyName);
+							}
+
+							updated = true;
+							LOG_INFO("[%p]: Name update %s => %s (LMS:%s)", Device, Device->friendlyName, friendlyName, Device->sq_config.name);
+							strcpy(Device->friendlyName, friendlyName);
+						}
+
+						NFREE(friendlyName);
+
 						// we are a master (or not a Sonos)
 						if (!Master && Device->Master) {
 							// leaving a group
@@ -1147,7 +1169,6 @@ static void *UpdateThread(void *args)
 							pthread_mutex_unlock(&Device->Mutex);
 						}
 
-						NFREE(friendlyName);
 						goto cleanup;
 					}
 				}
@@ -1182,6 +1203,7 @@ static void *UpdateThread(void *args)
 				}
 
 				Device = &glMRDevices[i];
+				updated = true;
 
 				if (AddMRDevice(Device, UDN, DescDoc, Update->Data) && !glDiscovery) {
 					char **MimeTypes = ParseProtocolInfo(Device->Sink, Device->Config.ForcedMimeTypes);
@@ -1198,16 +1220,20 @@ static void *UpdateThread(void *args)
 					free(MimeTypes);
 				}
 
-				if (glAutoSaveConfigFile || glDiscovery) {
-					LOG_DEBUG("Updating configuration %s", glConfigName);
+cleanup:
+				if (updated && (glAutoSaveConfigFile || glDiscovery)) {
+					LOG_DEBUG("Updating configuration %s", glConfigName);
 					SaveConfig(glConfigName, glConfigID, false);
 				}
-cleanup:
+
 				NFREE(UDN);
 				NFREE(ModelName);
 				if (DescDoc) ixmlDocument_free(DescDoc);
 			}
 		}
+
+		// now release the update mutex (will be locked/unlocked)
+		pthread_mutex_unlock(&glUpdateMutex);
 	}
 
 	return NULL;

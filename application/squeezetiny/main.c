@@ -721,6 +721,12 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 			}
 			break;
 		}
+		case SQ_SETNAME: {
+			sprintf(cmd, "%s name %s", ctx->cli_id, (char*) param);
+			rsp = cli_send_cmd(cmd, false, false, ctx);
+			NFREE(rsp);
+			break;
+		}
 		default:
 			LOG_WARN("[%p]: unknown notification %u", event);
 			break;

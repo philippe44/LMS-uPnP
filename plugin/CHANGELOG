@@ -1,3 +1,6 @@
+1.28.0
+ - Reflect UPnP player name change to LMS, unless LMS has set its own name
+ 
 1.27.0
  - search for mediarenderer:2 as well (x2 number of searches)
 

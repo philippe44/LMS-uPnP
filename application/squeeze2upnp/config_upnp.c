@@ -119,7 +119,7 @@ void SaveConfig(char *name, void *ref, bool full)
 			ixmlDocument_importNode(doc, dev_node, true, &dev_node);
 			ixmlNode_appendChild((IXML_Node*) root, dev_node);
 
-			XMLUpdateNode(doc, dev_node, false, "friendly_name", p->friendlyName);
+			XMLUpdateNode(doc, dev_node, true, "friendly_name", p->friendlyName);
 			XMLUpdateNode(doc, dev_node, true, "name", p->sq_config.name);
 			if (*p->sq_config.set_server) XMLUpdateNode(doc, dev_node, true, "server", p->sq_config.set_server);
 		}
