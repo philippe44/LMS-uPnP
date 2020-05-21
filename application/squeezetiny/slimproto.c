@@ -1015,10 +1015,9 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 	out->remote = info.metadata.remote;
 
 	// read source parameters (if any)
-	if (format != 'a')
-		out->sample_size = (size != '?') ? pcm_sample_size[size - '0'] : 0;
-	else
-		out->sample_size = size;
+	if (size == '?') out->sample_size = 0;
+	else if (format == 'a' || format == 'd' || format == 'f') out->sample_size = size;
+	else out->sample_size = pcm_sample_size[size - '0'];
 	out->sample_rate = (rate != '?') ? pcm_sample_rate[rate - '0'] : 0;
 	if (ctx->output.sample_rate > ctx->config.sample_rate) {
 		 LOG_WARN("[%p]: Sample rate %u error suspected, forcing to %u", ctx, out->sample_rate, ctx->config.sample_rate);
@@ -1101,12 +1100,14 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 				if (out->sample_size == '0') options = "dsf";
 				else if (out->sample_size == '1') options = "dff";
 				else options = "dsd";
+			} else if (out->codec == 'f' && out->sample_size == 'o') {
+				options = "ogg";
 			} else options = NULL;
 
 			mimetype = find_mimetype(out->codec, ctx->mimetypes, options);
 
 			if (out->codec == 'a' && out->sample_size == '5' && mimetype && strstr(mimetype, "aac")) out->codec = '4';
-			else if (out->codec == 'f') out->codec ='c';
+			else if (out->codec == 'f' && out->sample_size != 'o') out->codec ='c';
 			else out->codec = '*';
 		}
 

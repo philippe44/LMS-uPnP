@@ -162,20 +162,21 @@ char *mimetype2ext(char *mimetype)
 {
 	if (!mimetype) return "";
 
-	if (strstr(mimetype, "wav")) return "wav";
+	if (strstr(mimetype, "audio/wav")) return "wav";
 	if (strstr(mimetype, "audio/L") || mimetype[0] == '*') return "pcm";
-	if (strstr(mimetype, "flac")) return "flac";
-	if (strstr(mimetype, "flc")) return "flc";
-	if (strstr(mimetype, "mp3") || strstr(mimetype, "mpeg")) return "mp3";
-	if (strstr(mimetype, "ogg") && strstr(mimetype, "codecs=opus")) return "ops";
-	if (strstr(mimetype, "ogg")) return "ogg";
-	if (strstr(mimetype, "aif")) return "aif";
-	if (strstr(mimetype, "aac")) return "aac";
-	if (strstr(mimetype, "mp4")) return "mp4";
-	if (strstr(mimetype, "m4a")) return "m4a";
-	if (strstr(mimetype, "dsd")) return "dsd";
-	if (strstr(mimetype, "dsf")) return "dsf";
-	if (strstr(mimetype, "dff")) return "dff";
+	if (strstr(mimetype, "audio/flac")) return "flac";
+	if (strstr(mimetype, "audio/flc")) return "flc";
+	if (strstr(mimetype, "audio/mp3") || strstr(mimetype, "mpeg")) return "mp3";
+	if (strstr(mimetype, "audio/ogg") && strstr(mimetype, "codecs=opus")) return "ops";
+	if (strstr(mimetype, "audio/ogg") && strstr(mimetype, "codecs=flac")) return "ogg";
+	if (strstr(mimetype, "audio/ogg")) return "ogg";
+	if (strstr(mimetype, "audio/aif")) return "aif";
+	if (strstr(mimetype, "audio/aac")) return "aac";
+	if (strstr(mimetype, "audio/mp4")) return "mp4";
+	if (strstr(mimetype, "audio/m4a")) return "m4a";
+	if (strstr(mimetype, "audio/dsd")) return "dsd";
+	if (strstr(mimetype, "audio/dsf")) return "dsf";
+	if (strstr(mimetype, "audio/dff")) return "dff";
 
 	return "nil";
 
@@ -191,6 +192,7 @@ u8_t mimetype2format(char *mimetype)
 	if (strstr(mimetype, "flac") || strstr(mimetype, "flc")) return 'f';
 	if (strstr(mimetype, "mp3") || strstr(mimetype, "mpeg")) return 'm';
 	if (strstr(mimetype, "ogg") && strstr(mimetype, "codecs=opus")) return 'u';
+	if (strstr(mimetype, "ogg") && strstr(mimetype, "codecs=flac")) return 'f';
 	if (strstr(mimetype, "ogg")) return 'o';
 	if (strstr(mimetype, "aif")) return 'i';
 	if (strstr(mimetype, "aac")) return 'a';

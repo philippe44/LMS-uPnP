@@ -1,3 +1,6 @@
+1.30.0
+ - add OggFlac
+
 1.28.0
  - Reflect UPnP player name change to LMS, unless LMS has set its own name
  

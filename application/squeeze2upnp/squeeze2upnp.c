@@ -113,7 +113,7 @@ sq_dev_param_t glDeviceParam = {
 					HTTP_CHUNKED, 	 		// stream_length
 					STREAMBUF_SIZE,			// stream_buffer_size
 					OUTPUTBUF_SIZE,			// output_buffer_size
-					"aac,ogg,ops,flc,alc,aif,pcm,mp3",		// codecs
+					"aac,ogg,ops,ogf,flc,alc,aif,pcm,mp3",		// codecs
 					"thru",					// mode
 					"raw,wav,aif",			// raw_audio_format
 					"?",                    // server
