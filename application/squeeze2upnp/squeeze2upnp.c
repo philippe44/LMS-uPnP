@@ -60,6 +60,8 @@
 
 #define SHORT_TRACK		(10*1000)
 
+#define MODEL_NAME_STRING	"UPnPBridge"
+
 enum { NEXT_FORCE = -1, NEXT_GAPPED = 0, NEXT_GAPLESS = 1 };
 
 /*----------------------------------------------------------------------------*/
@@ -188,6 +190,7 @@ static char 			glIPaddress[128] = "";
 static void				*glConfigID = NULL;
 static char				glConfigName[_STR_LEN_] = "./config.xml";
 static char				*glExcluded = "Squeezebox";
+static char				glModelName[_STR_LEN_] = MODEL_NAME_STRING;
 
 static char usage[] =
 			VERSION "\n"
@@ -201,7 +204,7 @@ static char usage[] =
 		   "  -f <logfile>\t\tWrite debug to logfile\n"
 		   "  -p <pid file>\t\twrite PID in file\n"
 		   "  -d <log>=<level>\tSet logging level, logs: all|slimproto|slimmain|stream|decode|output|web|main|util|upnp, level: error|warn|info|debug|sdebug\n"
-
+			"  -M <modelname>\tSet the squeezelite player model name sent to the server (default: " MODEL_NAME_STRING ")\n"
 #if LINUX || FREEBSD
 		   "  -z \t\t\tDaemonize\n"
 #endif
@@ -1470,7 +1473,7 @@ static bool Start(void)
 	if (!*glIPaddress) strcpy(glIPaddress, UpnpGetServerIpAddress());
 	if (!glPort) glPort = UpnpGetServerPort();
 
-	sq_init(glIPaddress, glPort);
+	sq_init(glIPaddress, glPort, glModelName);
 
 	rc = UpnpRegisterClient(MasterHandler, NULL, &glControlPointHandle);
 
@@ -1592,7 +1595,7 @@ bool ParseArgs(int argc, char **argv) {
 
 	while (optind < argc && strlen(argv[optind]) >= 2 && argv[optind][0] == '-') {
 		char *opt = argv[optind] + 1;
-		if (strstr("stxdfpibc", opt) && optind < argc - 1) {
+		if (strstr("stxdfpibcM", opt) && optind < argc - 1) {
 			optarg = argv[optind + 1];
 			optind += 2;
 		} else if (strstr("tzZIk", opt)) {
@@ -1609,6 +1612,9 @@ bool ParseArgs(int argc, char **argv) {
 			break;
 		case 's':
 			strcpy(glDeviceParam.server, optarg);
+			break;
+		case 'M':
+			strcpy(glModelName, optarg);
 			break;
 		case 'b':
 			strcpy(glUPnPSocket, optarg);

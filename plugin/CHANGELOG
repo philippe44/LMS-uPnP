@@ -1,3 +1,6 @@
+1.31.0
+ - global model_name can be set (only on command line using -M) and default to UPnPBridge
+ 
 1.30.0
  - add OggFlac
 

@@ -105,7 +105,7 @@ struct track_param
 
 typedef bool (*sq_callback_t)(sq_dev_handle_t handle, void *caller_id, sq_action_t action, u8_t *cookie, void *param);
 
-void				sq_init(char *ip, u16_t port);
+void				sq_init(char *ip, u16_t port, char *model_name);
 void				sq_stop(void);
 
 // only name cannot be NULL

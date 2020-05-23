@@ -222,7 +222,7 @@ static void LoadGlobalItem(char *name, char *val)
 	if (!strcmp(name, "upnp_log")) upnp_loglevel = debug2level(val);
 	if (!strcmp(name, "util_log")) util_loglevel = debug2level(val);
 	if (!strcmp(name, "log_limit")) glLogLimit = atol(val);
- }
+}
 
 
 /*----------------------------------------------------------------------------*/

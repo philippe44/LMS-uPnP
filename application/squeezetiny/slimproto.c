@@ -111,31 +111,34 @@ void send_packet(u8_t *packet, size_t len, sockfd sock) {
 }
 
 /*---------------------------------------------------------------------------*/
-static void sendHELO(bool reconnect, const char *fixed_cap, const char *var_cap, u8_t mac[6], struct thread_ctx_s *ctx) {
-	const char *base_cap =
+static void sendHELO(bool reconnect, struct thread_ctx_s *ctx) {
+	char *base_cap;
+	struct HELO_packet pkt;
+
+	asprintf(&base_cap,
 #if USE_SSL
 	"CanHTTPS=1,"
 #endif
-	"Model=squeezelite,ModelName=SqueezeLite,AccuratePlayPoints=0,HasDigitalOut=1";
-	struct HELO_packet pkt;
+	"Model=squeezelite,ModelName=%s,AccuratePlayPoints=0,HasDigitalOut=1", sq_model_name);
 
 	memset(&pkt, 0, sizeof(pkt));
 	memcpy(&pkt.opcode, "HELO", 4);
-	pkt.length = htonl(sizeof(struct HELO_packet) - 8 + strlen(base_cap) + strlen(fixed_cap) + strlen(var_cap));
+	pkt.length = htonl(sizeof(struct HELO_packet) - 8 + strlen(base_cap) + strlen(ctx->fixed_cap) + strlen(ctx->var_cap));
 	pkt.deviceid = 12; // squeezeplay
 	pkt.revision = 0;
 	packn(&pkt.wlan_channellist, reconnect ? 0x4000 : 0x0000);
 	packN(&pkt.bytes_received_H, (u64_t)ctx->status.stream_bytes >> 32);
 	packN(&pkt.bytes_received_L, (u64_t)ctx->status.stream_bytes & 0xffffffff);
-	memcpy(pkt.mac, mac, 6);
+	memcpy(pkt.mac, ctx->config.mac, 6);
 
 	LOG_DEBUG("[%p] mac: %02x:%02x:%02x:%02x:%02x:%02x", ctx, pkt.mac[0], pkt.mac[1], pkt.mac[2], pkt.mac[3], pkt.mac[4], pkt.mac[5]);
-	LOG_INFO("[%p] cap: %s%s%s", ctx, base_cap, fixed_cap, var_cap);
+	LOG_INFO("[%p] cap: %s%s%s", ctx, base_cap, ctx->fixed_cap, ctx->var_cap);
 
 	send_packet((u8_t *)&pkt, sizeof(pkt), ctx->sock);
 	send_packet((u8_t *)base_cap, strlen(base_cap), ctx->sock);
-	send_packet((u8_t *)fixed_cap, strlen(fixed_cap), ctx->sock);
-	send_packet((u8_t *)var_cap, strlen(var_cap), ctx->sock);
+	send_packet((u8_t *)ctx->fixed_cap, strlen(ctx->fixed_cap), ctx->sock);
+	send_packet((u8_t *)ctx->var_cap, strlen(ctx->var_cap), ctx->sock);
+	free(base_cap);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -895,7 +898,7 @@ static void slimproto(struct thread_ctx_s *ctx) {
 				ctx->new_server_cap = NULL;
 			}
 
-			sendHELO(reconnect, ctx->fixed_cap, ctx->var_cap, ctx->config.mac, ctx);
+			sendHELO(reconnect, ctx);
 
 			slimproto_run(ctx);
 
