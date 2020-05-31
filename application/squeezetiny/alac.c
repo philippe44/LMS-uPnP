@@ -286,16 +286,16 @@ static decode_state alac_decode(struct thread_ctx_s *ctx) {
 
 	LOCK_S;
 
-		// data not reached yet
-		if (l->consume) {
-			u32_t consume = min(l->consume, _buf_used(ctx->streambuf));
-			LOG_DEBUG("[%p]: consume: %u of %u", ctx, consume, l->consume);
-			_buf_inc_readp(ctx->streambuf, consume);
-			l->pos += consume;
-			l->consume -= consume;
-			UNLOCK_S;
-			return DECODE_RUNNING;
-		}
+	// data not reached yet
+	if (l->consume) {
+		u32_t consume = min(l->consume, _buf_used(ctx->streambuf));
+		LOG_DEBUG("[%p]: consume: %u of %u", ctx, consume, l->consume);
+		_buf_inc_readp(ctx->streambuf, consume);
+		l->pos += consume;
+		l->consume -= consume;
+		UNLOCK_S;
+		return DECODE_RUNNING;
+	}
 
 	if (ctx->decode.new_stream) {
 		int found = 0;

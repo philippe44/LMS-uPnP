@@ -1,3 +1,7 @@
+1.40.0
+ - add 'wav' codec support
+ - add WAV and AIF header parser in PCM
+ 
 1.31.0
  - global model_name can be set (only on command line using -M) and default to UPnPBridge
  

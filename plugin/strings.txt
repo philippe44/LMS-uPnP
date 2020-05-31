@@ -196,12 +196,12 @@ PLUGIN_UPNPBRIDGE_UPNPAUDIOCAPS
 
 PLUGIN_UPNPBRIDGE_UPNPAUDIOCAPS_DESC
 	EN	List the audio capabilities of the UPnP/DLNA player as they will be reported to LMS
-	EN	<br><i>- Codecs:</i> supported codecs. Comma-separated list of <b>lossy</b>:aac,ogg,mp3 <b>lossless</b>:flc,alc 
-	EN	and <b>uncompressed</b>:pcm,aif. When setting these for a specific player, add + or - in front of codec name to
+	EN	<br><i>- Codecs:</i> supported codecs. Comma-separated list of <b>lossy</b>:aac,ogg,ops,mp3 <b>lossless</b>:flc,ogf,alc 
+	EN	and <b>uncompressed</b>:wav,pcm,aif. When setting these for a specific player, add + or - in front of codec name to
 	EN	add to or remove from the default list. If re-encoding is enabled, local decoding will be done by the bridge and 
 	EN	(only mp3,aac,flc,alc,pcm and ogg are supported). If re-encoding is disabled and a listed codec is NOT supported 
 	EN	by the UPnP player, it will be ignored. If re-encoding is enabled, local decoding will be done by the bridge 
-	EN	(only mp3,aac,flc,alc,pcm and ogg are supported)
+	EN	(only mp3,aac,flc,alc,wav,aif,pcm,ogf,ops and ogg are supported)
 	EN	<br><i>- Max sample rate:</i> maximum supported sample rate. This will let LMS decide when to do resampling on
 	EN	the server side.
 	EN	<br>- <i>PCM format:</i> comma-separated list (<b>ordered</b>) of supported uncompressed audio formats (wav, aiff or
