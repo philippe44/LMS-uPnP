@@ -1,3 +1,7 @@
+1.40.1
+ - stop pcm decoder when bytes < bytes_per_frame
+ - set bytes_per_frame in new_stream only
+ 
 1.40.0
  - add 'wav' codec support
  - add WAV and AIF header parser in PCM
