@@ -1,3 +1,6 @@
+1.40.2
+ - bytes_per_frame must be ina  context!
+ 
 1.40.1
  - stop pcm decoder when bytes < bytes_per_frame
  - set bytes_per_frame in new_stream only

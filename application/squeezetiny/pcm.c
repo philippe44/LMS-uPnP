@@ -47,6 +47,10 @@ static log_level *loglevel = &decode_loglevel;
 #define MIN_READ 	4096
 #define MIN_SPACE	(16*1024)
 
+struct pcm {
+	unsigned bytes_per_frame;
+};
+
 /*---------------------------------------------------------------------------*/
 static unsigned check_header(struct thread_ctx_s *ctx) {
 	u8_t *ptr = ctx->streambuf->readp;
@@ -126,15 +130,16 @@ static unsigned check_header(struct thread_ctx_s *ctx) {
 
 /*---------------------------------------------------------------------------*/
 static decode_state pcm_decode(struct thread_ctx_s *ctx) {
-	size_t bytes, in, out, bytes_per_frame, count;
+	size_t bytes, in, out, count;
 	frames_t frames;
+	struct pcm *p = ctx->decode.handle;
 	u8_t *iptr, ibuf[BYTES_PER_FRAME];
 	u32_t *optr;
 
 	LOCK_S;
 	LOCK_O_direct;
 
-	if (ctx->stream.state <= DISCONNECT && _buf_used(ctx->streambuf) < bytes_per_frame) {
+	if (ctx->stream.state <= DISCONNECT && _buf_used(ctx->streambuf) < p->bytes_per_frame) {
 		UNLOCK_O_direct;
 		UNLOCK_S;
 		return DECODE_COMPLETE;
@@ -159,7 +164,7 @@ static decode_state pcm_decode(struct thread_ctx_s *ctx) {
 		ctx->output.track_start = ctx->outputbuf->writep;
 		if (ctx->output.fade_mode) _checkfade(true, ctx);
 		ctx->decode.new_stream = false;
-		bytes_per_frame = (ctx->output.sample_size * ctx->output.channels) / 8;
+		p->bytes_per_frame = (ctx->output.sample_size * ctx->output.channels) / 8;
 
 		UNLOCK_O_not_direct;
 
@@ -178,11 +183,11 @@ static decode_state pcm_decode(struct thread_ctx_s *ctx) {
 	bytes = min(_buf_used(ctx->streambuf), _buf_cont_read(ctx->streambuf));
 
 	iptr = (u8_t *)ctx->streambuf->readp;
-	in = bytes / bytes_per_frame;
+	in = bytes / p->bytes_per_frame;
 
-	if (in == 0 && bytes > 0 && _buf_used(ctx->streambuf) >= bytes_per_frame) {
+	if (in == 0 && bytes > 0 && _buf_used(ctx->streambuf) >= p->bytes_per_frame) {
 		memcpy(ibuf, iptr, bytes);
-		memcpy(ibuf + bytes, ctx->streambuf->buf, bytes_per_frame - bytes);
+		memcpy(ibuf + bytes, ctx->streambuf->buf, p->bytes_per_frame - bytes);
 		iptr = ibuf;
 		in = 1;
 	}
@@ -305,7 +310,7 @@ static decode_state pcm_decode(struct thread_ctx_s *ctx) {
 
 	LOG_SDEBUG("[%p]: decoded %u frames", ctx, frames);
 
-	_buf_inc_readp(ctx->streambuf, frames * bytes_per_frame);
+	_buf_inc_readp(ctx->streambuf, frames * p->bytes_per_frame);
 
 	IF_DIRECT(
 		_buf_inc_writep(ctx->outputbuf, frames * BYTES_PER_FRAME);
@@ -322,11 +327,15 @@ static decode_state pcm_decode(struct thread_ctx_s *ctx) {
 
 /*---------------------------------------------------------------------------*/
 static void pcm_open(u8_t sample_size, u32_t sample_rate, u8_t channels, u8_t endianness, struct thread_ctx_s *ctx) {
-	ctx->decode.handle = NULL;
+	struct pcm *p = ctx->decode.handle;
+	if (!p)	p = ctx->decode.handle = malloc(sizeof(struct pcm));
+	p->bytes_per_frame = BYTES_PER_FRAME;
 }
 
 /*---------------------------------------------------------------------------*/
 static void pcm_close(struct thread_ctx_s *ctx) {
+	if (ctx->decode.handle) free(ctx->decode.handle);
+	ctx->decode.handle = NULL;
 }
 
 /*---------------------------------------------------------------------------*/
