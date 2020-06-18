@@ -1,3 +1,6 @@
+1.40.4
+ - linearize streambuf for large needed atoms crossing boundary or give-up
+
 1.40.3
  - no need to flatten pcm header
  - stsz box can be really big, need to increase streambuf

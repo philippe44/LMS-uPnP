@@ -161,9 +161,24 @@ static int read_mp4_header(struct thread_ctx_s *ctx) {
 			a->pos += bytes;
 			a->consume = consume - bytes;
 			break;
-		} else {
+		} else if (len > bytes && len <= _buf_used(ctx->streambuf)) {
+			// atom body wrapping around buffer, need to linearize it
+			u8_t *buf;
+			for (buf = malloc(bytes); !buf && bytes/2; bytes /= 2) buf = malloc(bytes / 2);
+			memcpy(buf, ctx->streambuf->readp, bytes);
+			memmove(ctx->streambuf->buf + bytes, ctx->streambuf->buf, ctx->streambuf->writep - ctx->streambuf->buf);
+			memcpy(ctx->streambuf->buf, buf, bytes);
+			free(buf);
+			_buf_inc_writep(ctx->streambuf, bytes);
+			LOG_WARN("[%p]: buffer wrap in mp4 header parsing type:%s len:%u bytes:%s", ctx, type, len, bytes);
 			break;
-		}
+		 } else if (len > _buf_size(ctx->streambuf)) {
+			// can't process an atom larger than streambuf!
+			LOG_ERROR("[%p]: atom %s too large for buffer %u %u", ctx, type, len, _buf_size(ctx->streambuf));
+			return -1;
+		 } else {
+			break;
+		 }
 	}
 
 	return 0;
