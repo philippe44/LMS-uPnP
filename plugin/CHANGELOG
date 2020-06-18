@@ -1,5 +1,9 @@
+1.40.3
+ - no need to flatten pcm header
+ - stsz box can be really big, need to increase streambuf
+
 1.40.2
- - bytes_per_frame must be ina  context!
+ - bytes_per_frame must be in a context!
  
 1.40.1
  - stop pcm decoder when bytes < bytes_per_frame

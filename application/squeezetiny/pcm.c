@@ -54,22 +54,9 @@ struct pcm {
 /*---------------------------------------------------------------------------*/
 static unsigned check_header(struct thread_ctx_s *ctx) {
 	u8_t *ptr = ctx->streambuf->readp;
-	unsigned bytes = min(_buf_used(ctx->streambuf), _buf_cont_read(ctx->streambuf));
-	size_t flat_size = min(1024, MIN_READ);
+	unsigned bytes = 0;
 
-	// we need a linear buffer and we know that we have MIN_READ bytes at least
-	if (bytes < flat_size) {
-		u8_t *buf = malloc(flat_size);
-		LOG_INFO("[%p]: flattening buffer %u", ctx, bytes);
-		memcpy(buf, ptr, bytes);
-		memcpy(buf + bytes, ctx->streambuf->buf, flat_size - bytes);
-		ptr = buf;
-	}
-
-	// make sure that we return 0 in case header is missing or parsing failure
-	bytes = 0;
-
-	// ok, now we can safely parse the buffer : DO NOT MODIFY ptr
+	// we can safely parse the buffer as we start at the top
 	if (!memcmp(ptr, "RIFF", 4) && !memcmp(ptr+8, "WAVE", 4) && !memcmp(ptr+12, "fmt ", 4)) {
 		LOG_INFO("[%p]: WAVE", ctx);
 		// override the server parsed values with our own
@@ -80,36 +67,36 @@ static unsigned check_header(struct thread_ctx_s *ctx) {
 		bytes = (12+8+4+4) + *(u32_t*) (ptr+16);
 		LOG_INFO("[%p]: pcm size: %u rate: %u chan: %u endian:1): %u", ctx, ctx->output.sample_size, ctx->output.sample_rate, ctx->output.channels);
 	} else if (!memcmp(ptr, "FORM", 4) && (!memcmp(ptr+8, "AIFF", 4) || !memcmp(ptr+8, "AIFC", 4))) {
-		u8_t *parse = ptr+12;
+		ptr += 12;
 		LOG_INFO("[%p]: AIFF", ctx);
 
 		// we explore as far as 22 bytes ahead of parse pointer
-		while (parse - ptr < flat_size - 22) {
-			unsigned len = htonl(*(u32_t*) (parse+4));
-			LOG_INFO("[%p]: AIFF header: %4s len: %d", ctx, parse, len);
+		while (ctx->streambuf->readp - ptr < MIN_READ - 22) {
+			unsigned len = htonl(*(u32_t*) (ptr+4));
+			LOG_INFO("[%p]: AIFF header: %4s len: %d", ctx, ptr, len);
 
-			if (!memcmp(parse, "COMM", 4)) {
+			if (!memcmp(ptr, "COMM", 4)) {
 				int exponent;
 				// override the server parsed values with our own
-				ctx->output.channels    = htons(*(u16_t*) (parse + 8));
-				ctx->output.sample_size = htons(*(u16_t*) (parse + 14));
+				ctx->output.channels    = htons(*(u16_t*) (ptr + 8));
+				ctx->output.sample_size = htons(*(u16_t*) (ptr + 14));
 				ctx->output.in_endian   = 0;
 				// sample rate is encoded as IEEE 80 bit extended format
 				// make some assumptions to simplify processing - only use first 32 bits of mantissa
-				exponent = ((*(parse+16) & 0x7f) << 8 | *(parse+17)) - 16383 - 31;
-				ctx->output.sample_rate  = htonl(*(u32_t*) (parse+18));
+				exponent = ((*(ptr+16) & 0x7f) << 8 | *(ptr+17)) - 16383 - 31;
+				ctx->output.sample_rate  = htonl(*(u32_t*) (ptr+18));
 				while (exponent < 0) { ctx->output.sample_rate >>= 1; ++exponent; }
 				while (exponent > 0) { ctx->output.sample_rate <<= 1; --exponent; }
 				LOG_INFO("[%p]: pcm size: %u rate: %u chan: %u endian:0): %u", ctx, ctx->output.sample_size, ctx->output.sample_rate, ctx->output.channels);
 			}
 
-			if (!memcmp(parse, "SSND", 4)) {
-				unsigned offset = htonl(*(u32_t*) (parse+8));
-				bytes = parse - ptr + offset + (8+8);
+			if (!memcmp(ptr, "SSND", 4)) {
+				unsigned offset = htonl(*(u32_t*) (ptr+8));
+				bytes = ptr - ctx->streambuf->readp + offset + (8+8);
 				break;
 			}
 
-			parse += len + 8;
+			ptr += len + 8;
 		}
 	} else if (ctx->output.in_endian && !(*(u64_t*) ptr) && (strstr(ctx->server_version, "7.7") || strstr(ctx->server_version, "7.8"))) {
 		/*
@@ -124,7 +111,6 @@ static unsigned check_header(struct thread_ctx_s *ctx) {
 		LOG_WARN("[%p]: unknown format - can't parse header", ctx);
 	}
 
-	if (ptr != ctx->streambuf->readp) free(ptr);
 	return bytes;
 }
 
