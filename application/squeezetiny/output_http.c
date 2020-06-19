@@ -313,11 +313,11 @@ static void output_http_thread(struct thread_param_s *param) {
 				continue;
 			}
 
-			sent = send_with_icy(ctx, sock, (void*) _buf_readp(obuf), &space, 0);
+			sent = send_with_icy(ctx, sock, (void*) obuf->readp, &space, 0);
 
 			if (sent > 0) {
 				if (bytes < HEAD_SIZE) {
-					memcpy(hbuf + bytes, _buf_readp(obuf), min(space, HEAD_SIZE - bytes));
+					memcpy(hbuf + bytes, obuf->readp, min(space, HEAD_SIZE - bytes));
 					hsize += min(space, HEAD_SIZE - bytes);
 				}
 
