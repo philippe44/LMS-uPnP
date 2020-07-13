@@ -436,8 +436,6 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 			break;
 		case SQ_PAUSE: {
 			int i;
-			AVTBasic(Device, "Pause");
-			Device->sqState = action;
 
 			// restore volume as/when it has been set to 0 before by LMS
 			for (i = 0; i < MAX_RENDERERS; i++) {
@@ -448,6 +446,11 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 					CtrlSetVolume(p, p->Volume, p->seqN++);
 				}
 			}
+
+			// pause after volume has been changed...
+			AVTBasic(Device, "Pause");
+			Device->sqState = action;
+
 			break;
 		}
 		case SQ_VOLUME: {
