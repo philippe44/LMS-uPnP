@@ -1,3 +1,6 @@
+1.40.6
+ - do not block commands in off mode if we are still playing (volume ramp up/down)
+ 
 1.40.4
  - linearize streambuf for large needed atoms crossing boundary or give-up
 

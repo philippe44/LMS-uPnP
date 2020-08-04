@@ -307,7 +307,7 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 		LOG_DEBUG("[%p]: device set on/off %d", caller, Device->on);
 	}
 
-	if (!Device->on && action != SQ_SETNAME && action != SQ_SETSERVER) {
+	if (!Device->on && action != SQ_SETNAME && action != SQ_SETSERVER && Device->sqState != SQ_PLAY) {
 		LOG_DEBUG("[%p]: device off or not controlled by LMS", caller);
 		pthread_mutex_unlock(&Device->Mutex);
 		return false;
@@ -447,7 +447,7 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 				}
 			}
 
-			// pause after volume has been changed...
+			// pause after volume has been changed
 			AVTBasic(Device, "Pause");
 			Device->sqState = action;
 
