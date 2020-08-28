@@ -1,3 +1,6 @@
+1.40.7
+ - when searching for mad sync, verify that next frame is valid
+ 
 1.40.6
  - do not block commands in off mode if we are still playing (volume ramp up/down)
  
