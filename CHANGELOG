@@ -1,3 +1,6 @@
+1.40.8
+ - deal with crappy UPnP player that responds malformed XMLGetFirstDocument
+ 
 1.40.7
  - when searching for mad sync, verify that next frame is valid
  

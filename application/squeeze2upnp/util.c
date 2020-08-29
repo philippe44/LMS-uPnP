@@ -168,15 +168,14 @@ char *XMLGetFirstDocumentItem(IXML_Document *doc, const char *item, bool strict)
 
 		if (tmpNode) {
 			textNode = ixmlNode_getFirstChild(tmpNode);
-			if (textNode) {
-				ret = strdup(ixmlNode_getNodeValue(textNode));
-				if (ret) break;
-				LOG_WARN("ixmlNode_getNodeValue returned NULL", NULL);
+			if (textNode && (ret = (char*) ixmlNode_getNodeValue(textNode)) != NULL) {
+				ret = strdup(ret);
+				break;
 			} else {
-				LOG_WARN("(BUG) ixmlNode_getFirstChild(tmpNode) returned NULL", NULL);
+				LOG_WARN("ixmlNode_getFirstChild(tmpNode) returned %p %p", textNode, ret);
 			}
 		} else {
-			LOG_WARN("ixmlNodeList_item(nodeList, %d) returned NULL", i, NULL);
+			LOG_WARN("ixmlNodeList_item(nodeList, %d) returned NULL", i);
 		}
 
 		if (strict) break;
