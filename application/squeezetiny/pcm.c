@@ -116,7 +116,7 @@ static unsigned check_header(struct thread_ctx_s *ctx) {
 
 /*---------------------------------------------------------------------------*/
 static decode_state pcm_decode(struct thread_ctx_s *ctx) {
-	size_t bytes, in, out, count;
+	size_t bytes = 0, in, out, count;
 	frames_t frames;
 	struct pcm *p = ctx->decode.handle;
 	u8_t *iptr, ibuf[BYTES_PER_FRAME];
@@ -140,7 +140,7 @@ static decode_state pcm_decode(struct thread_ctx_s *ctx) {
 
 	if (ctx->decode.new_stream) {
 		// check headers and consume bytes if needed
-		bytes = check_header(ctx);
+		if (!ctx->config.roon_mode) bytes = check_header(ctx);
 		_buf_inc_readp(ctx->streambuf, bytes);
 
 		LOCK_O_not_direct;
