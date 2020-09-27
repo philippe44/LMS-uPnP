@@ -1,3 +1,6 @@
+1.40.10
+ - 'wav' codec was missing in HELO message
+ 
 1.40.9
  - don't do WAV/AIFF header checking in Roon mode
  
