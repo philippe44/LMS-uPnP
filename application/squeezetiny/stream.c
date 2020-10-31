@@ -37,17 +37,10 @@ static log_level 	*loglevel = &stream_loglevel;
 #define UNLOCK_S mutex_unlock(ctx->streambuf->mutex)
 
 #if USE_SSL
+#define _last_error() ERROR_WOULDBLOCK
+
 static SSL_CTX *SSLctx = NULL;
 static int SSLcount = 0;
-#endif
-
-#if !USE_SSL
-#define _recv(ctx, buf, n, opt) recv(ctx->fd, buf, n, opt)
-#define _send(ctx, buf, n, opt) send(ctx->fd, buf, n, opt)
-#define _poll(ctx, pollinfo, timeout) poll(pollinfo, 1, timeout)
-#define _last_error() last_error()
-#else
-#define _last_error() ERROR_WOULDBLOCK
 
 static int _recv(struct thread_ctx_s *ctx, void *buffer, size_t bytes, int options) {
 	int n;
@@ -85,6 +78,11 @@ static int _poll(struct thread_ctx_s *ctx, struct pollfd *pollinfo, int timeout)
 	}
 	return poll(pollinfo, 1, timeout);
 }
+#else
+#define _recv(ctx, buf, n, opt) recv(ctx->fd, buf, n, opt)
+#define _send(ctx, buf, n, opt) send(ctx->fd, buf, n, opt)
+#define _poll(ctx, pollinfo, timeout) poll(pollinfo, 1, timeout)
+#define _last_error() last_error()
 #endif
 
 static bool send_header(struct thread_ctx_s *ctx) {
@@ -149,6 +147,63 @@ static void _disconnect(stream_state state, disconnect_code disconnect, struct t
 	closesocket(ctx->fd);
 	ctx->fd = -1;
 	wake_controller(ctx);
+}
+
+static int connect_socket(bool use_ssl, struct thread_ctx_s *ctx) {
+	int sock = socket(AF_INET, SOCK_STREAM, 0);
+
+	LOG_INFO("[%p] connecting to %s:%d", ctx, inet_ntoa(ctx->stream.addr.sin_addr), ntohs(ctx->stream.addr.sin_port));
+
+	if (sock < 0) {
+		LOG_ERROR("[%p] failed to create socket", ctx);
+		return sock;
+	}
+
+	set_nonblock(sock);
+	set_nosigpipe(sock);
+
+	if (connect_timeout(sock, (struct sockaddr *) &ctx->stream.addr, sizeof(ctx->stream.addr), 10*1000) < 0) {
+		LOG_WARN("[%p] unable to connect to server", ctx);
+		closesocket(sock);
+		return -1;
+	}
+
+#if USE_SSL
+	if (use_ssl) {
+		ctx->ssl = SSL_new(SSLctx);
+		SSL_set_fd(ctx->ssl, sock);
+
+		// add SNI
+		if (*ctx->stream.host) SSL_set_tlsext_host_name(ctx->ssl, ctx->stream.host);
+
+		// try to connect (socket is non-blocking)
+		while (1) {
+			int status, err = 0;
+
+			ERR_clear_error();
+			status = SSL_connect(ctx->ssl);
+
+			// successful negotiation
+			if (status == 1) break;
+
+			// error or non-blocking requires more time
+			if (status < 0) {
+				err = SSL_get_error(ctx->ssl, status);
+				if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE) continue;
+			}
+
+			LOG_WARN("[%p] unable to open SSL socket %d (%d)", ctx, status, err);
+
+			closesocket(sock);
+			SSL_free(ctx->ssl);
+			ctx->ssl = NULL;
+
+			return -1;
+		}
+	} else ctx->ssl = NULL;
+#endif
+
+	return sock;
 }
 
 static void *stream_thread(struct thread_ctx_s *ctx) {
@@ -220,6 +275,7 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 
 			if ((pollinfo.revents & POLLOUT) && ctx->stream.state == SEND_HEADERS) {
 				if (send_header(ctx)) ctx->stream.state = RECV_HEADERS;
+				ctx->stream.header_mlen = ctx->stream.header_len;
 				ctx->stream.header_len = 0;
 				UNLOCK_S;
 				continue;
@@ -240,6 +296,27 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 							continue;
 						}
 						LOG_WARN("[%p] error reading headers: %s", ctx, n ? strerror(last_error()) : "closed");
+#if USE_SSL
+						if (!ctx->ssl && !ctx->stream.header_len) {
+							int sock;
+
+							// let's restart with SSL this time
+							ctx->stream.header_len = ctx->stream.header_mlen;
+							closesocket(ctx->fd);
+							ctx->fd = -1;
+							LOG_INFO("[%p] now attempting with SSL", ctx);
+
+							// stay locked for slimproto (I know it can be long)
+							sock = connect_socket(true, ctx);
+
+							if (sock >= 0) {
+								ctx->fd = sock;
+								ctx->stream.state = SEND_HEADERS;
+								UNLOCK_S;
+								continue;
+							}
+						}
+#endif
 						_disconnect(STOPPED, LOCAL_DISCONNECT, ctx);
 						UNLOCK_S;
 						continue;
@@ -469,80 +546,30 @@ void stream_file(const char *header, size_t header_len, unsigned threshold, stru
 }
 
 void stream_sock(u32_t ip, u16_t port, const char *header, size_t header_len, unsigned threshold, bool cont_wait, struct thread_ctx_s *ctx) {
-	struct sockaddr_in addr;
+	int sock;
+	char *p;
 
-	int sock = socket(AF_INET, SOCK_STREAM, 0);
+	memset(&ctx->stream.addr, 0, sizeof(ctx->stream.addr));
+	ctx->stream.addr.sin_family = AF_INET;
+	ctx->stream.addr.sin_addr.s_addr = ip;
+	ctx->stream.addr.sin_port = port;
+
+	*ctx->stream.host = '\0';
+	if ((p = strcasestr(header,"Host:")) != NULL) sscanf(p, "Host:%255[^:]", ctx->stream.host);
+
+	port = ntohs(port);
+	sock = connect_socket(port == 443, ctx);
+
+	// try one more time with plain socket
+	if (sock < 0 && port == 443) sock = connect_socket(false, ctx);
 
 	if (sock < 0) {
-		LOG_ERROR("[%p] failed to create socket", ctx);
-		return;
-	}
-
-	memset(&addr, 0, sizeof(addr));
-	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = ip;
-	addr.sin_port = port;
-
-	LOG_INFO("[%p] connecting to %s:%d", ctx, inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
-
-	set_nonblock(sock);
-	set_nosigpipe(sock);
-
-	if (connect_timeout(sock, (struct sockaddr *) &addr, sizeof(addr), 10*1000) < 0) {
-		LOG_WARN("[%p] unable to connect to server", ctx);
 		LOCK_S;
 		ctx->stream.state = DISCONNECT;
 		ctx->stream.disconnect = UNREACHABLE;
 		UNLOCK_S;
 		return;
 	}
-
-#if USE_SSL
-	if (ntohs(port) == 443) {
-		char *server = strcasestr(header, "Host:");
-
-		ctx->ssl = SSL_new(SSLctx);
-		SSL_set_fd(ctx->ssl, sock);
-
-		// add SNI
-		if (server) {
-			char *p, *servername = malloc(1024);
-
-			sscanf(server, "Host:%255[^:]s", servername);
-			for (p = servername; *p == ' '; p++);
-			SSL_set_tlsext_host_name(ctx->ssl, p);
-			free(servername);
-		}
-
-		// try to connect (socket is non-blocking)
-		while (1) {
-			int status, err = 0;
-
-			ERR_clear_error();
-			status = SSL_connect(ctx->ssl);
-
-			// successful negotiation
-			if (status == 1) break;
-
-			// error or non-blocking requires more time
-			if (status < 0) {
-				err = SSL_get_error(ctx->ssl, status);
-				if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE) continue;
-			}
-
-			LOG_WARN("[%p] unable to open SSL socket %d (%d)", ctx, status, err);
-			closesocket(sock);
-			SSL_free(ctx->ssl);
-			ctx->ssl = NULL;
-			LOCK_S;
-			ctx->stream.state = DISCONNECT;
-			ctx->stream.disconnect = UNREACHABLE;
-			UNLOCK_S;
-
-			return;
-		}
-	} else ctx->ssl = NULL;
-#endif
 
 	buf_flush(ctx->streambuf);
 
@@ -567,5 +594,6 @@ void stream_sock(u32_t ip, u16_t port, const char *header, size_t header_len, un
 
 	UNLOCK_S;
 }
+
 
 

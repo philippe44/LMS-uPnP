@@ -297,6 +297,9 @@ struct streamstate {
 	u32_t meta_next;
 	u32_t meta_left;
 	bool  meta_send;
+	size_t header_mlen;
+	struct sockaddr_in addr;
+	char host[256];
 };
 
 bool 		stream_thread_init(struct thread_ctx_s *ctx);
