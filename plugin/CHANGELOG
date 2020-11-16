@@ -1,3 +1,7 @@
+1.42.0
+ - SSL flags in stream_s
+ - consolidation with other bridges
+ 
 1.41.0
  - try SSL when plain fails on non 443
  

@@ -302,10 +302,10 @@ struct streamstate {
 	char host[256];
 };
 
-bool 		stream_thread_init(struct thread_ctx_s *ctx);
+bool 		stream_thread_init(unsigned streambuf_size, struct thread_ctx_s *ctx);
 void 		stream_close(struct thread_ctx_s *ctx);
 void 		stream_file(const char *header, size_t header_len, unsigned threshold, struct thread_ctx_s *ctx);
-void 		stream_sock(u32_t ip, u16_t port, const char *header, size_t header_len, unsigned threshold, bool cont_wait, struct thread_ctx_s *ctx);
+void 		stream_sock(u32_t ip, u16_t port, bool use_ssl, const char *header, size_t header_len, unsigned threshold, bool cont_wait, struct thread_ctx_s *ctx);
 bool 		stream_disconnect(struct thread_ctx_s *ctx);
 
 // decode.c

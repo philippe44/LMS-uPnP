@@ -2,7 +2,7 @@
  *  Squeezelite - lightweight headless squeezebox emulator
  *
  *  (c) Adrian Smith 2012-2015, triode1@btinternet.com
- *  (c) Philippe, philippe_44@outlook.com
+ *  (c) Philippe, philippe_44@outlook.com for multi-instance modifications
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -457,15 +457,15 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 
 
 /*---------------------------------------------------------------------------*/
-bool stream_thread_init(struct thread_ctx_s *ctx) {
+bool stream_thread_init(unsigned streambuf_size, struct thread_ctx_s *ctx) {
 
 	pthread_attr_t attr;
 
-	LOG_DEBUG("[%p] streambuf size: %u", ctx, ctx->config.streambuf_size);
+	LOG_DEBUG("[%p] streambuf size: %u", ctx, streambuf_size);
 
 	ctx->streambuf = &ctx->__s_buf;
 
-	buf_init(ctx->streambuf, ctx->config.streambuf_size);
+	buf_init(ctx->streambuf, ((streambuf_size / (BYTES_PER_FRAME * 3)) * BYTES_PER_FRAME * 3));
 	if (ctx->streambuf->buf == NULL) {
 		LOG_ERROR("[%p] unable to malloc buffer", ctx);
 		return false;
@@ -545,7 +545,7 @@ void stream_file(const char *header, size_t header_len, unsigned threshold, stru
 	UNLOCK_S;
 }
 
-void stream_sock(u32_t ip, u16_t port, const char *header, size_t header_len, unsigned threshold, bool cont_wait, struct thread_ctx_s *ctx) {
+void stream_sock(u32_t ip, u16_t port, bool use_ssl, const char *header, size_t header_len, unsigned threshold, bool cont_wait, struct thread_ctx_s *ctx) {
 	int sock;
 	char *p;
 
@@ -558,10 +558,10 @@ void stream_sock(u32_t ip, u16_t port, const char *header, size_t header_len, un
 	if ((p = strcasestr(header,"Host:")) != NULL) sscanf(p, "Host:%255[^:]", ctx->stream.host);
 
 	port = ntohs(port);
-	sock = connect_socket(port == 443, ctx);
+	sock = connect_socket((port == 443) || use_ssl, ctx);
 
 	// try one more time with plain socket
-	if (sock < 0 && port == 443) sock = connect_socket(false, ctx);
+	if (sock < 0 && port == 443 && !use_ssl) sock = connect_socket(false, ctx);
 
 	if (sock < 0) {
 		LOCK_S;
@@ -594,6 +594,5 @@ void stream_sock(u32_t ip, u16_t port, const char *header, size_t header_len, un
 
 	UNLOCK_S;
 }
-
 
 

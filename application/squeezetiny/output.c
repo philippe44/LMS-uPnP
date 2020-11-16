@@ -573,6 +573,8 @@ bool output_thread_init(struct thread_ctx_s *ctx) {
 	ctx->outputbuf = &ctx->__o_buf;
 	buf_init(ctx->outputbuf, OUTPUTBUF_IDLE_SIZE);
 
+	if (!ctx->outputbuf->buf) return false;
+
 	// all this is NULL at init, normally ...
 	ctx->output.track_started = false;
 	ctx->output.track_start = NULL;

@@ -2,7 +2,7 @@
  *  Squeezelite - lightweight headless squeezebox emulator
  *
  *  (c) Adrian Smith 2012-2014, triode1@btinternet.com
- *	(c) Philippe 2015-2017, philippe_44@outlook.com
+ *  (c) Philippe 2015-2020, philippe_44@outlook.com for raop/multi-instance modifications
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
  *
  */
 
-// fifo bufffers
+// fifo bufffers 
 
 #include "squeezelite.h"
 
