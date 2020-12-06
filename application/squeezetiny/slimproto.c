@@ -811,11 +811,11 @@ void discover_server(struct thread_ctx_s *ctx) {
 		}
 
 		if (poll(&pollinfo, 1, 5000) == 1) {
-			char readbuf[32], *p;
+			char readbuf[128], *p;
 
 			socklen_t slen = sizeof(s);
-			memset(readbuf, 0, 32);
-			recvfrom(disc_sock, readbuf, 32 - 1, 0, (struct sockaddr *)&s, &slen);
+			memset(readbuf, 0, sizeof(readbuf));
+			recvfrom(disc_sock, readbuf, sizeof(readbuf) - 1, 0, (struct sockaddr *)&s, &slen);
 
 			if ((p = strstr(readbuf, vers)) != NULL) {
 				p += strlen(vers);

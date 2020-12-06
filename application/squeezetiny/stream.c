@@ -558,7 +558,7 @@ void stream_sock(u32_t ip, u16_t port, bool use_ssl, const char *header, size_t 
 	if ((p = strcasestr(header,"Host:")) != NULL) sscanf(p, "Host:%255[^:]", ctx->stream.host);
 
 	port = ntohs(port);
-	sock = connect_socket((port == 443) || use_ssl, ctx);
+	sock = connect_socket(use_ssl || port == 443, ctx);
 
 	// try one more time with plain socket
 	if (sock < 0 && port == 443 && !use_ssl) sock = connect_socket(false, ctx);

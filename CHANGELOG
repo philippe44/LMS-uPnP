@@ -1,3 +1,6 @@
+1.42.1
+ - server discovry response was truncated and CLIP was missing
+ 
 1.42.0
  - SSL flags in stream_s
  - consolidation with other bridges
