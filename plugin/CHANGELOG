@@ -1,3 +1,6 @@
+1.43.0
+ - add '-o' on command line
+ 
 1.42.1
  - server discovry response was truncated and CLIP was missing
  
