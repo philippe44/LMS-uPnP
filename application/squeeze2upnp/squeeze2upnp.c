@@ -1461,7 +1461,9 @@ static bool Start(void)
 
 	UpnpSetLogLevel(UPNP_ALL);
 
-	if (!strstr(glUPnPSocket, "?")) sscanf(glUPnPSocket, "%[^:]:%u", glIPaddress, &glPort);
+	// Linux can't do a sscanf with an optional %[^:]
+	if (!strstr(glUPnPSocket, "?"))
+		if (!sscanf(glUPnPSocket, "%[^:]:%u", glIPaddress, &glPort)) sscanf(glUPnPSocket, ":%u", &glPort);
 
 	if (*glIPaddress) rc = UpnpInit(glIPaddress, glPort);
 	else rc = UpnpInit(NULL, glPort);
