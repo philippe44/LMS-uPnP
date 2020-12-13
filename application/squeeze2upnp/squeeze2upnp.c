@@ -1477,7 +1477,7 @@ static bool Start(void)
 	UpnpSetMaxContentLength(60000);
 
 	if (!*glIPaddress) strcpy(glIPaddress, UpnpGetServerIpAddress());
-	if (!glPort) glPort = UpnpGetServerPort();
+	glPort = UpnpGetServerPort();
 
 	sq_init(glIPaddress, glPort, glModelName);
 
