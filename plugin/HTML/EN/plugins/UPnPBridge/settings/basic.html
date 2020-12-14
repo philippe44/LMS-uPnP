@@ -51,7 +51,7 @@
 	[% END %]
 	
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_UPNPSOCKET" desc="PLUGIN_UPNPBRIDGE_UPNPSOCKET_DESC" %]
-		<input [% IF useLMSsocket || !xmlparams %] disabled [% END %] type="text" class="stdedit" name="upnp_socket" id="upnp_socket" value="[% upnp_socket %]" size="20">
+		<input [% IF useLMSsocket || !xmlparams %] disabled [% END %] type="text" class="stdedit" name="binding" id="binding" value="[% binding %]" size="20">
 		&nbsp<input name="useLMSsocket" type="checkbox" [% IF useLMSsocket %] checked [% END %]>&nbsp[% "PLUGIN_UPNPBRIDGE_USELMSSOCKET" | string %]
 	[% END %]
 	
