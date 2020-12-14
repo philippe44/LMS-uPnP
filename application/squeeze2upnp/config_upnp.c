@@ -70,7 +70,7 @@ void SaveConfig(char *name, void *ref, bool full)
 		common = XMLAddNode(doc, root, "common", NULL);
 	}
 
-	XMLUpdateNode(doc, root, false, "upnp_socket", glUPnPSocket);
+	XMLUpdateNode(doc, root, false, "binding", glBinding);
 	XMLUpdateNode(doc, root, false, "slimproto_log", level2debug(slimproto_loglevel));
 	XMLUpdateNode(doc, root, false, "slimmain_log", level2debug(slimmain_loglevel));
 	XMLUpdateNode(doc, root, false, "stream_log", level2debug(stream_loglevel));
@@ -209,10 +209,7 @@ static void LoadGlobalItem(char *name, char *val)
 {
 	if (!val) return;
 
-	// temporary to ensure parameter transfer from global to common
-	if (!strcmp(name, "server")) strcpy(glDeviceParam.server, val);
-
-	if (!strcmp(name, "upnp_socket")) strcpy(glUPnPSocket, val);
+	if (!strcmp(name, "binding")) strcpy(glBinding, val);
 	if (!strcmp(name, "slimproto_log")) slimproto_loglevel = debug2level(val);
 	if (!strcmp(name, "slimmain_log")) slimmain_loglevel = debug2level(val);
 	if (!strcmp(name, "stream_log")) stream_loglevel = debug2level(val);
@@ -222,6 +219,9 @@ static void LoadGlobalItem(char *name, char *val)
 	if (!strcmp(name, "upnp_log")) upnp_loglevel = debug2level(val);
 	if (!strcmp(name, "util_log")) util_loglevel = debug2level(val);
 	if (!strcmp(name, "log_limit")) glLogLimit = atol(val);
+
+	// deprecated
+	if (!strcmp(name, "upnp_socket")) strcpy(glBinding, val);
 }
 
 

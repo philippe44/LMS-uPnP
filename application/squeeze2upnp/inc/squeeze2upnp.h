@@ -108,7 +108,7 @@ struct sMR {
 };
 
 extern UpnpClient_Handle   	glControlPointHandle;
-extern char 				glUPnPSocket[];
+extern char 				glBinding[];
 extern s32_t				glLogLimit;
 extern tMRConfig			glMRConfig;
 extern sq_dev_param_t		glDeviceParam;

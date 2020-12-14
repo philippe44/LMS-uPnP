@@ -1,5 +1,10 @@
+1.44.0
+ - tweak below fix
+ - change "upnp_socket" for "binding"
+ - by default, HTTP server are not using UPnP port, unless specified
+ 
 1.43.1
-  - %&@!* of Linux does not handle sscanf with %[^:]:%u when the first string is empty
+ - %&@!* of Linux does not handle sscanf with %[^:]:%u when the first string is empty
 
 1.43.0
  - add '-o' on command line

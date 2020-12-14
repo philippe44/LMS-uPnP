@@ -68,7 +68,7 @@ enum { NEXT_FORCE = -1, NEXT_GAPPED = 0, NEXT_GAPLESS = 1 };
 /* globals initialized */
 /*----------------------------------------------------------------------------*/
 s32_t				glLogLimit = -1;
-char				glUPnPSocket[128] = "?";
+char				glBinding[128] = "?";
 struct sMR			glMRDevices[MAX_RENDERERS];
 pthread_mutex_t 	glMRMutex;
 UpnpClient_Handle 	glControlPointHandle;
@@ -185,7 +185,6 @@ static char				*glLogFile;
 static bool				glAutoSaveConfigFile = false;
 static bool				glGracefullShutdown = true;
 static bool				glDiscovery;
-static unsigned int 	glPort;
 static char 			glIPaddress[128] = "";
 static void				*glConfigID = NULL;
 static char				glConfigName[_STR_LEN_] = "./config.xml";
@@ -1441,6 +1440,7 @@ static bool isExcluded(char *Model)
 static bool Start(void)
 {
 	int i, rc;
+	unsigned short Port = 0;
 
 #if USE_SSL
 	// manually load openSSL symbols to accept multiple versions
@@ -1461,12 +1461,11 @@ static bool Start(void)
 
 	UpnpSetLogLevel(UPNP_ALL);
 
-	// Linux can't do a sscanf with an optional %[^:]
-	if (!strstr(glUPnPSocket, "?"))
-		if (!sscanf(glUPnPSocket, "%[^:]:%u", glIPaddress, &glPort)) sscanf(glUPnPSocket, ":%u", &glPort);
+	// sscanf does not capture empty string in %[^:]
+	if (!strstr(glBinding, "?") && !sscanf(glBinding, "%[^:]:%hu", glIPaddress, &Port)) sscanf(glBinding, ":%hu", &Port);
 
-	if (*glIPaddress) rc = UpnpInit(glIPaddress, glPort);
-	else rc = UpnpInit(NULL, glPort);
+	if (*glIPaddress) rc = UpnpInit(glIPaddress, Port);
+	else rc = UpnpInit(NULL, Port);
 
 	if (rc != UPNP_E_SUCCESS) {
 		LOG_ERROR("UPnP init failed: %d\n", rc);
@@ -1477,10 +1476,7 @@ static bool Start(void)
 	UpnpSetMaxContentLength(60000);
 
 	if (!*glIPaddress) strcpy(glIPaddress, UpnpGetServerIpAddress());
-	glPort = UpnpGetServerPort();
-
-	sq_init(glIPaddress, glPort, glModelName);
-
+	sq_init(glIPaddress, Port ? UpnpGetServerPort() : 0, glModelName);
 	rc = UpnpRegisterClient(MasterHandler, NULL, &glControlPointHandle);
 
 	if (rc != UPNP_E_SUCCESS) {
@@ -1489,7 +1485,7 @@ static bool Start(void)
 		return false;
 	}
 
-	LOG_INFO("Binding to %s:%d", glIPaddress, glPort);
+	LOG_INFO("Binding to %s:%hu (http:%u)", glIPaddress, (unsigned short) UpnpGetServerPort(), Port);
 
 	// init mutex & cond no matter what
 	pthread_mutex_init(&glUpdateMutex, 0);
@@ -1623,7 +1619,7 @@ bool ParseArgs(int argc, char **argv) {
 			strcpy(glModelName, optarg);
 			break;
 		case 'b':
-			strcpy(glUPnPSocket, optarg);
+			strcpy(glBinding, optarg);
 			break;
 		case 'f':
 			glLogFile = optarg;
