@@ -64,6 +64,7 @@ char 	   	*XMLGetChangeItem(IXML_Document *doc, char *Tag, char *SearchAttr,
 const char 	*XMLGetLocalName(IXML_Document *doc, int Depth);
 IXML_Node  	*XMLAddNode(IXML_Document *doc, IXML_Node *parent, char *name,
 						char *fmt, ...);
+char		*XMLDelNode(IXML_Node *from, char *name);
 IXML_Node  	*XMLUpdateNode(IXML_Document *doc, IXML_Node *parent, bool refresh,
 						   char *name, char *fmt, ...);
 int 	   	XMLAddAttribute(IXML_Document *doc, IXML_Node *parent, char *name,

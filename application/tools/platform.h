@@ -104,9 +104,9 @@ typedef __int64 s64_t;
 #define inline __inline
 
 int gettimeofday(struct timeval *tv, struct timezone *tz);
-int asprintf(char **strp, const char *fmt, ...);
 char *strcasestr(const char *haystack, const char *needle);
 int asprintf(char **strp, const char *fmt, ...);
+int vasprintf(char **strp, const char *fmt, va_list args);
 
 //#define poll(fds,numfds,timeout) WSAPoll(fds,numfds,timeout)
 #define usleep(x) Sleep((x)/1000)

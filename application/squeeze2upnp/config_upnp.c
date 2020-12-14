@@ -35,6 +35,9 @@ extern log_level	upnp_loglevel;
 
 //static log_level *loglevel = &util_loglevel;
 
+static void *MigrateConfig(IXML_Document *doc);
+static void *MigrateMRConfig(IXML_Node *device);
+
 /*----------------------------------------------------------------------------*/
 void SaveConfig(char *name, void *ref, bool full)
 {
@@ -219,9 +222,6 @@ static void LoadGlobalItem(char *name, char *val)
 	if (!strcmp(name, "upnp_log")) upnp_loglevel = debug2level(val);
 	if (!strcmp(name, "util_log")) util_loglevel = debug2level(val);
 	if (!strcmp(name, "log_limit")) glLogLimit = atol(val);
-
-	// deprecated
-	if (!strcmp(name, "upnp_socket")) strcpy(glBinding, val);
 }
 
 
@@ -274,7 +274,7 @@ void *LoadMRConfig(void *ref, char *UDN, tMRConfig *Conf, sq_dev_param_t *sq_con
 		if (node_list) ixmlNodeList_free(node_list);
 	}
 
-	return node;
+	return MigrateMRConfig(node);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -320,8 +320,34 @@ void *LoadConfig(char *name, tMRConfig *Conf, sq_dev_param_t *sq_conf)
 		if (l1_node_list) ixmlNodeList_free(l1_node_list);
 	}
 
+	return MigrateConfig(doc);
+}
+
+/*---------------------------------------------------------------------------*/
+static void *MigrateConfig(IXML_Document *doc)
+{
+	char *value;
+	IXML_Node *node;
+
+	if (!doc) return NULL;
+
+	// change "upnp_socket" into "binding"
+	value = XMLDelNode((IXML_Node*) doc, "upnp_socket");
+	if (value) {
+		node = XMLUpdateNode(doc, (IXML_Node*) doc, false, "binding", "%s", value);
+		if (!node) strcpy(glBinding, value);
+		free(value);
+	}
+
 	return doc;
- }
+}
+
+
+/*---------------------------------------------------------------------------*/
+static void *MigrateMRConfig(IXML_Node *device)
+{
+	return device;
+}
 
 
  /*

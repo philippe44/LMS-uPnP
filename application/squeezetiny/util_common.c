@@ -379,6 +379,18 @@ int asprintf(char **strp, const char *fmt, ...)
 
 	return ret;
 }
+
+int vasprintf(char **strp, const char *fmt, va_list args)
+{
+	int len, ret = 0;
+
+	len = vsnprintf(NULL, 0, fmt, args);
+	*strp = malloc(len + 1);
+
+	if (*strp) ret = vsprintf(*strp, fmt, args);
+
+	return ret;
+}
 #endif
 
 

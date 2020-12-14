@@ -1,3 +1,9 @@
+1.44.2
+ - fix migration of 1.44.0
+ 
+1.44.1
+ - just a fake increment
+ 
 1.44.0
  - tweak below fix
  - change "upnp_socket" for "binding"

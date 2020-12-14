@@ -493,22 +493,45 @@ IXML_Node *XMLAddNode(IXML_Document *doc, IXML_Node *parent, char *name, char *f
 /*----------------------------------------------------------------------------*/
 IXML_Node *XMLUpdateNode(IXML_Document *doc, IXML_Node *parent, bool refresh, char *name, char *fmt, ...)
 {
-	char buf[256];
+	char *buf;
 	va_list args;
 	IXML_Node *node = (IXML_Node*) ixmlDocument_getElementById((IXML_Document*) parent, name);
 
 	va_start(args, fmt);
-	vsprintf(buf, fmt, args);
+	vasprintf(&buf, fmt, args);
 
-	if (!node) XMLAddNode(doc, parent, name, buf);
-	else if (refresh) {
-		node = ixmlNode_getFirstChild(node);
-		ixmlNode_setNodeValue(node, buf);
+	if (!node) {
+		XMLAddNode(doc, parent, name, buf);
+	} else if (refresh) {
+		IXML_Node *child = ixmlNode_getFirstChild(node);
+		ixmlNode_setNodeValue(child, buf);
 	}
 
 	va_end(args);
+	free(buf);
 
 	return node;
+}
+
+
+/*----------------------------------------------------------------------------*/
+char *XMLDelNode(IXML_Node *from, char *name)
+{
+	IXML_Node *self, *node;
+	char *value = NULL;
+
+	self = (IXML_Node*) ixmlDocument_getElementById((IXML_Document*) from, name);
+	if (!self) return NULL;
+
+	node = (IXML_Node*) ixmlNode_getParentNode(self);
+	if (node) ixmlNode_removeChild(node, self, &self);
+
+	node = ixmlNode_getFirstChild(self);
+	value = (char*) ixmlNode_getNodeValue(node);
+	if (value) value = strdup(value);
+
+	ixmlNode_free(self);
+	return value;
 }
 
 
