@@ -109,7 +109,9 @@ sub start {
 	}
 	
 	if ($prefs->get('useLMSsocket')) {
-		push @params, ("-b", Slim::Utils::Network::serverAddr());
+		my $binding = Slim::Utils::Network::serverAddr;
+		$binding .= ':' . $prefs->get('baseport') if $prefs->get('baseport');
+		push @params, ("-b", $binding);
 	}
 
 	if ($prefs->get('logging')) {

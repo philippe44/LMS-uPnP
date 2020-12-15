@@ -14,8 +14,10 @@ use Slim::Utils::Log;
 
 my $prefs = preferences('plugin.upnpbridge');
 my $log   = logger('plugin.upnpbridge');
-my @xmlmain = qw(binding cli_port log_limit);
+my @xmlmain = qw(binding log_limit);
 my @xmldevice = qw(name mac stream_length accept_nexturi sample_rate mode codecs L24_format flac_header enabled remove_timeout send_metadata volume_on_play max_volume raw_audio_format send_coverart seek_after_pause send_icy volume_feedback server forced_mimetypes);
+my @prefs_bool  = qw(autorun logging autosave eraselog useLMSsocket);
+my @prefs_other = qw(output bin debugs opts baseport);
 
 sub name { 'PLUGIN_UPNPBRIDGE' }
 
@@ -54,8 +56,6 @@ sub handler {
 		Plugins::UPnPBridge::Squeeze2upnp->stop;
 		waitEndHandler(undef, $class, $client, $params, $callback, 30, @args);
 	} elsif ($params->{'saveSettings'}) {
-		my @bool  = qw(autorun logging autosave eraselog useLMSsocket);
-		my @other = qw(output bin debugs opts);
 		my $update;
 
 		$log->debug("save settings required");
@@ -75,7 +75,7 @@ sub handler {
 			}	
 		}	
 						
-		for my $param (@bool) {
+		for my $param (@prefs_bool) {
 			my $val = $params->{ $param } ? 1 : 0;
 			
 			if ($val != $prefs->get($param)) {
@@ -85,7 +85,7 @@ sub handler {
 		}
 		
 		# check that the config file name has not changed first
-		for my $param (@other) {
+		for my $param (@prefs_other) {
 			if ($params->{ $param } ne $prefs->get($param)) {
 				$prefs->set($param, $params->{ $param });
 				$update = 1;
@@ -248,7 +248,7 @@ sub handler2 {
 
 	$params->{'binary'}   = Plugins::UPnPBridge::Squeeze2upnp->bin;
 	$params->{'binaries'} = [ Plugins::UPnPBridge::Squeeze2upnp->binaries ];
-	for my $param (qw(autorun output bin opts debugs logging configfile autosave eraselog useLMSsocket)) {
+	for my $param (@prefs_bool, @prefs_other, qw(configfile)) {	
 		$params->{ $param } = $prefs->get($param);
 	}
 	

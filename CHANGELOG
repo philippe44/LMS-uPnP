@@ -1,3 +1,7 @@
+1.44.3
+ - ports were missing when using LMS interface (use -b)
+ - cosmetic issues in Settings' UI
+ 
 1.44.2
  - fix migration of 1.44.0
  

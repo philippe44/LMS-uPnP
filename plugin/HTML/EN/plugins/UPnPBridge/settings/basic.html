@@ -50,11 +50,22 @@
 		&nbsp<input name="delconfig" type="submit" value=[% "PLUGIN_UPNPBRIDGE_DELCONFIG" | string %]>
 	[% END %]
 	
-	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_UPNPSOCKET" desc="PLUGIN_UPNPBRIDGE_UPNPSOCKET_DESC" %]
-		<input [% IF useLMSsocket || !xmlparams %] disabled [% END %] type="text" class="stdedit" name="binding" id="binding" value="[% binding %]" size="20">
-		&nbsp<input name="useLMSsocket" type="checkbox" [% IF useLMSsocket %] checked [% END %]>&nbsp[% "PLUGIN_UPNPBRIDGE_USELMSSOCKET" | string %]
-	[% END %]
+	<script type="text/javascript">
+	function lmssocket(item) {
+		var params = document.getElementById('xmlparams') != null;
+		document.getElementById('binding').disabled = item.checked || !params;
+		document.getElementById('baseport_span').style.display = (item.checked && params) ? 'inline' : 'none';
+	}
+	</script>	
 	
+	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_BINDING" desc="PLUGIN_UPNPBRIDGE_BINDING_DESC" %]
+		<input type="text" class="stdedit" name="binding" id="binding" value="[% binding %]" size="16" [% IF useLMSsocket || !xmlparams %] disabled [% END %]>
+		&nbsp<input name="useLMSsocket" type="checkbox" onchange="lmssocket(this)" [% IF useLMSsocket %] checked [% END %]>&nbsp[% "PLUGIN_UPNPBRIDGE_USELMSBINDING" | string %]
+		<span id="baseport_span" [% IF !useLMSsocket || !xmlparams %] hidden [% END %]>
+			[% "PLUGIN_UPNPBRIDGE_BASEPORT" | string %]
+			&nbsp<input type="text" class="stdedit" name="baseport" id="baseport" value="[% baseport %]" size="3">
+		</span>		
+	[% END %]
 	
 	[% IF !xmlparams %]
 		[% WRAPPER settingSection %]

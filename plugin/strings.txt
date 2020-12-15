@@ -139,16 +139,19 @@ PLUGIN_UPNPBRIDGE_AUTOSAVECONFIG
 PLUGIN_UPNPBRIDGE_DELCONFIG
 	EN	Erase
 	
-PLUGIN_UPNPBRIDGE_UPNPSOCKET
-	EN	Network socket to use
+PLUGIN_UPNPBRIDGE_BINDING
+	EN	Network binding and port
 	
-PLUGIN_UPNPBRIDGE_USELMSSOCKET
-	EN	Use LMS' network interface
+PLUGIN_UPNPBRIDGE_BASEPORT
+	EN	and start from port
 
-PLUGIN_UPNPBRIDGE_UPNPSOCKET_DESC
-	EN	The socket (IP:port) used by the bridge. This is especially useful if you have a computer with multiple network interfaces.
-	EN	Use "?" (without ") to let the bridge decide or check "use LMS' network interface" to make sure the Bridge uses the same
-	EN	network as LMS
+PLUGIN_UPNPBRIDGE_USELMSBINDING
+	EN	Use LMS interface
+
+PLUGIN_UPNPBRIDGE_BINDING_DESC
+	EN	The network ip interface and base port to be used (format [ip][:port]. This is needed if you have a computer with multiple network interfaces.
+	EN	Use ? to let the bridge decide or check "use LMS interface" to make sure the Bridge uses the same network as LMS and add an optional baseport
+	EN	The bridge will use up to 64 ports from the base port (min 49152). When not set, random values are used.
 	
 PLUGIN_UPNPBRIDGE_TEXTDEFAULT
 	EN	The following parameters apply to ALL players - enter "default" (without ") in text boxes to set to default values
