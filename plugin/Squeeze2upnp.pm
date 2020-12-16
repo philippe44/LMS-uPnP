@@ -29,7 +29,7 @@ sub binaries {
 			return qw(squeeze2upnp-x86-static squeeze2upnp-x86);
 		}
 		if ($os->{'osArch'} =~ /aarch64/) {
-			return qw(squeeze2upnp-aarch64_static squeeze2upnp-aarch64 squeeze2upnp-armv6hf-static squeeze2upnp-armv6hf);
+			return qw(squeeze2upnp-aarch64-static squeeze2upnp-aarch64 squeeze2upnp-armv6hf-static squeeze2upnp-armv6hf);
 		}
 		if ($os->{'binArch'} =~ /armhf/) {
 			return qw( squeeze2upnp-armv6hf-static squeeze2upnp-armv6hf);
