@@ -403,7 +403,7 @@ static decode_state faad_decode(struct thread_ctx_s *ctx) {
 		}
 	}
 
-	if (bytes_wrap < WRAPBUF_LEN && bytes_total > WRAPBUF_LEN) {
+	if (bytes_wrap < WRAPBUF_LEN && bytes_wrap != bytes_total) {
 		// make a local copy of frames which may have wrapped round the end of streambuf
 		u8_t buf[WRAPBUF_LEN];
 		memcpy(buf, ctx->streambuf->readp, bytes_wrap);

@@ -1075,7 +1075,7 @@ static void *UpdateThread(void *args)
 
 				for (i = 0; i < MAX_RENDERERS; i++) {
 					Device = glMRDevices + i;
-					if (Device->Running &&
+					if (Device->Running && (Device->sqState != SQ_PLAY || Device->State != PLAYING) &&
 						((Device->Config.RemoveTimeout != -1 &&
 						(Device->LastSeen + Device->Config.RemoveTimeout) - now > Device->Config.RemoveTimeout) ||
 						Device->ErrorCount > MAX_ACTION_ERRORS)) {
