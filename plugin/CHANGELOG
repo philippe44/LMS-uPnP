@@ -1,3 +1,6 @@
+1.45.2 NR
+ - improving alac style while verifying code
+ 
 1.45.1
  - remove un-necessary "buffer" variable in alac.c
  - guarantee alac writebuf size

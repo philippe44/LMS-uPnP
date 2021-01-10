@@ -97,15 +97,14 @@ static int read_mp4_header(struct thread_ctx_s *ctx) {
 		if (!strcmp(type, "alac") && bytes > len) {
 			u8_t *ptr = ctx->streambuf->readp + 36;
 			unsigned int block_size;
+			l->play = l->trak;
 			l->decoder = alac_create_decoder(len - 36, ptr, &l->sample_size, &l->sample_rate, &l->channels, &block_size);
 			l->writebuf = malloc(block_size + 256);
+			LOG_INFO("[%p]: allocated write buffer of %u bytes", ctx, block_size);
 			if (!l->writebuf) {
-				LOG_ERROR("[%p]: cannot allocate write buffer for %u bytes", ctx, block_size);
+				LOG_ERROR("[%p]: allocation failed", ctx);
 				return -1;
-			} else {
-				LOG_INFO("[%p]: write buffer of %u bytes", ctx, block_size);
-            }
-			l->play = l->trak;
+			}
 		}
 
 		// extract the total number of samples from stts
@@ -502,37 +501,29 @@ static decode_state alac_decode(struct thread_ctx_s *ctx) {
 	return DECODE_RUNNING;
 }
 
+static void alac_cleanup (struct alac *l) {
+	if (l->decoder) alac_delete_decoder(l->decoder);
+	if (l->writebuf) free(l->writebuf);
+	if (l->chunkinfo) free(l->chunkinfo);
+	if (l->block_size) free(l->block_size);
+	if (l->stsc) free(l->stsc);
+}
+
 static void alac_open(u8_t sample_size, u32_t sample_rate, u8_t channels, u8_t endianness, struct thread_ctx_s *ctx) {
 	struct alac *l = ctx->decode.handle;
 
 	if (!l) {
 		if ((l = calloc(1, sizeof(struct alac))) == NULL) return;
 		ctx->decode.handle = l;
-	} else if (l->decoder) alac_delete_decoder(l->decoder);
+	} else alac_cleanup(l);
 
-	if (l->writebuf) free(l->writebuf);
-	if (l->chunkinfo) free(l->chunkinfo);
-	if (l->block_size) free(l->block_size);
-	if (l->stsc) free(l->stsc);
-	l->writebuf = NULL;
-	l->chunkinfo = NULL;
-	l->stsc = NULL;
-	l->block_size = NULL;
-	l->skip = 0;
-	l->samples = l->sttssamples = 0;
-	l->empty = false;
-	l->pos = l->consume = l->sample = l->nextchunk = 0;
-
+	memset(l, 0, sizeof(struct alac));
 }
 
 static void alac_close(struct thread_ctx_s *ctx) {
 	struct alac *l = ctx->decode.handle;
 
-	if (l->decoder) alac_delete_decoder(l->decoder);
-	if (l->writebuf) free(l->writebuf);
-	if (l->chunkinfo) free(l->chunkinfo);
-	if (l->block_size) free(l->block_size);
-	if (l->stsc) free(l->stsc);
+	alac_cleanup(l);
 	free(l);
 	ctx->decode.handle = NULL;
 }
