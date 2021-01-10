@@ -506,15 +506,15 @@ static void alac_open(u8_t sample_size, u32_t sample_rate, u8_t channels, u8_t e
 	struct alac *l = ctx->decode.handle;
 
 	if (!l) {
-		if ((l =  malloc(sizeof(struct alac))) == NULL) return;
+		if ((l = calloc(1, sizeof(struct alac))) == NULL) return;
 		ctx->decode.handle = l;
-		l->decoder = NULL;
-		l->chunkinfo = l->stsc = l->block_size = NULL;
 	} else if (l->decoder) alac_delete_decoder(l->decoder);
 
+	if (l->writebuf) free(l->writebuf);
 	if (l->chunkinfo) free(l->chunkinfo);
 	if (l->block_size) free(l->block_size);
 	if (l->stsc) free(l->stsc);
+	l->writebuf = NULL;
 	l->chunkinfo = NULL;
 	l->stsc = NULL;
 	l->block_size = NULL;
@@ -529,10 +529,10 @@ static void alac_close(struct thread_ctx_s *ctx) {
 	struct alac *l = ctx->decode.handle;
 
 	if (l->decoder) alac_delete_decoder(l->decoder);
+	if (l->writebuf) free(l->writebuf);
 	if (l->chunkinfo) free(l->chunkinfo);
 	if (l->block_size) free(l->block_size);
 	if (l->stsc) free(l->stsc);
-	free(l->writebuf);
 	free(l);
 	ctx->decode.handle = NULL;
 }
