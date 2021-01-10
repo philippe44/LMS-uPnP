@@ -96,7 +96,15 @@ static int read_mp4_header(struct thread_ctx_s *ctx) {
 		// extract audio config from within alac
 		if (!strcmp(type, "alac") && bytes > len) {
 			u8_t *ptr = ctx->streambuf->readp + 36;
-			l->decoder = alac_create_decoder(len - 36, ptr, &l->sample_size, &l->sample_rate, &l->channels);
+			unsigned int block_size;
+			l->decoder = alac_create_decoder(len - 36, ptr, &l->sample_size, &l->sample_rate, &l->channels, &block_size);
+			l->writebuf = malloc(block_size + 256);
+			if (!l->writebuf) {
+				LOG_ERROR("[%p]: cannot allocate write buffer for %u bytes", ctx, block_size);
+				return -1;
+			} else {
+				LOG_INFO("[%p]: write buffer of %u bytes", ctx, block_size);
+            }
 			l->play = l->trak;
 		}
 
@@ -357,10 +365,9 @@ static decode_state alac_decode(struct thread_ctx_s *ctx) {
 
 	// need to create a buffer with contiguous data
 	if (bytes < block_size) {
-		u8_t *buffer = malloc(block_size);
-		memcpy(buffer, ctx->streambuf->readp, bytes);
-		memcpy(buffer + bytes, ctx->streambuf->buf, block_size - bytes);
-		iptr = buffer;
+		iptr = malloc(block_size);
+		memcpy(iptr, ctx->streambuf->readp, bytes);
+		memcpy(iptr + bytes, ctx->streambuf->buf, block_size - bytes);
 	} else iptr = ctx->streambuf->readp;
 
 	if (!alac_to_pcm(l->decoder, iptr, l->writebuf, 2, &frames)) {
@@ -503,12 +510,6 @@ static void alac_open(u8_t sample_size, u32_t sample_rate, u8_t channels, u8_t e
 		ctx->decode.handle = l;
 		l->decoder = NULL;
 		l->chunkinfo = l->stsc = l->block_size = NULL;
-		l->writebuf = malloc(BLOCK_SIZE * 2);
-		if (!l->writebuf) {
-			free(l->writebuf);
-			free(l);
-			return;
-		}
 	} else if (l->decoder) alac_delete_decoder(l->decoder);
 
 	if (l->chunkinfo) free(l->chunkinfo);
@@ -541,7 +542,7 @@ struct codec *register_alac(void) {
 		'l',            // id
 		"alc",          // types
 		MIN_READ,	    // min read
-		MIN_SPACE,	 	// min space assuming a ratio of 2
+		MIN_SPACE,	 	// min space assuming a ratio of 4
 		alac_open,      // open
 		alac_close,     // close
 		alac_decode,    // decode

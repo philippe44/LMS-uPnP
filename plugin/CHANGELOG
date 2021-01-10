@@ -1,3 +1,7 @@
+1.45.1
+ - remove un-necessary "buffer" variable in alac.c
+ - guarantee alac writebuf size
+ 
 1.45.0
  - aac buffer wrap only when needed
  - don't remove player that is currently playing

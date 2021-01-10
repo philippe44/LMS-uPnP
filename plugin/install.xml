@@ -7,7 +7,7 @@
     <minVersion>7.7</minVersion>
   </targetApplication>
   <creator>Philippe</creator>
-  <version>1.45.0</version>
+  <version>1.45.1</version>
   <name>PLUGIN_UPNPBRIDGE</name>
   <description>PLUGIN_UPNPBRIDGE_DESC</description>
   <profilesURL>http://sourceforge.net/projects/lms-to-upnp/files/profiles.xml/download</profilesURL>
