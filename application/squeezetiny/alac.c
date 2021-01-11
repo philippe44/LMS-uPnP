@@ -507,6 +507,7 @@ static void alac_cleanup (struct alac *l) {
 	if (l->chunkinfo) free(l->chunkinfo);
 	if (l->block_size) free(l->block_size);
 	if (l->stsc) free(l->stsc);
+	memset(l, 0, sizeof(struct alac));
 }
 
 static void alac_open(u8_t sample_size, u32_t sample_rate, u8_t channels, u8_t endianness, struct thread_ctx_s *ctx) {
@@ -516,16 +517,14 @@ static void alac_open(u8_t sample_size, u32_t sample_rate, u8_t channels, u8_t e
 		if ((l = calloc(1, sizeof(struct alac))) == NULL) return;
 		ctx->decode.handle = l;
 	} else alac_cleanup(l);
-
-	memset(l, 0, sizeof(struct alac));
 }
 
 static void alac_close(struct thread_ctx_s *ctx) {
 	struct alac *l = ctx->decode.handle;
 
+	ctx->decode.handle = NULL;
 	alac_cleanup(l);
 	free(l);
-	ctx->decode.handle = NULL;
 }
 
 struct codec *register_alac(void) {
