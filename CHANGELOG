@@ -1,3 +1,6 @@
+1.47.1
+ - gapless option should offer an empty as well to allow default settings
+ 
 1.47.0
  - openssl dynamic load compatible with 1.1.x
  

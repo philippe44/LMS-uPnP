@@ -557,7 +557,7 @@ struct thread_ctx_s {
 	u16_t		voltage;
 	char		cli_id[18];		// (6*2)+(5*':')+NULL
 	mutex_type	cli_mutex;
-	u32_t		cli_timestamp;
+	u32_t		cli_timeout;
 	struct output_thread_s output_thread[2];
 	bool 		decode_running, stream_running;
 	thread_type	decode_thread, stream_thread;

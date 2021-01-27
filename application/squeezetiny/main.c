@@ -171,7 +171,7 @@ bool cli_open_socket(struct thread_ctx_s *ctx) {
 	addr.sin_addr.s_addr = ctx->slimproto_ip;
 	addr.sin_port = htons(ctx->cli_port);
 
-	if (connect_timeout(ctx->cli_sock, (struct sockaddr *) &addr, sizeof(addr), 50))  {
+	if (connect_timeout(ctx->cli_sock, (struct sockaddr *) &addr, sizeof(addr), 200))  {
 		LOG_ERROR("[%p] unable to connect to server with cli", ctx);
 		ctx->cli_sock = -1;
 		return false;
@@ -181,14 +181,14 @@ bool cli_open_socket(struct thread_ctx_s *ctx) {
 	return true;
 }
 
-#define CLI_SEND_SLEEP (10000)
-#define CLI_SEND_TO (1*500000)
 /*---------------------------------------------------------------------------*/
-char *cli_send_cmd(char *cmd, bool req, bool decode, struct thread_ctx_s *ctx)
+#define CLI_SEND_SLEEP (10000)
+#define CLI_SEND_TO (1*500000)
+#define CLI_KEEP_DURATION (15*60*1000)
+char *cli_send_cmd(char *cmd, bool req, bool decode, struct thread_ctx_s *ctx)
 {
-#define CLI_LEN 4096
-	char *packet;
-	int wait;
+	char packet[2048];
+	int wait;
 	size_t len;
 	char *rsp = NULL;
 
@@ -197,9 +197,8 @@ bool cli_open_socket(struct thread_ctx_s *ctx) {
 		mutex_unlock(ctx->cli_mutex);
 		return NULL;
 	}
-	ctx->cli_timestamp = gettime_ms();
+	ctx->cli_timeout = gettime_ms() + CLI_KEEP_DURATION;
 
-	packet = malloc(CLI_LEN);
 	wait = CLI_SEND_TO / CLI_SEND_SLEEP;
 	cmd = cli_encode(cmd);
 	if (req) len = sprintf(packet, "%s ?\n", cmd);
@@ -226,7 +225,7 @@ bool cli_open_socket(struct thread_ctx_s *ctx) {
 
 		if (k < 0) break;
 
-		k = recv(ctx->cli_sock, packet + len, CLI_LEN - 1 - len, 0);
+		k = recv(ctx->cli_sock, packet + len, sizeof(packet) - 1 - len, 0);
 		if (k <= 0) break;
 
 		len += k;
@@ -253,9 +252,7 @@ bool cli_open_socket(struct thread_ctx_s *ctx) {
 	}
 
 	mutex_unlock(ctx->cli_mutex);
-
 	free(cmd);
-	free(packet);
 
 	return rsp;
 }
