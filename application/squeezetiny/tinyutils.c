@@ -646,13 +646,17 @@ char *kd_lookup(key_data_t *kd, char *key)
 
 
 /*----------------------------------------------------------------------------*/
-bool kd_add(key_data_t *kd, char *key, char *data)
+bool kd_add(key_data_t *kd, char *key, char *data, ...)
 {
+	va_list args;
 	int i = 0;
 	while (kd && kd[i].key) i++;
 
+	va_start(args, data);
+	vasprintf(&kd[i].data, data, args);
+	va_end(args);
+
 	kd[i].key = strdup(key);
-	kd[i].data = strdup(data);
 	kd[i+1].key = NULL;
 
 	return NULL;

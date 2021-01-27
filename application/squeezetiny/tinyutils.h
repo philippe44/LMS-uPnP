@@ -33,7 +33,7 @@ int 		read_line(int fd, char *line, int maxlen, int timeout);
 int 		send_response(int sock, char *response);
 
 char*		kd_lookup(key_data_t *kd, char *key);
-bool 		kd_add(key_data_t *kd, char *key, char *value);
+bool 		kd_add(key_data_t *kd, char *key, char *data, ...);
 char* 		kd_dump(key_data_t *kd);
 void 		kd_free(key_data_t *kd);
 

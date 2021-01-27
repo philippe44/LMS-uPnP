@@ -171,7 +171,7 @@ static void output_http_thread(struct thread_param_s *param) {
 
 		// should be the HTTP headers (works with non-blocking socket)
 		if (n > 0 && FD_ISSET(sock, &rfds)) {
-			bool header;
+			bool header = false;
 			ssize_t offset = handle_http(ctx, sock, thread->index, bytes, obuf, &header);
 
 			http_ready = res = (offset >= 0 && offset <= bytes + 1);
@@ -487,9 +487,7 @@ static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, int thread_index,
 	if (ctx->config.send_icy && (!ctx->output.duration || ctx->output.encode.flow) &&
 		(format == 'm' || format == 'a') &&
 		((str = kd_lookup(headers, "Icy-MetaData")) != NULL) && atol(str)) {
-		asprintf(&str, "%u", ICY_INTERVAL);
-		kd_add(resp, "icy-metaint", str);
-		free(str);
+		kd_add(resp, "icy-metaint", "%u", ICY_INTERVAL);
 		LOCK_O;
 		ctx->output.icy.interval = ctx->output.icy.remain = ICY_INTERVAL;
 		ctx->output.icy.updated = true;
@@ -502,14 +500,9 @@ static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, int thread_index,
 		head = "HTTP/1.1 410 Gone";
 		res = -1;
 	} else {
-		kd_add(resp, "Content-Type", ctx->output.mimetype);
 		//kd_add(resp, "Accept-Ranges", "none");
-		if (ctx->output.length > 0) {
-			asprintf(&str, "%zu", ctx->output.length);
-			kd_add(resp, "Content-Length", str);
-			free(str);
-		}
-
+		kd_add(resp, "Content-Type", ctx->output.mimetype);
+		if (abs(ctx->output.length) > abs(HTTP_CHUNKED)) kd_add(resp, "Content-Length", "%zu", ctx->output.length);
 		mirror_header(headers, resp, "transferMode.dlna.org");
 
 		if (kd_lookup(headers, "getcontentFeatures.dlna.org")) {
@@ -524,18 +517,15 @@ static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, int thread_index,
 			int offset = 0;
 			sscanf(str, "bytes=%u", &offset);
 			if (offset) {
-				char *range;
-				asprintf(&range, "bytes %u-%zu/*", offset, bytes);
 				head = "HTTP/1.1 206 Partial Content";
-				if (type != SONOS) kd_add(resp, "Content-Range", range);
+				if (type != SONOS) kd_add(resp, "Content-Range", "bytes %u-%zu/*", offset, bytes);
 				res = offset + 1;
-				free(range);
 				obuf->readp = obuf->buf + offset % obuf->size;
 			}
 		} else if (bytes && type == SONOS) {
 			// Sonos client re-opening the connection, so make it believe we
 			// have a 2G length - thus it will sent a range-request
-			if (ctx->output.length < 0) kd_add(resp, "Content-Length", "2048000000");
+			if (ctx->output.length < 0) kd_add(resp, "Content-Length", "%zu", INT_MAX);
 			chunked = false;
 			*header = true;
 		} else if (bytes) {

@@ -28,7 +28,7 @@
 #define OUTPUTBUF_SIZE	(4*1024*1024)
 #define STREAMBUF_SIZE	(1024*1024)
 
-#define MAX_FILE_SIZE 	0xffff0000
+#define MAX_FILE_SIZE 	(UINT_MAX - 8192)
 #define	MAX_MIMETYPES 	128
 #define BRIDGE_URL	 	"bridge-"
 
