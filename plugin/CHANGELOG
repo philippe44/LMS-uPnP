@@ -1,3 +1,7 @@
+1.49.0
+ - switch flac for main set
+ - set estimated flac number of samples based on duration (when possible)
+ 
 1.48.1
  - HTTP mode -2 was not sending content-length for large files
  - make kd_add a variadic

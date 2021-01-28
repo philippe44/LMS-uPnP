@@ -66,6 +66,7 @@ static struct {
 	FLAC__bool (*FLAC__stream_encoder_set_sample_rate)(FLAC__StreamEncoder *encoder, unsigned value);
 	FLAC__bool (*FLAC__stream_encoder_set_blocksize)(FLAC__StreamEncoder *encoder, unsigned value);
 	FLAC__bool (*FLAC__stream_encoder_set_streamable_subset)(FLAC__StreamEncoder *encoder, FLAC__bool value);
+	FLAC__bool (*FLAC__stream_encoder_set_total_samples_estimate)(FLAC__StreamEncoder *encoder, FLAC__uint64 value);
 	FLAC__StreamEncoderInitStatus (*FLAC__stream_encoder_init_stream)(FLAC__StreamEncoder *encoder, FLAC__StreamEncoderWriteCallback write_callback, FLAC__StreamEncoderSeekCallback seek_callback, FLAC__StreamEncoderTellCallback tell_callback, FLAC__StreamEncoderMetadataCallback metadata_callback, void *client_data);
 	FLAC__bool (*FLAC__stream_encoder_process_interleaved)(FLAC__StreamEncoder *encoder, const FLAC__int32 buffer[], unsigned samples);
 } f;
@@ -353,8 +354,9 @@ bool _output_fill(struct buffer *buf, FILE *store, struct thread_ctx_s *ctx) {
 }
 
 /*---------------------------------------------------------------------------*/
-void _output_new_stream(struct buffer *obuf, struct thread_ctx_s *ctx) {
+void _output_new_stream(struct buffer *obuf, FILE *store, struct thread_ctx_s *ctx) {
 	struct outputstate *out = &ctx->output;
+	u8_t *writep = obuf->writep;
 
 	if (!out->encode.sample_rate) out->encode.sample_rate = out->sample_rate;
 	if (!out->encode.channels) out->encode.channels = out->channels;
@@ -444,7 +446,9 @@ void _output_new_stream(struct buffer *obuf, struct thread_ctx_s *ctx) {
 		ok &= FLAC(f, stream_encoder_set_bits_per_sample, codec, out->encode.sample_size);
 		ok &= FLAC(f, stream_encoder_set_sample_rate, codec, out->encode.sample_rate);
 		ok &= FLAC(f, stream_encoder_set_blocksize, codec, FLAC_BLOCK_SIZE);
-		ok &= FLAC(f, stream_encoder_set_streamable_subset, codec, true);
+		ok &= FLAC(f, stream_encoder_set_streamable_subset, codec, false);
+		if (!out->encode.flow) ok &= FLAC(f, stream_encoder_set_total_samples_estimate, codec,
+										  (out->encode.sample_rate * (u64_t) out->duration + 10) / 1000);
 		ok &= !FLAC(f, stream_encoder_init_stream, codec, flac_write_callback, NULL, NULL, NULL, obuf);
 		if (ok) {
 			out->encode.codec = (void*) codec;
@@ -484,6 +488,13 @@ void _output_new_stream(struct buffer *obuf, struct thread_ctx_s *ctx) {
 								  out->encode.sample_size, out->encode.channels);
 		}
 #endif
+	}
+
+	 if (store) {
+		size_t out, bytes = (obuf->writep - writep) % obuf->size;
+		out = min(bytes, obuf->wrap - writep);
+		fwrite(writep, out, 1, store);
+		fwrite(obuf->buf, bytes - out, 1, store);
 	}
 }
 
@@ -613,6 +624,7 @@ bool output_init(void) {
 		f.FLAC__stream_encoder_set_sample_rate = dlsym(handle, "FLAC__stream_encoder_set_sample_rate");
 		f.FLAC__stream_encoder_set_blocksize = dlsym(handle, "FLAC__stream_encoder_set_blocksize");
 		f.FLAC__stream_encoder_set_streamable_subset = dlsym(handle, "FLAC__stream_encoder_set_streamable_subset");
+		f.FLAC__stream_encoder_set_total_samples_estimate = dlsym(handle, "FLAC__stream_encoder_set_total_samples_estimate");
 		f.FLAC__stream_encoder_init_stream = dlsym(handle, "FLAC__stream_encoder_init_stream");
 		f.FLAC__stream_encoder_process_interleaved = dlsym(handle, "FLAC__stream_encoder_process_interleaved");
 		return true;

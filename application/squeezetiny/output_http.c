@@ -163,7 +163,7 @@ static void output_http_thread(struct thread_param_s *param) {
 			UNLOCK_D;
 
 			LOCK_O;
-			_output_new_stream(obuf, ctx);
+			_output_new_stream(obuf, store, ctx);
 			UNLOCK_O;
 
 			LOG_INFO("[%p]: drain is %u (waited %u)", ctx, obuf->size, gettime_ms() - start);
