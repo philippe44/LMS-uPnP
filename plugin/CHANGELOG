@@ -1,3 +1,6 @@
+1.49.1
+ - SNI must be w/o any leading space or trailing garbage now that LMS excludes port
+ 
 1.49.0
  - switch flac for main set
  - set estimated flac number of samples based on duration (when possible)
