@@ -265,7 +265,7 @@ struct sMR* UDN2Device(char *UDN)
 bool CheckAndLock(struct sMR *Device)
 {
 	if (!Device) {
-		LOG_INFO("device is NULL", NULL);
+		LOG_DEBUG("device is NULL", NULL);
 		return false;
 	}
 

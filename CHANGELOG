@@ -1,3 +1,6 @@
+1.49.2
+ - silence CheckAndLock utility when device is NULL
+ 
 1.49.1
  - SNI must be w/o any leading space or trailing garbage now that LMS excludes port
  
