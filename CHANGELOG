@@ -1,3 +1,6 @@
+1.49.4
+ - recurse in hasOutputChannels
+ 
 1.49.3
  - (P) remove "outputChannels" option from audio settings
  

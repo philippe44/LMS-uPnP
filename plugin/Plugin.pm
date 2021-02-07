@@ -43,8 +43,8 @@ sub initPlugin {
 	my $class = shift;
 
 	# this is hacky but I won't redefine a whole player model just for this	
-	$hasOutputChannels = \&Slim::Player::SqueezePlay::hasOutputChannels;
-	*Slim::Player::SqueezePlay::hasOutputChannels = \&hasOutputChannels;
+	$hasOutputChannels = \&Slim::Player::Squeezebox2::hasOutputChannels;
+	*Slim::Player::Squeezebox2::hasOutputChannels = \&hasOutputChannels;
 
 	$class->SUPER::initPlugin(@_);
 	
