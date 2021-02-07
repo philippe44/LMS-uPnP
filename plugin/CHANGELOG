@@ -1,3 +1,6 @@
+1.49.3
+ - (P) remove "outputChannels" option from audio settings
+ 
 1.49.2
  - silence CheckAndLock utility when device is NULL
  

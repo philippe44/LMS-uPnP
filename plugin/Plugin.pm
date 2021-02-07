@@ -13,6 +13,7 @@ use Slim::Utils::Log;
 use Plugins::UPnPBridge::Queries;
 
 my $prefs = preferences('plugin.upnpbridge');
+my $hasOutputChannels;
 
 $prefs->init({ 
 	autorun => 0, opts => '', 
@@ -32,13 +33,23 @@ my $log = Slim::Utils::Log->addLogCategory({
 	'description'  => Slim::Utils::Strings::string('PLUGIN_UPNPBRIDGE'),
 }); 
 
+sub hasOutputChannels {
+	my ($self) = @_;
+	return $hasOutputChannels->(@_) unless $self->modelName =~ /UPnPBridge/;
+	return 0;
+}
+
 sub initPlugin {
 	my $class = shift;
+
+	# this is hacky but I won't redefine a whole player model just for this	
+	$hasOutputChannels = \&Slim::Player::SqueezePlay::hasOutputChannels;
+	*Slim::Player::SqueezePlay::hasOutputChannels = \&hasOutputChannels;
 
 	$class->SUPER::initPlugin(@_);
 	
 	Plugins::UPnPBridge::Queries::initQueries();
-		
+
 	require Plugins::UPnPBridge::Squeeze2upnp;		
 	
 	if ($prefs->get('autorun')) {
