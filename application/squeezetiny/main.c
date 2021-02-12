@@ -701,21 +701,17 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 				ctx->render.ms_paused = ctx->render.ms_played = 0;
 				ctx->render.duration = ctx->output.duration;
 				if (ctx->render.state == RD_PLAYING) {
-					ctx->render.state = RD_TRANSITION;
-					LOG_INFO("[%p] track %u started by time, waiting for PLAY event", ctx, index);
-					/*
 					ctx->output.track_started = true;
 					ctx->render.track_start_time = gettime_ms();
 					LOG_INFO("[%p] track %u started at %u", ctx, index, ctx->render.track_start_time);
 					wake_controller(ctx);
-					*/
 				}
 			}
 			UNLOCK_O;
 			break;
 		}
 		case SQ_BATTERY: {
-			if (ctx->voltage != *(u16_t*) param) {
+			if 	(ctx->voltage != *(u16_t*) param) {
 				LOCK_O;
 				ctx->voltage = *(u16_t*) param;
 				UNLOCK_O;
