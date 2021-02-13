@@ -584,7 +584,7 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 				if (ctx->render.index == ctx->output.index) {
 					ctx->output.track_started = true;
 					ctx->render.track_start_time = gettime_ms();
-					LOG_INFO("[%p] track %u started at %u", ctx, ctx->render.index, ctx->render.track_start_time);
+					LOG_INFO("[%p] track %u started by play at %u", ctx, ctx->render.index, ctx->render.track_start_time);
             	} else {
 					LOG_INFO("[%p] play notification", ctx );
 				}
@@ -703,7 +703,7 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 				if (ctx->render.state == RD_PLAYING) {
 					ctx->output.track_started = true;
 					ctx->render.track_start_time = gettime_ms();
-					LOG_INFO("[%p] track %u started at %u", ctx, index, ctx->render.track_start_time);
+					LOG_INFO("[%p] track %u started by info at %u", ctx, index, ctx->render.track_start_time);
 					wake_controller(ctx);
 				}
 			}

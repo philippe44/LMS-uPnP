@@ -335,7 +335,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 			stream_sock(ip, port, strm->flags & 0x20, header, header_len, strm->threshold * 1024, ctx->autostart >= 2, ctx);
 
 			sendSTAT("STMc", 0, ctx);
-			ctx->canSTMdu = ctx->sentSTMu = ctx->sentSTMo = ctx->sentSTMl = ctx->sentSTMd = false;
+			ctx->canSTMdu = ctx->sentSTMu = ctx->sentSTMo = ctx->sentSTMl = ctx->sendSTMd = false;
 
 			// codec error
 			if (sendSTMn) {
@@ -762,8 +762,13 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			if (_sendSTMs) sendSTAT("STMs", 0, ctx);
 			if (_sendSTMt) sendSTAT("STMt", 0, ctx);
 			if (_sendSTMl) sendSTAT("STMl", 0, ctx);
-			if (_sendSTMd) sendSTAT("STMd", 0, ctx);
-			if (_sendSTMu) sendSTAT("STMu", 0, ctx);
+			if (_sendSTMu) {
+				sendSTAT("STMu", 0, ctx);
+				if (_sendSTMd) ctx->sendSTMd = true;
+			} else if (_sendSTMd || ctx->sendSTMd) {
+				sendSTAT("STMd", 0, ctx);
+				ctx->sendSTMd = false;
+			}
 			if (_sendSTMo) sendSTAT("STMo", 0, ctx);
 			if (_sendSTMn) sendSTAT("STMn", 0, ctx);
 			if (_sendRESP) sendRESP(ctx->slim_run.header, header_len, ctx->sock);

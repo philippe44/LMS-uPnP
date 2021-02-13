@@ -1,3 +1,6 @@
+1.49.6
+ - delay STMd by one cycle when STMu is required as well (Sonos)
+ 
 1.49.5
  - must force Squeezebox2 to be loaded
  
