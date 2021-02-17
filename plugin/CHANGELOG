@@ -1,3 +1,6 @@
+1.49.7
+ - delay STMd with STMs, not STMu!!!!!!!!!!!!!
+ 
 1.49.6
  - delay STMd by one cycle when STMu is required as well (Sonos)
  

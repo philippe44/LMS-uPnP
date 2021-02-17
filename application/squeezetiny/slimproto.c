@@ -759,11 +759,12 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 
 			// send packets once locks released as packet sending can block
 			if (_sendDSCO) sendDSCO(disconnect_code, ctx->sock);
-			if (_sendSTMs) sendSTAT("STMs", 0, ctx);
 			if (_sendSTMt) sendSTAT("STMt", 0, ctx);
 			if (_sendSTMl) sendSTAT("STMl", 0, ctx);
-			if (_sendSTMu) {
-				sendSTAT("STMu", 0, ctx);
+			// delay STMd by one round when STMs is pending as well
+			if (_sendSTMu) sendSTAT("STMu", 0, ctx);
+			if (_sendSTMs) {
+				sendSTAT("STMs", 0, ctx);
 				if (_sendSTMd) ctx->sendSTMd = true;
 			} else if (_sendSTMd || ctx->sendSTMd) {
 				sendSTAT("STMd", 0, ctx);

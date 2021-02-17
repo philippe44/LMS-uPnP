@@ -7,7 +7,7 @@
   </targetApplication>
   <optionsURL>plugins/UPnPBridge/settings/basic.html</optionsURL>
   <creator>Philippe</creator>
-  <version>1.49.6</version>
+  <version>1.49.7</version>
   <name>PLUGIN_UPNPBRIDGE</name>
   <profilesURL>http://sourceforge.net/projects/lms-to-upnp/files/profiles.xml/download</profilesURL>
   <description>PLUGIN_UPNPBRIDGE_DESC</description>
