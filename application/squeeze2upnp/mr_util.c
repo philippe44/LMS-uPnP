@@ -294,6 +294,7 @@ char** ParseProtocolInfo(char *Info, char *Forced)
 		// in case Info finishes by a serie of ','
 		if (!p) break;
 		n += strlen(p) + 1;
+		while (*p == ' ') p++;		
 		if (sscanf(p, "http-get:*:%[^:]", MimeType) && strstr(MimeType, "audio")) {
 			MimeTypes[i] = strdup(MimeType);
 			i++;

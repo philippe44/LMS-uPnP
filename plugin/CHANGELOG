@@ -1,3 +1,6 @@
+1.49.8
+ - handle players with spaces in ProtocolInfo
+ 
 1.49.7
  - delay STMd with STMs, not STMu!!!!!!!!!!!!!
  
