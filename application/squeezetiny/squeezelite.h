@@ -280,8 +280,6 @@ typedef enum { STOPPED = 0, DISCONNECT, STREAMING_WAIT,
 			   STREAMING_BUFFERING, STREAMING_FILE, STREAMING_HTTP, SEND_HEADERS, RECV_HEADERS } stream_state;
 typedef enum { DISCONNECT_OK = 0, LOCAL_DISCONNECT = 1, REMOTE_DISCONNECT = 2, UNREACHABLE = 3, TIMEOUT = 4 } disconnect_code;
 
-#define STREAM_DELAY 15000
-
 struct streamstate {
 	stream_state state;
 	disconnect_code disconnect;
@@ -417,7 +415,7 @@ struct outputstate {
 	u32_t 	duration;       // duration of track in ms, 0 if unknown
 	u32_t	offset;			// offset of track in ms (for flow mode)
 	u32_t	bitrate;	  	// as per name
-	bool  	remote;			// local track or not (if duration == 0 => live)
+	u32_t  	STMd_delay;		// shall this track delay STMd toward the end
 	ssize_t length;			// HTTP content-length (-1:no chunked, -3 chunked if possible, >0 fake length)
 	u16_t  	index;			// 16 bits track counter(see output_thread)
 	u16_t	port;			// port of latest thread (mainy used for codc)

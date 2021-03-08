@@ -117,6 +117,7 @@ sq_dev_param_t glDeviceParam = {
 					OUTPUTBUF_SIZE,			// output_buffer_size
 					"aac,ogg,ops,ogf,flc,alc,wav,aif,pcm,mp3",		// codecs
 					"thru",					// mode
+					15,						// next_delay
 					"raw,wav,aif",			// raw_audio_format
 					"?",                    // server
 					SQ_RATE_48000,          // sample_rate
@@ -1181,7 +1182,7 @@ static void *UpdateThread(void *args)
 
 				// this can take a very long time, too bad for the queue...
 				if ((rc = UpnpDownloadXmlDoc(Update->Data, &DescDoc)) != UPNP_E_SUCCESS) {
-					LOG_INFO("Error obtaining description %s -- error = %d\n", Update->Data, rc);
+					LOG_DEBUG("Error obtaining description %s -- error = %d\n", Update->Data, rc);
 					goto cleanup;
 				}
 

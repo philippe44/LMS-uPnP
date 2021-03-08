@@ -131,6 +131,9 @@
 			<option [% IF entry.1 == seek_after_pause %]selected[% END %] value="[% entry.1 %]">[% entry.0 | string %]</option>
 		[% END %]
 		</select>
+		&nbsp[% "PLUGIN_UPNPBRIDGE_NEXTDELAY1" | string %]
+		<input type="text" class="stdedit" name="next_delay" id="next_delay" value="[% next_delay %]" size="2">
+		[% "PLUGIN_UPNPBRIDGE_NEXTDELAY2" | string %]
 	[% END %]
 	
 	<script type="text/javascript">

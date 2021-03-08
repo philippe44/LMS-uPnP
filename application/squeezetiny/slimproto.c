@@ -730,15 +730,12 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			 to wait a bit toward the end of the track before sending STMd.
 			 But when flow mode is used, the stream is regulated by the player
 			 and thus should be continuous, so there is no need to wait toward
-			 the end of the track, which also fits nicely with the requirement
-			 for cross fade (need to have enough of current track in outputbuf
-			 when codec of next track starts)
+			 the end of the track
 			*/
 			if ((ctx->decode.state == DECODE_COMPLETE && ctx->canSTMdu && ctx->status.output_ready &&
-				(ctx->output.encode.flow || !ctx->output.remote || _sendSTMu ||
-				 (ctx->status.duration && ctx->status.duration - ctx->status.ms_played < STREAM_DELAY))) ||
+				(ctx->output.encode.flow || _sendSTMu || !ctx->output.STMd_delay ||
+				 (ctx->status.duration && ctx->status.duration - ctx->status.ms_played < ctx->output.STMd_delay))) ||
 				ctx->decode.state == DECODE_ERROR) {
-
 				if (ctx->decode.state == DECODE_COMPLETE) _sendSTMd = true;
 				if (ctx->decode.state == DECODE_ERROR)    _sendSTMn = true;
 				ctx->decode.state = DECODE_STOPPED;
@@ -761,7 +758,6 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			if (_sendDSCO) sendDSCO(disconnect_code, ctx->sock);
 			if (_sendSTMt) sendSTAT("STMt", 0, ctx);
 			if (_sendSTMl) sendSTAT("STMl", 0, ctx);
-			if (_sendSTMu) sendSTAT("STMu", 0, ctx);
 			// delay STMd by one round when STMs is pending as well
 			if (_sendSTMs) {
 				sendSTAT("STMs", 0, ctx);
@@ -770,6 +766,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 				sendSTAT("STMd", 0, ctx);
 				ctx->sendSTMd = false;
 			}
+			if (_sendSTMu) sendSTAT("STMu", 0, ctx);
 			if (_sendSTMo) sendSTAT("STMo", 0, ctx);
 			if (_sendSTMn) sendSTAT("STMn", 0, ctx);
 			if (_sendRESP) sendRESP(ctx->slim_run.header, header_len, ctx->sock);
@@ -1021,7 +1018,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 	out->completed = false;
 	out->duration = info.metadata.duration;
 	out->bitrate = info.metadata.bitrate;
-	out->remote = info.metadata.remote;
+	out->STMd_delay = info.metadata.remote ? ctx->config.next_delay*1000 : 0;
 
 	// read source parameters (if any)
 	if (size == '?') out->sample_size = 0;

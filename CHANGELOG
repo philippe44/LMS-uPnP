@@ -1,3 +1,8 @@
+1.49.9
+ - order correctly STMu & STMd
+ - STREAM_DELAY is now a runtime parameter
+ - move back CLI buffer to 4kB (allocated)
+ 
 1.49.8
  - handle players with spaces in ProtocolInfo
  
