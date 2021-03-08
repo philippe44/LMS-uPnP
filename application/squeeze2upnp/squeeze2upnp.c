@@ -321,9 +321,11 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 		case SQ_SET_TRACK: {
 			struct track_param *p = (struct track_param*) param;
 			char *ProtoInfo, *uri;
+			char format = mimetype2format(p->mimetype);
 
 			// when this is received the next track has been processed
 			NFREE(Device->NextURI);
+			NFREE(Device->ExpectedURI);
 			NFREE(Device->NextProtoInfo);
 			Device->ElapsedLast = Device->ElapsedOffset = 0;
 			sq_free_metadata(&Device->NextMetaData);
@@ -340,11 +342,13 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 			ProtoInfo = MakeProtoInfo(p->mimetype, p->metadata.duration);
 
 			// when it's a Sonos playing a live mp3 or aac stream, add special prefix
-			if (!p->metadata.duration && (*Device->Service[TOPOLOGY_IDX].ControlURL) &&
-				(mimetype2format(p->mimetype) == 'm' || mimetype2format(p->mimetype) == 'a')) {
+			if (!p->metadata.duration && (*Device->Service[TOPOLOGY_IDX].ControlURL) &&	(format == 'm' || format == 'a')) {
 				asprintf(&uri, "x-rincon-mp3radio://%s", p->uri);
+				if (format == 'a') asprintf(&Device->ExpectedURI, "aac://%s", p->uri);
 				LOG_INFO("[%p]: Sonos live stream", Device);
 			} else uri = strdup(p->uri);
+
+			if (!Device->ExpectedURI) Device->ExpectedURI = strdup(uri);
 
 			 if (p->offset) {
 				if (Device->State == STOPPED) {
@@ -372,12 +376,6 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 				Device->Duration = p->metadata.duration;
 				LOG_INFO("[%p]: set current URI (s:%u) %s", Device, Device->ShortTrack, uri);
 				AVTSetURI(Device, uri, &p->metadata, ProtoInfo);
-			}
-
-			// don't bother with missed NextURI if player don't support it
-			if (Device->Config.AcceptNextURI == NEXT_GAPLESS) {
-				NFREE(Device->ExpectedURI);
-				Device->ExpectedURI = strdup(uri);
 			}
 
 			// Gapless or direct URI used, free ressources

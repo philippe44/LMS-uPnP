@@ -1,3 +1,6 @@
+1.49.10
+ - Sonos returns a different URI than the one given for aac streams (replace x-rincon...::// by aac://)
+ 
 1.49.9
  - order correctly STMu & STMd
  - STREAM_DELAY is now a runtime parameter
