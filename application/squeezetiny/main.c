@@ -334,6 +334,7 @@ static void sq_init_metadata(metadata_t *metadata)
 	metadata->file_size = 0;
 	metadata->duration 	= 0;
 	metadata->remote 	= false;
+	metadata->repeating = false;
 	metadata->bitrate	= 0;
 }
 
@@ -382,7 +383,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, int offset)
 
 	if (repeating && (p = cli_find_tag(rsp, "repeating_stream")) != NULL) {
 		// detect repeating streams
-		repeating = atoi(p) != 0;
+		metadata->repeating = repeating = atoi(p) != 0;
 		free(p);
 	} else repeating = false;
 

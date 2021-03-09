@@ -426,6 +426,7 @@ struct outputstate {
 	int		supported_rates[2];	// for resampling (0 = use raw)
 	// for icy data
 	struct {
+		bool allowed;
 		size_t interval, remain;
 		size_t size, count;
 		char buffer[ICY_LEN_MAX];

@@ -590,8 +590,8 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 		now = gettime_ms();
 
 		// check for metadata update (LOCK_O not really necessary here)
-		if (ctx->output.state == OUTPUT_RUNNING && ctx->config.send_icy &&
-			ctx->output.icy.interval && (ctx->output.icy.last + ICY_UPDATE_TIME) - now > ICY_UPDATE_TIME) {
+		if (ctx->output.state == OUTPUT_RUNNING && ctx->output.icy.interval &&
+		    (ctx->output.icy.last + ICY_UPDATE_TIME) - now > ICY_UPDATE_TIME) {
 			struct metadata_s metadata;
 
 			sq_get_metadata(ctx->self, &metadata, -1);
@@ -1071,8 +1071,8 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 		if (!out->encode.sample_size) out->encode.sample_size = 16;
 		out->encode.channels = 2;
 		out->encode.flow = true;
-	} else {
-		if (ctx->config.send_icy && !out->duration) output_set_icy(&info.metadata, true, gettime_ms(), ctx);
+	} else if (ctx->config.send_icy && (!out->duration || info.metadata.repeating)) {
+		output_set_icy(&info.metadata, true, gettime_ms(), ctx);
 	}
 
 	// set sample rate for re-encoding

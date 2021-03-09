@@ -656,6 +656,7 @@ void output_set_icy(struct metadata_s *metadata, bool init, u32_t now, struct th
 	u32_t hash;
 
 	ctx->output.icy.last = now;
+	ctx->output.icy.allowed = true;
 	hash = hash32(metadata->artist) ^ hash32(metadata->title) ^ hash32(metadata->artwork);
 	if (init || hash != ctx->output.icy.hash) {
 		LOCK_O;

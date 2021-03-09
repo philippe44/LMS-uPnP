@@ -62,6 +62,7 @@ typedef struct metadata_s {
 	u32_t duration;
 	u32_t file_size;
 	bool  remote;
+	bool  repeating;
 	u32_t bitrate;
 	u32_t sample_rate;
 	u8_t  sample_size;

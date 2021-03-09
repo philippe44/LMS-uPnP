@@ -484,9 +484,8 @@ static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, int thread_index,
 	// check if add ICY metadata is needed (only on live stream)
 	format = mimetype2format(ctx->output.mimetype);
 	ctx->output.icy.count = 0;
-	if (ctx->config.send_icy && (!ctx->output.duration || ctx->output.encode.flow) &&
-		(format == 'm' || format == 'a') &&
-		((str = kd_lookup(headers, "Icy-MetaData")) != NULL) && atol(str)) {
+	if (ctx->output.icy.allowed && (format == 'm' || format == 'a') &&
+	    ((str = kd_lookup(headers, "Icy-MetaData")) != NULL) && atol(str)) {
 		kd_add(resp, "icy-metaint", "%u", ICY_INTERVAL);
 		LOCK_O;
 		ctx->output.icy.interval = ctx->output.icy.remain = ICY_INTERVAL;

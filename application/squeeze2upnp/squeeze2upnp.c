@@ -341,8 +341,9 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 			// passing DLNAfeatures back is really ugly
 			ProtoInfo = MakeProtoInfo(p->mimetype, p->metadata.duration);
 
-			// when it's a Sonos playing a live mp3 or aac stream, add special prefix
-			if (!p->metadata.duration && (*Device->Service[TOPOLOGY_IDX].ControlURL) &&	(format == 'm' || format == 'a')) {
+			// Sonos requires special prefix for ICY but it can't be a repeating stream (must have no duration)
+			if (!p->metadata.duration && (*Device->Service[TOPOLOGY_IDX].ControlURL) &&
+				(format == 'm' || format == 'a')) {
 				asprintf(&uri, "x-rincon-mp3radio://%s", p->uri);
 				if (format == 'a') asprintf(&Device->ExpectedURI, "aac://%s", p->uri);
 				LOG_INFO("[%p]: Sonos live stream", Device);
