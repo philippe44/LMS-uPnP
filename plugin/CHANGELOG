@@ -1,3 +1,6 @@
+1.49.12
+ - rebuild
+ 
 1.49.11
  - allow ICY for repeating streams as some BBC channels use repeating for programs and ICY inside for titles. This does not work for Sonos as ICY can only happen on webradio
  
