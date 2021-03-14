@@ -1,3 +1,6 @@
+1.49.13
+ - fix sslsym macros that were still incorrect
+ 
 1.49.12
  - rebuild
  

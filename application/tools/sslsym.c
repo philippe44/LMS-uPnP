@@ -59,33 +59,47 @@ static void *CRYPThandle = NULL;
 #define P(n, ...) P##n(__VA_ARGS__)
 #define V(n, ...) V##n(__VA_ARGS__)
 
+#define STR(x) #x
+
+#define SYM(fn) dlsym_##fn
+#define SSYM(fn) SYM(fn)
+#define SHIM(fn) shim_##fn
+#define SSHIM(fn) SHIM(fn)
+
 #ifndef LINKALL
 
-#define SYMDECL(fn, ret, n, ...) 			   	\
-static ret (*dlsym_##fn)(P(n,__VA_ARGS__));		\
-ret fn(P(n,__VA_ARGS__)) {						\
-	return (*dlsym_##fn)(V(n,__VA_ARGS__));		\
+#define SYMDECL(fn, ret, n, ...) 			\
+static ret (*SYM(fn))(P(n,__VA_ARGS__));	\
+ret fn(P(n,__VA_ARGS__)) {					\
+	return (*SYM(fn))(V(n,__VA_ARGS__));	\
 }
 
-#define SYMSHIMDECL(fn, ret, n, ...) 	  	   		\
-static ret (*dlsym_##fn)(P(n,__VA_ARGS__));			\
-ret fn(P(n,__VA_ARGS__)) {							\
-	if (dlsym_##fn) 								\
-		return (*dlsym_##fn)(V(n,__VA_ARGS__));		\
-	else        									\
-		return (shim_##fn)(V(n,__VA_ARGS__));		\
+#define SHIMDECL(fn, ret, n, ...) 	  	   		\
+static ret (*SYM(fn))(P(n,__VA_ARGS__));		\
+ret fn(P(n,__VA_ARGS__)) {						\
+	if (SYM(fn)) 								\
+		return (*SYM(fn))(V(n,__VA_ARGS__));	\
+	else        								\
+		return SHIM(fn)(V(n,__VA_ARGS__));	\
 }
+
+#define SHIMNULL(fn, ret, n, ...) 	  	   	\
+static ret (*SHIM(fn))(P(n,__VA_ARGS__))
 
 #else
 
 #define SYMDECL(fn, ret, n, ...)
-
-#define SYMSHIMDECL(fn, ret, n, ...)		\
+#define SHIMNULL(fn, ret, n, ...)
+#define SHIMDECL(fn, ret, n, ...)			\
 ret fn(P(n,__VA_ARGS__)) {				 	\
-	return (shim_##fn)(V(n,__VA_ARGS__));	\
+	return (SHIM(fn))(V(n,__VA_ARGS__));	\
 }
 
 #endif
+
+#define SYMLOAD(h, fn) SYM(fn) = dlsym(h, STR(fn))
+#define SHIMSET(fn) if (!SYM(fn)) SYM(fn) = shim_##fn
+
 
 /*
  MNNFFPPS: major minor fix patch status
@@ -98,9 +112,10 @@ static int shim_RSA_set0_key(RSA *r, BIGNUM *n, BIGNUM *e, BIGNUM *d) {
 	r->n = n; r->e = e;	r->d = d;
 	return 1;
 }
-SYMSHIMDECL(RSA_set0_key, int, 4, RSA*, r, BIGNUM*, n, BIGNUM*, e, BIGNUM*, d);
+SHIMDECL(RSA_set0_key, int, 4, RSA*, r, BIGNUM*, n, BIGNUM*, e, BIGNUM*, d);
 #else
 SYMDECL(RSA_set0_key, int, 4, RSA*, r, BIGNUM*, n, BIGNUM*, e, BIGNUM*, d);
+SHIMNULL(RSA_set0_key, int, 4, RSA*, r, BIGNUM*, n, BIGNUM*, e, BIGNUM*, d);
 #endif
 
 #ifndef LINKALL
@@ -132,25 +147,19 @@ static char *LIBCRYPTO[] 	= {
 			"libcrypto.so.1.0.0", NULL };
 #endif
 
-#define SYM(fn) dlsym_##fn
+#ifndef SSLv23_client_method
 
-#if 0
-#define SYMLOAD(h, fn) {		 		\
-	dlsym_##fn = dlsym(h, #fn);         \
-	printf("%s %p\n", #fn, dlsym_##fn);	\
-}
-#else
-#define SYMLOAD(h, fn) dlsym_##fn = dlsym(h, #fn)
+#define _SSLv23_client_method SSLv23_client_method
 #endif
-
-#define SHIMSET(fn) if (!SYM(fn)) SYM(fn) = &(shim_##fn)
-
+#ifndef SSL_library_init
+#define _SSL_library_init SSL_library_init
+#endif
+SYMDECL(_SSLv23_client_method, const SSL_METHOD*, 0);
+SYMDECL(_SSL_library_init, int, 0);
+SYMDECL(TLS_client_method, const SSL_METHOD*, 0);
 SYMDECL(SSL_read, int, 3, SSL*, s, void*, buf, int, len);
 SYMDECL(SSL_write, int, 3, SSL*, s, const void*, buf, int, len);
-SYMDECL(SSLv23_client_method, const SSL_METHOD*, 0);
-SYMDECL(TLS_client_method, const SSL_METHOD*, 0);
 SYMDECL(OpenSSL_version_num, unsigned long, 0);
-SYMDECL(SSL_library_init, int, 0);
 SYMDECL(SSL_CTX_set_cipher_list, int, 2, SSL_CTX *, ctx, const char*, str);
 SYMDECL(SSL_CTX_new, SSL_CTX*, 1, const SSL_METHOD *, meth);
 SYMDECL(SSL_CTX_ctrl, long, 4, SSL_CTX *, ctx, int, cmd, long, larg, void*, parg);
@@ -242,10 +251,10 @@ bool load_ssl_symbols(void) {
 	SYMLOAD(SSLhandle, SSL_read);
 	SYMLOAD(SSLhandle, SSL_write);
 	SYMLOAD(SSLhandle, SSL_pending);
-	SYMLOAD(SSLhandle, SSLv23_client_method);
 	SYMLOAD(SSLhandle, TLS_client_method);
-	SYMLOAD(SSLhandle, SSL_library_init);
 	SYMLOAD(SSLhandle, OpenSSL_version_num);
+	SYMLOAD(SSLhandle, _SSLv23_client_method);
+	SYMLOAD(SSLhandle, _SSL_library_init);
 
 	SYMLOAD(CRYPThandle, RAND_seed);
 	SYMLOAD(CRYPThandle, RAND_bytes);
@@ -271,8 +280,8 @@ bool load_ssl_symbols(void) {
 	SYMLOAD(CRYPThandle, PEM_read_bio_RSAPrivateKey);
 
 	// managed deprecated functions
-	if (!SYM(SSLv23_client_method)) SYM(SSLv23_client_method) = SYM(TLS_client_method);
-	if (!SYM(SSL_library_init)) SYM(SSL_library_init) = &lambda;
+	if (!SSYM(_SSLv23_client_method)) SSYM(_SSLv23_client_method) = SYM(TLS_client_method);
+	if (!SSYM(_SSL_library_init)) SSYM(_SSL_library_init) = lambda;
 
 	// manage mandatory new functions
 	SHIMSET(RSA_set0_key);
