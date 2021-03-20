@@ -44,6 +44,7 @@ DEPENDENCIES
  - libsoxr: https://sourceforge.net/p/soxr/wiki/Home/
  - libogg, libopus & libvorbis: https://xiph.org/vorbis/
  - shine: https://github.com/philippe44/shine
+ - valgrind: https://valgrind.org/
 
 LIBUPNP
  - Under Win32, libupnp is build with the following defines
