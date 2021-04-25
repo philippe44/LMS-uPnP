@@ -854,8 +854,8 @@ int ActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 			if (r) _SyncNotifState(r, p);
 			NFREE(r);
 
-			// When not playing, position is not reliable
 			if (p->State == PLAYING) {
+				// When not playing, position is not reliable
 				r = XMLGetFirstDocumentItem(Action->ActionResult, "RelTime", true);
 				if (r) {
 					u32_t Elapsed = Time2Int(r)*1000;
@@ -868,34 +868,34 @@ int ActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 					sq_notify(p->SqueezeHandle, p, SQ_TIME, NULL, &Elapsed);
 					LOG_DEBUG("[%p]: position %d (cookie %p)", p, Elapsed, Cookie);
 				}
-			}
-			NFREE(r);
-
-			// URI detection response
-			r = XMLGetFirstDocumentItem(Action->ActionResult, "TrackURI", true);
-			if (r && (*r == '\0' || !strstr(r, BRIDGE_URL))) {
-				char *s;
-				IXML_Document *doc;
-				IXML_Node *node;
 
 				NFREE(r);
-				s = XMLGetFirstDocumentItem(Action->ActionResult, "TrackMetaData", true);
-				doc = ixmlParseBuffer(s);
-				NFREE(s);
 
-				node = (IXML_Node*) ixmlDocument_getElementById(doc, "res");
-				if (node) node = (IXML_Node*) ixmlNode_getFirstChild(node);
-				if (node) r = strdup(ixmlNode_getNodeValue(node));
+				// URI detection response
+				r = XMLGetFirstDocumentItem(Action->ActionResult, "TrackURI", true);
+				if (r && (*r == '\0' || !strstr(r, BRIDGE_URL))) {
+					char *s;
+					IXML_Document *doc;
+					IXML_Node *node;
 
-				LOG_DEBUG("[%p]: no Current URI, use MetaData %s", p, r);
-				if (doc) ixmlDocument_free(doc);
-			}
+					NFREE(r);
+					s = XMLGetFirstDocumentItem(Action->ActionResult, "TrackMetaData", true);
+					doc = ixmlParseBuffer(s);
+					NFREE(s);
 
-			if (r) {
+					node = (IXML_Node*) ixmlDocument_getElementById(doc, "res");
+					if (node) node = (IXML_Node*) ixmlNode_getFirstChild(node);
+					if (node) r = strdup(ixmlNode_getNodeValue(node));
+
+					LOG_DEBUG("[%p]: no Current URI, use MetaData %s", p, r);
+					if (doc) ixmlDocument_free(doc);
+				}
+
 				if (p->ExpectedURI && !strcasecmp(r, p->ExpectedURI)) NFREE(p->ExpectedURI);
 				sq_notify(p->SqueezeHandle, p, SQ_TRACK_INFO, NULL, r);
+
+				NFREE(r);
 			}
-			NFREE(r);
 
 			LOG_SDEBUG("Action complete : %i (cookie %p)", EventType, Cookie);
 

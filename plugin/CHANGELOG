@@ -1,3 +1,6 @@
+1.49.14 (dev)
+ - do not gather trackinfo unless playing is confirmed
+ 
 1.49.13
  - fix sslsym macros that were still incorrect
  
