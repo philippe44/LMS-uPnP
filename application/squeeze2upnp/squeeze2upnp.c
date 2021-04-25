@@ -873,26 +873,28 @@ int ActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 
 				// URI detection response
 				r = XMLGetFirstDocumentItem(Action->ActionResult, "TrackURI", true);
-				if (r && (*r == '\0' || !strstr(r, BRIDGE_URL))) {
-					char *s;
-					IXML_Document *doc;
-					IXML_Node *node;
+				if (r) {
+					if (*r == '\0' || !strstr(r, BRIDGE_URL)) {
+						char *s;
+						IXML_Document *doc;
+						IXML_Node *node;
 
-					NFREE(r);
-					s = XMLGetFirstDocumentItem(Action->ActionResult, "TrackMetaData", true);
-					doc = ixmlParseBuffer(s);
-					NFREE(s);
+						NFREE(r);
+						s = XMLGetFirstDocumentItem(Action->ActionResult, "TrackMetaData", true);
+						doc = ixmlParseBuffer(s);
+						NFREE(s);
 
-					node = (IXML_Node*) ixmlDocument_getElementById(doc, "res");
-					if (node) node = (IXML_Node*) ixmlNode_getFirstChild(node);
-					if (node) r = strdup(ixmlNode_getNodeValue(node));
+						node = (IXML_Node*) ixmlDocument_getElementById(doc, "res");
+						if (node) node = (IXML_Node*) ixmlNode_getFirstChild(node);
+						if (node) r = strdup(ixmlNode_getNodeValue(node));
 
-					LOG_DEBUG("[%p]: no Current URI, use MetaData %s", p, r);
-					if (doc) ixmlDocument_free(doc);
+						LOG_DEBUG("[%p]: no Current URI, use MetaData %s", p, r);
+						if (doc) ixmlDocument_free(doc);
+					}
+
+					if (p->ExpectedURI && !strcasecmp(r, p->ExpectedURI)) NFREE(p->ExpectedURI);
+					sq_notify(p->SqueezeHandle, p, SQ_TRACK_INFO, NULL, r);
 				}
-
-				if (p->ExpectedURI && !strcasecmp(r, p->ExpectedURI)) NFREE(p->ExpectedURI);
-				sq_notify(p->SqueezeHandle, p, SQ_TRACK_INFO, NULL, r);
 
 				NFREE(r);
 			}
