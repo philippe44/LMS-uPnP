@@ -398,7 +398,7 @@ static void process_aude(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 /*---------------------------------------------------------------------------*/
 static void process_audg(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 	struct audg_packet *audg = (struct audg_packet *)pkt;
-	u16_t  gain;
+	int gain;
 
 	audg->old_gainL = unpackN(&audg->old_gainL);
 	audg->old_gainR = unpackN(&audg->old_gainR);

@@ -101,6 +101,7 @@ struct sMR {
 	pthread_mutex_t Mutex;
 	pthread_t 		Thread;
 	double			Volume, PauseVolume;
+	bool			Muted;
 	u32_t			VolumeStampRx, VolumeStampTx;	// timestamps to filter volume loopbacks
 	u16_t			ErrorCount;                     // UPnP protocol error count
 	u32_t			LastSeen;						// presence timeout for player which went dark

@@ -443,7 +443,7 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 				if (p->Running && (p->Master == Device || p == Device) && p->PauseVolume != -1) {
 					p->Volume = p->PauseVolume;
 					p->PauseVolume = -1;
-					CtrlSetVolume(p, p->Volume, p->seqN++);
+					if (p->Config.VolumeOnPlay != -1) CtrlSetVolume(p, p->Volume, p->seqN++);
 				}
 			}
 
@@ -454,8 +454,19 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 			break;
 		}
 		case SQ_VOLUME: {
-			u32_t Volume = LMSVolumeMap[*(u16_t*)param], now = gettime_ms();
+			int Volume = *(int*) param, now = gettime_ms();
 			int GroupVolume, i;
+
+			// some controllers send a volume < 0 to mute
+			if (Volume < 0) {
+				Device->Muted = true;
+				Volume = -Volume;
+				CtrlSetMute(Device, true, Device->seqN++);
+			} else if (Device->Muted) {
+				CtrlSetMute(Device, false, Device->seqN++);
+		   	}
+
+			Volume = LMSVolumeMap[Volume], now = gettime_ms();
 
 			// discard echo commands
 			if (now < Device->VolumeStampRx + 1000) break;

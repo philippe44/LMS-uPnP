@@ -1,5 +1,7 @@
 1.49.14 (dev)
  - do not gather trackinfo unless playing is confirmed
+ - on pause, do not restore volume if ignore volume was set
+ - add mute management with negative volumes
  
 1.49.13
  - fix sslsym macros that were still incorrect
