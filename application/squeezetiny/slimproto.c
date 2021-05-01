@@ -115,7 +115,7 @@ static void sendHELO(bool reconnect, struct thread_ctx_s *ctx) {
 	char *base_cap;
 	struct HELO_packet pkt;
 
-	asprintf(&base_cap,
+	(void) !asprintf(&base_cap,
 #if USE_SSL
 	"CanHTTPS=1,"
 #endif

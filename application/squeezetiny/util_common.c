@@ -150,7 +150,7 @@ char *make_dlna_content(char *mimetype, u32_t duration) {
 		DLNAOrgPN = "";
 	}
 
-	asprintf(&buf, "%sDLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=%08x000000000000000000000000",
+	(void) !asprintf(&buf, "%sDLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=%08x000000000000000000000000",
 						   DLNAOrgPN, DLNA_ORG_FLAG | (duration ? 0 : DLNA_ORG_FLAG_SN_INCREASE));
 
 	return buf;

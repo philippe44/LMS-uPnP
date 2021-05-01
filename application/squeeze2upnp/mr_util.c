@@ -61,7 +61,7 @@ int CalcGroupVolume(struct sMR *Device) {
 	char *buf, *DLNAfeatures;
 
 	DLNAfeatures = make_dlna_content(MimeType, duration);
-	asprintf(&buf, "http-get:*:%s:%s", MimeType, DLNAfeatures);
+	(void) !asprintf(&buf, "http-get:*:%s:%s", MimeType, DLNAfeatures);
 	free(DLNAfeatures);
 
 	return buf;

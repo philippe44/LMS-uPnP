@@ -824,7 +824,7 @@ char* find_pcm_mimetype(u8_t *sample_size, bool truncable, u32_t sample_rate,
 				   (!strstr(*p, "channels=") || strstr(*p, c))) {
 				   char *rsp;
 
-				   asprintf(&rsp, "%s;%s;%s", a, r, c);
+				   (void) !asprintf(&rsp, "%s;%s;%s", a, r, c);
 				   return rsp;
 				}
 				p++;

@@ -344,7 +344,7 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 			// Sonos requires special prefix for ICY but it can't be a repeating stream (must have no duration)
 			if (!p->metadata.duration && (*Device->Service[TOPOLOGY_IDX].ControlURL) &&
 				(format == 'm' || format == 'a')) {
-				asprintf(&uri, "x-rincon-mp3radio://%s", p->uri);
+				(void) !asprintf(&uri, "x-rincon-mp3radio://%s", p->uri);
 				if (format == 'a') asprintf(&Device->ExpectedURI, "aac://%s", p->uri);
 				LOG_INFO("[%p]: Sonos live stream", Device);
 			} else uri = strdup(p->uri);
@@ -463,6 +463,7 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 				Volume = -Volume;
 				CtrlSetMute(Device, true, Device->seqN++);
 			} else if (Device->Muted) {
+				Device->Muted = false;
 				CtrlSetMute(Device, false, Device->seqN++);
 		   	}
 
@@ -981,7 +982,7 @@ int MasterHandler(Upnp_EventType EventType, void *_Event, void *Cookie)
 				static int Version;
 				char *SearchTopic;
 
-				asprintf(&SearchTopic, "%s:%i", MEDIA_RENDERER, (Version++ & 0x01) + 1);
+				(void) !asprintf(&SearchTopic, "%s:%i", MEDIA_RENDERER, (Version++ & 0x01) + 1);
 				UpnpSearchAsync(glControlPointHandle, DISCOVERY_TIME, SearchTopic, NULL);
 				free(SearchTopic);
 			}
