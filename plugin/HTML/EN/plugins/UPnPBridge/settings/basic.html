@@ -289,12 +289,14 @@
 			<option [% IF entry.1 == send_metadata %]selected[% END %] value="[% entry.1 %]">[% entry.0 | string %]</option>
 		[% END %]
 		</select>
-		&nbsp&nbsp[% "PLUGIN_UPNPBRIDGE_SEND_COVERART" | string %]&nbsp
+		&nbsp&nbsp[% "PLUGIN_UPNPBRIDGE_SENDCOVERART" | string %]&nbsp
 		<select class="stdedit" name="send_coverart" id="send_coverart">
 		[% FOREACH entry IN YESNOBOX %] 
 			<option [% IF entry.1 == send_coverart %]selected[% END %] value="[% entry.1 %]">[% entry.0 | string %]</option>
 		[% END %]
 		</select>
+		&nbsp[% "PLUGIN_UPNPBRIDGE_COVERART" | string %]
+		<input type="text" class="stdedit" name="coverart" id="coverart" value="[% coverart %]" size="4">
 		&nbsp&nbsp[% "PLUGIN_UPNPBRIDGE_SENDICY" | string %]&nbsp
 		<select class="stdedit" name="send_icy" id="send_icy">
 		[% FOREACH entry IN {

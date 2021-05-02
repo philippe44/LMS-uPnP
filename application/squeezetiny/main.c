@@ -482,16 +482,26 @@ bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, int offset)
 			NFREE(metadata->artwork);
 			if ((p = cli_find_tag(cur, "coverid")) != NULL) {
 				metadata->artwork = malloc(_STR_LEN_);
-				snprintf(metadata->artwork, _STR_LEN_, "http://%s:%s/music/%s/cover.jpg", ctx->server_ip, ctx->server_port, p);
+				snprintf(metadata->artwork, _STR_LEN_, "http://%s:%s/music/%s/cover_%s.jpg", ctx->server_ip,
+													   ctx->server_port, p, ctx->config.coverart);
 				free(p);
 			}
 		}
 
 		if (metadata->artwork && strncmp(metadata->artwork, "http", 4)) {
-			char *artwork = malloc(_STR_LEN_);
+			char *artwork;
 
-			snprintf(artwork, _STR_LEN_, "http://%s:%s/%s", ctx->server_ip, ctx->server_port,
-							*(metadata->artwork) == '/' ? metadata->artwork + 1 : metadata->artwork);
+			p = strrchr(metadata->artwork, '.');
+			if (*ctx->config.coverart &&  p && (strcasecmp(p, ".jpg") || strcasecmp(p, ".png"))) {
+				*p = '\0';
+				asprintf(&artwork, "http://%s:%s/%s_%s.%s", ctx->server_ip, ctx->server_port,
+							*(metadata->artwork) == '/' ? metadata->artwork + 1 : metadata->artwork,
+							ctx->config.coverart, p + 1);
+			} else {
+				(void)!asprintf(&artwork, "http://%s:%s/%s", ctx->server_ip, ctx->server_port,
+				*(metadata->artwork) == '/' ? metadata->artwork + 1 : metadata->artwork);
+			}
+
 			free(metadata->artwork);
 			metadata->artwork = artwork;
 		}

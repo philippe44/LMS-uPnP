@@ -108,6 +108,7 @@ void SaveConfig(char *name, void *ref, bool full)
 	XMLUpdateNode(doc, common, false, "accept_nexturi", "%d", (int) glMRConfig.AcceptNextURI);
 	XMLUpdateNode(doc, common, false, "auto_play", "%d", (int) glMRConfig.AutoPlay);
 	XMLUpdateNode(doc, common, false, "server", glDeviceParam.server);
+	XMLUpdateNode(doc, common, false, "coverart", glDeviceParam.coverart);
 #ifdef RESAMPLE
 	XMLUpdateNode(doc, common, false, "resample_options", glDeviceParam.resample_options);
 #endif
@@ -197,6 +198,7 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "send_coverart")) Conf->SendCoverArt = atol(val);
 	if (!strcmp(name, "name")) strcpy(sq_conf->name, val);
 	if (!strcmp(name, "server")) strcpy(sq_conf->server, val);
+	if (!strcmp(name, "coverart")) strcpy(sq_conf->coverart, val);
 	if (!strcmp(name, "mac"))  {
 		unsigned mac[6];
 		int i;

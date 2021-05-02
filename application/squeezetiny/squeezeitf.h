@@ -88,6 +88,7 @@ typedef	struct sq_dev_param_s {
 #endif
 	bool		roon_mode;
 	char		store_prefix[_STR_LEN_];
+	char		coverart[_STR_LEN_];
 	// set at runtime, not from config
 	struct {
 		bool	use_cli;
