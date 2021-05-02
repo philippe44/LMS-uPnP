@@ -6,11 +6,10 @@ use File::Spec::Functions;
 use LWP::Simple;
 use base qw(Slim::Web::Settings);
 use XML::Simple;
-use Data::Dumper;
+use Data::Dump qw(dump);
 use Slim::Utils::PluginManager;
 use Slim::Utils::Prefs;
 use Slim::Utils::Log;
-
 
 my $prefs = preferences('plugin.upnpbridge');
 my $log   = logger('plugin.upnpbridge');
@@ -153,7 +152,7 @@ sub handler {
 					if ($params->{ 'applyprofile' }) {
 			
 						my $profile = loadprofiles()->{ $params->{'selprofile'} };
-						mergeprofile($device, $profile);
+						$device = { %$device, %$profile };
 					}	
 				}			
 			}	
@@ -167,7 +166,7 @@ sub handler {
 			}
 			
 			$log->info("writing XML config");
-			$log->debug(Dumper($xmlconfig));
+			$log->debug(dump($xmlconfig));
 			
 			$update = 1;
 		}	
@@ -264,7 +263,7 @@ sub handler2 {
 		unshift(@{$params->{'devices'}}, {'name' => '[common parameters]', 'udn' => '.common.'});
 		
 		$log->info("reading config: ", $params->{'seldevice'});
-		$log->debug(Dumper($params->{'devices'}));
+		$log->debug(dump($params->{'devices'}));
 				
 		#read global parameters
 		for my $p (@xmlmain) {
@@ -277,7 +276,7 @@ sub handler2 {
 			$params->{'seldevice'} = '.common.';
 			
 			for my $p (@xmldevice) {
-				$params->{ $p } = $xmlconfig->{common}->{ $p };
+				$params->{ $p } = $xmlconfig->{'common'}->{ $p };
 			}	
 		} else {
 			my $device = findUDN($params->{'seldevice'}, $params->{'devices'});
@@ -330,14 +329,6 @@ sub beforeRender {
 			$params->{encode_level} = $2 if defined $2 && $1 eq 'flc';
 			$params->{encode_bitrate} = $2 if $2 && $1 eq 'mp3';
 		}	
-	}	
-}
-
-sub mergeprofile{
-	my ($p1, $p2) = @_;
-	
-	foreach my $m (keys %$p2) {
-		$p1->{ $m } = $p2-> { $m };
 	}	
 }
 
@@ -402,7 +393,7 @@ sub readconfig {
 	
 	my $file = Plugins::UPnPBridge::Squeeze2upnp->configFile($class);
 	if (-e $file) {
-		$ret = XMLin($file, ForceArray => ['device'], KeepRoot => 0, NoAttr => 1, @args);
+		$ret = XMLin($file, ForceArray => ['device'], KeepRoot => 0, NoAttr => 1, SuppressEmpty => 1, @args);
 	}	
 	return $ret;
 }

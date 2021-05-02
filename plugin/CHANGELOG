@@ -1,3 +1,6 @@
+1.50.1
+ - fix the infamous "HASH()" thazt appeared in some empty fields
+ 
 1.50.0
  - add option to set coverart resolution
  
