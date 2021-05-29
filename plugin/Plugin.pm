@@ -9,11 +9,11 @@ use base qw(Slim::Plugin::Base);
 
 use Slim::Utils::Prefs;
 use Slim::Utils::Log;
-
-use Plugins::UPnPBridge::Queries;
+use Slim::Control::Request;
 
 my $prefs = preferences('plugin.upnpbridge');
 my $hasOutputChannels;
+my $statusHandler = Slim::Control::Request::addDispatch(['status', '_index', '_quantity'], [1, 1, 1, \&statusQuery]);
 
 $prefs->init({ 
 	autorun => 0, opts => '', 
@@ -49,8 +49,6 @@ sub initPlugin {
 
 	$class->SUPER::initPlugin(@_);
 	
-	Plugins::UPnPBridge::Queries::initQueries();
-
 	require Plugins::UPnPBridge::Squeeze2upnp;		
 	
 	if ($prefs->get('autorun')) {
@@ -77,6 +75,21 @@ sub shutdownPlugin {
 	if ($prefs->get('autorun')) {
 		Plugins::UPnPBridge::Squeeze2upnp->stop;
 	}
+}
+
+sub statusQuery {
+	my ($request) = @_;
+	my $song = $request->client->playingSong if $request->client;
+
+	$statusHandler->($request);
+
+	my $song = $request->client->playingSong if $request->client;
+	return unless $song;
+
+	my $handler = $song->currentTrackHandler;
+	return unless $handler;
+
+	$request->addResult("repeating_stream", 1) if $handler->can('isRepeatingStream') && $handler->isRepeatingStream($song);
 }
 
 1;

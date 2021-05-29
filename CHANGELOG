@@ -1,3 +1,6 @@
+1.60.0
+ - refactor metadata handling, including removing need for 'E' tag (always use artwork_url seems fine now) and associated special query 
+ 
 1.50.5
  - reset icy flag between tracks
  

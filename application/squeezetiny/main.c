@@ -357,7 +357,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, int offset)
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
 	char cmd[1024];
 	char *rsp, *p, *cur;
-	bool repeating = offset != -1;
+	bool seeking = !offset;
 
 	if (!handle || !ctx->in_use || !ctx->config.use_cli) {
 		if (ctx->config.use_cli) {
@@ -369,10 +369,10 @@ bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, int offset)
 
 	sq_init_metadata(metadata);
 
-	// use -1 to avoid repeating stream request
+	// use -1 to get what's playing
 	if (offset == -1) offset = 0;
 
-	sprintf(cmd, "%s status - %d tags:xcfldatgrKNoITHE", ctx->cli_id, offset + 1);
+	sprintf(cmd, "%s status - %d tags:xcfldatgrKNoITH", ctx->cli_id, offset + 1);
 	rsp = cli_send_cmd(cmd, false, false, ctx);
 
 	if (!rsp || !*rsp) {
@@ -381,42 +381,27 @@ bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, int offset)
 		return true;
 	}
 
-	if (repeating && (p = cli_find_tag(rsp, "repeating_stream")) != NULL) {
-		// detect repeating streams
-		metadata->repeating = repeating = atoi(p) != 0;
+	if ((p = cli_find_tag(rsp, "repeating_stream")) != NULL) {
+		metadata->repeating = atoi(p) != 0;
+		if (metadata->repeating) offset = 0;
 		free(p);
-	} else repeating = false;
+	};
 
-	if (repeating) {
-		free(rsp);
-
-		sprintf(cmd, "%s repeatingsonginfo tags:xcfldatgrKNoITHE", ctx->cli_id);
-		rsp = cli_send_cmd(cmd, false, false, ctx);
-
-		if (!rsp || !*rsp) {
-			sq_default_metadata(metadata, false);
-			LOG_WARN("[%p]: cannot get repeating stream metadata", ctx);
-			return true;
-		}
-
-		cur = rsp;
-	} else {
-		// find the current index
-		if ((p = cli_find_tag(rsp, "playlist_cur_index")) != NULL) {
-			metadata->index = atoi(p) + offset;
-			free(p);
-		}
-
-		// need to make sure we rollover if end of list
-		if ((p = cli_find_tag(rsp, "playlist_tracks")) != NULL) {
-			int len = atoi(p);
-			if (len) metadata->index %= len;
-			free(p);
-		}
-
-		sprintf(cmd, "playlist%%20index%%3a%d ", metadata->index);
-		cur = strcasestr(rsp, cmd);
+	// find the current index
+	if ((p = cli_find_tag(rsp, "playlist_cur_index")) != NULL) {
+		metadata->index = atoi(p) + offset;
+		free(p);
 	}
+
+	// need to make sure we rollover if end of list
+	if ((p = cli_find_tag(rsp, "playlist_tracks")) != NULL) {
+		int len = atoi(p);
+		if (len) metadata->index %= len;
+		free(p);
+	}
+
+	sprintf(cmd, "playlist%%20index%%3a%d ", metadata->index);
+	cur = strcasestr(rsp, cmd);
 
 	if (cur) {
 		metadata->title = cli_find_tag(cur, "title");
@@ -424,20 +409,18 @@ bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, int offset)
 		metadata->album = cli_find_tag(cur, "album");
 		metadata->genre = cli_find_tag(cur, "genre");
 		metadata->remote_title = cli_find_tag(cur, "remote_title");
+		metadata->artwork = cli_find_tag(cur, "artwork_url");
 
 		if ((p = cli_find_tag(cur, "duration")) != NULL) {
 			metadata->duration = 1000 * atof(p);
 			free(p);
 		}
 
-		/*
-		at this point, LMS sends the original filesize, not the transcoded
-		so it simply does not work
-		if ((p = cli_find_tag(cur, "filesize")) != NULL) {
-			metadata->file_size = atol(p);
+		// when potentially seeking, need to adjust duration
+		if (seeking && metadata->duration && ((p = cli_find_tag(rsp, "time")) != NULL)) {
+			metadata->duration -= (u32_t) (atof(p) * 1000);
 			free(p);
 		}
-		*/
 
 		if ((p = cli_find_tag(cur, "bitrate")) != NULL) {
 			metadata->bitrate = atol(p);
@@ -472,11 +455,8 @@ bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, int offset)
 			free(p);
 		}
 
-		// remote_title is present, webradio if not repeating
-		if (metadata->remote_title) {
-			if (!repeating) metadata->duration = 0;
-			metadata->artwork = cli_find_tag(cur, "browse_icon");
-		} else metadata->artwork = cli_find_tag(cur, "artwork_url");
+		// remote_title is present, it's a webradio if not repeating
+		if (metadata->remote_title && !metadata->repeating) metadata->duration = 0;
 
 		if (!metadata->artwork || !strlen(metadata->artwork)) {
 			NFREE(metadata->artwork);
@@ -508,11 +488,6 @@ bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, int offset)
 
 	} else {
 		LOG_ERROR("[%p]: track not found %u %s", ctx, metadata->index, rsp);
-	}
-
-	if (!offset && metadata->duration && ((p = cli_find_tag(rsp, "time")) != NULL)) {
-		metadata->duration -= (u32_t) (atof(p) * 1000);
-		free(p);
 	}
 
 	NFREE(rsp);
