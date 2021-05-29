@@ -1019,6 +1019,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 	out->duration = info.metadata.duration;
 	out->bitrate = info.metadata.bitrate;
 	out->STMd_delay = info.metadata.remote ? ctx->config.next_delay*1000 : 0;
+	out->icy.allowed = false;
 
 	// read source parameters (if any)
 	if (size == '?') out->sample_size = 0;

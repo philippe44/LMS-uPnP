@@ -1483,7 +1483,7 @@ static bool Start(void)
 	else rc = UpnpInit(NULL, Port);
 
 	if (rc != UPNP_E_SUCCESS) {
-		LOG_ERROR("UPnP init failed: %d\n", rc);
+		LOG_ERROR("UPnP init failed: %d %s\n", rc, rc == UPNP_E_SOCKET_BIND ? "cannot bind socket(s)" : "");
 		UpnpFinish();
 		return false;
 	}

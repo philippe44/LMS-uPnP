@@ -1,3 +1,9 @@
+1.50.5
+ - reset icy flag between tracks
+ 
+1.50.4
+ - better error message when UPnP cannot bind socket
+ 
 1.50.3
  - minor info-bubble correction for image resizing
  
