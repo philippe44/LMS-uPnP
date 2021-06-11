@@ -1,3 +1,9 @@
+1.62.0
+ - disable Sonos mode with icy
+ 
+1.61.0
+ - autostart and use static helper by default
+ 
 1.60.0
  - refactor metadata handling, including removing need for 'E' tag (always use artwork_url seems fine now) and associated special query 
  

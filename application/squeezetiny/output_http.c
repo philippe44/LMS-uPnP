@@ -510,8 +510,10 @@ static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, int thread_index,
 			free(dlna_features);
 		}
 
-		// a range request - might happen even when we said NO RANGE !!!
+		// no header re-send by default
 		*header = false;
+
+		// a range request - might happen even when we said NO RANGE !!!
 		if ((str = kd_lookup(headers, "Range")) != NULL) {
 			int offset = 0;
 			sscanf(str, "bytes=%u", &offset);
@@ -521,7 +523,7 @@ static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, int thread_index,
 				res = offset + 1;
 				obuf->readp = obuf->buf + offset % obuf->size;
 			}
-		} else if (bytes && type == SONOS) {
+		} else if (bytes && type == SONOS && !ctx->output.icy.interval) {
 			// Sonos client re-opening the connection, so make it believe we
 			// have a 2G length - thus it will sent a range-request
 			if (ctx->output.length < 0) kd_add(resp, "Content-Length", "%zu", INT_MAX);

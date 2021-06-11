@@ -16,7 +16,7 @@ my $hasOutputChannels;
 my $statusHandler = Slim::Control::Request::addDispatch(['status', '_index', '_quantity'], [1, 1, 1, \&statusQuery]);
 
 $prefs->init({ 
-	autorun => 0, opts => '', 
+	autorun => 1, opts => '', 
 	debugs => '', 
 	logging => 0, 
 	bin => undef, 
