@@ -150,9 +150,11 @@ sub handler {
 				
 					# a profile has been applied, then overwrite some of the above
 					if ($params->{ 'applyprofile' }) {
-			
 						my $profile = loadprofiles()->{ $params->{'selprofile'} };
-						$device = { %$device, %$profile };
+						
+						foreach (keys %$profile) {
+							$device->{ $_ } = $profile-> { $_ };
+						}	
 					}	
 				}			
 			}	
