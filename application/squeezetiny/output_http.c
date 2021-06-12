@@ -454,7 +454,6 @@ static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, int thread_index,
 	char *head = "HTTP/1.1 200 OK";
 	int len, index;
 	ssize_t res = 0;
-	bool chunked = true;
 	char format;
 	enum { ANY, SONOS, CHROMECAST } type;
 
@@ -480,6 +479,7 @@ static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, int thread_index,
 
 	kd_add(resp, "Server", "squeezebox-bridge");
 	kd_add(resp, "Connection", "close");
+	ctx->output.chunked = false;
 
 	// check if add ICY metadata is needed (only on live stream)
 	format = mimetype2format(ctx->output.mimetype);
@@ -510,43 +510,43 @@ static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, int thread_index,
 			free(dlna_features);
 		}
 
-		// no header re-send by default
-		*header = false;
+		if (!strstr(request, "HEAD")) {
+			bool chunked = true;
+			// a range request - might happen even when we said NO RANGE !!!
+			if ((str = kd_lookup(headers, "Range")) != NULL) {
+				int offset = 0;
+				sscanf(str, "bytes=%u", &offset);
+				if (offset) {
+					head = "HTTP/1.1 206 Partial Content";
+					if (type != SONOS) kd_add(resp, "Content-Range", "bytes %u-%zu/*", offset, bytes);
+					res = offset + 1;
+					obuf->readp = obuf->buf + offset % obuf->size;
+				}
+			} else if (bytes && type == SONOS && !ctx->output.icy.interval) {
+				// Sonos client re-opening the connection, so make it believe we
+				// have a 2G length - thus it will sent a range-request
+				if (ctx->output.length < 0) kd_add(resp, "Content-Length", "%zu", INT_MAX);
+				chunked = false;
+				*header = true;
+			} else if (bytes) {
+				// re-opening an existing connection, resend from beginning
+				obuf->readp = obuf->buf;
+				LOG_INFO("[%p]: re-opening a connection at %zu", ctx, bytes);
+				if (bytes > HTTP_STUB_DEPTH) {
+					LOG_WARN("[%p]: head is lost %zu", ctx, bytes);
+				}
+			}
 
-		// a range request - might happen even when we said NO RANGE !!!
-		if ((str = kd_lookup(headers, "Range")) != NULL) {
-			int offset = 0;
-			sscanf(str, "bytes=%u", &offset);
-			if (offset) {
-				head = "HTTP/1.1 206 Partial Content";
-				if (type != SONOS) kd_add(resp, "Content-Range", "bytes %u-%zu/*", offset, bytes);
-				res = offset + 1;
-				obuf->readp = obuf->buf + offset % obuf->size;
+			// set chunked mode
+			if (strstr(request, "1.1") && ctx->output.length == -3 && chunked) {
+				ctx->output.chunked = true;
+				kd_add(resp, "Transfer-Encoding", "chunked");
 			}
-		} else if (bytes && type == SONOS && !ctx->output.icy.interval) {
-			// Sonos client re-opening the connection, so make it believe we
-			// have a 2G length - thus it will sent a range-request
-			if (ctx->output.length < 0) kd_add(resp, "Content-Length", "%zu", INT_MAX);
-			chunked = false;
-			*header = true;
-		} else if (bytes) {
-			// re-opening an existing connection, resend from beginning
-			obuf->readp = obuf->buf;
-			LOG_INFO("[%p]: re-opening a connection at %zu", ctx, bytes);
-			if (bytes > HTTP_STUB_DEPTH) {
-				LOG_WARN("[%p]: head is lost %zu", ctx, bytes);
-			}
+		} else {
+			// do not send body if request is HEAD
+			res = -1;
 		}
 	}
-
-	// set chunked mode
-	if (strstr(request, "1.1") && ctx->output.length == -3 && chunked) {
-		ctx->output.chunked = true;
-		kd_add(resp, "Transfer-Encoding", "chunked");
-	} else ctx->output.chunked = false;
-
-	// do not send body if request is HEAD
-	if (strstr(request, "HEAD")) res = -1;
 
 	str = http_send(sock, head, resp);
 
