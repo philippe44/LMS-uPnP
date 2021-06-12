@@ -1,3 +1,6 @@
+1.62.2
+ - fix profile's URL
+ 
 1.62.1
  - do not use special http mode or respond with ranges to HEAD method
  
