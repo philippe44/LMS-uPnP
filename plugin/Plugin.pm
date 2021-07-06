@@ -79,17 +79,25 @@ sub shutdownPlugin {
 
 sub statusQuery {
 	my ($request) = @_;
-	my $song = $request->client->playingSong if $request->client;
-
+	my $client = $request->client;
+	my $song = $request->client->playingSong if $client;
+	my $handler = $song->currentTrackHandler if $song;
+	
 	$statusHandler->($request);
+	return unless $client && $song && $handler;
 
-	my $song = $request->client->playingSong if $request->client;
-	return unless $song;
+	if ($handler->can('isRepeatingStream') && $handler->isRepeatingStream($song)) {
+		my $repeating = 0;
 
-	my $handler = $song->currentTrackHandler;
-	return unless $handler;
-
-	$request->addResult("repeating_stream", 1) if $handler->can('isRepeatingStream') && $handler->isRepeatingStream($song);
+		if ( $handler && $handler->can('getMetadataFor') ) {
+			my $url = Slim::Player::Playlist::url($client);
+			my $metadata = $handler->getMetadataFor( $client, $url, 'repeating' );
+			$repeating = $metadata->{duration} || $metadata->{secs} || 0;
+		}
+		
+		$request->addResult("repeating_stream", $repeating);
+	}
 }
+
 
 1;
