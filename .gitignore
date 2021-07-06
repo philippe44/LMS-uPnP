@@ -31,7 +31,8 @@
 .LSOverride
 
 # Icon must end with two \r
-Icon
+Icon
+
 
 # Thumbnails
 ._*
@@ -71,6 +72,7 @@ $RECYCLE.BIN/
 *.zip
 *.z
 *.local
+*.$$$
 __history
 tests
 Win32

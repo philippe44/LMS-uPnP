@@ -343,7 +343,7 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 			ProtoInfo = MakeProtoInfo(p->mimetype, p->metadata.duration);
 
 			// Sonos requires special prefix for ICY but it can't be a repeating stream (must have no duration)
-			if (!p->metadata.duration && (*Device->Service[TOPOLOGY_IDX].ControlURL) &&
+			if ((!p->metadata.duration || p->metadata.repeating != -1) && (*Device->Service[TOPOLOGY_IDX].ControlURL) &&
 				(format == 'm' || format == 'a')) {
 				(void) !asprintf(&uri, "x-rincon-mp3radio://%s", p->uri);
 				if (format == 'a') asprintf(&Device->ExpectedURI, "aac://%s", p->uri);

@@ -1072,7 +1072,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 		if (!out->encode.sample_size) out->encode.sample_size = 16;
 		out->encode.channels = 2;
 		out->encode.flow = true;
-	} else if (ctx->config.send_icy && (!out->duration || info.metadata.repeating)) {
+	} else if (ctx->config.send_icy && (!out->duration || info.metadata.repeating != -1)) {
 		output_set_icy(&info.metadata, true, gettime_ms(), ctx);
 	}
 

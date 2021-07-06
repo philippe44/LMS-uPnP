@@ -1,3 +1,7 @@
+1.63.0
+ - fix repeating stream (RP)
+ - enable icy for SONOS when repeating
+ 
 1.62.2
  - fix profile's URL
  

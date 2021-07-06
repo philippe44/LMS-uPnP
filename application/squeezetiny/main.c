@@ -334,7 +334,7 @@ static void sq_init_metadata(metadata_t *metadata)
 	metadata->file_size = 0;
 	metadata->duration 	= 0;
 	metadata->remote 	= false;
-	metadata->repeating = false;
+	metadata->repeating = -1;
 	metadata->bitrate	= 0;
 }
 
@@ -381,9 +381,10 @@ bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, int offset)
 		return true;
 	}
 
+	// the tag means the it's a repeating stream whose length might be known
 	if ((p = cli_find_tag(rsp, "repeating_stream")) != NULL) {
-		metadata->repeating = atoi(p) != 0;
-		if (metadata->repeating) offset = 0;
+		offset = 0;
+		metadata->duration = metadata->repeating = atoi(p) * 1000;
 		free(p);
 	};
 
@@ -411,7 +412,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, int offset)
 		metadata->remote_title = cli_find_tag(cur, "remote_title");
 		metadata->artwork = cli_find_tag(cur, "artwork_url");
 
-		if ((p = cli_find_tag(cur, "duration")) != NULL) {
+		if (!metadata->duration && (p = cli_find_tag(cur, "duration")) != NULL) {
 			metadata->duration = 1000 * atof(p);
 			free(p);
 		}
@@ -456,7 +457,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, int offset)
 		}
 
 		// remote_title is present, it's a webradio if not repeating
-		if (metadata->remote_title && !metadata->repeating) metadata->duration = 0;
+		if (metadata->remote_title && metadata->repeating != -1) metadata->duration = 0;
 
 		if (!metadata->artwork || !strlen(metadata->artwork)) {
 			NFREE(metadata->artwork);
