@@ -13,6 +13,7 @@ use Slim::Control::Request;
 
 my $prefs = preferences('plugin.upnpbridge');
 my $hasOutputChannels;
+my $fade_volume;
 my $statusHandler = Slim::Control::Request::addDispatch(['status', '_index', '_quantity'], [1, 1, 1, \&statusQuery]);
 
 $prefs->init({ 
@@ -39,6 +40,12 @@ sub hasOutputChannels {
 	return 0;
 }
 
+sub fade_volume {
+	my ($client, $fade, $callback, $callbackargs) = @_;
+	return $fade_volume->($client, $fade, $callback, $callbackargs) if $fade > 0 || $client->modelName !~ /UPnPBridge/;
+	return $callback->($callbackargs) if $callback;
+}
+
 sub initPlugin {
 	my $class = shift;
 
@@ -46,6 +53,9 @@ sub initPlugin {
 	require Slim::Player::SqueezePlay;
 	$hasOutputChannels = Slim::Player::SqueezePlay->can('hasOutputChannels');
 	*Slim::Player::SqueezePlay::hasOutputChannels = \&hasOutputChannels;
+	
+	$fade_volume = \&Slim::Player::SqueezePlay::fade_volume;
+	*Slim::Player::SqueezePlay::fade_volume = \&fade_volume;
 
 	$class->SUPER::initPlugin(@_);
 	
