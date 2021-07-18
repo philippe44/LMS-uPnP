@@ -1,3 +1,6 @@
+1.64.1
+ - (P) callbackargs is an array
+ 
 1.64.0
  - (P) don't fade-out on pause (no zero volume)
  

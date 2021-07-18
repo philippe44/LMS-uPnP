@@ -43,7 +43,7 @@ sub hasOutputChannels {
 sub fade_volume {
 	my ($client, $fade, $callback, $callbackargs) = @_;
 	return $fade_volume->($client, $fade, $callback, $callbackargs) if $fade > 0 || $client->modelName !~ /UPnPBridge/;
-	return $callback->($callbackargs) if $callback;
+	return $callback->(@{$callbackargs}) if $callback;
 }
 
 sub initPlugin {
