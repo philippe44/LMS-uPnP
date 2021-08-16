@@ -1200,6 +1200,12 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 		} else sq_free_metadata(&info.metadata);
 	}
 
+	// need to stop thread if something went wrong
+	if (!ret) {
+		LOG_INFO("[%p]: something went wrong starting process %d", ctx, out->index);
+		output_abort(ctx, out->index);
+	}
+
 	return ret;
 }
 

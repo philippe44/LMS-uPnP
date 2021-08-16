@@ -67,11 +67,13 @@ u8_t	FLAC_CODED_SAMPLE_SIZE[] = { 0, 8, 12, 0, 16, 20, 24, 0 };
 #define FLAC_GET_FRAME_SAMPLE_SIZE(n) ((u8_t) ((n) >> 1) & 0x07)
 
 #define FLAC_RECV_MIN	128
+#define FLAC_MAX_SAMPLES 0xfffffffffLL
 
 typedef struct flac_frame_s {
 	u16_t	tag;
 	u8_t    bsize_rate;
 	u8_t	channels_sample_size;
+	u8_t	body;
 } flac_frame_t;
 
 typedef struct flac_streaminfo_s {
@@ -84,7 +86,7 @@ typedef struct flac_streaminfo_s {
 		u8_t MD5[16];
 } flac_streaminfo_t;
 
-flac_streaminfo_t FLAC_NORMAL_STREAMINFO = {
+flac_streaminfo_t FLAC_STREAMINFO = {
 		{ 0x00, 0x10 },
 		{ 0xff, 0xff },
 		{ 0x00, 0x00, 0x00 },
@@ -101,25 +103,6 @@ flac_streaminfo_t FLAC_NORMAL_STREAMINFO = {
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }
 };
 
-#define FLAC_TOTAL_SAMPLES 0xffffffff
-
-flac_streaminfo_t FLAC_FULL_STREAMINFO = {
-		{ 0x00, 0x10 },
-		{ 0xff, 0xff },
-		{ 0x00, 0x00, 0x00 },
-		{ 0x00, 0x00, 0x00 },
-		{ BYTE_1(FLAC_COMBO(44100, 2, 16)),
-		BYTE_2(FLAC_COMBO(44100, 2, 16)),
-		BYTE_3(FLAC_COMBO(44100, 2, 16)),
-		BYTE_4(FLAC_COMBO(44100, 2, 16)) | BYTE_1(QUAD_BYTE_H(FLAC_TOTAL_SAMPLES)) },
-		{ BYTE_1(QUAD_BYTE_L(FLAC_TOTAL_SAMPLES)),
-		BYTE_2(QUAD_BYTE_L(FLAC_TOTAL_SAMPLES)),
-		BYTE_3(QUAD_BYTE_L(FLAC_TOTAL_SAMPLES)),
-		BYTE_4(QUAD_BYTE_L(FLAC_TOTAL_SAMPLES)) },
-		{ 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa,
-		0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa }
-};
-
 static u8_t flac_header[] = {
 			'f', 'L', 'a', 'C',
 			0x80,
@@ -130,12 +113,11 @@ static u8_t flac_header[] = {
 
 
 struct flac {
-	flac_streaminfo_t *streaminfo;
 	u32_t sample_rate;
 };
 
 static u16_t 	flac_block_size(u8_t block_size);
-static bool 	create_streaminfo(flac_frame_t *frame, flac_streaminfo_t *streaminfo, u32_t *rate);
+static bool 	create_streaminfo(sq_flac_header_t type, flac_frame_t *frame, flac_streaminfo_t *streaminfo, u32_t *rate, u32_t duration);
 
 /*---------------------------------------------------------------------------*/
 decode_state flac_decode(struct thread_ctx_s *ctx) {
@@ -154,40 +136,40 @@ decode_state flac_decode(struct thread_ctx_s *ctx) {
 	}
 
 	// need to do that before header increments pointer
-	if (ctx->decode.new_stream) ctx->output.track_start = ctx->outputbuf->writep;
-
-	// the min in and out are enough to process a full header
-	if (p->streaminfo) {
-		flac_frame_t frame;
-		size_t bytes;
-
-		// acquire a full header, do not increment pointer
-		bytes = min(in, sizeof(frame));
-		memcpy(&frame, ctx->streambuf->readp, bytes);
-		memcpy((u8_t*) &frame + bytes, ctx->streambuf->buf, sizeof(frame) - bytes);
-
-		// starting with "flAC", we have a full header, no need to to anything
-		if (strncmp((char*) &frame, "fLaC", 4) && create_streaminfo(&frame, p->streaminfo, &p->sample_rate)) {
-			bytes = min(sizeof(flac_header), _buf_cont_write(ctx->outputbuf));
-			memcpy(ctx->outputbuf->writep, &flac_header, bytes);
-			memcpy(ctx->outputbuf->buf, (u8_t*) &flac_header + bytes, sizeof(flac_header) - bytes);
-			_buf_inc_writep(ctx->outputbuf, sizeof(flac_header));
-
-			bytes = min(sizeof(flac_streaminfo_t), _buf_cont_write(ctx->outputbuf));
-			memcpy(ctx->outputbuf->writep, p->streaminfo, bytes);
-			memcpy(ctx->outputbuf->buf, (u8_t*) p->streaminfo + bytes, sizeof(flac_streaminfo_t) - bytes);
-			_buf_inc_writep(ctx->outputbuf, sizeof(flac_streaminfo_t));
-
-			LOG_INFO("[%p]: FLAC header added", ctx);
-		}
-
-		free(p->streaminfo);
-		p->streaminfo = NULL;
-	}
-
 	if (ctx->decode.new_stream) {
-		LOG_INFO("[%p]: setting track_start", ctx);
+		ctx->output.track_start = ctx->outputbuf->writep;
 		ctx->decode.new_stream = false;
+
+		LOG_INFO("[%p]: setting track_start", ctx);
+
+		// the min in and out are enough to process a full header
+		if (ctx->config.flac_header != FLAC_NO_HEADER) {
+			flac_frame_t frame;
+			flac_streaminfo_t streaminfo;
+			size_t bytes;
+
+			memcpy(&streaminfo, &FLAC_STREAMINFO, sizeof(flac_streaminfo_t));
+
+			// acquire a full header, do not increment pointer
+			bytes = min(in, sizeof(frame));
+			memcpy(&frame, ctx->streambuf->readp, bytes);
+			memcpy((u8_t*) &frame + bytes, ctx->streambuf->buf, sizeof(frame) - bytes);
+
+			// starting with "flAC", we have a full header, no need to to anything
+			if (strncmp((char*) &frame, "fLaC", 4) && create_streaminfo(ctx->config.flac_header, &frame, &streaminfo, &p->sample_rate, ctx->output.duration)) {
+				bytes = min(sizeof(flac_header), _buf_cont_write(ctx->outputbuf));
+				memcpy(ctx->outputbuf->writep, &flac_header, bytes);
+				memcpy(ctx->outputbuf->buf, (u8_t*) &flac_header + bytes, sizeof(flac_header) - bytes);
+				_buf_inc_writep(ctx->outputbuf, sizeof(flac_header));
+
+				bytes = min(sizeof(flac_streaminfo_t), _buf_cont_write(ctx->outputbuf));
+				memcpy(ctx->outputbuf->writep, &streaminfo, bytes);
+				memcpy(ctx->outputbuf->buf, (u8_t*) &streaminfo + bytes, sizeof(flac_streaminfo_t) - bytes);
+				_buf_inc_writep(ctx->outputbuf, sizeof(flac_streaminfo_t));
+
+				LOG_INFO("[%p]: FLAC header added", ctx);
+			}
+		}
 	}
 
 	out = min(_buf_space(ctx->outputbuf), _buf_cont_write(ctx->outputbuf));
@@ -206,29 +188,12 @@ decode_state flac_decode(struct thread_ctx_s *ctx) {
 
 /*---------------------------------------------------------------------------*/
 static void flac_open(u8_t sample_size, u32_t sample_rate, u8_t	channels, u8_t endianness, struct thread_ctx_s *ctx) {
-	struct flac *p = ctx->decode.handle;
-
-	if (!p)	p = ctx->decode.handle = malloc(sizeof(struct flac));
-
-	if (!p) return;
-
-	if (ctx->config.flac_header != FLAC_NO_HEADER) {
-		p->streaminfo = malloc(sizeof(flac_streaminfo_t));
-		if (ctx->config.flac_header == FLAC_NORMAL_HEADER)
-			memcpy(p->streaminfo, &FLAC_NORMAL_STREAMINFO, sizeof(flac_streaminfo_t));
-		else
-			memcpy(p->streaminfo, &FLAC_FULL_STREAMINFO, sizeof(flac_streaminfo_t));
-	} else p->streaminfo = NULL;
+	if (!ctx->decode.handle) ctx->decode.handle = malloc(sizeof(struct flac));
 }
 
 /*---------------------------------------------------------------------------*/
 static void flac_close(struct thread_ctx_s *ctx) {
-	struct flac *p = ctx->decode.handle;
-
-	if (p) {
-		if (p->streaminfo) free(p->streaminfo);
-		free(p);
-	}
+	if (ctx->decode.handle) free(ctx->decode.handle);
 	ctx->decode.handle = NULL;
 }
 
@@ -252,9 +217,54 @@ void deregister_flac_thru(void) {
 }
 
 /*---------------------------------------------------------------------------*/
-bool create_streaminfo(flac_frame_t *frame, flac_streaminfo_t *streaminfo, u32_t *rate) {
+u32_t read_utf8_u32(u8_t *buf)
+{
+  u32_t v = 0;
+  u32_t x;
+  unsigned i;
+
+  x = *buf++;
+
+  if(!(x & 0x80)) { /* 0xxxxxxx */
+	v = x;
+	i = 0;
+  } else if(x & 0xC0 && !(x & 0x20)) { /* 110xxxxx */
+	v = x & 0x1F;
+	i = 1;
+  } else if(x & 0xE0 && !(x & 0x10)) { /* 1110xxxx */
+	v = x & 0x0F;
+	i = 2;
+  } else if(x & 0xF0 && !(x & 0x08)) { /* 11110xxx */
+	v = x & 0x07;
+	i = 3;
+  } else if(x & 0xF8 && !(x & 0x04)) { /* 111110xx */
+	v = x & 0x03;
+	i = 4;
+  } else if(x & 0xFC && !(x & 0x02)) { /* 1111110x */
+	v = x & 0x01;
+	i = 5;
+  } else {
+	return 0xffffffff;
+  }
+
+  for( ; i; i--) {
+	x = *buf++;
+	if(!(x & 0x80) || (x & 0x40)) { /* 10xxxxxx */
+	  return 0xffffffff;
+	}
+	v <<= 6;
+	v |= (x & 0x3F);
+  }
+
+  return v;
+}
+
+/*---------------------------------------------------------------------------*/
+bool create_streaminfo(sq_flac_header_t type, flac_frame_t *frame, flac_streaminfo_t *streaminfo, u32_t *rate, u32_t duration) {
 	u8_t sample_size, channels;
 	u16_t block_size = 0;
+	u64_t sample_count = 0;
+	int i;
 
 	if (FLAC_GET_FRAME_TAG(frame->tag) != FLAC_TAG) {
 		LOG_ERROR("flac no header and not a frame ...", NULL);
@@ -281,12 +291,17 @@ bool create_streaminfo(flac_frame_t *frame, flac_streaminfo_t *streaminfo, u32_t
 		}
 	}
 
+	if (type == FLAC_ADJUST_HEADER) sample_count = read_utf8_u32(&frame->body);
+	if (sample_count == 0xffffffff || type == FLAC_MAX_HEADER) sample_count = FLAC_MAX_SAMPLES;
+	else if (sample_count) sample_count = sample_count * block_size + (*rate * (u64_t) duration) / 1000;
+
 	streaminfo->combo[0] = BYTE_1(FLAC_COMBO(*rate, channels, sample_size));
 	streaminfo->combo[1] = BYTE_2(FLAC_COMBO(*rate, channels, sample_size));
 	streaminfo->combo[2] = BYTE_3(FLAC_COMBO(*rate, channels, sample_size));
-	streaminfo->combo[3] = BYTE_4(FLAC_COMBO(*rate, channels, sample_size));
+	streaminfo->combo[3] = BYTE_4(FLAC_COMBO(*rate, channels, sample_size) | BYTE_1(QUAD_BYTE_H(sample_count)));
+	for (i = 3; i >= 0; i--) streaminfo->sample_count[3-i] = sample_count >> 8*i;
 
-	LOG_INFO("flac header ch:%d, s:%d, r:%d, b:%d", channels, sample_size, *rate, block_size);
+	LOG_INFO("flac header ch:%d, s:%d, r:%d, b:%d cnt:%lld", channels, sample_size, *rate, block_size, sample_count);
 	if (!*rate || !sample_size || !channels) {
 		LOG_ERROR("flac wrong header %d %d %d", *rate, channels, sample_size);
 	}

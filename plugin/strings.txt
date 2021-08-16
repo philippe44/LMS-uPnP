@@ -261,6 +261,8 @@ PLUGIN_UPNPBRIDGE_ENCODEPARAMS_DESC
 	EN	<br><i>- 24 bits PCM:</i> 24 bits sample can be sent in plain or packed using a special DVD formt. If UPnP player does
 	EN	not support 24 bits pcm at all, samples can tbe truncated to 16 bits. Some players accept 'wav' in 24 bits but not "raw",
 	EN	in which case truncation is only made for "raw". 
+	EN	<br><i>- Flac header:</i> when seeking, LMS removes flac header but most UPnP requires it. Headers contain "total number 
+	EN	of samples" and different values can be tried (flac standard says 0 should work but it does not always)
 	EN	<br><i>- Flac compression:</i> in flac mode, set the compression level. 0 = lowest compression & CPU load
 	EN	<br><i>- MP3 bitrate:</i> in mp3 mode, set bitrate
 	EN	<br><i>- Resample at:</i> resample rate for re-encoding. When "No higher" is set, resampling will only happen if rate is

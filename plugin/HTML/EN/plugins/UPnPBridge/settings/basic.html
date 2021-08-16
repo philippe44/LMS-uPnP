@@ -148,7 +148,7 @@
 		<input type="text" class="stdedit" name="codecs" id="codecs" value="[% codecs %]" size="20">&nbsp
 		[% "PLUGIN_UPNPBRIDGE_SAMPLERATE" | string %]
 		<select class="stdedit" name="sample_rate" id="sample_rate">
-		[% FOREACH entry IN [ '', '44100', '48000', '88200', '96000', '176400', '192000' ] %]
+		[% FOREACH entry IN [ '', '44100', '48000', '88200', '96000', '176400', '192000', '352800', '384000' ] %]
 			<option [% IF entry == sample_rate %]selected[% END %] value="[% entry %]">[% entry %]</option>
 		[% END %]
 		</select>&nbsp&nbsp
@@ -209,7 +209,7 @@
 			<span id="encode_thru" [% IF encode_mode && encode_mode != 'thru' %]hidden[% END %]>
 				[% "PLUGIN_UPNPBRIDGE_FLACHEADER" | string %]&nbsp
 				<select class="stdedit" name="flac_header" id="flac_header">
-				[% FOREACH entry IN [ ['',''], ['none','0'], ['normal','1'], ['fixed size','2'] ] %]
+				[% FOREACH entry IN [ ['',''], ['none','0'], ['normal','1'], ['maximum','2'], ['adjusted', '3'] ] %]
 					<option [% IF entry.1 == flac_header %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
 				[% END %]
 				</select>&nbsp

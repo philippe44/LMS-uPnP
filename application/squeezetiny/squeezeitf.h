@@ -46,7 +46,7 @@ typedef enum { SQ_RATE_384000 = 384000, SQ_RATE_352000 = 352000,
 			   SQ_RATE_16000 = 16000, SQ_RATE_12000 = 12000, SQ_RATE_11025 = 11025,
 			   SQ_RATE_8000 = 8000, SQ_RATE_DEFAULT = 0} sq_rate_e;
 typedef enum { L24_PACKED, L24_PACKED_LPCM, L24_TRUNC16, L24_TRUNC16_PCM, L24_UNPACKED_HIGH, L24_UNPACKED_LOW } sq_L24_pack_t;
-typedef enum { FLAC_NO_HEADER = 0, FLAC_NORMAL_HEADER = 1, FLAC_FULL_HEADER = 2 } sq_flac_header_t;
+typedef enum { FLAC_NO_HEADER = 0, FLAC_DEFAULT_HEADER = 1, FLAC_MAX_HEADER = 2, FLAC_ADJUST_HEADER } sq_flac_header_t;
 typedef	int	sq_dev_handle_t;
 typedef unsigned sq_rate_t;
 

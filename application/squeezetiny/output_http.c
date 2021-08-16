@@ -86,6 +86,23 @@ bool output_start(struct thread_ctx_s *ctx) {
 }
 
 /*---------------------------------------------------------------------------*/
+bool output_abort(struct thread_ctx_s *ctx, int index) {
+	int i;
+
+	for (i = 0; i < 2; i++) if (ctx->output_thread[i].index == index) {
+		LOCK_O;
+		ctx->output_thread[i].running = false;
+		UNLOCK_O;
+		pthread_join(ctx->output_thread[i].thread, NULL);
+		return true;
+	}
+
+	return false;
+}
+
+
+
+/*---------------------------------------------------------------------------*/
 static void output_http_thread(struct thread_param_s *param) {
 	bool http_ready = false, done = false;
 	int sock = -1;
@@ -351,7 +368,7 @@ static void output_http_thread(struct thread_param_s *param) {
 	}
 
 	NFREE(hbuf);
-	if (acquired) buf_destroy(obuf);
+	buf_destroy(obuf);
 
 	// in chunked mode, a full chunk might not have been sent (due to TCP)
 	if (sock != -1) shutdown_socket(sock);

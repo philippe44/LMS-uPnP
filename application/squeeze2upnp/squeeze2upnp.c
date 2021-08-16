@@ -122,7 +122,7 @@ sq_dev_param_t glDeviceParam = {
 					"?",                    // server
 					SQ_RATE_48000,          // sample_rate
 					L24_PACKED_LPCM,        // L24_mode
-					FLAC_NORMAL_HEADER,		// flac_header
+					FLAC_DEFAULT_HEADER,	// flac_header
 					"",						// name
 					{ 0x00,0x00,0x00,0x00,0x00,0x00 },
 #ifdef RESAMPLE
