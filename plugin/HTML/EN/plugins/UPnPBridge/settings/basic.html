@@ -148,7 +148,7 @@
 		<input type="text" class="stdedit" name="codecs" id="codecs" value="[% codecs %]" size="20">&nbsp
 		[% "PLUGIN_UPNPBRIDGE_SAMPLERATE" | string %]
 		<select class="stdedit" name="sample_rate" id="sample_rate">
-		[% FOREACH entry IN [ '', '44100', '48000', '88200', '96000', '176400', '192000', '352800', '384000' ] %]
+		[% FOREACH entry IN [ '', '44100', '48000', '88200', '96000', '176400', '192000', '352800', '384000', '705600', '768000' ] %]
 			<option [% IF entry == sample_rate %]selected[% END %] value="[% entry %]">[% entry %]</option>
 		[% END %]
 		</select>&nbsp&nbsp

@@ -1,3 +1,6 @@
+1.71.0
+ - increase max sample rate
+ 
 1.70.0
  - always release obuf when exiting output_thread 
  - abort current output thread when codec/process start fails
