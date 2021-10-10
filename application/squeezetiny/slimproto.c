@@ -68,7 +68,7 @@ static log_level *loglevel = &slimproto_loglevel;
 static u8_t 	pcm_sample_size[] = { 8, 16, 24, 32 };
 static u32_t 	pcm_sample_rate[] = { 11025, 22050, 32000, 44100, 48000,
 									  8000, 12000, 16000, 24000, 96000, 88200,
-									  176400, 192000, 352800, 384000, 705600, 768000 };
+									  176400, 192000, 352800, 384000 };
 static u8_t		pcm_channels[] = { 1, 2 };
 
 static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels,
@@ -1045,6 +1045,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 	if (strcasestr(mode, "pcm")) out->encode.mode = ENCODE_PCM;
 	else if (strcasestr(mode, "flc")) out->encode.mode = ENCODE_FLAC;
 	else if (strcasestr(mode, "mp3")) out->encode.mode = ENCODE_MP3;
+	else if (strcasestr(mode, "null")) out->encode.mode = ENCODE_NULL;
 	else {
 		// make sure we have a stable default mode
 		strcpy(mode, "thru");
@@ -1167,6 +1168,14 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 			out->encode.level = atoi(p+4);
 			if (out->encode.level > 320) out->encode.level = 320;
 		} else out->encode.level = 128;
+
+	} if (out->encode.mode == ENCODE_NULL) {
+
+		mimetype = strdup("audio/mp3");
+		out->codec = '*';
+		out->encode.count = out->duration / MP3_SILENCE_DURATION;
+		LOG_INFO("[%p]: will send %zu mp3 silence blocks", ctx, out->encode.count);
+
 	}
 
 	// matching found in player

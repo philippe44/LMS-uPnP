@@ -385,6 +385,8 @@ void 		resample_end(struct thread_ctx_s *ctx);
 #define ICY_LEN_MAX		(255*16+1)
 #define ICY_UPDATE_TIME	5000
 
+#define MP3_SILENCE_DURATION 26
+
 typedef enum { OUTPUT_OFF = -1, OUTPUT_STOPPED = 0, OUTPUT_WAITING,
 			   OUTPUT_RUNNING } output_state;
 
@@ -392,7 +394,7 @@ typedef enum { FADE_INACTIVE = 0, FADE_DUE, FADE_ACTIVE, FADE_PENDING } fade_sta
 typedef enum { FADE_UP = 1, FADE_DOWN, FADE_CROSS } fade_dir;
 typedef enum { FADE_NONE = 0, FADE_CROSSFADE, FADE_IN, FADE_OUT, FADE_INOUT } fade_mode;
 
-typedef enum { ENCODE_THRU, ENCODE_PCM, ENCODE_FLAC, ENCODE_MP3 } encode_mode;
+typedef enum { ENCODE_THRU, ENCODE_NULL, ENCODE_PCM, ENCODE_FLAC, ENCODE_MP3 } encode_mode;
 
 // parameters for the output management thread
 struct output_thread_s {
@@ -459,7 +461,7 @@ struct outputstate {
 		void 	*codec; 	// re-encoding codec
 		u16_t  	level;      // in flac, compression level, in mp3 bitrate
 		u8_t	*buffer;	// interim codec buffer (optional)
-		size_t	count;		// # of *frames* in buffer
+		size_t	count;		// # of *frames* in buffer or # of silence blocks to send (null mode)
 	} encode;				// format of what being sent to player
 };
 

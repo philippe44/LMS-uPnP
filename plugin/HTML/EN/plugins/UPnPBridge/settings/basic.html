@@ -190,7 +190,7 @@
 		
 		[% "PLUGIN_UPNPBRIDGE_ENCODEMODE" | string %]
 		<select class="stdedit" name="encode_mode" id="encode_mode" onchange="modechange(this)">
-		[% FOREACH entry IN [ ['',''], ['none','thru'], ['pcm','pcm'], ['flac', 'flc'], ['mp3', 'mp3'] ] %]
+		[% FOREACH entry IN [ ['',''], ['none','thru'], ['null','null'], ['pcm','pcm'], ['flac', 'flc'], ['mp3', 'mp3'] ] %]
 			<option [% IF entry.1 == encode_mode %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
 		[% END %]
 		</select>&nbsp
