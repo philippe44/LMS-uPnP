@@ -257,7 +257,7 @@ PLUGIN_UPNPBRIDGE_ENCODEPARAMS_DESC
 	EN	possible to send audio in a continuous flow of data instead of tracks one-by-one to enable true gapless and 
 	EN	cross-fading. See user's guide for more details
 	EN	<br><i>- Transcode:</i> format sent to player. When left empty or set to 'none', audio is simply passed through to player.
-	EN	Use 'null' to send mp3 silent frames and use the player for display only (don't maintain sync)
+	EN	Use 'silent' to send mp3 silent frames and use the player for display only (don't maintain sync)
 	EN	<br><i>- Flow:</i> enable "flow" mode where playlists are sent as a continuous audio stream.
 	EN	<br><i>- 24 bits PCM:</i> 24 bits sample can be sent in plain or packed using a special DVD formt. If UPnP player does
 	EN	not support 24 bits pcm at all, samples can tbe truncated to 16 bits. Some players accept 'wav' in 24 bits but not "raw",
