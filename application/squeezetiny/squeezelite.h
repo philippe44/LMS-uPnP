@@ -385,6 +385,7 @@ void 		resample_end(struct thread_ctx_s *ctx);
 #define ICY_LEN_MAX		(255*16+1)
 #define ICY_UPDATE_TIME	5000
 
+// real value is 576x2=1152 samples@44100kHz = 26.122 ms but we want a bit more blocks
 #define MP3_SILENCE_DURATION 26
 
 typedef enum { OUTPUT_OFF = -1, OUTPUT_STOPPED = 0, OUTPUT_WAITING,
