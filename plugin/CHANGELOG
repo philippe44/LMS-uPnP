@@ -1,3 +1,7 @@
+1.80.3
+ - mp3 mimetype is audio/mpeg
+ - mimetypes audio/x-... where mishandled when setting "bridge-NN." extension
+
 1.80.2
  - add proper opus DLLs
  

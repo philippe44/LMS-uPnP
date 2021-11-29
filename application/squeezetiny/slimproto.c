@@ -1171,7 +1171,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 
 	} if (out->encode.mode == ENCODE_NULL) {
 
-		mimetype = strdup("audio/mp3");
+		mimetype = strdup("audio/mpeg");
 		out->codec = '*';
 		out->encode.count = out->duration / MP3_SILENCE_DURATION;
 		LOG_INFO("[%p]: will send %zu mp3 silence blocks", ctx, out->encode.count);

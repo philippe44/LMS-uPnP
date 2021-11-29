@@ -160,23 +160,28 @@ char *make_dlna_content(char *mimetype, u32_t duration) {
 /*---------------------------------------------------------------------------*/
 char *mimetype2ext(char *mimetype)
 {
-	if (!mimetype) return "";
+	char *p;
 
-	if (strstr(mimetype, "audio/wav")) return "wav";
-	if (strstr(mimetype, "audio/L") || mimetype[0] == '*') return "pcm";
-	if (strstr(mimetype, "audio/flac")) return "flac";
-	if (strstr(mimetype, "audio/flc")) return "flc";
-	if (strstr(mimetype, "audio/mp3") || strstr(mimetype, "mpeg")) return "mp3";
-	if (strstr(mimetype, "audio/ogg") && strstr(mimetype, "codecs=opus")) return "ops";
-	if (strstr(mimetype, "audio/ogg") && strstr(mimetype, "codecs=flac")) return "ogg";
-	if (strstr(mimetype, "audio/ogg")) return "ogg";
-	if (strstr(mimetype, "audio/aif")) return "aif";
-	if (strstr(mimetype, "audio/aac")) return "aac";
-	if (strstr(mimetype, "audio/mp4")) return "mp4";
-	if (strstr(mimetype, "audio/m4a")) return "m4a";
-	if (strstr(mimetype, "audio/dsd")) return "dsd";
-	if (strstr(mimetype, "audio/dsf")) return "dsf";
-	if (strstr(mimetype, "audio/dff")) return "dff";
+	if (!mimetype) return "";
+	if ((p = strstr(mimetype, "audio/x-")) != NULL) p += strlen("audio/x-");
+	else if ((p = strstr(mimetype, "audio/")) != NULL) p += strlen("audio/");
+	else return "";
+
+	if (strstr(mimetype, "wav") == p) return "wav";
+	if (strstr(mimetype, "L") == p || mimetype[0] == '*') return "pcm";
+	if (strstr(mimetype, "flac") == p) return "flac";
+	if (strstr(mimetype, "flc") == p) return "flc";
+	if (strstr(mimetype, "mp3") == p || strstr(mimetype, "mpeg") == p) return "mp3";
+	if (strstr(mimetype, "ogg") == p && strstr(mimetype, "codecs=opus")) return "ops";
+	if (strstr(mimetype, "ogg") == p && strstr(mimetype, "codecs=flac")) return "ogg";
+	if (strstr(mimetype, "ogg") == p) return "ogg";
+	if (strstr(mimetype, "aif") == p) return "aif";
+	if (strstr(mimetype, "aac") == p) return "aac";
+	if (strstr(mimetype, "mp4") == p) return "mp4";
+	if (strstr(mimetype, "m4a") == p) return "m4a";
+	if (strstr(mimetype, "dsd") == p) return "dsd";
+	if (strstr(mimetype, "dsf") == p) return "dsf";
+	if (strstr(mimetype, "dff") == p) return "dff";
 
 	return "nil";
 
