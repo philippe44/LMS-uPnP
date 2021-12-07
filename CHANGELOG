@@ -1,3 +1,6 @@
+1.80.4
+ - wakeup from long sleep timer when start playing to detect play activity faster
+
 1.80.3
  - mp3 mimetype is audio/mpeg
  - mimetypes audio/x-... where mishandled when setting "bridge-NN." extension

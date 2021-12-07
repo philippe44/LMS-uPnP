@@ -409,6 +409,9 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t 
 			AVTPlay(Device);
 			Device->sqState = SQ_PLAY;
 
+			// we need to wakeup that player from long sleep
+			WakeAll();
+
 			// send volume to master + slaves
 			if (Device->Config.VolumeOnPlay == 1 && Device->Volume != -1) {
 				int i;
@@ -549,7 +552,7 @@ static void *MRThread(void *args)
 		pthread_mutex_lock(&p->Mutex);
 
 		if (p->ShortTrack) wakeTimer = MIN_POLL / 2;
-		else wakeTimer = (p->State != STOPPED) ? MIN_POLL : MIN_POLL * 10;
+		else wakeTimer = (p->sqState != SQ_STOP && p->on) ? MIN_POLL : MIN_POLL * 10;
 
 		LOG_SDEBUG("[%p]: UPnP thread timer %d %d", p, elapsed, wakeTimer);
 
