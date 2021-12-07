@@ -533,12 +533,15 @@ static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, int thread_index,
 			if ((str = kd_lookup(headers, "Range")) != NULL) {
 				int offset = 0;
 				sscanf(str, "bytes=%u", &offset);
-				if (offset) {
+				// when range cannot be satisfied, just continue where we were
+				if (offset < bytes) {
 					head = "HTTP/1.1 206 Partial Content";
 					if (type != SONOS) kd_add(resp, "Content-Range", "bytes %u-%zu/*", offset, bytes);
 					res = offset + 1;
 					obuf->readp = obuf->buf + offset % obuf->size;
-				}
+				} else {
+                    LOG_INFO("[%p]: range cannot be satisfied %zu/%zu", ctx, offset, bytes);
+                }
 			} else if (bytes && type == SONOS && !ctx->output.icy.interval) {
 				// Sonos client re-opening the connection, so make it believe we
 				// have a 2G length - thus it will sent a range-request

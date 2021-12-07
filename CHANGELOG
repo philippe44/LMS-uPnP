@@ -1,3 +1,6 @@
+1.81.0
+ - do an HTPP 200 on non-satisfiable range
+
 1.80.4
  - wakeup from long sleep timer when start playing to detect play activity faster
 
