@@ -325,9 +325,14 @@ static void _CheckCodecs(char *Codecs, char *Sink, char *Forced, char *Details, 
 	va_start(args, n);
 
 	for (i = 0; i < n; i++) {
-		char *lookup = va_arg(args, char*);
+		char *arg = va_arg(args, char*);
+		char lookup[32], lookup_x[32];
+
+		sprintf(lookup, "audio/%s", arg);
+		sprintf(lookup_x, "audio/x-%s", arg);
 
 		if ((strstr(Sink, lookup) && (!Details || strstr(Sink, Details))) ||
+			(strstr(Sink, lookup_x) && (!Details || strstr(Sink, Details))) ||
 			(strstr(Forced, lookup) && (!Details || strstr(Forced, Details)))) {
 			if (strlen(Codecs)) {
 				strcat(Codecs, ",");

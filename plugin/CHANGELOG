@@ -1,3 +1,7 @@
+1.81.2
+ - no trace when offset is 0
+ - check codecs looks for audio/<codec> or audio/x-<codec> explicitely
+ 
 1.81.0
  - do an HTPP 200 on non-satisfiable range
 

@@ -539,7 +539,7 @@ static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, int thread_index,
 					if (type != SONOS) kd_add(resp, "Content-Range", "bytes %u-%zu/*", offset, bytes);
 					res = offset + 1;
 					obuf->readp = obuf->buf + offset % obuf->size;
-				} else {
+				} else if (offset) {
                     LOG_INFO("[%p]: range cannot be satisfied %zu/%zu", ctx, offset, bytes);
                 }
 			} else if (bytes && type == SONOS && !ctx->output.icy.interval) {
