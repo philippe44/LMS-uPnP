@@ -1,3 +1,6 @@
+1.81.3
+ - output_http thread should wait for new_stream to be unset not for track_start as the latter can be missed if gain_and_fade is called while we sleep
+ 
 1.81.2
  - no trace when offset is 0
  - check codecs looks for audio/<codec> or audio/x-<codec> explicitely

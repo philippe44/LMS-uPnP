@@ -170,7 +170,7 @@ static void output_http_thread(struct thread_param_s *param) {
 		// need to wait till we have an initialized codec
 		if (!acquired && n > 0) {
 			LOCK_D;
-			if (!ctx->output.track_start) {
+			if (ctx->decode.new_stream) {
 				UNLOCK_D;
 				// not very elegant but let's not consume all CPU
 				usleep(SLEEP*1000);
