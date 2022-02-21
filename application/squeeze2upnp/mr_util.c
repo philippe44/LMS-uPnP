@@ -287,6 +287,7 @@ char** ParseProtocolInfo(char *Info, char *Forced)
 	int n = 0, i = 0;
 	int size = strlen(Info);
 	char MimeType[_STR_LEN_];
+	bool MatchAll = strcasestr(Info, "http-get:*:*:") || strcasestr(Info, "http-get:::");
 
 	// strtok is not re-entrant
 	do {
@@ -312,6 +313,8 @@ char** ParseProtocolInfo(char *Info, char *Forced)
 		i++;
 	}
 
+	if (i < MAX_MIMETYPES && MatchAll) MimeTypes[i] = strdup("*");
+
 	return MimeTypes;
 }
 
@@ -321,6 +324,7 @@ static void _CheckCodecs(char *Codecs, char *Sink, char *Forced, char *Details, 
 {
 	int i;
 	va_list args;
+	bool MatchAll = strcasestr(Sink, "http-get:*:*:") || strcasestr(Sink, "http-get:::");
 
 	va_start(args, n);
 
@@ -331,7 +335,8 @@ static void _CheckCodecs(char *Codecs, char *Sink, char *Forced, char *Details, 
 		sprintf(lookup, "audio/%s", arg);
 		sprintf(lookup_x, "audio/x-%s", arg);
 
-		if ((strstr(Sink, lookup) && (!Details || strstr(Sink, Details))) ||
+		if ( MatchAll ||
+			(strstr(Sink, lookup) && (!Details || strstr(Sink, Details))) ||
 			(strstr(Sink, lookup_x) && (!Details || strstr(Sink, Details))) ||
 			(strstr(Forced, lookup) && (!Details || strstr(Forced, Details)))) {
 			if (strlen(Codecs)) {

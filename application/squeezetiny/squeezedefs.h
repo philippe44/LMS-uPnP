@@ -22,7 +22,7 @@
 #ifndef __SQUEEZEDEFS_H
 #define __SQUEEZEDEFS_H
 
-#define VERSION "v1.81.3"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v1.82.2"" ("__DATE__" @ "__TIME__")"
 
 #include "platform.h"
 
@@ -72,6 +72,7 @@
 #include <unistd.h>
 #include <stdbool.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <sys/time.h>
 #include <sys/socket.h>

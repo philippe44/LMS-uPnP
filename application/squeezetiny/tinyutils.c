@@ -731,7 +731,7 @@ char *kd_dump(key_data_t *kd)
 		mimetype = va_arg(args, char*);
 		p = mimetypes;
 		while (*p) {
-			if (strstr(*p, mimetype) && (!details || strstr(*p, details))) {
+			if (**p == '*' || (strstr(*p, mimetype) && (!details || strstr(*p, details)))) {
 				va_end(args);
 				return strdup(*p);
 			}
@@ -819,9 +819,10 @@ char* find_pcm_mimetype(u8_t *sample_size, bool truncable, u32_t sample_rate,
 			sprintf(r, "rate=%u", sample_rate);
 			sprintf(c, "channels=%hhu", channels);
 			while (*p) {
-				if (strstr(*p, a) &&
-				   (!strstr(*p, "rate=") || strstr(*p, r)) &&
-				   (!strstr(*p, "channels=") || strstr(*p, c))) {
+				if (**p == '*' ||
+					(strstr(*p, a) &&
+					(!strstr(*p, "rate=") || strstr(*p, r)) &&
+					(!strstr(*p, "channels=") || strstr(*p, c)))) {
 				   char *rsp;
 
 				   (void) !asprintf(&rsp, "%s;%s;%s", a, r, c);

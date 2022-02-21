@@ -1,3 +1,10 @@
+1.82.x
+ - XX
+ 
+1.82.1
+ - accept protocolinfo with all match
+ - use TCP_NODELAY to send last chunk
+ 
 1.81.3
  - output_http thread should wait for new_stream to be unset not for track_start as the latter can be missed if gain_and_fade is called while we sleep
  
