@@ -1,5 +1,6 @@
-1.82.x
- - XX
+1.82.2
+ - fix protocolinfo all matches
+ - remove TCP_NODELAY for last chunk
  
 1.82.1
  - accept protocolinfo with all match
