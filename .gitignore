@@ -98,5 +98,7 @@ bin.old/
 alpha/
 _backup/
 *bridge-*
+*.bak
+*.user
 
 
