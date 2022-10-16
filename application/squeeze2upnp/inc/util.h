@@ -25,11 +25,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include "pthread.h"
 
 #include "ixml.h" /* for IXML_Document, IXML_Element */
 #include "upnp.h" /* for Upnp_EventType */
-#include "util_common.h"
-#include "log_util.h"
+#include "cross_log.h"
 
 typedef struct {
 	pthread_mutex_t	*mutex;
@@ -54,7 +54,8 @@ void 		QueueFlush(tQueue *queue);
 
 int 		pthread_cond_reltimedwait(pthread_cond_t *cond, pthread_mutex_t *mutex,	u32_t msWait);
 
-char 		*uPNPEvent2String(Upnp_EventType S);
+
+char 		*uPNPEvent2String(Upnp_EventType S);
 void 		uPNPUtilInit(log_level level);
 in_addr_t	ExtractIP(const char *URL);
 s64_t	 	Time2Int(char *Time);

@@ -297,13 +297,18 @@ bool _output_fill(struct buffer *buf, FILE *store, struct thread_ctx_s *ctx) {
 						iptr = p->encode.buffer;
 						p->encode.count = 0;
 						process = 2;
-					} else process--;
-				}
 
-				// might be nothing to process if only one frame available
-				lpcm_pack(optr, iptr, process * BYTES_PER_FRAME, p->encode.channels, 1);
+					} else process--;
 
-			} else scale_and_pack(optr, (u32_t*) ctx->outputbuf->readp, frames,
+				}
+
+
+				// might be nothing to process if only one frame available
+
+				lpcm_pack(optr, iptr, process * BYTES_PER_FRAME, p->encode.channels, 1);
+
+
+			} else scale_and_pack(optr, (u32_t*) ctx->outputbuf->readp, frames,
 								  p->encode.channels, p->encode.sample_size, p->out_endian);
 
 			// take the data from temporary buffer if needed
@@ -405,7 +410,7 @@ void _output_new_stream(struct buffer *obuf, FILE *store, struct thread_ctx_s *c
 		should be consistent
 		*/
 		if (!out->duration || out->encode.flow) {
-			if (ctx->config.stream_length < 0) length = MAX_FILE_SIZE;
+			if (ctx->config.stream_length < 0) length = HTTP_LARGE;
 			else length = ctx->config.stream_length;
 			length = (length / ((u64_t) out->encode.sample_rate * out->encode.channels * out->encode.sample_size /8)) *
 					 (u64_t) out->encode.sample_rate * out->encode.channels * out->encode.sample_size / 8;
@@ -694,9 +699,9 @@ void output_set_icy(struct metadata_s *metadata, bool init, u32_t now, struct th
 		if (!init) ctx->output.icy.updated = true;
 		ctx->output.icy.hash = hash;
 		output_free_icy(ctx);
-		ctx->output.icy.artist = strdupn(metadata->artist);
-		ctx->output.icy.title = strdupn(metadata->title);
-		ctx->output.icy.artwork = (ctx->config.send_icy != ICY_TEXT) ? strdupn(metadata->artwork) : NULL;
+		ctx->output.icy.artist = metadata->artist ? strdup(metadata->artist) : NULL;
+		ctx->output.icy.title = metadata->title ? strdup(metadata->title) : NULL;
+		ctx->output.icy.artwork = (ctx->config.send_icy != ICY_TEXT && metadata->artwork) ? strdup(metadata->artwork) : NULL;
 		UNLOCK_O;
 	}
 }
@@ -898,7 +903,8 @@ static void to_mono(s32_t *iptr,  size_t frames) {
 		iptr += 2;
   }
 }
-#endif
+
+#endif
 
 /*---------------------------------------------------------------------------*/
 void _checkfade(bool start, struct thread_ctx_s *ctx) {
@@ -1099,8 +1105,10 @@ static void apply_gain(s32_t *iptr, u32_t fade, u32_t gain, u8_t shift, size_t f
 
 	if (gain == 65536 && !shift) return;
 
-	if (gain == 65536) {
-		if (shift == 8) while (count--) {*iptr = *iptr >> 8; iptr++; }
+
+	if (gain == 65536) {
+
+		if (shift == 8) while (count--) {*iptr = *iptr >> 8; iptr++; }
 		else if (shift == 16) while (count--) { *iptr = *iptr >> 16; iptr++; }
 		else if (shift == 24) while (count--) { *iptr = *iptr >> 24; iptr++; }
 	} else {

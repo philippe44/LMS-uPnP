@@ -22,6 +22,7 @@
 // make may define: SELFPIPE, RESAMPLE, RESAMPLE_MP, VISEXPORT, DSD, LINKALL to influence build
 
 // build detection
+#include "platform.h"
 #include "squeezedefs.h"
 
 #if !defined(LOOPBACK)
@@ -62,7 +63,6 @@
 #if !LINKALL
 
 // dynamically loaded libraries at run time
-
 #if LINUX
 #define LIBFLAC "libFLAC.so.8"
 #define LIBMAD  "libmad.so.0"
@@ -134,8 +134,36 @@
 #include <sys/stat.h>
 
 #include "squeezeitf.h"
-#include "util_common.h"
-#include "log_util.h"
+#include "mimetypes.h"
+#include "cross_log.h"
+#include "cross_net.h"
+#include "cross_util.h"
+
+// we'll give venerable squeezelite the benefit of "old" int's
+typedef uint64_t u64_t;
+typedef int64_t  s64_t;
+typedef uint32_t u32_t;
+typedef int32_t  s32_t;
+typedef uint16_t u16_t;
+typedef int16_t  s16_t;
+typedef uint8_t  u8_t;
+typedef int8_t   s8_t;
+
+#define STREAM_THREAD_STACK_SIZE (1024 * 64)
+#define DECODE_THREAD_STACK_SIZE (1024 * 128)
+#define OUTPUT_THREAD_STACK_SIZE (1024 * 64)
+#define SLIMPROTO_THREAD_STACK_SIZE  (1024 * 64)
+#define DECODE_THREAD_STACK_SIZE (1024 * 128)
+
+#define mutex_type pthread_mutex_t
+#define mutex_create(m) pthread_mutex_init(&m, NULL)
+#define mutex_create_p mutex_create
+#define mutex_lock(m) pthread_mutex_lock(&m)
+#define mutex_unlock(m) pthread_mutex_unlock(&m)
+#define mutex_trylock(m) pthread_mutex_trylock(&m)
+#define mutex_destroy(m) pthread_mutex_destroy(&m)
+#define thread_type pthread_t
+#define mutex_timedlock(m, t) _mutex_timedlock(&m, t)
 
 #if !defined(MSG_NOSIGNAL)
 #define MSG_NOSIGNAL 0
@@ -205,15 +233,7 @@ void _wake_create(event_event*);
 typedef enum { EVENT_TIMEOUT = 0, EVENT_READ, EVENT_WAKE } event_type;
 struct thread_ctx_s;
 
-char *find_mimetype(char codec, char *mimetypes[], char *options);
-char* find_pcm_mimetype(u8_t *sample_size, bool truncable, u32_t sample_rate,
-						u8_t channels, char *mimetypes[], char *options);
 char*		next_param(char *src, char c);
-void 		set_nonblock(sockfd s);
-void 		set_block(sockfd s);
-int 		connect_timeout(sockfd sock, const struct sockaddr *addr, socklen_t addrlen, int timeout);
-int 		bind_socket(unsigned short *port, int mode);
-int 		shutdown_socket(int sd);
 void 		server_addr(char *server, in_addr_t *ip_ptr, unsigned *port_ptr);
 void 		set_readwake_handles(event_handle handles[], sockfd s, event_event e);
 event_type 	wait_readwake(event_handle handles[], int timeout);
@@ -221,23 +241,6 @@ void 		packN(u32_t *dest, u32_t val);
 void 		packn(u16_t *dest, u16_t val);
 u32_t 		unpackN(u32_t *src);
 u16_t 		unpackn(u16_t *src);
-#if OSX
-void set_nosigpipe(sockfd s);
-#else
-#define set_nosigpipe(s)
-#endif
-#if WIN
-void 		winsock_init(void);
-void 		winsock_close(void);
-void*		dlopen(const char *filename, int flag);
-void 		dlclose(void *handle);
-void*		dlsym(void *handle, const char *symbol);
-char*		dlerror(void);
-int 		poll(struct pollfd *fds, unsigned long numfds, int timeout);
-#endif
-#if LINUX || FREEBSD
-void 		touch_memory(u8_t *buf, size_t size);
-#endif
 
 // buffer.c
 struct buffer {
@@ -423,7 +426,7 @@ struct outputstate {
 	u16_t  	index;			// 16 bits track counter(see output_thread)
 	u16_t	port;			// port of latest thread (mainy used for codc)
 	bool 	chunked;		// chunked mode
-	char 	mimetype[_STR_LEN_];	// content-type to send to player
+	char 	mimetype[STR_LEN];	// content-type to send to player
 	bool  	track_started;	// track has started to be streamed (trigger, not state)
 	u8_t  	*track_start;   // pointer where track starts in buffer, just for legacy compatibility
 	int		supported_rates[2];	// for resampling (0 = use raw)
@@ -519,6 +522,7 @@ typedef enum {TRACK_STOPPED = 0, TRACK_STARTED, TRACK_PAUSED} track_status_t;
 #define PLAYER_NAME_LEN 64
 #define SERVER_VERSION_LEN	32
 #define MAX_PLAYER		32
+#define MAX_MIMETYPES	128
 
 struct thread_ctx_s {
 	int 		self;

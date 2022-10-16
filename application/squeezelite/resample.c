@@ -68,13 +68,11 @@ struct soxr {
 	bool exception;
 };
 
-
 #if LINKALL
 #define SOXR(h, fn, ...) (soxr_ ## fn)(__VA_ARGS__)
 #else
 #define SOXR(h, fn, ...) (h)->soxr_##fn(__VA_ARGS__)
 #endif
-
 
 void resample_samples(struct thread_ctx_s *ctx) {
 	struct soxr *r = ctx->decode.process_handle;
@@ -257,7 +255,6 @@ void resample_flush(struct thread_ctx_s *ctx) {
 		r->resampler = NULL;
 	}
 }
-
 
 bool resample_init(char *opt, struct thread_ctx_s *ctx) {
 	struct soxr *r;

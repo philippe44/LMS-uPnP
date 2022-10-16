@@ -1,28 +1,18 @@
 /*
- *  Squeeze2upnp - LMS to uPNP gateway
+ * AirUPnP - Config utils
  *
- *	(c) Philippe 2015-2017, philippe_44@outlook.com
+ * (c) Philippe, philippe_44@outlook.com
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * see LICENSE
  *
  */
 
 #include <stdarg.h>
 
 #include "squeeze2upnp.h"
+#include "ixmlextra.h"
 #include "config_upnp.h"
-#include "log_util.h"
+#include "cross_log.h"
 
 extern log_level	slimproto_loglevel;
 extern log_level	slimmain_loglevel;
@@ -33,35 +23,24 @@ extern log_level	main_loglevel;
 extern log_level	util_loglevel;
 extern log_level	upnp_loglevel;
 
-//static log_level *loglevel = &util_loglevel;
-
 static void *MigrateConfig(IXML_Document *doc);
 static void *MigrateMRConfig(IXML_Node *device);
 
 /*----------------------------------------------------------------------------*/
-void SaveConfig(char *name, void *ref, bool full)
-{
+void SaveConfig(char *name, void *ref, bool full) {
 	struct sMR *p;
 	IXML_Document *doc = ixmlDocument_createDocument();
 	IXML_Document *old_doc = ref;
-	IXML_Node	 *root, *common;
-	IXML_NodeList *list;
-	IXML_Element *old_root;
-	char *s;
-	FILE *file;
-	int i;
-
-	old_root = ixmlDocument_getElementById(old_doc, "squeeze2upnp");
+	IXML_Node *root, *common, *proto;
+	IXML_Element* old_root = ixmlDocument_getElementById(old_doc, "squeeze2upnp");
 
 	if (!full && old_doc) {
 		ixmlDocument_importNode(doc, (IXML_Node*) old_root, true, &root);
 		ixmlNode_appendChild((IXML_Node*) doc, root);
 
-		list = ixmlDocument_getElementsByTagName((IXML_Document*) root, "device");
-		for (i = 0; i < (int) ixmlNodeList_length(list); i++) {
-			IXML_Node *device;
-
-			device = ixmlNodeList_item(list, i);
+		IXML_NodeList* list = ixmlDocument_getElementsByTagName((IXML_Document*) root, "device");
+		for (int i = 0; i < (int) ixmlNodeList_length(list); i++) {
+			IXML_Node *device = ixmlNodeList_item(list, i);
 			ixmlNode_removeChild(root, device, &device);
 			ixmlNode_free(device);
 		}
@@ -82,11 +61,11 @@ void SaveConfig(char *name, void *ref, bool full)
 	XMLUpdateNode(doc, root, false, "main_log",level2debug(main_loglevel));
 	XMLUpdateNode(doc, root, false, "upnp_log",level2debug(upnp_loglevel));
 	XMLUpdateNode(doc, root, false, "util_log",level2debug(util_loglevel));
-	XMLUpdateNode(doc, root, false, "log_limit", "%d", (s32_t) glLogLimit);
+	XMLUpdateNode(doc, root, false, "log_limit", "%d", (int32_t) glLogLimit);
 
-	XMLUpdateNode(doc, common, false, "streambuf_size", "%d", (u32_t) glDeviceParam.streambuf_size);
-	XMLUpdateNode(doc, common, false, "output_size", "%d", (u32_t) glDeviceParam.outputbuf_size);
-	XMLUpdateNode(doc, common, false, "stream_length", "%d", (u32_t) glDeviceParam.stream_length);
+	XMLUpdateNode(doc, common, false, "streambuf_size", "%d", (uint32_t) glDeviceParam.streambuf_size);
+	XMLUpdateNode(doc, common, false, "output_size", "%d", (uint32_t) glDeviceParam.outputbuf_size);
+	XMLUpdateNode(doc, common, false, "stream_length", "%d", (uint32_t) glDeviceParam.stream_length);
 	XMLUpdateNode(doc, common, false, "enabled", "%d", (int) glMRConfig.Enabled);
 	XMLUpdateNode(doc, common, false, "remove_timeout", "%d", (int) glMRConfig.RemoveTimeout);
 	XMLUpdateNode(doc, common, false, "codecs", glDeviceParam.codecs);
@@ -113,7 +92,7 @@ void SaveConfig(char *name, void *ref, bool full)
 	XMLUpdateNode(doc, common, false, "resample_options", glDeviceParam.resample_options);
 #endif
 
-	for (i = 0; i < MAX_RENDERERS; i++) {
+	for (int i = 0; i < MAX_RENDERERS; i++) {
 		IXML_Node *dev_node;
 
 		if (!glMRDevices[i].Running) continue;
@@ -142,8 +121,8 @@ void SaveConfig(char *name, void *ref, bool full)
 	}
 
 	// add devices in old XML file that has not been discovered
-	list = ixmlDocument_getElementsByTagName((IXML_Document*) old_root, "device");
-	for (i = 0; i < (int) ixmlNodeList_length(list); i++) {
+	IXML_NodeList* list = ixmlDocument_getElementsByTagName((IXML_Document*) old_root, "device");
+	for (int i = 0; i < (int) ixmlNodeList_length(list); i++) {
 		char *udn;
 		IXML_Node *device, *node;
 
@@ -158,8 +137,8 @@ void SaveConfig(char *name, void *ref, bool full)
 	}
 	if (list) ixmlNodeList_free(list);
 
-	file = fopen(name, "wb");
-	s = ixmlDocumenttoString(doc);
+	FILE* file = fopen(name, "wb");
+	char *s = ixmlDocumenttoString(doc);
 	fwrite(s, 1, strlen(s), file);
 	fclose(file);
 	free(s);
@@ -168,8 +147,7 @@ void SaveConfig(char *name, void *ref, bool full)
 }
 
 /*----------------------------------------------------------------------------*/
-static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name, char *val)
-{
+static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name, char *val) {
 	if (!val) return;
 
 	if (!strcmp(name, "streambuf_size")) sq_conf->streambuf_size = atol(val);
@@ -228,24 +206,17 @@ static void LoadGlobalItem(char *name, char *val)
 	if (!strcmp(name, "log_limit")) glLogLimit = atol(val);
 }
 
-
 /*----------------------------------------------------------------------------*/
-void *FindMRConfig(void *ref, char *UDN)
-{
-	IXML_Element *elm;
+void *FindMRConfig(void *ref, char *UDN) {
 	IXML_Node	*device = NULL;
-	IXML_NodeList *l1_node_list;
 	IXML_Document *doc = (IXML_Document*) ref;
-	char *v;
-	unsigned i;
+	IXML_Element* elm = ixmlDocument_getElementById(doc, "airupnp");
+	IXML_NodeList* l1_node_list = ixmlDocument_getElementsByTagName((IXML_Document*) elm, "udn");
 
-	elm = ixmlDocument_getElementById(doc, "squeeze2upnp");
-	l1_node_list = ixmlDocument_getElementsByTagName((IXML_Document*) elm, "udn");
-	for (i = 0; i < ixmlNodeList_length(l1_node_list); i++) {
-		IXML_Node *l1_node, *l1_1_node;
-		l1_node = ixmlNodeList_item(l1_node_list, i);
-		l1_1_node = ixmlNode_getFirstChild(l1_node);
-		v = (char*) ixmlNode_getNodeValue(l1_1_node);
+	for (unsigned i = 0; i < ixmlNodeList_length(l1_node_list); i++) {
+		IXML_Node* l1_node = ixmlNodeList_item(l1_node_list, i);
+		IXML_Node* l1_1_node = ixmlNode_getFirstChild(l1_node);
+		char* v = (char*) ixmlNode_getNodeValue(l1_1_node);
 		if (v && !strcmp(v, UDN)) {
 			device = ixmlNode_getParentNode(l1_node);
 			break;
@@ -256,23 +227,17 @@ void *FindMRConfig(void *ref, char *UDN)
 }
 
 /*----------------------------------------------------------------------------*/
-void *LoadMRConfig(void *ref, char *UDN, tMRConfig *Conf, sq_dev_param_t *sq_conf)
-{
-	IXML_NodeList *node_list;
+void* LoadMRConfig(void* ref, char* UDN, tMRConfig * Conf, sq_dev_param_t * sq_conf) {
 	IXML_Document *doc = (IXML_Document*) ref;
-	IXML_Node *node;
-	char *n, *v;
-	unsigned i;
+	IXML_Node* node = (IXML_Node*) FindMRConfig(doc, UDN);
 
-	node = (IXML_Node*) FindMRConfig(doc, UDN);
 	if (node) {
-		node_list = ixmlNode_getChildNodes(node);
-		for (i = 0; i < ixmlNodeList_length(node_list); i++) {
-			IXML_Node *l1_node, *l1_1_node;
-			l1_node = ixmlNodeList_item(node_list, i);
-			n = (char*) ixmlNode_getNodeName(l1_node);
-			l1_1_node = ixmlNode_getFirstChild(l1_node);
-			v = (char*) ixmlNode_getNodeValue(l1_1_node);
+		IXML_NodeList* node_list = ixmlNode_getChildNodes(node);
+		for (unsigned i = 0; i < ixmlNodeList_length(node_list); i++) {
+			IXML_Node* l1_node = ixmlNodeList_item(node_list, i);
+			char* n = (char*) ixmlNode_getNodeName(l1_node);
+			IXML_Node* l1_1_node = ixmlNode_getFirstChild(l1_node);
+			char *v = (char*) ixmlNode_getNodeValue(l1_1_node);
 			LoadConfigItem(Conf, sq_conf, n, v);
 		}
 		if (node_list) ixmlNodeList_free(node_list);
@@ -282,44 +247,32 @@ void *LoadMRConfig(void *ref, char *UDN, tMRConfig *Conf, sq_dev_param_t *sq_con
 }
 
 /*----------------------------------------------------------------------------*/
-void *LoadConfig(char *name, tMRConfig *Conf, sq_dev_param_t *sq_conf)
-{
-	IXML_Element *elm;
-	IXML_Document	*doc;
-
-	doc = ixmlLoadDocument(name);
+void *LoadConfig(char *name, tMRConfig *Conf, sq_dev_param_t *sq_conf) {
+	IXML_Document* doc = ixmlLoadDocument(name);
 	if (!doc) return NULL;
 
-	elm = ixmlDocument_getElementById(doc, "squeeze2upnp");
+	IXML_Element* elm = ixmlDocument_getElementById(doc, "squeeze2upnp");
 	if (elm) {
-		unsigned i;
-		char *n, *v;
-		IXML_NodeList *l1_node_list;
-		l1_node_list = ixmlNode_getChildNodes((IXML_Node*) elm);
-		for (i = 0; i < ixmlNodeList_length(l1_node_list); i++) {
-			IXML_Node *l1_node, *l1_1_node;
-			l1_node = ixmlNodeList_item(l1_node_list, i);
-			n = (char*) ixmlNode_getNodeName(l1_node);
-			l1_1_node = ixmlNode_getFirstChild(l1_node);
-			v = (char*) ixmlNode_getNodeValue(l1_1_node);
+		IXML_NodeList* l1_node_list = ixmlNode_getChildNodes((IXML_Node*) elm);
+		for (unsigned i = 0; i < ixmlNodeList_length(l1_node_list); i++) {
+			IXML_Node* l1_node = ixmlNodeList_item(l1_node_list, i);
+			char* n = (char*) ixmlNode_getNodeName(l1_node);
+			IXML_Node* l1_1_node = ixmlNode_getFirstChild(l1_node);
+			char *v = (char*) ixmlNode_getNodeValue(l1_1_node);
 			LoadGlobalItem(n, v);
 		}
 		if (l1_node_list) ixmlNodeList_free(l1_node_list);
 	}
 
-	elm = ixmlDocument_getElementById((IXML_Document	*)elm, "common");
+	elm = ixmlDocument_getElementById((IXML_Document*) elm, "common");
 	if (elm) {
-		char *n, *v;
-		IXML_NodeList *l1_node_list;
-		unsigned i;
-		l1_node_list = ixmlNode_getChildNodes((IXML_Node*) elm);
-		for (i = 0; i < ixmlNodeList_length(l1_node_list); i++) {
-			IXML_Node *l1_node, *l1_1_node;
-			l1_node = ixmlNodeList_item(l1_node_list, i);
-			n = (char*) ixmlNode_getNodeName(l1_node);
-			l1_1_node = ixmlNode_getFirstChild(l1_node);
-			v = (char*) ixmlNode_getNodeValue(l1_1_node);
-			LoadConfigItem(&glMRConfig, &glDeviceParam, n, v);
+		IXML_NodeList* l1_node_list = ixmlNode_getChildNodes((IXML_Node*) elm);
+		for (unsigned i = 0; i < ixmlNodeList_length(l1_node_list); i++) {
+			IXML_Node* l1_node = ixmlNodeList_item(l1_node_list, i);
+			char* n = (char*) ixmlNode_getNodeName(l1_node);
+			IXML_Node* l1_1_node = ixmlNode_getFirstChild(l1_node);
+			char *v = (char*) ixmlNode_getNodeValue(l1_1_node);
+			LoadConfigItem(&glMRConfig, sq_conf, n, v);
 		}
 		if (l1_node_list) ixmlNodeList_free(l1_node_list);
 	}
@@ -328,17 +281,13 @@ void *LoadConfig(char *name, tMRConfig *Conf, sq_dev_param_t *sq_conf)
 }
 
 /*---------------------------------------------------------------------------*/
-static void *MigrateConfig(IXML_Document *doc)
-{
-	char *value;
-	IXML_Node *node;
-
+static void *MigrateConfig(IXML_Document *doc) {
 	if (!doc) return NULL;
 
 	// change "upnp_socket" into "binding"
-	value = XMLDelNode((IXML_Node*) doc, "upnp_socket");
+	char* value = XMLDelNode((IXML_Node*) doc, "upnp_socket");
 	if (value) {
-		node = XMLUpdateNode(doc, (IXML_Node*) doc, false, "binding", "%s", value);
+		IXML_Node* node = XMLUpdateNode(doc, (IXML_Node*) doc, false, "binding", "%s", value);
 		if (!node) strcpy(glBinding, value);
 		free(value);
 	}
@@ -348,41 +297,7 @@ static void *MigrateConfig(IXML_Document *doc)
 
 
 /*---------------------------------------------------------------------------*/
-static void *MigrateMRConfig(IXML_Node *device)
-{
+static void *MigrateMRConfig(IXML_Node *device) {
 	return device;
 }
-
-
- /*
-"http-get:*:audio/mpeg:DLNA.ORG_PN=MP3;DLNA.ORG_OP=01;DLNA.ORG_FLAGS=$flags",
-"http-get:*:audio/L16;rate=8000;channels=1:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=01,DLNA.ORG_FLAGS=$flags",
-"http-get:*:audio/L16;rate=8000;channels=2:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=01,DLNA.ORG_FLAGS=$flags",
-"http-get:*:audio/L16;rate=11025;channels=1:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=01,DLNA.ORG_FLAGS=$flags",
-"http-get:*:audio/L16;rate=11025;channels=2:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=01,DLNA.ORG_FLAGS=$flags",
-"http-get:*:audio/L16;rate=12000;channels=1:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=01,DLNA.ORG_FLAGS=$flags",
-"http-get:*:audio/L16;rate=12000;channels=2:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=01,DLNA.ORG_FLAGS=$flags",
-"http-get:*:audio/L16;rate=16000;channels=1:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=01,DLNA.ORG_FLAGS=$flags",
-"http-get:*:audio/L16;rate=16000;channels=2:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=01,DLNA.ORG_FLAGS=$flags",
-"http-get:*:audio/L16;rate=22050;channels=1:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=01,DLNA.ORG_FLAGS=$flags",
-"http-get:*:audio/L16;rate=22050;channels=2:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=01,DLNA.ORG_FLAGS=$flags",
-"http-get:*:audio/L16;rate=24000;channels=1:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=01,DLNA.ORG_FLAGS=$flags",
-"http-get:*:audio/L16;rate=24000;channels=2:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=01,DLNA.ORG_FLAGS=$flags",
-"http-get:*:audio/L16;rate=32000;channels=1:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=01,DLNA.ORG_FLAGS=$flags",
-"http-get:*:audio/L16;rate=32000;channels=2:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=01,DLNA.ORG_FLAGS=$flags",
-"http-get:*:audio/L16;rate=44100;channels=1:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=01,DLNA.ORG_FLAGS=$flags",
-"http-get:*:audio/L16;rate=44100;channels=2:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=01,DLNA.ORG_FLAGS=$flags",
-"http-get:*:audio/L16;rate=48000;channels=1:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=01,DLNA.ORG_FLAGS=$flags",
-"http-get:*:audio/L16;rate=48000;channels=2:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=01,DLNA.ORG_FLAGS=$flags",
-"http-get:*:audio/vnd.dlna.adts:DLNA.ORG_PN=AAC_ADTS;DLNA.ORG_OP=01;DLNA.ORG_FLAGS=$flags",
-"http-get:*:audio/vnd.dlna.adts:DLNA.ORG_PN=HEAAC_L2_ADTS;DLNA.ORG_OP=01;DLNA.ORG_FLAGS=$flags",
-"http-get:*:audio/mp4:DLNA.ORG_PN=AAC_ISO;DLNA.ORG_OP=00;DLNA.ORG_FLAGS=$flags",
-"http-get:*:audio/mp4:DLNA.ORG_PN=AAC_ISO_320;DLNA.ORG_OP=00;DLNA.ORG_FLAGS=$flags",
-"http-get:*:audio/mp4:DLNA.ORG_PN=HEAAC_L2_ISO;DLNA.ORG_OP=00;DLNA.ORG_FLAGS=$flags",
-"http-get:*:audio/x-ms-wma:DLNA.ORG_PN=WMABASE;DLNA.ORG_OP=01;DLNA.ORG_FLAGS=$flags",
-"http-get:*:audio/x-ms-wma:DLNA.ORG_PN=WMAFULL;DLNA.ORG_OP=01;DLNA.ORG_FLAGS=$flags",
-"http-get:*:audio/x-ms-wma:DLNA.ORG_PN=WMAPRO;DLNA.ORG_OP=01;DLNA.ORG_FLAGS=$flags",
-"http-get:*:application/ogg:DLNA.ORG_OP=00;DLNA.ORG_FLAGS=$flags",
-"http-get:*:audio/x-flac:DLNA.ORG_OP=00;DLNA.ORG_FLAGS=$flags",
-*/
 

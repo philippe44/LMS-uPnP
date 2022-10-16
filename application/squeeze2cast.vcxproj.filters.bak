@@ -1,0 +1,115 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="crosstools">
+      <UniqueIdentifier>{80f4c7f0-6e75-40a2-90e1-dc1b64ee5799}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="protobuf">
+      <UniqueIdentifier>{ba1d1d84-8ece-4962-9210-6e89ac13a8bf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="squeezelite">
+      <UniqueIdentifier>{92977c45-e5f7-4785-b52d-42e1501a36ae}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="crosstools\src\cross_log.c">
+      <Filter>crosstools</Filter>
+    </ClCompile>
+    <ClCompile Include="crosstools\src\cross_net.c">
+      <Filter>crosstools</Filter>
+    </ClCompile>
+    <ClCompile Include="crosstools\src\cross_ssl.c">
+      <Filter>crosstools</Filter>
+    </ClCompile>
+    <ClCompile Include="crosstools\src\cross_thread.c">
+      <Filter>crosstools</Filter>
+    </ClCompile>
+    <ClCompile Include="crosstools\src\cross_util.c">
+      <Filter>crosstools</Filter>
+    </ClCompile>
+    <ClCompile Include="crosstools\src\platform.c">
+      <Filter>crosstools</Filter>
+    </ClCompile>
+    <ClCompile Include="squeeze2cast\cast_parse.c" />
+    <ClCompile Include="squeeze2cast\cast_util.c" />
+    <ClCompile Include="squeeze2cast\castcore.c" />
+    <ClCompile Include="squeeze2cast\squeeze2cast.c" />
+    <ClCompile Include="squeeze2cast\config_cast.c" />
+    <ClCompile Include="nanopb\pb_common.c">
+      <Filter>protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="nanopb\pb_decode.c">
+      <Filter>protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="nanopb\pb_encode.c">
+      <Filter>protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="squeeze2cast\CastMessage.pb.c">
+      <Filter>protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="squeezelite\alac.c">
+      <Filter>squeezelite</Filter>
+    </ClCompile>
+    <ClCompile Include="squeezelite\buffer.c">
+      <Filter>squeezelite</Filter>
+    </ClCompile>
+    <ClCompile Include="squeezelite\decode.c">
+      <Filter>squeezelite</Filter>
+    </ClCompile>
+    <ClCompile Include="squeezelite\flac.c">
+      <Filter>squeezelite</Filter>
+    </ClCompile>
+    <ClCompile Include="squeezelite\flac_thru.c">
+      <Filter>squeezelite</Filter>
+    </ClCompile>
+    <ClCompile Include="squeezelite\m4a_thru.c">
+      <Filter>squeezelite</Filter>
+    </ClCompile>
+    <ClCompile Include="squeezelite\main.c">
+      <Filter>squeezelite</Filter>
+    </ClCompile>
+    <ClCompile Include="squeezelite\metadata.c">
+      <Filter>squeezelite</Filter>
+    </ClCompile>
+    <ClCompile Include="squeezelite\output.c">
+      <Filter>squeezelite</Filter>
+    </ClCompile>
+    <ClCompile Include="squeezelite\output_http.c">
+      <Filter>squeezelite</Filter>
+    </ClCompile>
+    <ClCompile Include="squeezelite\pcm.c">
+      <Filter>squeezelite</Filter>
+    </ClCompile>
+    <ClCompile Include="squeezelite\process.c">
+      <Filter>squeezelite</Filter>
+    </ClCompile>
+    <ClCompile Include="squeezelite\resample.c">
+      <Filter>squeezelite</Filter>
+    </ClCompile>
+    <ClCompile Include="squeezelite\slimproto.c">
+      <Filter>squeezelite</Filter>
+    </ClCompile>
+    <ClCompile Include="squeezelite\stream.c">
+      <Filter>squeezelite</Filter>
+    </ClCompile>
+    <ClCompile Include="squeezelite\thru.c">
+      <Filter>squeezelite</Filter>
+    </ClCompile>
+    <ClCompile Include="squeezelite\liteutils.c">
+      <Filter>squeezelite</Filter>
+    </ClCompile>
+    <ClCompile Include="squeezelite\utils.c">
+      <Filter>squeezelite</Filter>
+    </ClCompile>
+    <ClCompile Include="squeezelite\mimetypes.c">
+      <Filter>squeezelite</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Library Include="libcodecs\targets\win32\x86\libcodecs.lib" />
+    <Library Include="libpupnp\targets\win32\x86\libpupnp.lib" />
+    <Library Include="libjansson\targets\win32\x86\libjansson.lib" />
+    <Library Include="pthreads4w\targets\win32\x86\libpthreadVC3.lib" />
+    <Library Include="libmdns\targets\win32\x86\libmdns.lib" />
+  </ItemGroup>
+</Project>

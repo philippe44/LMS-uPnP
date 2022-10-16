@@ -3,7 +3,8 @@
 *.lo
 *.o
 *.obj
-
+.vs/
+__recovery/
 # Compiled Dynamic libraries
 *.so
 *.dylib

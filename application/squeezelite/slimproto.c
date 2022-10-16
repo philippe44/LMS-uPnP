@@ -94,7 +94,7 @@ void send_packet(u8_t *packet, size_t len, sockfd sock) {
 		if (n <= 0) {
 			int error = last_error();
 #if WIN
-			if (n < 0 && (error == ERROR_WOULDBLOCK || error == WSAENOTCONN) && try < 10) {
+			if (n < 0 && (error == WSAEWOULDBLOCK || error == WSAENOTCONN) && try < 10) {
 #else
 			if (n < 0 && error == ERROR_WOULDBLOCK && try < 10) {
 #endif
@@ -422,8 +422,8 @@ static void process_setd(u8_t *pkt, int len,struct thread_ctx_s *ctx) {
 				sendSETDName(ctx->config.name, ctx->sock);
 			}
 		} else if (len > 5) {
-			strncpy(ctx->config.name, setd->data, _STR_LEN_);
-			ctx->config.name[_STR_LEN_ - 1] = '\0';
+			strncpy(ctx->config.name, setd->data, STR_LEN);
+			ctx->config.name[STR_LEN - 1] = '\0';
 			LOG_DEBUG("[%p] set name: %s", ctx, setd->data);
 			// confirm change to server
 			sendSETDName(setd->data, ctx->sock);
@@ -596,7 +596,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 
 			sq_get_metadata(ctx->self, &metadata, -1);
 			output_set_icy(&metadata, false, now, ctx);
-			sq_free_metadata(&metadata);
+			metadata_free(&metadata);
 		}
 
 		if (wake || now - ctx->slim_run.last > 100 || ctx->slim_run.last > now) {
@@ -791,16 +791,22 @@ void discover_server(struct thread_ctx_s *ctx) {
 	socklen_t enable = 1;
 
 	ctx->cli_port = 9090;
-
 	setsockopt(disc_sock, SOL_SOCKET, SO_BROADCAST, (const void *)&enable, sizeof(enable));
-
 	len = sprintf(buf,"e%s%c%s%c%s", vers, '\0', port, '\0', clip) + 1;
 
 	memset(&d, 0, sizeof(d));
 	d.sin_family = AF_INET;
 	d.sin_port = htons(PORT);
-	if (!ctx->slimproto_ip) d.sin_addr.s_addr = htonl(INADDR_BROADCAST);
-	else d.sin_addr.s_addr = ctx->slimproto_ip;
+	if (!ctx->slimproto_ip) {
+		// some systems refuse to broadcast on unbound socket
+		memset(&s, 0, sizeof(s));
+		s.sin_addr.s_addr = inet_addr(sq_ip);
+		s.sin_family = AF_INET;
+		bind(disc_sock, (struct sockaddr*) &s, sizeof(s));
+		d.sin_addr.s_addr = htonl(INADDR_BROADCAST);
+	} else {
+		d.sin_addr.s_addr = ctx->slimproto_ip;
+	}
 
 	pollinfo.fd = disc_sock;
 	pollinfo.events = POLLIN;
@@ -876,7 +882,7 @@ static void slimproto(struct thread_ctx_s *ctx) {
 		set_nonblock(ctx->sock);
 		set_nosigpipe(ctx->sock);
 
-		if (connect_timeout(ctx->sock, (struct sockaddr *) &ctx->serv_addr, sizeof(ctx->serv_addr), 5*1000) != 0) {
+		if (tcp_connect_timeout(ctx->sock, ctx->serv_addr, 5*1000) != 0) {
 
 			LOG_WARN("[%p] unable to connect to server %u", ctx, failed_connect);
 			sleep(5);
@@ -941,7 +947,7 @@ void slimproto_close(struct thread_ctx_s *ctx) {
 
 /*---------------------------------------------------------------------------*/
 void slimproto_thread_init(struct thread_ctx_s *ctx) {
-	char _codecs[_STR_LEN_] = "";
+	char _codecs[STR_LEN] = "";
 
 	wake_create(ctx->wake_e);
 	mutex_create(ctx->mutex);
@@ -1010,7 +1016,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 	// skip tracks that are too short
 	if (info.offset && info.metadata.duration && info.metadata.duration < SHORT_TRACK) {
 		LOG_WARN("[%p]: track too short (%d)", ctx, info.metadata.duration);
-		sq_free_metadata(&info.metadata);
+		metadata_free(&info.metadata);
 		return false;
 	}
 
@@ -1036,7 +1042,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 
 	// in flow mode we now have eveything, just initialize codec
 	if (out->encode.flow) {
-		sq_free_metadata(&info.metadata);
+		metadata_free(&info.metadata);
 		return codec_open(out->codec, out->sample_size, out->sample_rate,
 						  out->channels, out->in_endian, ctx);
 	}
@@ -1066,11 +1072,12 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 	// in case of flow, all parameters shall be set
 	if (strcasestr(mode, "flow") && out->encode.mode != ENCODE_THRU) {
 		if (ctx->config.send_icy) output_set_icy(&info.metadata, true, gettime_ms(), ctx);
-		sq_free_metadata(&info.metadata);
-		sq_default_metadata(&info.metadata, true);
+		metadata_free(&info.metadata);
+		metadata_defaults(&info.metadata);
 
 		if (!sample_rate || sample_rate < 0) sample_rate = 44100;
-		if (!out->encode.sample_size) out->encode.sample_size = 16;
+
+		if (!out->encode.sample_size) out->encode.sample_size = 16;
 		out->encode.channels = 2;
 		out->encode.flow = true;
 	} else if (ctx->config.send_icy && (!out->duration || info.metadata.repeating != -1)) {
@@ -1097,7 +1104,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 			if (!out->encode.sample_size)
 				out->encode.sample_size = (out->sample_size == 24 && ctx->config.L24_format == L24_TRUNC16) ? 16 : out->sample_size;
 
-			mimetype = find_pcm_mimetype(&out->encode.sample_size, ctx->config.L24_format == L24_TRUNC16_PCM,
+			mimetype = mimetype_from_pcm(&out->encode.sample_size, ctx->config.L24_format == L24_TRUNC16_PCM,
 										 out->encode.sample_rate, out->channels,
 										 ctx->mimetypes, ctx->config.raw_audio_format);
 			out->encode.mode = ENCODE_PCM;
@@ -1112,7 +1119,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 				options = "ogg";
 			} else options = NULL;
 
-			mimetype = find_mimetype(out->codec, ctx->mimetypes, options);
+			mimetype = mimetype_from_codec(out->codec, ctx->mimetypes, options);
 
 			if (out->codec == 'a' && out->sample_size == '5' && mimetype && strstr(mimetype, "aac")) out->codec = '4';
 			else if (out->codec == 'f' && out->sample_size != 'o') out->codec ='c';
@@ -1123,7 +1130,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 
 		if (out->encode.sample_rate && out->encode.sample_size) {
 			// everything is fixed
-			mimetype = find_pcm_mimetype(&out->encode.sample_size, ctx->config.L24_format == L24_TRUNC16_PCM,
+			mimetype = mimetype_from_pcm(&out->encode.sample_size, ctx->config.L24_format == L24_TRUNC16_PCM,
 										 out->encode.sample_rate, 2, ctx->mimetypes, ctx->config.raw_audio_format);
 		} else if ((info.metadata.sample_size || out->encode.sample_size) &&
 				   (info.metadata.sample_rate || out->encode.sample_rate || out->supported_rates[0])) {
@@ -1135,7 +1142,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 			else if (out->supported_rates[0] < 0) sample_rate = abs(out->supported_rates[0]);
 			else sample_rate = info.metadata.sample_rate;
 
-			mimetype = find_pcm_mimetype(&sample_size, ctx->config.L24_format == L24_TRUNC16_PCM,
+			mimetype = mimetype_from_pcm(&sample_size, ctx->config.L24_format == L24_TRUNC16_PCM,
 										   sample_rate, 2, ctx->mimetypes, ctx->config.raw_audio_format);
 
 			// if matching found, set generic format "*" if audio/L used
@@ -1147,43 +1154,49 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 			if (strcasestr(ctx->config.raw_audio_format, "wav")) strcat(format, "wav");
 			if (strcasestr(ctx->config.raw_audio_format, "aif")) strcat(format, "aif");
 
-			mimetype = find_mimetype('p', ctx->mimetypes, format);
+			mimetype = mimetype_from_codec('p', ctx->mimetypes, format);
 		}
 		
 	} else if (out->encode.mode == ENCODE_FLAC) {
 
-		mimetype = find_mimetype('f', ctx->mimetypes, NULL);
-		if (out->sample_size > 24) out->encode.sample_size = 24;
+		mimetype = mimetype_from_codec('f', ctx->mimetypes, NULL);
+
+		if (out->sample_size > 24) out->encode.sample_size = 24;
 		if ((p = strcasestr(mode, "flc:")) != NULL) out->encode.level = atoi(p+4);
 		if (out->encode.level > 9) out->encode.level = 0;
 
-	} else if (out->encode.mode == ENCODE_MP3) {
 
-		mimetype = find_mimetype('m', ctx->mimetypes, NULL);
+	} else if (out->encode.mode == ENCODE_MP3) {
+
+		mimetype = mimetype_from_codec('m', ctx->mimetypes, NULL);
 		out->encode.sample_size = 16;
-		// need to tweak a bit samples rates
+
+		// need to tweak a bit samples rates
 		if (!out->supported_rates[0] || out->supported_rates[0] < -48000 ) out->supported_rates[0] = -48000;
 		else if (out->supported_rates[0] > 48000) out->supported_rates[0] = out->encode.sample_rate = 48000;
-		if ((p = strcasestr(mode, "mp3:")) != NULL) {
+
+		if ((p = strcasestr(mode, "mp3:")) != NULL) {
 			out->encode.level = atoi(p+4);
 			if (out->encode.level > 320) out->encode.level = 320;
 		} else out->encode.level = 128;
 
-	} if (out->encode.mode == ENCODE_NULL) {
 
-		mimetype = strdup("audio/mpeg");
-		out->codec = '*';
-		out->encode.count = out->duration / MP3_SILENCE_DURATION;
-		LOG_INFO("[%p]: will send %zu mp3 silence blocks", ctx, out->encode.count);
+	} else if (out->encode.mode == ENCODE_NULL) {
 
-	}
+		mimetype = strdup("audio/mpeg");
+		out->codec = '*';
+		out->encode.count = out->duration / MP3_SILENCE_DURATION;
+		
+		LOG_INFO("[%p]: will send %zu mp3 silence blocks", ctx, out->encode.count);
+	}
 
-	// matching found in player
+
+	// matching found in player
 	if (mimetype) {
 		strcpy(out->mimetype, mimetype);
 		free(mimetype);
 
-		out->format = mimetype2format(out->mimetype);
+		out->format = mimetype_to_format(out->mimetype);
 		out->out_endian = (out->format == 'w');
 		out->length = ctx->config.stream_length;
 
@@ -1192,7 +1205,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 
 			strcpy(info.mimetype, out->mimetype);
 			sprintf(info.uri, "http://%s:%hu/" BRIDGE_URL "%u.%s", sq_ip,
-					out->port, out->index, mimetype2ext(out->mimetype));
+					out->port, out->index, mimetype_to_ext(out->mimetype));
 
 			/*
 			in THRU/PCM mode these values are known when we receive pcm and in
@@ -1206,7 +1219,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 			ret = ctx_callback(ctx, SQ_SET_TRACK, NULL, &info);
 
 			LOG_INFO("[%p]: codec:%c, ch:%d, s:%d, r:%d", ctx, out->codec, out->channels, out->sample_size, out->sample_rate);
-		} else sq_free_metadata(&info.metadata);
+		} else metadata_free(&info.metadata);
 	}
 
 	// need to stop thread if something went wrong
@@ -1217,14 +1230,3 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 
 	return ret;
 }
-
-
-
-
-
-
-
-
-
-
-

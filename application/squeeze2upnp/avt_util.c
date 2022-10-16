@@ -1,32 +1,19 @@
 /*
- *  UPnP control utils
+ * AirUPnP - UPnP control utils
  *
- *	(c) Philippe 2015-2017, philippe_44@outlook.com
+ * (c) Philippe, philippe_44@outlook.com
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * see LICENSE
  *
  */
 
-
 #include <stdlib.h>
-#include <math.h>
 
 #include "platform.h"
+#include "ixmlextra.h"
 #include "upnptools.h"
-#include "upnp.h"
 #include "squeeze2upnp.h"
-#include "util.h"
+#include "cross_log.h"
 #include "avt_util.h"
 
 /*
@@ -60,7 +47,7 @@ bool SubmitTransportAction(struct sMR *Device, IXML_Document *ActionNode)
 		tAction *Action = malloc(sizeof(tAction));
 		Action->Device = Device;
 		Action->ActionNode = ActionNode;
-		QueueInsert(&Device->ActionQueue, Action);
+		queue_insert(&Device->ActionQueue, Action);
 	}
 
 	return (rc == 0);
@@ -68,17 +55,18 @@ bool SubmitTransportAction(struct sMR *Device, IXML_Document *ActionNode)
 
 
 /*----------------------------------------------------------------------------*/
-void AVTActionFlush(tQueue *Queue)
+void AVTActionFlush(queue_t *Queue)
 {
 	tAction *Action;
 
-	while ((Action = QueueExtract(Queue)) != NULL) {
+	while ((Action = queue_extract(Queue)) != NULL) {
 		free(Action);
 	}
 }
 
 /*----------------------------------------------------------------------------*/
-bool AVTSetURI(struct sMR *Device, char *URI, struct metadata_s *MetaData, char *ProtoInfo)
+
+bool AVTSetURI(struct sMR *Device, char *URI, struct metadata_s *MetaData, char *ProtoInfo)
 {
 	IXML_Document *ActionNode = NULL;
 	struct sService *Service = &Device->Service[AVT_SRV_IDX];
@@ -234,7 +222,7 @@ bool AVTStop(struct sMR *Device)
 
 
 /*----------------------------------------------------------------------------*/
-int CtrlSetVolume(struct sMR *Device, u8_t Volume, void *Cookie)
+int CtrlSetVolume(struct sMR *Device, uint8_t Volume, void *Cookie)
 {
 	IXML_Document *ActionNode = NULL;
 	struct sService *Service = &Device->Service[REND_SRV_IDX];
@@ -372,9 +360,13 @@ char *GetProtocolInfo(struct sMR *Device)
 	return ProtocolInfo;
 }
 
-/*----------------------------------------------------------------------------*/
-char *CreateDIDL(char *URI, char *ProtoInfo, struct metadata_s *MetaData, struct sMRConfig *Config)
-{
+
+
+/*----------------------------------------------------------------------------*/
+
+char *CreateDIDL(char *URI, char *ProtoInfo, struct metadata_s *MetaData, struct sMRConfig *Config)
+
+{
 	char *s;
 
 	IXML_Document *doc = ixmlDocument_createDocument();
@@ -432,9 +424,9 @@ char *GetProtocolInfo(struct sMR *Device)
 		XMLAddAttribute(doc, node, "bitsPerSample", "%hhu", MetaData->sample_size);
 		XMLAddAttribute(doc, node, "nrAudioChannels", "%hhu", MetaData->channels);
 		if (MetaData->duration)
-			XMLAddAttribute(doc, node, "size", "%u", (u32_t) ((MetaData->sample_rate *
+			XMLAddAttribute(doc, node, "size", "%u", (uint32_t) ((MetaData->sample_rate *
 							MetaData->sample_size / 8 * MetaData->channels *
-							(u64_t) MetaData->duration) / 1000));
+							(uint64_t) MetaData->duration) / 1000));
 	}
 
 	s = ixmlNodetoString((IXML_Node*) doc);
@@ -445,8 +437,10 @@ char *GetProtocolInfo(struct sMR *Device)
 }
 
 
-/* typical DIDL header
-"<DIDL-Lite xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:upnp=\"urn:schemas-upnp-org:metadata-1-0/upnp/\" xmlns=\"urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/\">"
+
+/* typical DIDL header
+
+"<DIDL-Lite xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:upnp=\"urn:schemas-upnp-org:metadata-1-0/upnp/\" xmlns=\"urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/\">"
 	"<item id=\"{2148F1D5-1BE6-47C3-81AF-615A960E3704}.0.4\" restricted=\"0\" parentID=\"4\">"
 		"<dc:title>Make You Feel My Love</dc:title>"
 		"<dc:creator>Adele</dc:creator>"

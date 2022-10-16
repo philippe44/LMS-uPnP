@@ -20,7 +20,6 @@
  */
 
 #include "squeezelite.h"
-#include "tinyutils.h"
 
 extern log_level	output_loglevel;
 static log_level 	*loglevel = &output_loglevel;
@@ -67,7 +66,9 @@ bool output_start(struct thread_ctx_s *ctx) {
 	// find a free port
 	ctx->output.port = sq_port;
 	do {
-		param->thread->http = bind_socket(&ctx->output.port, SOCK_STREAM);
+		struct in_addr host;
+		host.s_addr = INADDR_ANY;
+		param->thread->http = bind_socket(host, &ctx->output.port, SOCK_STREAM);
 	} while (param->thread->http < 0 && ctx->output.port++ && i++ < 2 * MAX_PLAYER);
 
 	// and listen to it
@@ -123,9 +124,9 @@ static void output_http_thread(struct thread_param_s *param) {
 	buf_init(obuf, HTTP_STUB_DEPTH + 512*1024);
 
 	if (*ctx->config.store_prefix) {
-		char name[_STR_LEN_];
+		char name[STR_LEN];
 		sprintf(name, "%s/#%u#" BRIDGE_URL "%u.%s", ctx->config.store_prefix, thread->http,
-					  thread->index, mimetype2ext(ctx->output.mimetype));
+					  thread->index, mimetype_to_ext(ctx->output.mimetype));
 		store = fopen(name, "wb");
 	}
 
@@ -474,7 +475,7 @@ static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, int thread_index,
 	char format;
 	enum { ANY, SONOS, CHROMECAST } type;
 
-	if (!http_parse(sock, &request, headers, &body, &len)) {
+	if (!http_parse_simple(sock, &request, headers, &body, &len)) {
 		LOG_WARN("[%p]: http parsing error %s", ctx, request);
 		res = -1;
 		goto cleanup;
@@ -499,11 +500,11 @@ static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, int thread_index,
 	ctx->output.chunked = false;
 
 	// check if add ICY metadata is needed (only on live stream)
-	format = mimetype2format(ctx->output.mimetype);
+	format = mimetype_to_format(ctx->output.mimetype);
 	ctx->output.icy.count = 0;
 	if (ctx->output.icy.allowed && (format == 'm' || format == 'a') &&
 	    ((str = kd_lookup(headers, "Icy-MetaData")) != NULL) && atol(str)) {
-		kd_add(resp, "icy-metaint", "%u", ICY_INTERVAL);
+		kd_vadd(resp, "icy-metaint", "%u", ICY_INTERVAL);
 		LOCK_O;
 		ctx->output.icy.interval = ctx->output.icy.remain = ICY_INTERVAL;
 		ctx->output.icy.updated = true;
@@ -518,11 +519,11 @@ static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, int thread_index,
 	} else {
 		//kd_add(resp, "Accept-Ranges", "none");
 		kd_add(resp, "Content-Type", ctx->output.mimetype);
-		if (abs(ctx->output.length) > abs(HTTP_CHUNKED)) kd_add(resp, "Content-Length", "%zu", ctx->output.length);
+		if (abs(ctx->output.length) > abs(HTTP_CHUNKED)) kd_vadd(resp, "Content-Length", "%zu", ctx->output.length);
 		mirror_header(headers, resp, "transferMode.dlna.org");
 
 		if (kd_lookup(headers, "getcontentFeatures.dlna.org")) {
-			char *dlna_features = make_dlna_content(ctx->output.mimetype, ctx->output.duration);
+			char *dlna_features = mimetype_to_dlna(ctx->output.mimetype, ctx->output.duration);
 			kd_add(resp, "contentFeatures.dlna.org", dlna_features);
 			free(dlna_features);
 		}
@@ -536,7 +537,7 @@ static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, int thread_index,
 				// when range cannot be satisfied, just continue where we were
 				if (offset < bytes) {
 					head = "HTTP/1.1 206 Partial Content";
-					if (type != SONOS) kd_add(resp, "Content-Range", "bytes %u-%zu/*", offset, bytes);
+					if (type != SONOS) kd_vadd(resp, "Content-Range", "bytes %u-%zu/*", offset, bytes);
 					res = offset + 1;
 					obuf->readp = obuf->buf + offset % obuf->size;
 				} else if (offset) {
@@ -545,7 +546,7 @@ static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, int thread_index,
 			} else if (bytes && type == SONOS && !ctx->output.icy.interval) {
 				// Sonos client re-opening the connection, so make it believe we
 				// have a 2G length - thus it will sent a range-request
-				if (ctx->output.length < 0) kd_add(resp, "Content-Length", "%zu", INT_MAX);
+				if (ctx->output.length < 0) kd_vadd(resp, "Content-Length", "%zu", INT_MAX);
 				chunked = false;
 				*header = true;
 			} else if (bytes) {

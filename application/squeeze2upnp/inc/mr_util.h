@@ -1,47 +1,42 @@
-                   /*
- *  Squeeze2upnp - LMS to uPNP gateway
+/*
+ *  Squeeze2upnp - LMS to uPNP bridge
  *
- *	(c) Philippe 2015-2017, philippe_44@outlook.com
+ *	(c) Philippe, philippe_44@outlook.com
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *  See LICENSE
  *
  */
 
-#ifndef __MR_UTIL_H
-#define __MR_UTIL_H
+#pragma once
 
 #include "squeeze2upnp.h"
-#include "util_common.h"
 
-void 			FlushMRDevices(void);
-void 			DelMRDevice(struct sMR *p);
-struct sMR*		GetMaster(struct sMR *Device, char **Name);
-int 			CalcGroupVolume(struct sMR *Master);
-void 			BusyRaise(struct sMR *Device);
-void 			BusyDrop(struct sMR *Device);
-bool 			CheckAndLock(struct sMR *Device);
+void 		FlushMRDevices(void);
+void 		DelMRDevice(struct sMR *p);
+struct sMR *GetMaster(struct sMR *Device, char **Name);
+int 		CalcGroupVolume(struct sMR *Master);
+bool		CheckAndLock(struct sMR *Device);
+double		GetLocalGroupVolume(struct sMR *Member, int *count);
 
-struct sMR* 	SID2Device(Upnp_SID Sid);
-struct sMR* 	CURL2Device(char *CtrlURL);
-struct sMR* 	UDN2Device(char *SID);
-struct sService *EventURL2Service(char *URL, struct sService *s);
+struct sMR*  SID2Device(const UpnpString *SID);
+struct sMR*  CURL2Device(const UpnpString *CtrlURL);
+struct sMR*  PURL2Device(const UpnpString *URL);
+struct sMR*  UDN2Device(const char *SID);
 
-void 			MakeMacUnique(struct sMR *Device);
+struct sService* EventURL2Service(const UpnpString *URL, struct sService *s);
 
-char*			MakeProtoInfo(char *MimeType, u32_t duration);
+int  XMLFindAndParseService(IXML_Document* DescDoc, const char* location, const char* serviceTypeBase, char** serviceType, 
+                            char** serviceId, char** eventURL, char** controlURL, char** serviceURL);
+bool  XMLFindAction(const char* base, char* service, char* action);
+char* XMLGetChangeItem(IXML_Document *doc, char *Tag, char *SearchAttr, char *SearchVal, char *RetAttr);
+
+char* uPNPEvent2String(Upnp_EventType S);
+
+char*			MakeProtoInfo(char *MimeType, uint32_t duration);
 char** 			ParseProtocolInfo(char *Info, char* Forced);
 void 			CheckCodecs(char *Codecs, char *Sink, char *Forced);
 
+void 			BusyRaise(struct sMR* Device);
+void 			BusyDrop(struct sMR* Device);
 
-#endif
+

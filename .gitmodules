@@ -1,0 +1,15 @@
+[submodule "application/crosstools"]
+	path = application/crosstools
+	url = https://github.com/philippe44/crosstools
+[submodule "application/libcodecs"]
+	path = application/libcodecs
+	url = https://github.com/philippe44/libcodecs
+[submodule "application/libpupnp"]
+	path = application/libpupnp
+	url = https://github.com/philippe44/libpupnp
+[submodule "application/libopenssl"]
+	path = application/libopenssl
+	url = https://github.com/philippe44/libopenssl
+[submodule "application/pthreads4w"]
+	path = application/pthreads4w
+	url = https://github.com/philippe44/pthreads4w
