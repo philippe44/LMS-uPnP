@@ -55,3 +55,10 @@
 #undef LOOPBACK
 #define LOOPBACK 1
 #endif
+
+#if defined(LINKALL)
+#undef LINKALL
+#define LINKALL   1 // link all libraries at build time - requires all to be available at run time
+#else
+#define LINKALL   0
+#endif

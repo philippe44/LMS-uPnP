@@ -53,13 +53,6 @@
 #define LOOPBACK  1
 #endif
 
-#if defined(LINKALL)
-#undef LINKALL
-#define LINKALL   1 // link all libraries at build time - requires all to be available at run time
-#else
-#define LINKALL   0
-#endif
-
 #if !LINKALL
 
 // dynamically loaded libraries at run time
@@ -120,8 +113,6 @@
 
 #endif // !LINKALL
 
-#define MAX_HEADER 4096 // do not reduce as icy-meta max is 4080
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -132,6 +123,8 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+
+#define SL_LITTLE_ENDIAN (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
 
 #include "squeezeitf.h"
 #include "mimetypes.h"
@@ -149,6 +142,8 @@ typedef int16_t  s16_t;
 typedef uint8_t  u8_t;
 typedef int8_t   s8_t;
 
+#define MAX_HEADER 4096 // do not reduce as icy-meta max is 4080
+
 #define STREAM_THREAD_STACK_SIZE (1024 * 64)
 #define DECODE_THREAD_STACK_SIZE (1024 * 128)
 #define OUTPUT_THREAD_STACK_SIZE (1024 * 64)
@@ -157,13 +152,21 @@ typedef int8_t   s8_t;
 
 #define mutex_type pthread_mutex_t
 #define mutex_create(m) pthread_mutex_init(&m, NULL)
-#define mutex_create_p mutex_create
 #define mutex_lock(m) pthread_mutex_lock(&m)
 #define mutex_unlock(m) pthread_mutex_unlock(&m)
 #define mutex_trylock(m) pthread_mutex_trylock(&m)
 #define mutex_destroy(m) pthread_mutex_destroy(&m)
 #define thread_type pthread_t
 #define mutex_timedlock(m, t) _mutex_timedlock(&m, t)
+#if !WIN
+#define mutex_create_p(m) \
+	pthread_mutexattr_t attr; \
+	pthread_mutexattr_init(&attr); \
+	pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_INHERIT); \
+	pthread_mutex_init(&m, &attr); pthread_mutexattr_destroy(&attr)
+#else
+#define mutex_create_p mutex_create
+#endif	
 
 #if !defined(MSG_NOSIGNAL)
 #define MSG_NOSIGNAL 0
@@ -654,11 +657,4 @@ http. Depending how fast the UPnP player implements gapless, then there might be
 a small period of time where both thread will work in parallel, once doing full
 processing, the other one just sending what's left (draining) in http buffer.
 */
-
-
-
-
-
-
-
 

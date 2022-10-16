@@ -85,5 +85,3 @@ bool 				sq_set_time(sq_dev_handle_t handle, char *pos);
 bool				sq_close(void *desc);
 bool 				sq_is_remote(const char *urn);
 void*				sq_get_ptr(sq_dev_handle_t handle);
-
-
