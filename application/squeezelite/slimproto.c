@@ -973,7 +973,7 @@ void slimproto_thread_init(struct thread_ctx_s *ctx) {
 		int i;
 
 		while (p && sscanf(p, "%3[^,]", item) > 0) {
-			for (i = 0; i < MAX_CODECS; i++) if (codecs[i] && strcasestr(codecs[i]->types, item)) {
+			for (i = 0; i < MAX_CODECS; i++) if (codecs[i] && !codecs[i]->thru && strcasestr(codecs[i]->types, item)) {
 				if (*_codecs) strcat(_codecs, ",");
 				strcat(_codecs, item);
 				break;

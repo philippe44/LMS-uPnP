@@ -192,7 +192,7 @@ static int connect_socket(bool use_ssl, struct thread_ctx_s *ctx) {
 				if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE) continue;
 			}
 
-			LOG_WARN("[%p] unable to open SSL socket %d (%d)", ctx, status, err);
+			LOG_WARN("[%p]: unable to open SSL socket %d (%d)", ctx, status, err);
 
 			closesocket(sock);
 			SSL_free(ctx->ssl);
@@ -200,6 +200,7 @@ static int connect_socket(bool use_ssl, struct thread_ctx_s *ctx) {
 
 			return -1;
 		}
+		LOG_INFO("[%p]: streaming with SSL", ctx);
 	} else ctx->ssl = NULL;
 #endif
 

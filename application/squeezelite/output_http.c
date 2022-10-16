@@ -125,7 +125,7 @@ static void output_http_thread(struct thread_param_s *param) {
 
 	if (*ctx->config.store_prefix) {
 		char name[STR_LEN];
-		sprintf(name, "%s/#%u#" BRIDGE_URL "%u.%s", ctx->config.store_prefix, thread->http,
+		snprintf(name, sizeof(name), "%s/#%u#" BRIDGE_URL "%u.%s", ctx->config.store_prefix, thread->http,
 					  thread->index, mimetype_to_ext(ctx->output.mimetype));
 		store = fopen(name, "wb");
 	}

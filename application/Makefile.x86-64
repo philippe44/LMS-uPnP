@@ -1,9 +1,0 @@
-CFLAGS  ?= -Wall -fPIC -ggdb -m64 -O2 $(OPTS) -I/usr/include/i386-linux-gnu $(INCLUDE) $(DEFINES)
-LDFLAGS ?= -s -m64 -lgomp -lpthread -lm -lrt -ldl -lstdc++ -L. 
-
-OBJ					= bin/x86-64
-EXECUTABLE 			= bin/squeeze2upnp-x86-64
-EXECUTABLE_STATIC 	= bin/squeeze2upnp-x86-64-static
-
-include Makefile
-

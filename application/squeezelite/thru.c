@@ -101,6 +101,7 @@ struct codec *register_thru(void) {
 		thru_open,   // open
 		thru_close,  // close
 		thru_decode, // decode
+		true,        // thru
 	};
 
 	LOG_INFO("using thru", NULL);

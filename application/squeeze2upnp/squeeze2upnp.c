@@ -22,7 +22,7 @@
 
 #if USE_SSL
 #include <openssl/ssl.h>
-#include "sslsym.h"
+#include "cross_ssl.h"
 #endif
 
 #include "squeeze2upnp.h"
@@ -310,7 +310,7 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, uint8
 		return false;
 	}
 
-	LOG_SDEBUG("callback for %s", Device->friendlyName);
+	LOG_SDEBUG("[%p]: callback for %s", Device, Device->friendlyName);
 
 	switch (action) {
 
@@ -341,7 +341,7 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, uint8
 			if ((!p->metadata.duration || p->metadata.repeating != -1) && (*Device->Service[TOPOLOGY_IDX].ControlURL) &&
 				(format == 'm' || format == 'a')) {
 				(void) !asprintf(&uri, "x-rincon-mp3radio://%s", p->uri);
-				if (format == 'a') asprintf(&Device->ExpectedURI, "aac://%s", p->uri);
+				if (format == 'a') (void)! asprintf(&Device->ExpectedURI, "aac://%s", p->uri);
 				LOG_INFO("[%p]: Sonos live stream", Device);
 			} else uri = strdup(p->uri);
 
@@ -814,7 +814,7 @@ static void ProcessEvent(Upnp_EventType EventType, const void* _Event, void* Coo
 }
 
 /*----------------------------------------------------------------------------*/
-int ActionHandler(Upnp_EventType EventType, void* Event, void* Cookie) {
+int ActionHandler(Upnp_EventType EventType, const void* Event, void* Cookie) {
 	struct sMR* p = NULL;
 	static int recurse = 0;
 
@@ -1279,14 +1279,10 @@ static void *MainThread(void *args) {
 	return NULL;
 }
 
-
 /*----------------------------------------------------------------------------*/
 static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, const char *location) {
 	char *friendlyName = NULL;
-	unsigned long mac_size = 6;
-	in_addr_t ip;
-	int i;
-
+	
 	// read parameters from default then config file
 	memcpy(&Device->Config, &glMRConfig, sizeof(tMRConfig));
 	memcpy(&Device->sq_config, &glDeviceParam, sizeof(sq_dev_param_t));
@@ -1336,7 +1332,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	memset(&Device->Service, 0, sizeof(struct sService) * NB_SRV);
 
 	/* find the different services */
-	for (i = 0; i < NB_SRV; i++) {
+	for (int i = 0; i < NB_SRV; i++) {
 		char *ServiceId = NULL, *ServiceType = NULL;
 		char *EventURL = NULL, *ControlURL = NULL;
 		char *ServiceURL = NULL;
@@ -1366,17 +1362,10 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	}
 	Device->Master = GetMaster(Device, &friendlyName);
 
-	if (Device->Master) {
-		LOG_INFO("[%p] skipping Sonos slave %s", Device, friendlyName);
-	} else {
-		LOG_INFO("[%p]: adding renderer (%s)", Device, friendlyName);
-	}
-
 	// set remaining items now that we are sure
 	Device->Running = true;
 	strcpy(Device->friendlyName, friendlyName);
-	NFREE(friendlyName);
-	
+		
 	if (!memcmp(Device->sq_config.mac, "\0\0\0\0\0\0", 6)) {
 		char ip[32];
 		uint32_t mac_size = 6;
@@ -1385,7 +1374,6 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 		if (SendARP(inet_addr(ip), INADDR_ANY, Device->sq_config.mac, &mac_size)) {
 			*(uint32_t*)(Device->sq_config.mac + 2) = hash32(Device->UDN);
 			LOG_INFO("[%p]: creating MAC", Device);
-			LOG_INFO("[%p]: duplicated mac ... updating", Device);
 		}
 		memset(Device->sq_config.mac, 0xbb, 2);
 	}
@@ -1398,7 +1386,13 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 			LOG_INFO("[%p]: duplicated mac ... updating", Device);
 		}
 	}
-	
+
+	if (Device->Master) {
+		LOG_INFO("[%p] skipping Sonos slave %s", Device, Device->friendlyName);
+	} else {
+		LOG_INFO("[%p]: adding renderer (%s) with mac %hX-%X", Device, Device->friendlyName, *(uint16_t*)Device->sq_config.mac, *(uint32_t*)(Device->sq_config.mac + 2));
+	}
+
 	// get the protocol info
 	if ((Device->Sink = GetProtocolInfo(Device)) == NULL) {
 		LOG_WARN("[%p] unable to get protocol info, set <forced_mimetypes>", Device);
@@ -1412,7 +1406,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	pthread_create(&Device->Thread, NULL, &MRThread, Device);
 
 	/* subscribe here, not before */
-	for (i = 0; i < NB_SRV; i++) if (Device->Service[i].TimeOut)
+	for (int i = 0; i < NB_SRV; i++) if (Device->Service[i].TimeOut)
 		UpnpSubscribeAsync(glControlPointHandle, Device->Service[i].EventURL,
 						   Device->Service[i].TimeOut, MasterHandler,
 						   (void*) strdup(UDN));
@@ -1441,12 +1435,10 @@ static bool Start(void) {
 	unsigned short Port = 0;
 
 #if USE_SSL
-	// manually load openSSL symbols to accept multiple versions
-	if (!load_ssl_symbols()) {
+	if (!cross_ssl_load()) {
 		LOG_ERROR("Cannot load SSL libraries", NULL);
 		return false;
 	}
-	SSL_library_init();
 #endif
 
 	// sscanf does not capture empty string in %[^:]
@@ -1593,7 +1585,6 @@ static void DeltaOptions(char* ref, char* src) {
 	strcpy(src, ref);
 	free(ref);
 }
-
 
 /*---------------------------------------------------------------------------*/
 bool ParseArgs(int argc, char **argv) {

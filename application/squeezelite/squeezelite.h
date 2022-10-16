@@ -344,6 +344,7 @@ struct codec {
 				 u8_t endianness, struct thread_ctx_s *ctx);
 	void (*close)(struct thread_ctx_s *ctx);
 	decode_state (*decode)(struct thread_ctx_s *ctx);
+	bool thru;
 };
 
 void 		decode_init(void);

@@ -444,7 +444,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, int offset)
 		if (!metadata->artwork || !strlen(metadata->artwork)) {
 			NFREE(metadata->artwork);
 			if ((p = cli_find_tag(cur, "coverid")) != NULL) {
-				asprintf(&metadata->artwork, "http://%s:%s/music/%s/cover_%s.jpg", ctx->server_ip, ctx->server_port, p, ctx->config.coverart);
+				(void)! asprintf(&metadata->artwork, "http://%s:%s/music/%s/cover_%s.jpg", ctx->server_ip, ctx->server_port, p, ctx->config.coverart);
 				free(p);
 			}
 		}

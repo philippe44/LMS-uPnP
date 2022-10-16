@@ -22,7 +22,7 @@
 #include "squeezelite.h"
 #if CODECS
 #include "FLAC/stream_encoder.h"
-#include "shine/src/lib/layer3.h"
+#include "layer3.h"
 #endif
 
 extern log_level	output_loglevel;
@@ -639,7 +639,7 @@ bool output_thread_init(struct thread_ctx_s *ctx) {
 
 /*---------------------------------------------------------------------------*/
 void output_close(struct thread_ctx_s *ctx) {
-	LOG_INFO("[%p] close media renderer", ctx);
+	LOG_DEBUG("[%p] close media renderer", ctx);
 	buf_destroy(ctx->outputbuf);
 }
 

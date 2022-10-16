@@ -302,6 +302,7 @@ struct codec *register_m4a_thru(void) {
 		m4adts_open,    // open
 		m4adts_close,   // close
 		m4adts_decode,  // decode
+		true,			// thru
 	};
 
 	LOG_INFO("using mp4 to aac (ADTS)", NULL);

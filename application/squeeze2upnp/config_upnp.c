@@ -31,7 +31,7 @@ void SaveConfig(char *name, void *ref, bool full) {
 	struct sMR *p;
 	IXML_Document *doc = ixmlDocument_createDocument();
 	IXML_Document *old_doc = ref;
-	IXML_Node *root, *common, *proto;
+	IXML_Node *root, *common;
 	IXML_Element* old_root = ixmlDocument_getElementById(old_doc, "squeeze2upnp");
 
 	if (!full && old_doc) {

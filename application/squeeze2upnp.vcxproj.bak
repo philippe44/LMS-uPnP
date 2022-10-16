@@ -25,6 +25,10 @@
     <ClCompile Include="crosstools\src\cross_thread.c" />
     <ClCompile Include="crosstools\src\cross_util.c" />
     <ClCompile Include="crosstools\src\platform.c" />
+    <ClCompile Include="squeeze2upnp\avt_util.c" />
+    <ClCompile Include="squeeze2upnp\config_upnp.c" />
+    <ClCompile Include="squeeze2upnp\mr_util.c" />
+    <ClCompile Include="squeeze2upnp\squeeze2upnp.c" />
     <ClCompile Include="squeezelite\alac.c" />
     <ClCompile Include="squeezelite\buffer.c" />
     <ClCompile Include="squeezelite\decode.c" />
@@ -85,9 +89,9 @@
       <WarningLevel>Level3</WarningLevel>
       <DisableSpecificWarnings>4129;4018;4244;4101;4267;4102;4068;4142</DisableSpecificWarnings>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>FLAC__NO_DLL;LINKALL;UPNP_STATIC_LIB;PB_NO_STATIC_ASSERT;PB_FIELD_16BIT;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;_WINSOCK_DEPRECATED_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>USE_SSL;FLAC__NO_DLL;LINKALL;UPNP_STATIC_LIB;PB_NO_STATIC_ASSERT;PB_FIELD_16BIT;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;_WINSOCK_DEPRECATED_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>squeezelite;squeeze2upnp\inc;crosstools\src;libopenssl\targets\win32\$(PlatformTarget)\include;libpupnp\targets\win32\$(PlatformTarget)\include\addons;libpupnp\targets\win32\$(PlatformTarget)\include\upnp;libpupnp\targets\win32\$(PlatformTarget)\include\ixml;pthreads4w\targets\win32\$(PlatformTarget)\include;libcodecs\targets\include\flac;libcodecs\targets\include\shine;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>squeezelite;squeeze2upnp\inc;crosstools\src;libopenssl\targets\win32\$(PlatformTarget)\include;libpupnp\targets\win32\$(PlatformTarget)\include\addons;libpupnp\targets\win32\$(PlatformTarget)\include\upnp;libpupnp\targets\win32\$(PlatformTarget)\include\ixml;pthreads4w\targets\win32\$(PlatformTarget)\include;libcodecs\targets\include\flac;libcodecs\targets\include\shine;libcodecs\targets\include\addons;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <ProgramDataBaseFileName>$(TEMP)vc$(PlatformToolsetVersion)$(ProjectName).pdb</ProgramDataBaseFileName>
       <LanguageStandard_C Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Default</LanguageStandard_C>

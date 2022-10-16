@@ -207,6 +207,7 @@ struct codec *register_flac_thru(void) {
 		flac_open,   // open
 		flac_close,  // close
 		flac_decode, // decode
+		true,        // thru
 	};
 
 	LOG_INFO("using flac", NULL);

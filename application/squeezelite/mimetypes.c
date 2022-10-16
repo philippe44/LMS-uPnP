@@ -265,7 +265,7 @@ char* mimetype_to_ext(char* mimetype)
 }
 
 /*---------------------------------------------------------------------------*/
-uint8_t mimetype_to_format(char* mimetype)
+char mimetype_to_format(char* mimetype)
 {
 	if (!mimetype) return '\0';
 
