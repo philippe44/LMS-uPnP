@@ -1440,7 +1440,7 @@ static bool Start(void) {
 	}
 #endif
 
-	// must binding to an address
+	// must bind to an address
 	get_interface(&Host);
 
 	if (!strstr(glBinding, "?")) {
