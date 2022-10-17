@@ -1430,8 +1430,7 @@ static bool isExcluded(char *Model)
 
 /*----------------------------------------------------------------------------*/
 static bool Start(void) {
-	struct in_addr addr;
-	char IPaddr[16] = "";
+	struct in_addr Host;
 	unsigned short Port = 0;
 
 #if USE_SSL
@@ -1441,17 +1440,17 @@ static bool Start(void) {
 	}
 #endif
 
-	// sscanf does not capture empty string in %[^:]
-	if (!strstr(glBinding, "?") && !sscanf(glBinding, "%[^:]:%hu", IPaddr, &Port)) sscanf(glBinding, ":%hu", &Port);
+	// must binding to an address
+	get_interface(&Host);
+
+	if (!strstr(glBinding, "?")) {
+		char addr[16] = "";
+		// sscanf does not capture empty string in %[^:]
+		if (!sscanf(glBinding, "%[^:]:%hu", addr, &Port)) sscanf(glBinding, ":%hu", &Port);
+		if (*addr) Host.s_addr = inet_addr(addr);
+	}
 
 	UpnpSetLogLevel(UPNP_ALL);
-
-	if (*IPaddr) {
-		addr.s_addr = inet_addr(IPaddr);
-	} else {
-		get_interface(&addr);
-		strcpy(IPaddr, inet_ntoa(addr));
-	}
 
 	// UPnP stack does not seem to accept a specific IP address ...
 	int rc = UpnpInit2(NULL, Port);
@@ -1470,7 +1469,7 @@ static bool Start(void) {
 	for (int i = 0; i < MAX_RENDERERS; i++) pthread_mutex_init(&glMRDevices[i].Mutex, 0);
 	
 	//if (!*glIPaddress) strcpy(glIPaddress, UpnpGetServerIpAddress());
-	sq_init(IPaddr, Port ? UpnpGetServerPort() : 0, glModelName);
+	sq_init(Host, Port ? UpnpGetServerPort() : 0, glModelName);
 	rc = UpnpRegisterClient(MasterHandler, NULL, &glControlPointHandle);
 
 	if (rc != UPNP_E_SUCCESS) {
@@ -1479,7 +1478,7 @@ static bool Start(void) {
 		return false;
 	}
 
-	LOG_INFO("Binding to %s:%hu (http:%u)", IPaddr, (unsigned short) UpnpGetServerPort(), Port);
+	LOG_INFO("Binding to %s:%hu (http:%u)", inet_ntoa(Host), (unsigned short) UpnpGetServerPort(), Port);
 
 	// init mutex & cond no matter what
 	pthread_mutex_init(&glUpdateMutex, 0);

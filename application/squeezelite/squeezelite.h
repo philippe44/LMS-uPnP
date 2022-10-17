@@ -586,7 +586,7 @@ struct thread_ctx_s {
 };
 
 extern struct thread_ctx_s 	thread_ctx[MAX_PLAYER];
-extern char  				sq_local_addr[];
+extern struct in_addr		sq_local_host;
 extern u16_t 				sq_local_port;
 extern char  				sq_model_name[];
 
