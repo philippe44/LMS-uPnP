@@ -800,7 +800,7 @@ void discover_server(struct thread_ctx_s *ctx) {
 	if (!ctx->slimproto_ip) {
 		// some systems refuse to broadcast on unbound socket
 		memset(&s, 0, sizeof(s));
-		s.sin_addr.s_addr = inet_addr(sq_ip);
+		s.sin_addr.s_addr = inet_addr(sq_local_addr);
 		s.sin_family = AF_INET;
 		bind(disc_sock, (struct sockaddr*) &s, sizeof(s));
 		d.sin_addr.s_addr = htonl(INADDR_BROADCAST);
@@ -1204,7 +1204,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 			out->in_endian, ctx) &&	output_start(ctx)) {
 
 			strcpy(info.mimetype, out->mimetype);
-			sprintf(info.uri, "http://%s:%hu/" BRIDGE_URL "%u.%s", sq_ip,
+			sprintf(info.uri, "http://%s:%hu/" BRIDGE_URL "%u.%s", sq_local_addr,
 					out->port, out->index, mimetype_to_ext(out->mimetype));
 
 			/*

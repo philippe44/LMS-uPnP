@@ -586,8 +586,8 @@ struct thread_ctx_s {
 };
 
 extern struct thread_ctx_s 	thread_ctx[MAX_PLAYER];
-extern u16_t 				sq_port;
-extern char  				sq_ip[];
+extern char  				sq_local_addr[];
+extern u16_t 				sq_local_port;
 extern char  				sq_model_name[];
 
 #define MAX_CODECS 16

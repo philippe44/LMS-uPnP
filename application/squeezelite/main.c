@@ -40,9 +40,9 @@
 #define UNLOCK_P mutex_unlock(ctx->mutex)
 
 struct thread_ctx_s thread_ctx[MAX_PLAYER];
-char				sq_ip[16];
+char				sq_local_addr[16];
+u16_t				sq_local_port;
 char				sq_model_name[STR_LEN];
-u16_t				sq_port;
 
 /*----------------------------------------------------------------------------*/
 /* locals */
@@ -692,10 +692,10 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 
 
 /*---------------------------------------------------------------------------*/
-void sq_init(char *ip, u16_t port, char *model_name)
+void sq_init(char *addr, u16_t port, char *model_name)
 {
-	strcpy(sq_ip, ip);
-	sq_port = port;
+	strcpy(sq_local_addr, addr);
+	sq_local_port = port;
 	strcpy(sq_model_name, model_name);
 
 	output_init();

@@ -64,7 +64,7 @@ bool output_start(struct thread_ctx_s *ctx) {
 	param->ctx = ctx;
 
 	// find a free port
-	ctx->output.port = sq_port;
+	ctx->output.port = sq_local_port;
 	do {
 		struct in_addr host;
 		host.s_addr = INADDR_ANY;
