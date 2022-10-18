@@ -10,6 +10,6 @@
 [submodule "application/libopenssl"]
 	path = application/libopenssl
 	url = https://github.com/philippe44/libopenssl
-[submodule "application/pthreads4w"]
-	path = application/pthreads4w
-	url = https://github.com/philippe44/pthreads4w
+[submodule "application/libpthreads4w"]
+	path = application/libpthreads4w
+	url = https://github.com/philippe44/libpthreads4w
