@@ -13,7 +13,7 @@ LINKSTATIC 	= -static
 LDFLAGS 	+= -Wl,--gc-sections
 endif
 
-BUILDDIR	= build/$(PLATFORM)
+BUILDDIR	= bin/$(PLATFORM)
 EXECUTABLE 	= bin/squeeze2upnp-$(PLATFORM)
 EXECUTABLE_STATIC = bin/squeeze2upnp-$(PLATFORM)-static
 
@@ -27,7 +27,7 @@ OPENSSL		= libopenssl/targets/$(HOST)/$(PLATFORM)
 #VALGRIND	= $(BASE)/valgrind
 
 #DEFINES 	= -D_FILE_OFFSET_BITS=64 -DPB_FIELD_16BIT -DHAVE_STDINT_H -DRESAMPLE -DCODECS -DUSE_SSL -D_GNU_SOURCE -DUPNP_STATIC_LIB
-DEFINES 	= -DCODECS -DUSE_SSL -D_GNU_SOURCE -DUPNP_STATIC_LIB -DLINKALL
+DEFINES 	= -DCODECS -DUSE_SSL -D_GNU_SOURCE -DUPNP_STATIC_LIB -DLINKALL -DRESAMPLE
 
 CFLAGS  	+= -Wall -Wno-deprecated-declarations -Wno-format-truncation -Wno-stringop-truncation -fPIC -ggdb -O2 $(DEFINES) -fdata-sections -ffunction-sections 
 LDFLAGS += -s -lpthread -ldl -lm -lrt -lstdc++ -L. 
@@ -40,13 +40,19 @@ INCLUDE = -I$(OPENSSL)/include \
 		  -I$(SQUEEZELITE) \
 		  -I$(SRC)/inc \
 		  -I$(PUPNP)/include/upnp -I$(PUPNP)/include/ixml -I$(PUPNP)/include/addons \
-		  -I$(CODECS)/include/flac -I$(CODECS)/include/shine -I$(CODECS)/include/addons \
+		  -I$(CODECS)/include/flac -I$(CODECS)/include/mad \
+		  -I$(CODECS)/include/ogg -I$(CODECS)/include/vorbis \
+		  -I$(CODECS)/include/opus -I$(CODECS)/include/opusfile \
+		  -I$(CODECS)/include/faad2 \
+		  -I$(CODECS)/include/shine \
+		  -I$(CODECS)/include/soxr -I$(CODECS)/include/addons \
 		  -I$(MDNS)/include/tinysvcmdns -I$(MDNS)/include/mdnssd
 		  		  		  
 DEPS	= $(SRC)/inc/squeezedefs.h
 				  
 SOURCES = slimproto.c buffer.c output_http.c output.c main.c \
-		  stream.c decode.c pcm.c resample.c process.c alac.c flac.c \
+		  stream.c decode.c pcm.c resample.c process.c \
+          alac.c flac.c mad.c vorbis.c opus.c faad.c \
 		  flac_thru.c m4a_thru.c thru.c \
 		  utils.c metadata.c mimetypes.c \
 		  cross_util.c cross_log.c cross_net.c cross_thread.c platform.c \

@@ -120,7 +120,7 @@ static decode_state pcm_decode(struct thread_ctx_s *ctx) {
 	frames_t frames;
 	struct pcm *p = ctx->decode.handle;
 	u8_t *iptr, ibuf[BYTES_PER_FRAME];
-	u32_t *optr;
+	u32_t *optr = NULL;
 
 	LOCK_S;
 	LOCK_O_direct;

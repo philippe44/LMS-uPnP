@@ -145,7 +145,7 @@ static FLAC__StreamDecoderWriteStatus write_cb(const FLAC__StreamDecoder *decode
 	while (frames > 0) {
 		frames_t f;
 		frames_t count;
-		s32_t *optr;
+		s32_t *optr = NULL;
 
 		IF_DIRECT(
 			optr = (s32_t *)ctx->outputbuf->writep;

@@ -107,7 +107,7 @@ static decode_state vorbis_decode( struct thread_ctx_s *ctx) {
 	struct vorbis *v = ctx->decode.handle;
 	frames_t frames;
 	int bytes, s, n;
-	u8_t *write_buf;
+	u8_t *write_buf = NULL;
 
 	LOCK_S;
 	LOCK_O_direct;

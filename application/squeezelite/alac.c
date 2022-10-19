@@ -442,7 +442,7 @@ static decode_state alac_decode(struct thread_ctx_s *ctx) {
 
 	while (frames > 0) {
 		size_t f, count;
-		s32_t *optr;
+		s32_t *optr = NULL;
 
 		IF_DIRECT(
 			f = min(frames, _buf_cont_write(ctx->outputbuf) / BYTES_PER_FRAME);

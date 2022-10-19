@@ -124,14 +124,12 @@ void decode_init(void) {
 
 #if CODECS
 	codecs[i++] = register_alac();
-	/*
 	codecs[i++] = register_mad();
 	codecs[i++] = register_faad();
 	codecs[i++] = register_vorbis();
-	*/
 	codecs[i++] = register_pcm();
 	codecs[i++] = register_flac();
-	//codecs[i++] = register_opus();
+	codecs[i++] = register_opus();
 #endif
 	codecs[i++] = register_m4a_thru();
 	codecs[i++] = register_flac_thru();
@@ -147,14 +145,12 @@ void decode_init(void) {
 void decode_end(void) {
 #if CODECS
 	deregister_alac();
-	/*
 	deregister_vorbis();
 	deregister_faad();
 	deregister_mad();
-	*/
 	deregister_pcm();
 	deregister_flac();
-	//deregister_opus();
+	deregister_opus();
 #endif
 	deregister_m4a_thru();
 	deregister_flac_thru();

@@ -115,7 +115,7 @@ sq_dev_param_t glDeviceParam = {
 					15,						// next_delay
 					"raw,wav,aif",			// raw_audio_format
 					"?",                    // server
-					48000,			        // sample_rate
+					96000,			        // sample_rate
 					L24_PACKED_LPCM,        // L24_mode
 					FLAC_DEFAULT_HEADER,	// flac_header
 					"",						// name

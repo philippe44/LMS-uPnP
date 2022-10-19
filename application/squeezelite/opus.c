@@ -88,7 +88,7 @@ static decode_state opus_decompress( struct thread_ctx_s *ctx) {
 	struct opus *u = ctx->decode.handle;
 	frames_t frames;
 	int n;
-	u8_t *write_buf;
+	u8_t *write_buf = NULL;
 
 	LOCK_S;
 	LOCK_O_direct;
