@@ -5,17 +5,13 @@ endif
 PLATFORM ?= $(firstword $(subst -, ,$(CC)))
 HOST ?= $(word 2, $(subst -, ,$(CC)))
 
-ifeq ($(OS),Darwin)
-LINKSTATIC	=
-LDFLAGS 	+= -Wl,-dead_strip
-else
-LINKSTATIC 	= -static
-LDFLAGS 	+= -Wl,--gc-sections
+ifneq ($(HOST),macos)
+LINKSTATIC += -static
 endif
 
-BUILDDIR	= bin/$(PLATFORM)
-EXECUTABLE 	= bin/squeeze2upnp-$(PLATFORM)
-EXECUTABLE_STATIC = bin/squeeze2upnp-$(PLATFORM)-static
+BUILDDIR	= bin/$(HOST)/$(PLATFORM)
+EXECUTABLE 	= bin/squeeze2upnp-$(HOST)-$(PLATFORM)
+EXECUTABLE_STATIC = bin/squeeze2upnp-$(HOST)-$(PLATFORM)-static
 
 SRC			= squeeze2upnp
 SQUEEZELITE	= squeezelite
@@ -26,11 +22,10 @@ CODECS		= libcodecs/targets
 OPENSSL		= libopenssl/targets/$(HOST)/$(PLATFORM)
 #VALGRIND	= $(BASE)/valgrind
 
-#DEFINES 	= -D_FILE_OFFSET_BITS=64 -DPB_FIELD_16BIT -DHAVE_STDINT_H -DRESAMPLE -DCODECS -DUSE_SSL -D_GNU_SOURCE -DUPNP_STATIC_LIB
 DEFINES 	= -DCODECS -DUSE_SSL -D_GNU_SOURCE -DUPNP_STATIC_LIB -DLINKALL -DRESAMPLE
 
 CFLAGS  	+= -Wall -Wno-deprecated-declarations -Wno-format-truncation -Wno-stringop-truncation -fPIC -ggdb -O2 $(DEFINES) -fdata-sections -ffunction-sections 
-LDFLAGS += -s -lpthread -ldl -lm -lrt -lstdc++ -L. 
+LDFLAGS += -s -lpthread -ldl -lm -lstdc++ -L. 
 
 vpath %.c $(TOOLS):$(SRC):$(SQUEEZELITE)
 vpath %.cpp $(TOOLS):$(SRC):$(SQUEEZELITE)
@@ -46,7 +41,7 @@ INCLUDE = -I$(OPENSSL)/include \
 		  -I$(CODECS)/include/faad2 \
 		  -I$(CODECS)/include/shine \
 		  -I$(CODECS)/include/soxr -I$(CODECS)/include/addons \
-		  -I$(MDNS)/include/tinysvcmdns -I$(MDNS)/include/mdnssd
+		  -I$(MDNS)/include/mdnsvc -I$(MDNS)/include/mdnssd
 		  		  		  
 DEPS	= $(SRC)/inc/squeezedefs.h
 				  
@@ -76,7 +71,7 @@ $(EXECUTABLE): $(OBJECTS) $(DEPS)
 	$(CC) $(OBJECTS) $(LIBRARY) $(LDFLAGS) -o $@
 	
 $(EXECUTABLE_STATIC): $(OBJECTS_STATIC) $(DEPS)
-	$(CC) $(OBJECTS_STATIC) $(LIBRARY_STATIC) $(LDFLAGS) -static -o $@	
+	$(CC) $(OBJECTS_STATIC) $(LIBRARY_STATIC) $(LDFLAGS) $(LINKSTATIC) -o $@	
 
 directory:
 	@mkdir -p $(BUILDDIR)
@@ -86,7 +81,7 @@ $(BUILDDIR)/%.o : %.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(INCLUDE) $< -c -o $@
 
 $(BUILDDIR)/%-static.o : %.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) -DSSL_LIB_STATIC $(INCLUDE) $< -c -o $(BUILDDIR)/$*-static.o	
+	$(CC) $(CFLAGS) $(CPPFLAGS) -DSSL_STATIC_LIB $(INCLUDE) $< -c -o $(BUILDDIR)/$*-static.o	
 	
 clean:
 	rm -f $(OBJECTS) $(EXECUTABLE) $(OBJECTS_STATIC) $(EXECUTABLE_STATIC) 
