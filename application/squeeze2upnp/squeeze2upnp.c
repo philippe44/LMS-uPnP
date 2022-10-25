@@ -33,6 +33,7 @@
 #include "mr_util.h"
 #include "mimetypes.h"
 #include "config_upnp.h"
+#include "cross_util.h"
 #include "cross_log.h"
 #include "cross_net.h"
 #include "cross_ssl.h"
@@ -167,7 +168,7 @@ static const struct cSearchedSRV_s
 /* locals */
 /*----------------------------------------------------------------------------*/
 static log_level 	  	*loglevel = &main_loglevel;
-#if LINUX || FREEBSD
+#if LINUX || FREEBSD || SUNOS
 bool					glDaemonize = false;
 #endif
 pthread_t				glUpdateMRThread;
@@ -177,7 +178,7 @@ static pthread_mutex_t 	glUpdateMutex;
 
 static pthread_cond_t  	glUpdateCond;
 static pthread_t 		glMainThread, glUpdateThread;
-static queue_t			glUpdateQueue;
+static cross_queue_t	glUpdateQueue;
 static char				*glLogFile;
 
 static char				*glPidFile = NULL;
@@ -203,7 +204,7 @@ static char usage[] =
 		   "  -o [thru|pcm|flc[:<q>]|mp3[:<r>]][,r:[-]<rate>][,s:<8:16:24>][,flow]\tTranscode mode\n"
 		   "  -d <log>=<level>\tSet logging level, logs: all|slimproto|slimmain|stream|decode|output|web|main|util|upnp, level: error|warn|info|debug|sdebug\n"
 		   "  -M <modelname>\tSet the squeezelite player model name sent to the server (default: " MODEL_NAME_STRING ")\n"
-#if LINUX || FREEBSD
+#if LINUX || FREEBSD || SUNOS
 		   "  -z \t\t\tDaemonize\n"
 #endif
 		   "  -Z \t\t\tNOT interactive\n"
@@ -222,6 +223,9 @@ static char usage[] =
 #endif
 #if FREEBSD
 		   " FREEBSD"
+#endif
+#if SUNOS
+	" SUNOS"
 #endif
 #if EVENTFD
 		   " EVENTFD"
@@ -1432,6 +1436,7 @@ static bool isExcluded(char *Model)
 static bool Start(void) {
 	struct in_addr Host;
 	unsigned short Port = 0;
+	char addr[128] = "";
 
 #if USE_SSL
 	if (!cross_ssl_load()) {
@@ -1440,20 +1445,17 @@ static bool Start(void) {
 	}
 #endif
 
-	// must bind to an address
-	get_interface(&Host);
+	// sscanf does not capture empty strings
+	if (!strchr(glBinding, '?') && !sscanf(glBinding, "%[^:]:%hu", addr, &Port)) sscanf(glBinding, ":%hu", &Port);
 
-	if (!strstr(glBinding, "?")) {
-		char addr[16] = "";
-		// sscanf does not capture empty string in %[^:]
-		if (!sscanf(glBinding, "%[^:]:%hu", addr, &Port)) sscanf(glBinding, ":%hu", &Port);
-		if (*addr) Host.s_addr = inet_addr(addr);
-	}
+	Host = get_interface(addr);
 
-	UpnpSetLogLevel(UPNP_ALL);
+	// can't find a suitable interface
+	if (Host.s_addr == INADDR_NONE) return false;
 
-	// UPnP stack does not seem to accept a specific IP address ...
-	int rc = UpnpInit2(NULL, Port);
+	UpnpSetLogLevel(UPNP_CRITICAL);
+	// only set iface name if it's a name
+	int rc = UpnpInit2((*addr && inet_addr(addr) == INADDR_NONE) ? addr : NULL, Port);
 
 	if (rc != UPNP_E_SUCCESS) {
 		LOG_ERROR("UPnP init failed: %d %s\n", rc, rc == UPNP_E_SOCKET_BIND ? "cannot bind socket(s)" : "");
@@ -1641,7 +1643,7 @@ bool ParseArgs(int argc, char **argv) {
 		case 'k':
 			glGracefullShutdown = false;
 			break;
-#if LINUX || FREEBSD
+#if LINUX || FREEBSD || SUNOS
 		case 'z':
 			glDaemonize = true;
 			break;
@@ -1731,7 +1733,7 @@ int main(int argc, char *argv[])
 		return(0);
 	}
 
-#if LINUX || FREEBSD
+#if LINUX || FREEBSD || SUNOS
 	if (glDaemonize) {
 		if (daemon(1, glLogFile ? 1 : 0)) {
 			fprintf(stderr, "error daemonizing: %s\n", strerror(errno));
@@ -1756,7 +1758,7 @@ int main(int argc, char *argv[])
 
 	while (strcmp(resp, "exit")) {
 
-#if LINUX || FREEBSD
+#if LINUX || FREEBSD || SUNOS
 		if (!glDaemonize && glInteractive)
 			i = scanf("%s", resp);
 		else pause();

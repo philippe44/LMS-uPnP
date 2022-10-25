@@ -163,7 +163,7 @@ static int read_mp4_header(unsigned long *samplerate_p, unsigned char *channels_
 				a->sttssamples += count * size;
 				ptr += 8;
 			}
-			LOG_DEBUG("[%p]: total number of samples contained in stts: " FMT_u64, ctx, a->sttssamples);
+			LOG_DEBUG("[%p]: total number of samples contained in stts: %" PRIu64, ctx, a->sttssamples);
 		}
 
 		// stash sample to chunk info, assume it comes before stco
@@ -263,8 +263,8 @@ static int read_mp4_header(unsigned long *samplerate_p, unsigned char *channels_
 			if (!memcmp(ptr + 4, "data", 4) && remain > 16 + 48) {
 				// data is stored as hex strings: 0 start end samples
 				u32_t b, c; u64_t d;
-				if (sscanf((const char *)(ptr + 16), "%x %x %x " FMT_x64, &b, &b, &c, &d) == 4) {
-					LOG_DEBUG("[%p]: iTunSMPB start: %u end: %u samples: " FMT_u64, ctx, b, c, d);
+				if (sscanf((const char *)(ptr + 16), "%x %x %x %" PRIx64, &b, &b, &c, &d) == 4) {
+					LOG_DEBUG("[%p]: iTunSMPB start: %u end: %u samples: %" PRIu64, ctx, b, c, d);
 					if (a->sttssamples && a->sttssamples < b + c + d) {
 						LOG_DEBUG("[%p]: reducing samples as stts count is less", ctx);
 						d = a->sttssamples - (b + c);

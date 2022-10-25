@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include <limits.h>
 #include "squeezedefs.h"
 #include "metadata.h"
 

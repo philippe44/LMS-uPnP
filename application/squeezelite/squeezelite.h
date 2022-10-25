@@ -26,7 +26,7 @@
 #include "squeezedefs.h"
 
 #if !defined(LOOPBACK)
-#if SUN
+#if SUNOS
 #define EVENTFD   0
 #define WINEVENT  0
 #define SELFPIPE  1
@@ -217,17 +217,6 @@ void _wake_create(event_event*);
 #define wake_create(e) e = CreateEvent(NULL, FALSE, FALSE, NULL)
 #define wake_signal(e) SetEvent(e)
 #define wake_close(e) CloseHandle(e)
-#endif
-
-// printf/scanf formats for u64_t
-#if (LINUX && __WORDSIZE == 64) || (FREEBSD && __LP64__)
-#define FMT_u64 "%lu"
-#define FMT_x64 "%lx"
-#elif __GLIBC_HAVE_LONG_LONG || defined __GNUC__ || WIN
-#define FMT_u64 "%llu"
-#define FMT_x64 "%llx"
-#else
-#error can not support u64_t
 #endif
 
 // this is for decoded frames buffers (32 bits * 2 channels)

@@ -53,7 +53,8 @@ struct sService {
 	uint32_t		Failed;
 };
 
-typedef struct sMRConfig
+
+typedef struct sMRConfig
 {
 	bool		SeekAfterPause;
 	bool		ByteSeek;
@@ -91,7 +92,7 @@ struct sMR {
 	sq_action_t		sqState;
 	uint8_t			*seqN;
 	void			*WaitCookie, *StartCookie;
-	queue_t			ActionQueue;
+	cross_queue_t	ActionQueue;
 	unsigned		TrackPoll, StatePoll;
 	int				InfoExPoll;
 	int	 			SqueezeHandle;

@@ -155,7 +155,7 @@ static void _check_lame_header(size_t bytes, struct thread_ctx_s *ctx) {
 		m->samples = frame_count * 1152 - enc_delay - enc_padding;
 		m->padding = enc_padding;
 		
-		LOG_INFO("gapless: skip: %u samples: " FMT_u64 " delay: %u padding: %u", m->skip, m->samples, enc_delay, enc_padding);
+		LOG_INFO("gapless: skip: %u samples: %" PRIu64 " delay: %u padding: %u", m->skip, m->samples, enc_delay, enc_padding);
 	}
 }
 
