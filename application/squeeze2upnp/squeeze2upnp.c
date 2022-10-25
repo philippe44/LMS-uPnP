@@ -195,7 +195,7 @@ static char usage[] =
 		   "See -t for license terms\n"
 		   "Usage: [options]\n"
 		   "  -s <server>[:<port>]\tConnect to specified server, otherwise uses autodiscovery to find server\n"
-		   "  -b <address>]\tNetwork address to bind to\n"
+		   "  -b <address|iface>]\tNetwork address (or interface name) to bind to\n"
 		   "  -x <config file>\tread config from file (default is ./config.xml)\n"
 		   "  -i <config file>\tdiscover players, save <config file> and exit\n"
 		   "  -I \t\t\tauto save config at every network scan\n"
