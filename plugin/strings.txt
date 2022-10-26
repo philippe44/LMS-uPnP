@@ -33,8 +33,6 @@ PLUGIN_UPNPBRIDGE_RESTART
 
 PLUGIN_UPNPBRIDGE_BINARIES_DESC
 	EN	Select the Squeeze2upnp binary which best matches your machine's architecture.
-	EN	<br>- on raspi, use only armv6hf version
-	EN	<br>- armv5te emulates floating point
 	
 PLUGIN_UPNPBRIDGE_WARNING
 	EN	It is HIGHLY recommended to stop the bridge before changing parameters
@@ -149,7 +147,7 @@ PLUGIN_UPNPBRIDGE_USELMSBINDING
 	EN	Use LMS interface
 
 PLUGIN_UPNPBRIDGE_BINDING_DESC
-	EN	The network ip interface and base port to be used (format [ip][:port]. This is needed if you have a computer with multiple network interfaces.
+	EN	The network ip interface and base port to be used (format [ip|iface][:port]. This is needed if you have a computer with multiple network interfaces. The iface is the name of the interface found using ipconfig/ifconifg
 	EN	Use ? to let the bridge decide or check "use LMS interface" to make sure the Bridge uses the same network as LMS and add an optional baseport
 	EN	The bridge will use up to 64 ports from the base port (min 49152). When not set, random values are used.
 	

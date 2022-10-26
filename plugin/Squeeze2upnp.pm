@@ -23,64 +23,53 @@ sub binaries {
 	if ($os->{'os'} eq 'Linux') {
 
 		if ($os->{'osArch'} =~ /x86_64/) {
-			return qw( squeeze2upnp-x86-64-static squeeze2upnp-x86-64 );
+			return qw(squeeze2upnp-linux_x86_64-static squeeze2upnp-linux-x86_64 );
 		}
 		if ($os->{'binArch'} =~ /i386/) {
-			return qw(squeeze2upnp-x86-static squeeze2upnp-x86 );
+			return qw(squeeze2upnp-linux-x86-static squeeze2upnp-linux-x86 );
 		}
 		if ($os->{'osArch'} =~ /aarch64/) {
-			return qw(squeeze2upnp-aarch64-static squeeze2upnp-aarch64 squeeze2upnp-armv6hf-static squeeze2upnp-armv6hf) ;
+			return qw(squeeze2upnp-linux-aarch64-static squeeze2upnp-linux-aarch64 );
 		}
 		if ($os->{'binArch'} =~ /armhf/) {
-			return qw( squeeze2upnp-armv6hf-static squeeze2upnp-armv6hf );
-		}
-		if ($os->{'binArch'} =~ /arm/) {
-			return qw( squeeze2upnp-armv5te-static squeeze2upnp-armv5te );
+			return qw(squeeze2upnp-linux-arm-static squeeze2upnp-linux-arm );
 		}
 		if ($os->{'binArch'} =~ /powerpc/) {
-			return qw( squeeze2upnp-ppc-static squeeze2upnp-ppc );
+			return qw(squeeze2upnp-linux-powerpc-static squeeze2upnp-linux-powerpc );
 		}
 		if ($os->{'binArch'} =~ /sparc/) {
-			return qw( squeeze2upnp-sparc-static squeeze2upnp-sparc );
+			return qw(squeeze2upnp-linux-sparc64-static squeeze2upnp-linux-sparc64 );
 		}
 		
-		# fallback to offering all linux options for case when architecture detection does not work
-		return qw( squeeze2upnp-x86-64 squeeze2upnp-x86-64-static squeeze2upnp-x86 squeeze2upnp-x86-static squeeze2upnp-armv6hf squeeze2upnp-armv6hf-static squeeze2upnp-armv5te squeeze2upnp-armv5te-static squeeze2upnp-ppc squeeze2upnp-ppc-static
-		squeeze2upnp-sparc squeeze2upnp-sparc-static squeeze2upnp-aarch64 squeeze2upnp-aarch64_static );
 	}
 	
 	if ($os->{'os'} eq 'Unix') {
 	
+		if ($os->{'osName'} eq 'solaris') {
+			return qw(squeeze2upnp-solaris-x86_64-static squeeze2upnp-solaris-x86_64 );
+		}	
 		if ($os->{'osName'} =~ /freebsd/) {
-			return qw(  squeeze2upnp-bsd-x64-static squeeze2upnp-bsd-x64 );
+			return qw( squeeze2upnp-freebsd-x86_64-static squeeze2upnp-freebsd-x86_64 );
 		}
 		
 	}	
 	
 	if ($os->{'os'} eq 'Darwin') {
-		return qw( squeeze2upnp-osx-multi-static squeeze2upnp-osx-multi );
+		return qw(squeeze2upnp-macos-x86_64-static squeeze2upnp-macos-x86_64);
 	}
-		
+	
 	if ($os->{'os'} eq 'Windows') {
-		return qw(squeeze2upnp-win.exe);
+		return qw(squeeze2upnp-static.exe squeeze2upnp.exe);
 	}	
 	
 }
 
 sub bin {
 	my $class = shift;
-
 	my @binaries = $class->binaries;
+	my $bin = $prefs->get("bin");
 
-	if (my $b = $prefs->get("bin")) {
-		for my $bin (@binaries) {
-			if ($bin eq $b) {
-				return $b;
-			}
-		}
-	}
-
-	return $binaries[0];
+	return grep($bin, @binaries) ? $bin : @binaries;
 }
 
 sub start {

@@ -26,16 +26,12 @@
 #include "squeezedefs.h"
 
 #if !defined(LOOPBACK)
-#if SUNOS
-#define EVENTFD   0
-#define WINEVENT  0
-#define SELFPIPE  1
-#elif LINUX && !defined(SELFPIPE)
+#if LINUX && !defined(SELFPIPE)
 #define EVENTFD   1
 #define SELFPIPE  0
 #define WINEVENT  0
 #endif
-#if (LINUX && !EVENTFD) || OSX || FREEBSD
+#if (LINUX && !EVENTFD) || OSX || FREEBSD || SUNOS
 #define EVENTFD   0
 #define SELFPIPE  1
 #define WINEVENT  0
@@ -56,7 +52,7 @@
 #if !LINKALL
 
 // dynamically loaded libraries at run time
-#if LINUX
+#if LINUX || SUNOS
 #define LIBFLAC "libFLAC.so.8"
 #define LIBMAD  "libmad.so.0"
 #define LIBMPG "libmpg123.so.0"
