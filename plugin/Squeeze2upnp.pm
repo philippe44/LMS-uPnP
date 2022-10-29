@@ -23,43 +23,46 @@ sub binaries {
 	if ($os->{'os'} eq 'Linux') {
 
 		if ($os->{'osArch'} =~ /x86_64/) {
-			return qw(squeeze2upnp-linux_x86_64-static squeeze2upnp-linux-x86_64 );
+			return qw(squeeze2upnp-linux_x86_64 squeeze2upnp-linux-x86_64-static );
 		}
 		if ($os->{'binArch'} =~ /i386/) {
-			return qw(squeeze2upnp-linux-x86-static squeeze2upnp-linux-x86 );
+			return qw(squeeze2upnp-linux-x86 squeeze2upnp-linux-x86-static );
 		}
 		if ($os->{'osArch'} =~ /aarch64/) {
-			return qw(squeeze2upnp-linux-aarch64-static squeeze2upnp-linux-aarch64 );
+			return qw(squeeze2upnp-linux-aarch64 squeeze2upnp-linux-aarch64-static );
 		}
 		if ($os->{'binArch'} =~ /armhf/) {
-			return qw(squeeze2upnp-linux-arm-static squeeze2upnp-linux-arm );
+			return qw(squeeze2upnp-linux-arm squeeze2upnp-linux-arm-static );
 		}
 		if ($os->{'binArch'} =~ /powerpc/) {
-			return qw(squeeze2upnp-linux-powerpc-static squeeze2upnp-linux-powerpc );
+			return qw(squeeze2upnp-linux-powerpc squeeze2upnp-linux-powerpc-static );
 		}
 		if ($os->{'binArch'} =~ /sparc/) {
-			return qw(squeeze2upnp-linux-sparc64-static squeeze2upnp-linux-sparc64 );
+			return qw(squeeze2upnp-linux-sparc64 squeeze2upnp-linux-sparc64-static );
 		}
+		if ($os->{'binArch'} =~ /mips/) {
+			return qw(squeeze2upnp-linux-mips squeeze2upnp-linux-mips-static );
+		}		
 		
 	}
 	
 	if ($os->{'os'} eq 'Unix') {
 	
 		if ($os->{'osName'} eq 'solaris') {
-			return qw(squeeze2upnp-solaris-x86_64-static squeeze2upnp-solaris-x86_64 );
+			return qw(squeeze2upnp-solaris-x86_64 squeeze2upnp-solaris-x86_64-static );
 		}	
 		if ($os->{'osName'} =~ /freebsd/) {
-			return qw( squeeze2upnp-freebsd-x86_64-static squeeze2upnp-freebsd-x86_64 );
+			return qw( squeeze2upnp-freebsd-x86_64 squeeze2upnp-freebsd-x86_64-static );
 		}
 		
 	}	
 	
 	if ($os->{'os'} eq 'Darwin') {
-		return qw(squeeze2upnp-macos-x86_64-static squeeze2upnp-macos-x86_64);
+		return qw(squeeze2upnp-macos-x86_64 squeeze2upnp-macos-x86_64-static);
 	}
 	
 	if ($os->{'os'} eq 'Windows') {
-		return qw(squeeze2upnp-static.exe squeeze2upnp.exe);
+		return qw(squeeze2upnp.exe squeeze2upnp-static.exe);
 	}	
 	
 }

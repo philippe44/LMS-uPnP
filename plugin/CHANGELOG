@@ -1,3 +1,7 @@
+2.0.1
+ - new compîlers to allow glibc starting 2.23
+ - mips is bigendian by default
+ 
 2.0.0
  - new build backend 
  - iface can be used for binding

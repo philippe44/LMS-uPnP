@@ -7,17 +7,21 @@ HOST ?= $(word 2, $(subst -, ,$(CC)))
 
 ifneq ($(HOST),macos)
 ifneq ($(HOST),solaris)
-LINKSTATIC += -static
+LINKSTATIC = -static
 else
 LDFLAGS += -lssp	
 endif
+endif
+
+ifeq ($(HOST)-$(PLATFORM), linux-x86_64)
+LDFLAGS += -lmvec
 endif
 
 BUILDDIR	= bin/$(HOST)/$(PLATFORM)
 EXECUTABLE 	= bin/squeeze2upnp-$(HOST)-$(PLATFORM)
 EXECUTABLE_STATIC = bin/squeeze2upnp-$(HOST)-$(PLATFORM)-static
 
-SRC			= squeeze2upnp
+SRC		= squeeze2upnp
 SQUEEZELITE	= squeezelite
 TOOLS		= crosstools/src
 MDNS		= libmdns/targets
@@ -71,11 +75,14 @@ LIBRARY_STATIC 	= $(LIBRARY) $(OPENSSL)/libopenssl.a
 
 all: directory $(EXECUTABLE) $(EXECUTABLE_STATIC)
 
-$(EXECUTABLE): $(OBJECTS) $(DEPS)
-	$(CC) $(OBJECTS) $(LIBRARY) $(LDFLAGS) -o $@
+$(EXECUTABLE): $(OBJECTS)
+	$(CC) $(OBJECTS) $(LIBRARY) $(CFLAGS) $(LDFLAGS) -o $@
 	
-$(EXECUTABLE_STATIC): $(OBJECTS_STATIC) $(DEPS)
-	$(CC) $(OBJECTS_STATIC) $(LIBRARY_STATIC) $(LDFLAGS) $(LINKSTATIC) -o $@	
+$(EXECUTABLE_STATIC): $(OBJECTS_STATIC)
+	$(CC) $(OBJECTS_STATIC) $(LIBRARY_STATIC) $(CFLAGS) $(LDFLAGS) $(LINKSTATIC) -o $@	
+
+$(OBJECTS): $(DEPS)
+$(OBJECTSTATICS): $(DEPS)	
 
 directory:
 	@mkdir -p $(BUILDDIR)
