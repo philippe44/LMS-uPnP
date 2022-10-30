@@ -210,7 +210,7 @@ static void LoadGlobalItem(char *name, char *val)
 void *FindMRConfig(void *ref, char *UDN) {
 	IXML_Node	*device = NULL;
 	IXML_Document *doc = (IXML_Document*) ref;
-	IXML_Element* elm = ixmlDocument_getElementById(doc, "airupnp");
+	IXML_Element* elm = ixmlDocument_getElementById(doc, "squeeze2upnp");
 	IXML_NodeList* l1_node_list = ixmlDocument_getElementsByTagName((IXML_Document*) elm, "udn");
 
 	for (unsigned i = 0; i < ixmlNodeList_length(l1_node_list); i++) {
