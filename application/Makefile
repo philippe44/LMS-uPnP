@@ -2,6 +2,14 @@ ifeq ($(CC),cc)
 CC=$(lastword $(subst /, ,$(shell readlink -f `which cc`)))
 endif
 
+ifeq ($(findstring gcc,$(CC)),gcc)
+CFLAGS  += -Wno-deprecated-declarations -Wno-format-truncation -Wno-stringop-truncation 
+LDFLAGS += -s -lstdc++
+else
+CFLAGS += -fno-temp-file
+LDFLAGS += -lc++
+endif
+
 PLATFORM ?= $(firstword $(subst -, ,$(CC)))
 HOST ?= $(word 2, $(subst -, ,$(CC)))
 
@@ -21,7 +29,7 @@ BUILDDIR	= bin/$(HOST)/$(PLATFORM)
 EXECUTABLE 	= bin/squeeze2upnp-$(HOST)-$(PLATFORM)
 EXECUTABLE_STATIC = bin/squeeze2upnp-$(HOST)-$(PLATFORM)-static
 
-SRC		= squeeze2upnp
+SRC	        = squeeze2upnp
 SQUEEZELITE	= squeezelite
 TOOLS		= crosstools/src
 MDNS		= libmdns/targets
@@ -32,8 +40,8 @@ OPENSSL		= libopenssl/targets/$(HOST)/$(PLATFORM)
 
 DEFINES 	= -DCODECS -DUSE_SSL -D_GNU_SOURCE -DUPNP_STATIC_LIB -DLINKALL -DRESAMPLE
 
-CFLAGS  	+= -Wall -Wno-deprecated-declarations -Wno-format-truncation -Wno-stringop-truncation -fPIC -ggdb -O2 $(DEFINES) -fdata-sections -ffunction-sections 
-LDFLAGS += -s -lpthread -ldl -lm -lstdc++ -L. 
+CFLAGS  += -Wall -fPIC -ggdb -O2 $(DEFINES) -fdata-sections -ffunction-sections 
+LDFLAGS += -lpthread -ldl -lm -L. 
 
 vpath %.c $(TOOLS):$(SRC):$(SQUEEZELITE)
 vpath %.cpp $(TOOLS):$(SRC):$(SQUEEZELITE)

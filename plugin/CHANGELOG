@@ -1,3 +1,6 @@
+2.0.3
+ - add arm64 for M1
+ 
 2.0.2
  - copy of airupnp config code was causing players to be added all the time
  
