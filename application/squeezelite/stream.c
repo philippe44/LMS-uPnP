@@ -37,7 +37,13 @@ static log_level 	*loglevel = &stream_loglevel;
 #define UNLOCK_S mutex_unlock(ctx->streambuf->mutex)
 
 #if USE_SSL
+
+#if WIN
+#define _last_error() WSAGetLastError()
+#define ERROR_WOULDBLOCK WSAEWOULDBLOCK
+#else
 #define _last_error() ERROR_WOULDBLOCK
+#endif
 
 static SSL_CTX *SSLctx = NULL;
 static int SSLcount = 0;

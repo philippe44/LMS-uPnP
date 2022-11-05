@@ -59,7 +59,7 @@ do
 	IFS=- read -r platform host dummy <<< $cc
 
 	export CFLAGS=${cflags[$cc]}
-	make CC=${alias[$cc]:-$cc} HOST=$host PLATFORM=$platform $clean
+	make CC=${alias[$cc]:-$cc} HOST=$host PLATFORM=$platform $clean -j8
 	
 	if [[ -n $clean ]]; then
 		continue
