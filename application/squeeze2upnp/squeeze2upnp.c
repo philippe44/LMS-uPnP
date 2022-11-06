@@ -1716,11 +1716,13 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "error opening logfile %s: %s\n", glLogFile, strerror(errno));
 		}
 	}
-	LOG_ERROR("Starting squeeze2upnp version: %s", VERSION);
+
+	LOG_WARN("Starting squeeze2upnp version: %s", VERSION);
+
 	if (strtod("0.30", NULL) != 0.30) {
-		LOG_ERROR("Wrong GLIBC version, use -static build", NULL);
-		exit(1);
+		LOG_WARN("weird GLIBC, try -static build in case of failure");
 	}
+
 	if (!glConfigID) {
 		LOG_ERROR("\n\n!!!!!!!!!!!!!!!!!! ERROR LOADING CONFIG FILE !!!!!!!!!!!!!!!!!!!!!\n", NULL);
 	}

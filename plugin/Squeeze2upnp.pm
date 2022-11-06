@@ -32,7 +32,7 @@ sub binaries {
 			return qw(squeeze2upnp-linux-aarch64 squeeze2upnp-linux-aarch64-static );
 		}
 		if ($os->{'binArch'} =~ /armhf/) {
-			return qw(squeeze2upnp-linux-arm squeeze2upnp-linux-arm-static );
+			return qw(squeeze2upnp-linux-arm squeeze2upnp-linux-arm-static squeeze2upnp-linux-armv6 squeeze2upnp-linux-armv6-static);
 		}
 		if ($os->{'binArch'} =~ /powerpc/) {
 			return qw(squeeze2upnp-linux-powerpc squeeze2upnp-linux-powerpc-static );
@@ -58,7 +58,14 @@ sub binaries {
 	}	
 	
 	if ($os->{'os'} eq 'Darwin') {
-		return qw(squeeze2upnp-macos-x86_64 squeeze2upnp-macos-x86_64-static);
+		
+		if ($os->{'osArch'} =~ /x86_64/) {
+			return qw(squeeze2upnp-macos-x86_64 squeeze2upnp-macos-x86_64-static);
+		}
+		if ($os->{'osArch'} =~ /arm64/) {
+			return qw(squeeze2upnp-macos-am64 squeeze2upnp-macos-arm64-static);
+		}
+		
 	}
 	
 	if ($os->{'os'} eq 'Windows') {
