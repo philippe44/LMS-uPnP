@@ -80,6 +80,7 @@ log_level	upnp_loglevel = lINFO;
 
 tMRConfig			glMRConfig = {
 							false,      	// SeekAfterPause
+							true,			// LivePause
 							false,			// ByteSeek
 							true,			// Enabled
 							PRESENCE_TIMEOUT, // Removal timeout
@@ -451,7 +452,8 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, uint8
 			}
 
 			// pause after volume has been changed
-			AVTBasic(Device, "Pause");
+			if (Device->Config.LivePause || Device->Duration) AVTBasic(Device, "Pause");
+			else AVTBasic(Device, "Stop");
 			Device->sqState = action;
 
 			break;

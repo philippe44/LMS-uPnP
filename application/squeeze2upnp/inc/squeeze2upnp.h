@@ -57,6 +57,7 @@ struct sService {
 typedef struct sMRConfig
 {
 	bool		SeekAfterPause;
+	bool		LivePause;
 	bool		ByteSeek;
 	bool		Enabled;
 	int			RemoveTimeout;

@@ -164,8 +164,8 @@ PLUGIN_UPNPBRIDGE_STREAMOPTIONS_DESC
 	EN	<br>- Some players support gapless playback and thus automatically move to next track in playlist. This is automatically
 	EN	detected, but you can force it disabled. Others (e.g. Bose) are totally broken and are stuck toward track end. Use 'force'
 	EN	to force them to move to next track
-	EN	<br>- UPnP players can use different methods to restart from paused position. If your player does not pause or resume, 
-	EN	use this tp force LMS to restart from paused position
+	EN	<br>- If your player does not resume where it was paused, use this to force LMS to restart from memorized position
+	EN	<br>- Some players refuse to pause live streams (webradios). Use this to stop when LMS requests a pause
 	EN	<br>- With large buffers, next track can be requested very quickly and some remote streaming services might close the connection.
 	EN	That request can be delayed up to &ltN&gt seconds before end of the current track. Set to 0 to request it immediately
 	EN	<br>see User Guide for more details (really). 
@@ -192,7 +192,22 @@ PLUGIN_UPNPBRIDGE_NEXTFORCE
 	EN	Force
 	
 PLUGIN_UPNPBRIDGE_SEEKAFTERPAUSE
-	EN	Seek on resume
+	EN	Unpause
+	
+PLUGIN_UPNPBRIDGE_UNPAUSESEEK
+	EN	Seek
+	
+PLUGIN_UPNPBRIDGE_UNPAUSERESUME
+	EN	Resume
+	
+PLUGIN_UPNPBRIDGE_LIVEPAUSE
+	EN	Live pause	
+	
+PLUGIN_UPNPBRIDGE_PAUSE
+	EN	Pause		
+	
+PLUGIN_UPNPBRIDGE_STOP
+	EN	Stop			
 	
 PLUGIN_UPNPBRIDGE_NEXTDELAY1
 	EN	Next

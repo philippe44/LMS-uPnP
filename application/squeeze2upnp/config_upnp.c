@@ -78,6 +78,7 @@ void SaveConfig(char *name, void *ref, bool full) {
 	XMLUpdateNode(doc, common, false, "roon_mode", "%d", (int) glDeviceParam.roon_mode);
 	XMLUpdateNode(doc, common, false, "forced_mimetypes", "%s", glMRConfig.ForcedMimeTypes);
 	XMLUpdateNode(doc, common, false, "seek_after_pause", "%d", (int) glMRConfig.SeekAfterPause);
+	XMLUpdateNode(doc, common, false, "live_pause", "%d", (int)glMRConfig.LivePause);
 	XMLUpdateNode(doc, common, false, "send_icy", "%d", (int) glMRConfig.SendIcy);
 	XMLUpdateNode(doc, common, false, "volume_on_play", "%d", (int) glMRConfig.VolumeOnPlay);
 	XMLUpdateNode(doc, common, false, "volume_feedback", "%d", (int) glMRConfig.VolumeFeedback);
@@ -167,6 +168,7 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "flac_header")) sq_conf->flac_header = atol(val);
 	if (!strcmp(name, "forced_mimetypes")) strcpy(Conf->ForcedMimeTypes, val);
 	if (!strcmp(name, "seek_after_pause")) Conf->SeekAfterPause = atol(val);
+	if (!strcmp(name, "live_pause")) Conf->LivePause = atol(val);
 	if (!strcmp(name, "volume_on_play")) Conf->VolumeOnPlay = atol(val);
 	if (!strcmp(name, "volume_feedback")) Conf->VolumeFeedback = atol(val);
 	if (!strcmp(name, "max_volume")) Conf->MaxVolume = atol(val);

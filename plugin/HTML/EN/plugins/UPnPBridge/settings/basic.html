@@ -120,19 +120,25 @@
 		[% END %]
 		</select>
 		[% "PLUGIN_UPNPBRIDGE_ACCEPTNEXTURI" | string %]
-		&nbsp<select class="stdedit" name="accept_nexturi" id="accept_nexturi">
+		<select class="stdedit" name="accept_nexturi" id="accept_nexturi">
 		[% FOREACH entry IN [ ['', ''], ['PLUGIN_UPNPBRIDGE_YES','1'], ['PLUGIN_UPNPBRIDGE_NO', '0'], ['PLUGIN_UPNPBRIDGE_NEXTFORCE','-1'] ] %]
 			<option [% IF entry.1 == accept_nexturi %]selected[% END %] value="[% entry.1 %]">[% entry.0 | string %]</option>
 		[% END %]
 		</select>
-		[% "PLUGIN_UPNPBRIDGE_SEEKAFTERPAUSE" | string %]&nbsp
+		[% "PLUGIN_UPNPBRIDGE_SEEKAFTERPAUSE" | string %]
 		<select class="stdedit" name="seek_after_pause" id="seek_after_pause">
-		[% FOREACH entry IN YESNOBOX %] 
+		[% FOREACH entry IN [ ['', ''],  ['PLUGIN_UPNPBRIDGE_UNPAUSERESUME', '0'], ['PLUGIN_UPNPBRIDGE_UNPAUSESEEK','1'] ] %]
 			<option [% IF entry.1 == seek_after_pause %]selected[% END %] value="[% entry.1 %]">[% entry.0 | string %]</option>
 		[% END %]
 		</select>
+		[% "PLUGIN_UPNPBRIDGE_LIVEPAUSE" | string %]
+		<select class="stdedit" name="live_pause" id="live_pause">
+		[% FOREACH entry IN [ ['', ''], ['PLUGIN_UPNPBRIDGE_PAUSE', '1'], ['PLUGIN_UPNPBRIDGE_STOP', '0'] ] %]
+			<option [% IF entry.1 == live_pause %]selected[% END %] value="[% entry.1 %]">[% entry.0 | string %]</option>
+		[% END %]
+		</select>		
 		&nbsp[% "PLUGIN_UPNPBRIDGE_NEXTDELAY1" | string %]
-		<input type="text" class="stdedit" name="next_delay" id="next_delay" value="[% next_delay %]" size="2">
+		<input type="text" class="stdedit" name="next_delay" id="next_delay" value="[% next_delay %]" size="1">
 		[% "PLUGIN_UPNPBRIDGE_NEXTDELAY2" | string %]
 	[% END %]
 	
