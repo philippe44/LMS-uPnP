@@ -175,8 +175,9 @@ bool cli_open_socket(struct thread_ctx_s *ctx) {
 	addr.sin_addr.s_addr = ctx->slimproto_ip;
 	addr.sin_port = htons(ctx->cli_port);
 
-	if (tcp_connect_timeout(ctx->cli_sock, addr, 200))  {
+	if (tcp_connect_timeout(ctx->cli_sock, addr, 250))  {
 		LOG_ERROR("[%p] unable to connect to server with cli", ctx);
+		closesocket(ctx->cli_sock);
 		ctx->cli_sock = -1;
 		return false;
 	}
@@ -189,13 +190,10 @@ bool cli_open_socket(struct thread_ctx_s *ctx) {
 /*---------------------------------------------------------------------------*/
 #define CLI_SEND_SLEEP (10000)
 #define CLI_SEND_TO (1*500000)
-
 #define CLI_KEEP_DURATION (15*60*1000)
 #define CLI_PACKET 4096
-char *cli_send_cmd(char *cmd, bool req, bool decode, struct thread_ctx_s *ctx)
-{
+char *cli_send_cmd(char *cmd, bool req, bool decode, struct thread_ctx_s *ctx) {
 	char *packet;
-
 	int wait;
 	size_t len;
 	char *rsp = NULL;
@@ -207,12 +205,8 @@ char *cli_send_cmd(char *cmd, bool req, bool decode, struct thread_ctx_s *ctx)
 		return NULL;
 	}
 
-
 	packet = malloc(CLI_PACKET + 1);
-
 	ctx->cli_timeout = gettime_ms() + CLI_KEEP_DURATION;
-
-
 	wait = CLI_SEND_TO / CLI_SEND_SLEEP;
 
 	cmd = cli_encode(cmd);
@@ -224,7 +218,6 @@ char *cli_send_cmd(char *cmd, bool req, bool decode, struct thread_ctx_s *ctx)
 	send_packet((u8_t*) packet, len, ctx->cli_sock);
 
 	// first receive the tag and then point to the last '\n'
-
 	len = 0;
 	while (wait)	{
 		int k;
