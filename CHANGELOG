@@ -1,3 +1,7 @@
+2.0.7.1
+ - glibc is really static (-nss)
+ - give a bit of love to log window
+ 
 2.0.7
  - use non-debug dll's
  

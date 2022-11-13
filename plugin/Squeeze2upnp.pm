@@ -85,7 +85,7 @@ sub start {
 
 	my @params;
 	my $logging;
-
+	
 	push @params, ("-Z");
 	
 	if ($prefs->get('autosave')) {
@@ -222,41 +222,27 @@ sub configFile {
 }
 
 sub logHandler {
-	my ($client, $params, undef, undef, $response) = @_;
+	my ($client, $params, $callback, $httpClient, $response) = @_;
+	my $body = \'';
 
-	$response->header("Refresh" => "10; url=" . $params->{path} . ($params->{lines} ? '?lines=' . $params->{lines} : ''));
-	$response->header("Content-Type" => "text/plain; charset=utf-8");
+	if ( main::WEBUI ) {
+		$body = Slim::Web::Pages::Common->logFile($httpClient, $params, $response, 'upnpbridge');
+		# as of LMS 8.3, this is in fact ignored (overwritten)
+		$response->header('Content-Type' => 'text/html; charset=utf-8');	
+	}	
 
-	my $body = '';
-	my $file = File::ReadBackwards->new(logFile());
-	
-	if ($file){
-
-		my @lines;
-		my $count = $params->{lines} || 1000;
-
-		while ( --$count && (my $line = $file->readline()) ) {
-			unshift (@lines, $line);
-		}
-
-		$body .= join('', @lines);
-
-		$file->close();			
-	};
-
-	return \$body;
+	return $body;
 }
 
 sub configHandler {
 	my ($client, $params, undef, undef, $response) = @_;
-
-	$response->header("Content-Type" => "text/xml; charset=utf-8");
-
 	my $body = '';
+	
+	# as of LMS 8.3, this is in fact ignored (overwritten)
+	$response->header('Content-Type' => 'text/xml; charset=utf-8');
 	
 	if (-e configFile) {
 		open my $fh, '<', configFile;
-		
 		read $fh, $body, -s $fh;
 		close $fh;
 	}	
@@ -266,7 +252,6 @@ sub configHandler {
 
 sub guideHandler {
 	my ($client, $params) = @_;
-		
 	return Slim::Web::HTTP::filltemplatefile('plugins/UPnPBridge/userguide.htm', $params);
 }
 
