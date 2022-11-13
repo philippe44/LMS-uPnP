@@ -5,7 +5,7 @@
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_AUTORUN" desc="PLUGIN_UPNPBRIDGE_AUTORUN_DESC" %]
 		<input name="autorun" type="checkbox" [% IF autorun %] checked [% END %]> [% "PLUGIN_UPNPBRIDGE_RUNNING_$running" | string %] [% IF binary %] ([% binary %]) [% END %]
 		[%IF running %] &nbsp<input name="restart" type="submit" value=[% "PLUGIN_UPNPBRIDGE_RESTART" | string %]> [% END %]
-		&nbsp&nbsp<b><a href="upnpbridge-guide" target="user guide">[% "PLUGIN_UPNPBRIDGE_USERGUIDELINK" | string %]</a></b>
+		&nbsp&nbsp<b><a href="upnpbridge-guide" target="guide">[% "PLUGIN_UPNPBRIDGE_USERGUIDELINK" | string %]</a></b>
 		[%IF running %] <b><font color="red">&nbsp&nbsp[% "PLUGIN_UPNPBRIDGE_WARNING" | string %]</font></b> [% END %]
 	[% END %]
 	

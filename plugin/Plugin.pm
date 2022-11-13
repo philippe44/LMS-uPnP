@@ -56,6 +56,8 @@ sub initPlugin {
 	
 	$fade_volume = \&Slim::Player::SqueezePlay::fade_volume;
 	*Slim::Player::SqueezePlay::fade_volume = \&fade_volume;
+	
+	*Slim::Utils::Log::upnpbridgeLogFile = sub { Plugins::UPnPBridge::Squeeze2upnp->logFile; };
 
 	$class->SUPER::initPlugin(@_);
 	
