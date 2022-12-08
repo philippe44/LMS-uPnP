@@ -70,7 +70,6 @@ void SaveConfig(char *name, void *ref, bool full) {
 	XMLUpdateNode(doc, common, false, "remove_timeout", "%d", (int) glMRConfig.RemoveTimeout);
 	XMLUpdateNode(doc, common, false, "codecs", glDeviceParam.codecs);
 	XMLUpdateNode(doc, common, false, "mode", glDeviceParam.mode);
-	XMLUpdateNode(doc, common, false, "next_delay", "%d", (int) glDeviceParam.next_delay);
 	XMLUpdateNode(doc, common, false, "raw_audio_format", glDeviceParam.raw_audio_format);
 	XMLUpdateNode(doc, common, false, "sample_rate", "%d", (int) glDeviceParam.sample_rate);
 	XMLUpdateNode(doc, common, false, "L24_format", "%d", (int) glDeviceParam.L24_format);
@@ -159,7 +158,6 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "remove_timeout")) Conf->RemoveTimeout = atol(val);
 	if (!strcmp(name, "codecs")) strcpy(sq_conf->codecs, val);
 	if (!strcmp(name, "mode")) strcpy(sq_conf->mode, val);
-	if (!strcmp(name, "next_delay")) sq_conf->next_delay = atol(val);
 	if (!strcmp(name, "roon_mode")) sq_conf->roon_mode = atol(val);
 	if (!strcmp(name, "raw_audio_format")) strcpy(sq_conf->raw_audio_format, val);
 	if (!strcmp(name, "store_prefix")) strcpy(sq_conf->store_prefix, val);			//RO

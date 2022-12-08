@@ -114,7 +114,6 @@ sq_dev_param_t glDeviceParam = {
 					OUTPUTBUF_SIZE,			// output_buffer_size
 					"aac,ogg,ops,ogf,flc,alc,wav,aif,pcm,mp3",		// codecs
 					"thru",					// mode
-					15,						// next_delay
 					"raw,wav,aif",			// raw_audio_format
 					"?",                    // server
 					96000,			        // sample_rate

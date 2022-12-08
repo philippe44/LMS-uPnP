@@ -166,8 +166,6 @@ PLUGIN_UPNPBRIDGE_STREAMOPTIONS_DESC
 	EN	to force them to move to next track
 	EN	<br>- If your player does not resume where it was paused, use this to force LMS to restart from memorized position
 	EN	<br>- Some players refuse to pause live streams (webradios). Use this to stop when LMS requests a pause
-	EN	<br>- With large buffers, next track can be requested very quickly and some remote streaming services might close the connection.
-	EN	That request can be delayed up to &ltN&gt seconds before end of the current track. Set to 0 to request it immediately
 	EN	<br>see User Guide for more details (really). 
 		
 PLUGIN_UPNPBRIDGE_HTTPMODE
@@ -209,12 +207,6 @@ PLUGIN_UPNPBRIDGE_PAUSE
 PLUGIN_UPNPBRIDGE_STOP
 	EN	Stop			
 	
-PLUGIN_UPNPBRIDGE_NEXTDELAY1
-	EN	Next
-	
-PLUGIN_UPNPBRIDGE_NEXTDELAY2
-	EN	afore end
-
 PLUGIN_UPNPBRIDGE_UPNPAUDIOCAPS
 	EN	UPnP player audio capabilities
 

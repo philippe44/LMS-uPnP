@@ -35,7 +35,6 @@ typedef	struct sq_dev_param_s {
 	unsigned 	outputbuf_size;
 	char		codecs[STR_LEN];
 	char		mode[STR_LEN];
-	int 		next_delay;
 	char 		raw_audio_format[STR_LEN];
 	char		server[STR_LEN];
 	uint32_t 	sample_rate;

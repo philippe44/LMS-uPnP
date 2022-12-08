@@ -14,7 +14,7 @@ use Slim::Utils::Log;
 my $prefs = preferences('plugin.upnpbridge');
 my $log   = logger('plugin.upnpbridge');
 my @xmlmain = qw(binding log_limit);
-my @xmldevice = qw(name mac stream_length accept_nexturi next_delay sample_rate mode codecs L24_format flac_header enabled remove_timeout send_metadata volume_on_play max_volume raw_audio_format send_coverart coverart seek_after_pause live_pause send_icy volume_feedback server forced_mimetypes);
+my @xmldevice = qw(name mac stream_length accept_nexturi sample_rate mode codecs L24_format flac_header enabled remove_timeout send_metadata volume_on_play max_volume raw_audio_format send_coverart coverart seek_after_pause live_pause send_icy volume_feedback server forced_mimetypes);
 my @prefs_bool  = qw(autorun logging autosave eraselog useLMSsocket);
 my @prefs_other = qw(output bin debugs opts baseport);
 

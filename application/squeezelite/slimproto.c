@@ -2,7 +2,7 @@
  *  Squeezelite - lightweight headless squeezebox emulator
  *
  *  (c) Adrian Smith 2012-2014, triode1@btinternet.com
- *	(c) Philippe 2015-2017, philippe_44@outlook.com
+ *	(c) Philippe, philippe_44@outlook.com
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,7 +33,6 @@ decoder is running at that time
 */
 
 /* TODO
-- maybe one single CLI socket for all machines
 - move from CLI to COMET
 */
 
@@ -332,7 +331,8 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 				break;
 			}
 
-			stream_sock(ip, port, strm->flags & 0x20, header, header_len, strm->threshold * 1024, ctx->autostart >= 2, ctx);
+			stream_sock(ip, port, strm->flags & 0x20, header, header_len, strm->threshold * 1024, 
+						ctx->autostart >= 2, ctx->output.state > OUTPUT_STOPPED, ctx);
 
 			sendSTAT("STMc", 0, ctx);
 			ctx->canSTMdu = ctx->sentSTMu = ctx->sentSTMo = ctx->sentSTMl = ctx->sendSTMd = false;
@@ -733,8 +733,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			 the end of the track
 			*/
 			if ((ctx->decode.state == DECODE_COMPLETE && ctx->canSTMdu && ctx->status.output_ready &&
-				(ctx->output.encode.flow || _sendSTMu || !ctx->output.STMd_delay ||
-				 (ctx->status.duration && ctx->status.duration - ctx->status.ms_played < ctx->output.STMd_delay))) ||
+				(ctx->output.encode.flow || _sendSTMu)) ||
 				ctx->decode.state == DECODE_ERROR) {
 				if (ctx->decode.state == DECODE_COMPLETE) _sendSTMd = true;
 				if (ctx->decode.state == DECODE_ERROR)    _sendSTMn = true;
@@ -1024,7 +1023,6 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 	out->completed = false;
 	out->duration = info.metadata.duration;
 	out->bitrate = info.metadata.bitrate;
-	out->STMd_delay = info.metadata.remote ? ctx->config.next_delay*1000 : 0;
 	out->icy.allowed = false;
 
 	// read source parameters (if any)

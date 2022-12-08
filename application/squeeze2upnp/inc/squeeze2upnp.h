@@ -104,9 +104,9 @@ struct sMR {
 	pthread_t 		Thread;
 	double			Volume, PauseVolume;
 	bool			Muted;
-	uint32_t			VolumeStampRx, VolumeStampTx;	// timestamps to filter volume loopbacks
-	uint16_t			ErrorCount;                     // UPnP protocol error count
-	uint32_t			LastSeen;						// presence timeout for player which went dark
+	uint32_t		VolumeStampRx, VolumeStampTx;	// timestamps to filter volume loopbacks
+	uint16_t		ErrorCount;                     // UPnP protocol error count
+	uint32_t		LastSeen;						// presence timeout for player which went dark
 	char			*Sink;
 };
 

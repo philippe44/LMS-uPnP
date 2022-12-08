@@ -267,7 +267,7 @@ void 		send_packet(u8_t *packet, size_t len, sockfd sock);
 void 		wake_controller(struct thread_ctx_s *ctx);
 
 // stream.c
-typedef enum { STOPPED = 0, DISCONNECT, STREAMING_WAIT,
+typedef enum { STOPPED = 0, DISCONNECT, ON_HOLD, STREAMING_WAIT,
 			   STREAMING_BUFFERING, STREAMING_FILE, STREAMING_HTTP, SEND_HEADERS, RECV_HEADERS } stream_state;
 typedef enum { DISCONNECT_OK = 0, LOCAL_DISCONNECT = 1, REMOTE_DISCONNECT = 2, UNREACHABLE = 3, TIMEOUT = 4 } disconnect_code;
 
@@ -294,7 +294,8 @@ struct streamstate {
 bool 		stream_thread_init(unsigned streambuf_size, struct thread_ctx_s *ctx);
 void 		stream_close(struct thread_ctx_s *ctx);
 void 		stream_file(const char *header, size_t header_len, unsigned threshold, struct thread_ctx_s *ctx);
-void 		stream_sock(u32_t ip, u16_t port, bool use_ssl, const char *header, size_t header_len, unsigned threshold, bool cont_wait, struct thread_ctx_s *ctx);
+void 		stream_sock(u32_t ip, u16_t port, bool use_ssl, const char *header, size_t header_len, unsigned threshold, 
+						bool cont_wait, bool hold, struct thread_ctx_s *ctx);
 bool 		stream_disconnect(struct thread_ctx_s *ctx);
 
 // decode.c
@@ -410,7 +411,6 @@ struct outputstate {
 	u32_t 	duration;       // duration of track in ms, 0 if unknown
 	u32_t	offset;			// offset of track in ms (for flow mode)
 	u32_t	bitrate;	  	// as per name
-	u32_t  	STMd_delay;		// shall this track delay STMd toward the end
 	ssize_t length;			// HTTP content-length (-1:no chunked, -3 chunked if possible, >0 fake length)
 	u16_t  	index;			// 16 bits track counter(see output_thread)
 	u16_t	port;			// port of latest thread (mainy used for codc)
