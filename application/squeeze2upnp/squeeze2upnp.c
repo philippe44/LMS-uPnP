@@ -1358,11 +1358,15 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 		NFREE(EventURL);
 		NFREE(ControlURL);
 
-		if (ServiceURL && cSearchedSRV[i].idx == AVT_SRV_IDX && !XMLFindAction(location, ServiceURL, "SetNextAVTransportURI") && Device->Config.AcceptNextURI == NEXT_GAPLESS)
+		if (ServiceURL && cSearchedSRV[i].idx == AVT_SRV_IDX && !XMLFindAction(location, ServiceURL, "SetNextAVTransportURI") && Device->Config.AcceptNextURI == NEXT_GAPLESS) {
+			LOG_INFO("[%p]: player can't do gapless or gapless disabled by config (%d)", Device, Device->Config.AcceptNextURI);
 			Device->Config.AcceptNextURI = NEXT_GAPPED;
+		}
 
-		if (ServiceURL && cSearchedSRV[i].idx == AVT_SRV_IDX && XMLFindAction(location, ServiceURL, "GetInfoEx"))
+		if (ServiceURL && cSearchedSRV[i].idx == AVT_SRV_IDX && XMLFindAction(location, ServiceURL, "GetInfoEx")) {
+			LOG_INFO("[%p]: player has extended information", Device);
 			Device->InfoExPoll = INFOEX_POLL;
+		}
 
 		NFREE(ServiceURL);
 	}

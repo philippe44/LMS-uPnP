@@ -69,7 +69,6 @@ $RECYCLE.BIN/
 *.msp
 
 # C++ builder related
-*.*proj
 *.zip
 *.z
 *.local
