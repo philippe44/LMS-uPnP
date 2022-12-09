@@ -1,5 +1,8 @@
+2.1.1
+ - release
+
 2.1.0.0
- - no more "nextèdelay" but instead wait until UPnP player requests track to start LMS streaming
+ - no more "next_delay" but instead wait until UPnP player requests track to start LMS streaming
  
 2.0.7.3
  - don't use debug dll's
