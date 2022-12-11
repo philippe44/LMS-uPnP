@@ -24,8 +24,6 @@
 extern log_level	output_loglevel;
 static log_level 	*loglevel = &output_loglevel;
 
-#define LOCK_S 	 mutex_lock(ctx->streambuf->mutex)
-#define UNLOCK_S mutex_unlock(ctx->streambuf->mutex)
 #define LOCK_O 	 mutex_lock(ctx->outputbuf->mutex)
 #define UNLOCK_O mutex_unlock(ctx->outputbuf->mutex)
 #define LOCK_D   mutex_lock(ctx->decode.mutex)
@@ -172,11 +170,6 @@ static void output_http_thread(struct thread_param_s *param) {
 
 		// need to wait till we have an initialized codec
 		if (!acquired && n > 0) {
-			// make sure we don't start LMS too early to avoid stalling
-			LOCK_S;
-			if (ctx->stream.state == ON_HOLD) ctx->stream.state = SEND_HEADERS;
-			UNLOCK_S;
-
 			LOCK_D;
 			if (ctx->decode.new_stream) {
 				UNLOCK_D;

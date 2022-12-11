@@ -550,7 +550,7 @@ void stream_file(const char *header, size_t header_len, unsigned threshold, stru
 }
 
 void stream_sock(u32_t ip, u16_t port, bool use_ssl, const char *header, size_t header_len, unsigned threshold, 
-				 bool cont_wait, bool hold, struct thread_ctx_s *ctx) {
+				 bool cont_wait, struct thread_ctx_s *ctx) {
 	int sock;
 	char *p;
 
@@ -584,7 +584,7 @@ void stream_sock(u32_t ip, u16_t port, bool use_ssl, const char *header, size_t 
 	LOCK_S;
 
 	ctx->fd = sock;
-	ctx->stream.state = hold ? ON_HOLD : SEND_HEADERS;
+	ctx->stream.state = SEND_HEADERS;
 	ctx->stream.cont_wait = cont_wait;
 	ctx->stream.meta_interval = 0;
 	ctx->stream.meta_next = 0;

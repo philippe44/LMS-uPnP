@@ -331,8 +331,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 				break;
 			}
 
-			stream_sock(ip, port, strm->flags & 0x20, header, header_len, strm->threshold * 1024, 
-						ctx->autostart >= 2, ctx->output.state > OUTPUT_STOPPED, ctx);
+			stream_sock(ip, port, strm->flags & 0x20, header, header_len, strm->threshold * 1024, ctx->autostart >= 2,  ctx);
 
 			sendSTAT("STMc", 0, ctx);
 			ctx->canSTMdu = ctx->sentSTMu = ctx->sentSTMo = ctx->sentSTMl = ctx->sendSTMd = false;

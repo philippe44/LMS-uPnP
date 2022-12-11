@@ -267,7 +267,7 @@ void 		send_packet(u8_t *packet, size_t len, sockfd sock);
 void 		wake_controller(struct thread_ctx_s *ctx);
 
 // stream.c
-typedef enum { STOPPED = 0, DISCONNECT, ON_HOLD, STREAMING_WAIT,
+typedef enum { STOPPED = 0, DISCONNECT, STREAMING_WAIT,
 			   STREAMING_BUFFERING, STREAMING_FILE, STREAMING_HTTP, SEND_HEADERS, RECV_HEADERS } stream_state;
 typedef enum { DISCONNECT_OK = 0, LOCAL_DISCONNECT = 1, REMOTE_DISCONNECT = 2, UNREACHABLE = 3, TIMEOUT = 4 } disconnect_code;
 
@@ -295,7 +295,7 @@ bool 		stream_thread_init(unsigned streambuf_size, struct thread_ctx_s *ctx);
 void 		stream_close(struct thread_ctx_s *ctx);
 void 		stream_file(const char *header, size_t header_len, unsigned threshold, struct thread_ctx_s *ctx);
 void 		stream_sock(u32_t ip, u16_t port, bool use_ssl, const char *header, size_t header_len, unsigned threshold, 
-						bool cont_wait, bool hold, struct thread_ctx_s *ctx);
+						bool cont_wait, struct thread_ctx_s *ctx);
 bool 		stream_disconnect(struct thread_ctx_s *ctx);
 
 // decode.c
@@ -568,6 +568,7 @@ struct thread_ctx_s {
 	sq_callback_t	callback;
 	void			*MR;
 	u8_t 	last_command;
+	u32_t lastFill;
 };
 
 extern struct thread_ctx_s 	thread_ctx[MAX_PLAYER];

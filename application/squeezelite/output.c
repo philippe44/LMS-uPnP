@@ -200,6 +200,15 @@ bool _output_fill(struct buffer *buf, FILE *store, struct thread_ctx_s *ctx) {
 	*/
 	if (bytes < HTTP_STUB_DEPTH) return true;
 
+	// start moderating download to 16B/s when getting close to limit
+	if (bytes < buf->size - 32768) {
+		u32_t now = gettime_ms();
+		if (now < ctx->lastFill + 1000) return true;
+		LOG_INFO("[%p]: moderating streaming (space: %d)", ctx, bytes);
+		bytes = min(bytes, 16);
+		ctx->lastFill = now;
+	}
+
 	// write header pending data if any and exit
 	if (p->header.buffer) {
 		bytes = min(p->header.count, _buf_cont_write(buf));
@@ -400,6 +409,9 @@ void _output_new_stream(struct buffer *obuf, FILE *store, struct thread_ctx_s *c
 		if (ctx->config.L24_format == L24_TRUNC16 && out->sample_size == 24) out->encode.sample_size = 16;
 		else out->encode.sample_size = out->sample_size;
 	}
+
+	// so that we can moderate streaming
+	ctx->lastFill = gettime_ms();
 
 	if (out->encode.mode == ENCODE_PCM) {
 		size_t length;
