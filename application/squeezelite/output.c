@@ -201,11 +201,11 @@ bool _output_fill(struct buffer *buf, FILE *store, struct thread_ctx_s *ctx) {
 	if (bytes < HTTP_STUB_DEPTH) return true;
 
 	// start moderating download to 16B/s when getting close to limit
-	if (bytes < buf->size - 32768) {
+	if (bytes < HTTP_STUB_DEPTH + 32768) {
 		u32_t now = gettime_ms();
 		if (now < ctx->lastFill + 1000) return true;
 		LOG_INFO("[%p]: moderating streaming (space: %d)", ctx, bytes);
-		bytes = min(bytes, 16);
+		bytes = 16;
 		ctx->lastFill = now;
 	}
 
