@@ -31,8 +31,8 @@ sub binaries {
 		if ($os->{'osArch'} =~ /aarch64/) {
 			return qw(squeeze2upnp-linux-aarch64 squeeze2upnp-linux-aarch64-static);
 		}
-		if ($os->{'binArch'} =~ /armhf/) {
-			return qw(squeeze2upnp-linux-arm squeeze2upnp-linux-arm-static squeeze2upnp-linux-armv6 squeeze2upnp-linux-armv6-static);
+		if ($os->{'binArch'} =~ /arm/) {
+			return qw(squeeze2upnp-linux-armv6 squeeze2upnp-linux-armv6-static squeeze2upnp-linux-arm squeeze2upnp-linux-arm-static);
 		}
 		if ($os->{'binArch'} =~ /powerpc/) {
 			return qw(squeeze2upnp-linux-powerpc squeeze2upnp-linux-powerpc-static);
@@ -72,7 +72,7 @@ sub bin {
 	my @binaries = $class->binaries;
 	my $bin = $prefs->get("bin");
 
-	return grep($bin, @binaries) ? $bin : @binaries;
+	return grep($bin, @binaries) ? $bin : @binaries[0];
 }
 
 sub start {
