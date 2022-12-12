@@ -30,6 +30,8 @@
 #include "openssl/err.h"
 #endif
 
+#define THROTTLE_LEVEL	(128*1024)
+
 extern log_level	stream_loglevel;
 static log_level 	*loglevel = &stream_loglevel;
 
@@ -405,9 +407,18 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 
 				// stream body into streambuf
 				} else {
-					int n;
+					int n, sleep = 0;
 
-					space = min(_buf_space(ctx->streambuf), _buf_cont_write(ctx->streambuf));
+					// need to leave some room to throttle down
+					space = min(_buf_space(ctx->streambuf), ctx->streambuf->size - THROTTLE_LEVEL);
+
+					// if we have reached low water level throttle down to 80 Bytes/s
+					if (space <= THROTTLE_LEVEL) {
+						space = 8;
+						sleep = 100 * 1000;
+					} 
+
+					space = min(space, _buf_cont_write(ctx->streambuf));
 
 					if (ctx->stream.meta_interval) {
 						space = min(space, ctx->stream.meta_next);
@@ -441,6 +452,7 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 					}
 
 					LOG_DEBUG("[%p] streambuf read %d bytes", ctx, n);
+					if (sleep) usleep(sleep);
 				}
 			}
 

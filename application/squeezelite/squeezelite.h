@@ -568,7 +568,6 @@ struct thread_ctx_s {
 	sq_callback_t	callback;
 	void			*MR;
 	u8_t 	last_command;
-	u32_t lastFill;
 };
 
 extern struct thread_ctx_s 	thread_ctx[MAX_PLAYER];

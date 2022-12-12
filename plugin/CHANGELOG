@@ -1,3 +1,9 @@
+2.1.10
+ - move throttle down to stream thread
+ 
+2.1.8
+ - sourceforge sha issue
+ 
 2.1.7
  - add NextURI "underrun" mode for problematic players
  - make sure we don't go below throttle threshold in one run

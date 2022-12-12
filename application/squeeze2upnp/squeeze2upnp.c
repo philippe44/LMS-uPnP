@@ -1454,7 +1454,7 @@ static bool Start(void) {
 	// sscanf does not capture empty strings
 	if (!strchr(glBinding, '?') && !sscanf(glBinding, "%[^:]:%hu", addr, &Port)) sscanf(glBinding, ":%hu", &Port);
 
-	Host = get_interface(addr);
+	Host = get_interface(addr, NULL);
 
 	// can't find a suitable interface
 	if (Host.s_addr == INADDR_NONE) return false;
