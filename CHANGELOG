@@ -1,3 +1,7 @@
+2.1.7
+ - add NextURI "underrun" mode for problematic players
+ - make sure we don't go below throttle threshold in one run
+ 
 2.1.6
  - restore selection of binaries
  

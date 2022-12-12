@@ -50,9 +50,10 @@ typedef	struct sq_dev_param_s {
 	char		coverart[STR_LEN];
 	// set at runtime, not from config
 	struct {
-		bool	use_cli;
-		char 	set_server[STR_LEN];
+		bool	 use_cli;
+		char 	 set_server[STR_LEN];
 		sq_icy_e send_icy;
+		bool	 wait_underrun;
 	};
 } sq_dev_param_t;
 

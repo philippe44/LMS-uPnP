@@ -80,6 +80,8 @@ static struct {
 #define DRAIN_LEN		3
 #define MAX_FRAMES_SEC 	10
 
+#define HTTP_THROTTLE_THRESHOLD	32768
+
 #if LINKALL
 #define FLAC(h, fn, ...) (FLAC__ ## fn)(__VA_ARGS__)
 #define FLAC_A(h, a)     (FLAC__ ## a)
@@ -201,12 +203,15 @@ bool _output_fill(struct buffer *buf, FILE *store, struct thread_ctx_s *ctx) {
 	if (bytes < HTTP_STUB_DEPTH) return true;
 
 	// start moderating download to 16B/s when getting close to limit
-	if (bytes < HTTP_STUB_DEPTH + 32768) {
+	if (bytes <= HTTP_STUB_DEPTH + HTTP_THROTTLE_THRESHOLD) {
 		u32_t now = gettime_ms();
 		if (now < ctx->lastFill + 1000) return true;
-		LOG_INFO("[%p]: moderating streaming (space: %d)", ctx, bytes);
+		LOG_INFO("[%p]: throttle streaming (space: %d)", ctx, bytes);
 		bytes = 16;
 		ctx->lastFill = now;
+	} else {
+		// we can't be below threshold right next time
+		bytes = min(bytes, buf->size - (HTTP_STUB_DEPTH + HTTP_THROTTLE_THRESHOLD));
 	}
 
 	// write header pending data if any and exit
