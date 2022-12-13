@@ -1,3 +1,6 @@
+2.1.11
+ - don't hold streambuf mutex during sleep
+  
 2.1.10
  - move throttle down to stream thread
  

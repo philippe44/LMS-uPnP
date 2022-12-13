@@ -30,8 +30,6 @@
 #include "openssl/err.h"
 #endif
 
-#define THROTTLE_LEVEL	(128*1024)
-
 extern log_level	stream_loglevel;
 static log_level 	*loglevel = &stream_loglevel;
 
@@ -216,6 +214,7 @@ static int connect_socket(bool use_ssl, struct thread_ctx_s *ctx) {
 }
 
 static void *stream_thread(struct thread_ctx_s *ctx) {
+	bool sleep = false;
 
 	while (ctx->stream_running) {
 
@@ -235,9 +234,10 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 		*/
 		space = min(_buf_space(ctx->streambuf), _buf_cont_write(ctx->streambuf));
 
-		if (ctx->fd < 0 || !space || ctx->stream.state <= STREAMING_WAIT) {
+		if (ctx->fd < 0 || !space || ctx->stream.state <= STREAMING_WAIT || sleep) {
 			UNLOCK_S;
 			usleep(100000);
+			sleep = false;
 			continue;
 		}
 
@@ -407,15 +407,15 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 
 				// stream body into streambuf
 				} else {
-					int n, sleep = 0;
+					int n;
 
 					// need to leave some room to throttle down
-					space = min(_buf_space(ctx->streambuf), ctx->streambuf->size - THROTTLE_LEVEL);
+					space = _buf_space(ctx->streambuf);
 
 					// if we have reached low water level throttle down to 80 Bytes/s
-					if (space <= THROTTLE_LEVEL) {
+					if (space < 128 * 1024) {
 						space = 8;
-						sleep = 100 * 1000;
+						sleep = true;
 					} 
 
 					space = min(space, _buf_cont_write(ctx->streambuf));
@@ -452,7 +452,6 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 					}
 
 					LOG_DEBUG("[%p] streambuf read %d bytes", ctx, n);
-					if (sleep) usleep(sleep);
 				}
 			}
 
