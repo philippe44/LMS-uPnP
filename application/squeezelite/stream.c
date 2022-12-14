@@ -38,35 +38,36 @@ static log_level 	*loglevel = &stream_loglevel;
 
 #if USE_SSL
 
-#if WIN
-#define _last_error() WSAGetLastError()
-#define ERROR_WOULDBLOCK WSAEWOULDBLOCK
-#else
-#define _last_error() ERROR_WOULDBLOCK
-#endif
-
 static SSL_CTX *SSLctx = NULL;
 static int SSLcount = 0;
 
+static int _last_error(struct thread_ctx_s* ctx) {
+	if (!ctx->ssl) return last_error();
+	return ctx->ssl_error ? ECONNABORTED : ERROR_WOULDBLOCK;
+}
+
 static int _recv(struct thread_ctx_s *ctx, void *buffer, size_t bytes, int options) {
-	int n;
 	if (!ctx->ssl) return recv(ctx->fd, buffer, bytes, options);
-	n = SSL_read(ctx->ssl, (u8_t*) buffer, bytes);
-	if (n <= 0 && SSL_get_error(ctx->ssl, n) == SSL_ERROR_ZERO_RETURN) return 0;
+	int n = SSL_read(ctx->ssl, (u8_t*) buffer, bytes);
+	if (n <= 0) {
+		int err = SSL_get_error(ctx->ssl, n);
+		if (err == SSL_ERROR_ZERO_RETURN) return 0;
+		ctx->ssl_error = (err != SSL_ERROR_WANT_READ && err != SSL_ERROR_WANT_WRITE);
+	}
 	return n;
 }
 
 static int _send(struct thread_ctx_s *ctx, void *buffer, size_t bytes, int options) {
-	int n;
 	if (!ctx->ssl) return send(ctx->fd, buffer, bytes, options);
-	while (1) {
-		int err;
+	for (int err, n;;) {
 		ERR_clear_error();
 		if ((n = SSL_write(ctx->ssl, (u8_t*) buffer, bytes)) >= 0) return n;
 		err = SSL_get_error(ctx->ssl, n);
-		if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE) continue;
+		ctx->ssl_error = (err != SSL_ERROR_WANT_READ && err != SSL_ERROR_WANT_WRITE);
+		if (!ctx->ssl_error) continue;
 		LOG_INFO("[%p]: SSL write error %d", ctx, err );
-		return n;	}
+		return n;	
+	}
 }
 
 /*
@@ -88,7 +89,7 @@ static int _poll(struct thread_ctx_s *ctx, struct pollfd *pollinfo, int timeout)
 #define _recv(ctx, buf, n, opt) recv(ctx->fd, buf, n, opt)
 #define _send(ctx, buf, n, opt) send(ctx->fd, buf, n, opt)
 #define _poll(ctx, pollinfo, timeout) poll(pollinfo, 1, timeout)
-#define _last_error() last_error()
+#define _last_error(x) last_error()
 #endif
 
 static bool send_header(struct thread_ctx_s *ctx) {
@@ -101,12 +102,12 @@ static bool send_header(struct thread_ctx_s *ctx) {
 	while (len) {
 		n = _send(ctx, ptr, len, MSG_NOSIGNAL);
 		if (n <= 0) {
-			if (n < 0 && last_error() == ERROR_WOULDBLOCK && try < 10) {
+			if (n < 0 && _last_error(ctx) == ERROR_WOULDBLOCK && try < 10) {
 				LOG_SDEBUG("[%p] retrying (%d) writing to socket", ctx, ++try);
 				usleep(1000);
 				continue;
 			}
-			LOG_WARN("[%p] failed writing to socket: %s", ctx, strerror(last_error()));
+			LOG_WARN("[%p] failed writing to socket: %s", ctx, strerror(_last_error(ctx)));
 			ctx->stream.disconnect = LOCAL_DISCONNECT;
 			ctx->stream.state = DISCONNECT;
 			wake_controller(ctx);
@@ -219,7 +220,7 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 	while (ctx->stream_running) {
 
 		struct pollfd pollinfo;
-		size_t space;
+		ssize_t space;
 
 		LOCK_S;
 
@@ -254,7 +255,7 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 				LOG_SDEBUG("[%p] ctx->streambuf read %d bytes", ctx, n);
 			}
 			if (n < 0) {
-				LOG_WARN("[%p] error reading: %s", ctx, strerror(last_error()));
+				LOG_WARN("[%p] error reading: %s", ctx, strerror(_last_error(ctx)));
 				_disconnect(DISCONNECT, REMOTE_DISCONNECT, ctx);
 			}
 
@@ -300,11 +301,11 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 
 					int n = _recv(ctx, &c, 1, 0);
 					if (n <= 0) {
-						if (n < 0 && last_error() == ERROR_WOULDBLOCK) {
+						if (n < 0 && _last_error(ctx) == ERROR_WOULDBLOCK) {
 							UNLOCK_S;
 							continue;
 						}
-						LOG_WARN("[%p] error reading headers: %s", ctx, n ? strerror(last_error()) : "closed");
+						LOG_WARN("[%p] error reading headers: %s", ctx, n ? strerror(_last_error(ctx)) : "closed");
 #if USE_SSL
 						if (!ctx->ssl && !ctx->stream.header_len) {
 							int sock;
@@ -363,11 +364,11 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 						u8_t c;
 						int n = _recv(ctx, &c, 1, 0);
 						if (n <= 0) {
-							if (n < 0 && last_error() == ERROR_WOULDBLOCK) {
+							if (n < 0 && _last_error(ctx) == ERROR_WOULDBLOCK) {
 								UNLOCK_S;
 								continue;
 							}
-							LOG_WARN("[%p] error reading icy meta: %s", ctx, n ? strerror(last_error()) : "closed");
+							LOG_WARN("[%p] error reading icy meta: %s", ctx, n ? strerror(_last_error(ctx)) : "closed");
 							_disconnect(STOPPED, LOCAL_DISCONNECT, ctx);
 							UNLOCK_S;
 							continue;
@@ -380,11 +381,11 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 					if (ctx->stream.meta_left) {
 						int n = _recv(ctx, ctx->stream.header + ctx->stream.header_len, ctx->stream.meta_left, 0);
 						if (n <= 0) {
-							if (n < 0 && last_error() == ERROR_WOULDBLOCK) {
+							if (n < 0 && _last_error(ctx) == ERROR_WOULDBLOCK) {
 								UNLOCK_S;
 								continue;
 							}
-							LOG_WARN("[%p] error reading icy meta: %s", ctx, n ? strerror(last_error()) : "closed");
+							LOG_WARN("[%p] error reading icy meta: %s", ctx, n ? strerror(_last_error(ctx)) : "closed");
 							_disconnect(STOPPED, LOCAL_DISCONNECT, ctx);
 							UNLOCK_S;
 							continue;
@@ -410,11 +411,11 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 					int n;
 
 					// need to leave some room to throttle down
-					space = _buf_space(ctx->streambuf);
+					space = (ssize_t) _buf_space(ctx->streambuf) - 128 * 1024;
 
 					// if we have reached low water level throttle down to 80 Bytes/s
-					if (space < 128 * 1024) {
-						space = 8;
+					if (space <= 0) {
+						space = min(_buf_space(ctx->streambuf), 8);
 						sleep = true;
 					} 
 
@@ -429,8 +430,8 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 						LOG_INFO("[%p] end of stream (t:%lld)", ctx, ctx->stream.bytes);
 						_disconnect(DISCONNECT, DISCONNECT_OK, ctx);
 					}
-					if (n < 0 && last_error() != ERROR_WOULDBLOCK) {
-						LOG_WARN("[%p] error reading: %s", ctx, strerror(last_error()));
+					if (n < 0 && _last_error(ctx) != ERROR_WOULDBLOCK) {
+						LOG_WARN("[%p] error reading: %s (%d)", ctx, strerror(_last_error(ctx)), _last_error(ctx));
 						_disconnect(DISCONNECT, REMOTE_DISCONNECT, ctx);
 					}
 
@@ -451,7 +452,7 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 						wake_controller(ctx);
 					}
 
-					LOG_DEBUG("[%p] streambuf read %d bytes", ctx, n);
+					LOG_DEBUG("[%p] streambuf read %d bytes / %d", ctx, n, _buf_space(ctx->streambuf));
 				}
 			}
 
@@ -589,6 +590,11 @@ void stream_sock(u32_t ip, u16_t port, bool use_ssl, const char *header, size_t 
 		UNLOCK_S;
 		return;
 	}
+
+	// try to prevent timeout on some platforms
+	int opt = 16384;
+	setsockopt(sock, SOL_SOCKET, SO_RCVBUF, &opt, sizeof(opt));
+	setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
 
 	buf_flush(ctx->streambuf);
 

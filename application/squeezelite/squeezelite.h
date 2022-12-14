@@ -549,6 +549,7 @@ struct thread_ctx_s {
 	sockfd 		sock, fd, cli_sock;
 #if USE_SSL
 	void		*ssl;  			// void to no include openssl headers
+	bool		ssl_error;
 #endif
 	u16_t		voltage;
 	char		cli_id[18];		// (6*2)+(5*':')+NULL

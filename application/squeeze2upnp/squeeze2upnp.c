@@ -1454,14 +1454,20 @@ static bool Start(void) {
 	// sscanf does not capture empty strings
 	if (!strchr(glBinding, '?') && !sscanf(glBinding, "%[^:]:%hu", addr, &Port)) sscanf(glBinding, ":%hu", &Port);
 
-	Host = get_interface(addr, NULL);
+	char* iface = NULL;
+	Host = get_interface(addr, &iface, NULL);
 
 	// can't find a suitable interface
-	if (Host.s_addr == INADDR_NONE) return false;
+	if (Host.s_addr == INADDR_NONE) {
+		NFREE(iface);
+		return false;
+	}
 
 	UpnpSetLogLevel(UPNP_CRITICAL);
-	// only set iface name if it's a name
-	int rc = UpnpInit2((*addr && inet_addr(addr) == INADDR_NONE) ? addr : NULL, Port);
+	int rc = UpnpInit2(iface, Port);
+
+	LOG_INFO("Binding to iface %s@%s:%hu (http:%u)", iface, inet_ntoa(Host), (unsigned short)UpnpGetServerPort(), Port);
+	NFREE(iface);
 
 	if (rc != UPNP_E_SUCCESS) {
 		LOG_ERROR("UPnP init failed: %d %s\n", rc, rc == UPNP_E_SOCKET_BIND ? "cannot bind socket(s)" : "");
@@ -1485,8 +1491,6 @@ static bool Start(void) {
 		UpnpFinish();
 		return false;
 	}
-
-	LOG_INFO("Binding to %s:%hu (http:%u)", inet_ntoa(Host), (unsigned short) UpnpGetServerPort(), Port);
 
 	// init mutex & cond no matter what
 	pthread_mutex_init(&glUpdateMutex, 0);

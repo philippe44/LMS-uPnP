@@ -1,0 +1,133 @@
+<?xml version="1.0"?>
+<squeeze2upnp>
+<util_log>info</util_log>
+<decode_log>info</decode_log>
+<common>
+<send_metadata>1</send_metadata>
+<output_size>4194304</output_size>
+<send_icy>1</send_icy>
+<accept_nexturi>2</accept_nexturi>
+<mode>flc,flow</mode>
+<flac_header>1</flac_header>
+<remove_timeout>120</remove_timeout>
+<next_delay>15</next_delay>
+<enabled>1</enabled>
+<live_pause>1</live_pause>
+<send_coverart>1</send_coverart>
+<codecs>aac,ogg,ops,ogf,flc,alc,wav,aif,pcm,mp3</codecs>
+<max_volume>100</max_volume>
+<seek_after_pause>0</seek_after_pause>
+<stream_length>-3</stream_length>
+<auto_play>0</auto_play>
+<L24_format>1</L24_format>
+<roon_mode>0</roon_mode>
+<raw_audio_format>raw,wav,aif</raw_audio_format>
+<streambuf_size>1048576</streambuf_size>
+<volume_on_play>1</volume_on_play>
+<server>?</server>
+<sample_rate>96000</sample_rate>
+<volume_feedback>1</volume_feedback>
+<forced_mimetypes></forced_mimetypes>
+<coverart></coverart>
+<resample_options></resample_options>
+</common>
+<stream_log>info</stream_log>
+<slimproto_log>info</slimproto_log>
+<slimmain_log>info</slimmain_log>
+<main_log>info</main_log>
+<upnp_log>info</upnp_log>
+<output_log>info</output_log>
+<log_limit>-1</log_limit>
+<binding>?</binding>
+<device>
+<udn>uuid:FF280003-B664-78BA-0545-F489FF280003</udn>
+<enabled>1</enabled>
+<friendly_name>GGMM_E5_4C68</friendly_name>
+<mac>bb:bb:6c:5e:4c:6a</mac>
+<server>192.168.2.230</server>
+<name>GGMM_E5_4C68</name>
+</device>
+<device>
+<friendly_name>Salle chiens</friendly_name>
+<udn>uuid:e0f3152e-f517-11e8-8592-d51f44eefe96</udn>
+<enabled>1</enabled>
+<name>Salle chiens</name>
+<mac>bb:bb:93:0b:40:56</mac>
+</device>
+<device>
+<mac>bb:bb:58:fd:8a:4a</mac>
+<codecs>-ogg</codecs>
+<forced_mimetypes>audio/aac</forced_mimetypes>
+<udn>uuid:RINCON_000E58FD8A4A01400</udn>
+<friendly_name>Office</friendly_name>
+<sample_rate>48000</sample_rate>
+<name>Office (PLAY:3)</name>
+<enabled>1</enabled>
+</device>
+<device>
+<name>foobar2000</name>
+<server>192.168.2.230</server>
+<enabled>1</enabled>
+<mac>bb:bb:d3:0f:6c:ff</mac>
+<friendly_name>foobar2000 Renderer (phili) [DESKTOP-W11]</friendly_name>
+<udn>uuid:57624ace-d1b6-01ba-a1d1-fae30bb6ef5a</udn>
+<forced_mimetypes>audio/aac</forced_mimetypes>
+</device>
+<device>
+<friendly_name>marantz NR1603</friendly_name>
+<udn>uuid:5f9ec1b3-ff59-19bb-8530-000678110596</udn>
+<enabled>1</enabled>
+<name>marantz NR1603</name>
+<mac>bb:bb:78:11:05:96</mac>
+</device>
+<device>
+<mac>bb:bb:93:0b:1c:cc</mac>
+<name>Bureau (riva upnp)</name>
+<udn>uuid:023a1efa-4d23-11ed-8d2e-f38dab64c98f</udn>
+<enabled>1</enabled>
+<friendly_name>Bureau (riva)</friendly_name>
+</device>
+<device>
+<enabled>1</enabled>
+<udn>uuid:0a8922b4-f65f-11e8-8275-6ddef8c82289</udn>
+<friendly_name>Riva-C</friendly_name>
+<mac>bb:bb:93:09:a8:b4</mac>
+<name>Riva-C</name>
+</device>
+<device>
+<friendly_name>Riva-R</friendly_name>
+<udn>uuid:46906194-f517-11e8-b283-a7f657f73811</udn>
+<enabled>1</enabled>
+<name>Riva-R</name>
+<mac>bb:bb:93:0a:39:d0</mac>
+</device>
+<device>
+<enabled>1</enabled>
+<udn>uuid:9ab0c000-f668-11de-9976-00a0def6f472</udn>
+<friendly_name>wx-010</friendly_name>
+<server>192.168.2.230</server>
+<mac>bb:bb:ea:31:43:d5</mac>
+<name>wx-010</name>
+</device>
+<device>
+<udn>uuid:048bfe5c-0d6a-481b-88b2-fe5dafa1f4d0</udn>
+<enabled>1</enabled>
+<friendly_name>XBOXONE</friendly_name>
+<mac>bb:bb:c5:17:2d:ee</mac>
+<name>XBOXONE</name>
+</device>
+<device>
+<mac>cc:cc:06:ac:93:75</mac>
+<name>phili (DESKTOP-W11 : Windows Media Player)</name>
+<enabled>1</enabled>
+<udn>uuid:4758d392-0757-4bca-8ea0-0505227c61b6</udn>
+<friendly_name>phili (DESKTOP-W11 : Windows Media Player)</friendly_name>
+</device>
+<device>
+<friendly_name>Media Renderer (Desktop-W11)</friendly_name>
+<enabled>1</enabled>
+<udn>uuid:a6358847-841d-400c-928b-c503544bef21</udn>
+<name>Media Renderer (Desktop-W11)</name>
+<mac>cc:cc:09:d3:d9:a2</mac>
+</device>
+</squeeze2upnp>

@@ -1,3 +1,13 @@
+2.1.12.1
+ - detect iface name
+ - use SO_KEEPALIVE and SO_RCVBUF
+ - better SSL handling in streaming thread
+
+2.1.12
+ - fix strings.txt
+ - ensure throttling does not go overboard
+ - fix mixed unsigned upconversion issue
+ 
 2.1.11
  - don't hold streambuf mutex during sleep
   
