@@ -59,15 +59,14 @@ static int _recv(struct thread_ctx_s *ctx, void *buffer, size_t bytes, int optio
 
 static int _send(struct thread_ctx_s *ctx, void *buffer, size_t bytes, int options) {
 	if (!ctx->ssl) return send(ctx->fd, buffer, bytes, options);
-	for (int err, n;;) {
+	int n = 0;
+	do {
 		ERR_clear_error();
-		if ((n = SSL_write(ctx->ssl, (u8_t*) buffer, bytes)) >= 0) return n;
-		err = SSL_get_error(ctx->ssl, n);
+		if ((n = SSL_write(ctx->ssl, (u8_t*) buffer, bytes)) >= 0) break;
+		int err = SSL_get_error(ctx->ssl, n);
 		ctx->ssl_error = (err != SSL_ERROR_WANT_READ && err != SSL_ERROR_WANT_WRITE);
-		if (!ctx->ssl_error) continue;
-		LOG_INFO("[%p]: SSL write error %d", ctx, err );
-		return n;	
-	}
+	} while (!ctx->ssl_error);
+	return n;
 }
 
 /*
@@ -215,12 +214,10 @@ static int connect_socket(bool use_ssl, struct thread_ctx_s *ctx) {
 }
 
 static void *stream_thread(struct thread_ctx_s *ctx) {
-	bool sleep = false;
-
 	while (ctx->stream_running) {
 
 		struct pollfd pollinfo;
-		ssize_t space;
+		size_t space;
 
 		LOCK_S;
 
@@ -235,10 +232,9 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 		*/
 		space = min(_buf_space(ctx->streambuf), _buf_cont_write(ctx->streambuf));
 
-		if (ctx->fd < 0 || !space || ctx->stream.state <= STREAMING_WAIT || sleep) {
+		if (ctx->fd < 0 || !space || ctx->stream.state <= STREAMING_WAIT) {
 			UNLOCK_S;
-			usleep(100000);
-			sleep = false;
+			usleep(100 * 1000);
 			continue;
 		}
 
@@ -408,24 +404,13 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 
 				// stream body into streambuf
 				} else {
-					int n;
-
-					// need to leave some room to throttle down
-					space = (ssize_t) _buf_space(ctx->streambuf) - 128 * 1024;
-
-					// if we have reached low water level throttle down to 80 Bytes/s
-					if (space <= 0) {
-						space = min(_buf_space(ctx->streambuf), 8);
-						sleep = true;
-					} 
-
-					space = min(space, _buf_cont_write(ctx->streambuf));
+					space = min(_buf_space(ctx->streambuf), _buf_cont_write(ctx->streambuf));
 
 					if (ctx->stream.meta_interval) {
 						space = min(space, ctx->stream.meta_next);
 					}
 
-					n = _recv(ctx, ctx->streambuf->writep, space, 0);
+					int n = _recv(ctx, ctx->streambuf->writep, space, 0);
 					if (n == 0) {
 						LOG_INFO("[%p] end of stream (t:%lld)", ctx, ctx->stream.bytes);
 						_disconnect(DISCONNECT, DISCONNECT_OK, ctx);
@@ -452,7 +437,7 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 						wake_controller(ctx);
 					}
 
-					LOG_DEBUG("[%p] streambuf read %d bytes / %d", ctx, n, _buf_space(ctx->streambuf));
+					LOG_DEBUG("[%p] streambuf read %d bytes", ctx, n);
 				}
 			}
 
@@ -561,8 +546,7 @@ void stream_file(const char *header, size_t header_len, unsigned threshold, stru
 	UNLOCK_S;
 }
 
-void stream_sock(u32_t ip, u16_t port, bool use_ssl, const char *header, size_t header_len, unsigned threshold, 
-				 bool cont_wait, struct thread_ctx_s *ctx) {
+void stream_sock(u32_t ip, u16_t port, bool use_ssl, const char *header, size_t header_len, unsigned threshold, bool cont_wait, struct thread_ctx_s *ctx) {
 	int sock;
 	char *p;
 
@@ -590,11 +574,6 @@ void stream_sock(u32_t ip, u16_t port, bool use_ssl, const char *header, size_t 
 		UNLOCK_S;
 		return;
 	}
-
-	// try to prevent timeout on some platforms
-	int opt = 16384;
-	setsockopt(sock, SOL_SOCKET, SO_RCVBUF, &opt, sizeof(opt));
-	setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
 
 	buf_flush(ctx->streambuf);
 

@@ -503,7 +503,6 @@ typedef struct {
 	u32_t	ms_played;
 	u32_t	duration;
 	u16_t	voltage;
-	bool	output_ready;
 } status_t;
 
 typedef enum {TRACK_STOPPED = 0, TRACK_STARTED, TRACK_PAUSED} track_status_t;

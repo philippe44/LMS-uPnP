@@ -1,3 +1,8 @@
+2.1.12.2
+ - move back to original streal as throttle can't work because client must send a FIN when server did send one 
+ and throttle would prevent that to happen in time, creating a TIME_WAIT event and a RST frame on Windows
+ - fix underrun logic
+
 2.1.12.1
  - detect iface name
  - use SO_KEEPALIVE and SO_RCVBUF

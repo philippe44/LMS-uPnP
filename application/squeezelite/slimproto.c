@@ -649,10 +649,10 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			ctx->status.output_full = ctx->sentSTMu ? 0 : ctx->outputbuf->size / 2;
 			ctx->status.output_size = ctx->outputbuf->size;
 			ctx->status.sample_rate = ctx->output.sample_rate;
-			ctx->status.output_ready = ctx->output.completed || ctx->output.encode.flow;
 			ctx->status.duration = ctx->render.duration;
 			ctx->status.ms_played = ctx->render.ms_played;
 			ctx->status.voltage = ctx->voltage;
+			bool output_ready = ctx->output.completed || ctx->output.encode.flow;
 
 			// streaming properly started
 			if (ctx->output.track_started) {
@@ -672,7 +672,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 
 			// normal end of track with underrun
 			if (ctx->output.state == OUTPUT_RUNNING && !ctx->sentSTMu &&
-				ctx->status.output_ready && ctx->status.stream_state <= DISCONNECT &&
+				output_ready && ctx->status.stream_state <= DISCONNECT &&
 				ctx->render.state == RD_STOPPED && ctx->canSTMdu) {
 				_sendSTMu = true;
 				ctx->sentSTMu = true;
@@ -731,9 +731,10 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			 and thus should be continuous, so there is no need to wait toward
 			 the end of the track
 			*/
-			if ((ctx->decode.state == DECODE_COMPLETE && ctx->canSTMdu && ctx->status.output_ready &&
-				(ctx->output.encode.flow || !ctx->config.wait_underrun || _sendSTMu)) ||
-				ctx->decode.state == DECODE_ERROR) {
+			if (ctx->decode.state == DECODE_ERROR || 
+			    (ctx->decode.state == DECODE_COMPLETE && ctx->canSTMdu && output_ready &&
+				(ctx->output.encode.flow || _sendSTMu ||
+				 (!ctx->config.wait_underrun && ctx->status.duration && ctx->status.duration - ctx->status.ms_played < 20 * 1000)))) {
 				if (ctx->decode.state == DECODE_COMPLETE) _sendSTMd = true;
 				if (ctx->decode.state == DECODE_ERROR)    _sendSTMn = true;
 				ctx->decode.state = DECODE_STOPPED;
