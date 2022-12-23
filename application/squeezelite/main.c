@@ -52,12 +52,16 @@ static void sq_wipe_device(struct thread_ctx_s *ctx);
 extern log_level	 slimmain_loglevel;
 static log_level	*loglevel = &slimmain_loglevel;
 
+static bool lambda(void* caller, sq_action_t action, ...) {
+	return true;
+}
+
 /*--------------------------------------------------------------------------*/
 void sq_wipe_device(struct thread_ctx_s *ctx) {
 	int i;
 
 	mutex_lock(ctx->cli_mutex);
-	ctx->callback = NULL;
+	ctx->callback = lambda;
 	ctx->in_use = false;
 	mutex_unlock(ctx->cli_mutex);
 
@@ -86,7 +90,6 @@ void sq_delete_device(sq_dev_handle_t handle) {
 
 /*---------------------------------------------------------------------------*/
 static char from_hex(char ch) {
-
   return isdigit(ch) ? ch - '0' : tolower(ch) - 'a' + 10;
 }
 
@@ -500,7 +503,7 @@ u32_t sq_self_time(sq_dev_handle_t handle)
 
 
 /*---------------------------------------------------------------------------*/
-void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *cookie, void *param)
+void sq_notify(sq_dev_handle_t handle, sq_event_t event, ...)
 {
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
 	char cmd[128], *rsp;
@@ -509,6 +512,9 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 
 	// squeezelite device has not started yet or is off ...
 	if (!ctx->running || !ctx->on || !handle || !ctx->in_use) return;
+
+	va_list args;
+	va_start(args, event);
 
 	switch (event) {
 		case SQ_TRANSITION:
@@ -546,7 +552,7 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 				LOG_INFO("[%p] play ignored", ctx );
 			}
 
-			if (*(bool*) param) {
+			if (va_arg(args, int)) {
 				// unsollicited PLAY done on the player direclty
 				LOG_WARN("[%p] unsollicited play", ctx);
 				sprintf(cmd, "%s play", ctx->cli_id);
@@ -563,7 +569,7 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 			LOG_INFO("[%p] track paused at %u", ctx, ctx->render.track_pause_time);
 			UNLOCK_O;
 
-			if (*(bool*) param) {
+			if (va_arg(args, int)) {
 				LOG_WARN("[%p] unsollicited pause", ctx);
 				sprintf(cmd, "%s pause", ctx->cli_id);
 				rsp = cli_send_cmd(cmd, false, true, ctx);
@@ -572,7 +578,7 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 			break;
 		}
 		case SQ_STOP:
-			if (*(bool*) param) {
+			if (va_arg(args, int)) {
 				// stop if the renderer side is sure or if we had 2 stops in a row
 				LOG_INFO("[%p] forced STOP", ctx);
 				sprintf(cmd, "%s stop", ctx->cli_id);
@@ -595,15 +601,18 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 				wake_controller(ctx);
 			}
 			break;
-		case SQ_VOLUME: {
-			sprintf(cmd, "%s mixer volume %d", ctx->cli_id, *(u16_t*) param);
+		case SQ_VOLUME:
+			sprintf(cmd, "%s mixer volume %d", ctx->cli_id, va_arg(args, int));
 			rsp = cli_send_cmd(cmd, false, true, ctx);
 			NFREE(rsp);
 			break;
-		}
-
+		case SQ_MUTE:
+			sprintf(cmd, "%s mixer muting %d", ctx->cli_id, va_arg(args, int) ? 1 : 0);
+			rsp = cli_send_cmd(cmd, false, true, ctx);
+			NFREE(rsp);
+			break;
 		case SQ_TIME: {
-			u32_t now, time = *((u32_t*) param);
+			u32_t now, time = va_arg(args, u32_t);
 			LOCK_O;
 			if (ctx->render.index != -1) {
 				now = gettime_ms();
@@ -635,7 +644,7 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 			break;
 		}
 		case SQ_TRACK_INFO: {
-			char *uri= (char*) param;
+			char *uri= va_arg(args, char*);
 			u32_t index;
 
 			uri = strstr(uri, BRIDGE_URL);
@@ -663,16 +672,17 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 			break;
 		}
 		case SQ_BATTERY: {
-			if 	(ctx->voltage != *(u16_t*) param) {
+			int voltage = va_arg(args, int);
+			if 	(ctx->voltage != voltage) {
 				LOCK_O;
-				ctx->voltage = *(u16_t*) param;
+				ctx->voltage = voltage;
 				UNLOCK_O;
-				LOG_INFO("[%p]: battery %#hx", ctx, ctx->voltage);
+				LOG_INFO("[%p]: battery %#x", ctx, ctx->voltage);
 			}
 			break;
 		}
 		case SQ_SETNAME: {
-			sprintf(cmd, "%s name %s", ctx->cli_id, (char*) param);
+			sprintf(cmd, "%s name %s", ctx->cli_id, va_arg(args, char*));
 			rsp = cli_send_cmd(cmd, false, false, ctx);
 			NFREE(rsp);
 			break;
@@ -681,6 +691,8 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 			LOG_WARN("[%p]: unknown notification %u", event);
 			break;
 	 }
+
+	 va_end(args);
  }
 
 

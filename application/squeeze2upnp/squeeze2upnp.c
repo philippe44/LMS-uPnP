@@ -290,7 +290,7 @@ static void 	_ProcessVolume(char *Volume, struct sMR* Device);
 
 
 /*----------------------------------------------------------------------------*/
-bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, uint8_t *cookie, void *param)
+bool sq_callback(void *caller, sq_action_t action, ...)
 {
 	struct sMR *Device = caller;
 	bool rc = true;
@@ -298,12 +298,15 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, uint8
 	// this is async, so need to check context validity
 	if (!CheckAndLock(Device)) return false;
 
+	va_list args;
+	va_start(args, action);
+
 	if (action == SQ_ONOFF) {
-		Device->on = *((bool*) param);
+		Device->on = va_arg(args, int);
 
 		// this is probably now safe against inter-domains deadlock
 		if (Device->on && Device->Config.AutoPlay)
-			sq_notify(Device->SqueezeHandle, Device, SQ_PLAY, NULL, &Device->on);
+			sq_notify(Device->SqueezeHandle, SQ_PLAY, (int) Device->on);
 
 		LOG_DEBUG("[%p]: device set on/off %d", caller, Device->on);
 	}
@@ -311,6 +314,7 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, uint8
 	if (!Device->on && action != SQ_SETNAME && action != SQ_SETSERVER && Device->sqState != SQ_PLAY) {
 		LOG_DEBUG("[%p]: device off or not controlled by LMS", caller);
 		pthread_mutex_unlock(&Device->Mutex);
+		va_end(args);
 		return false;
 	}
 
@@ -319,7 +323,7 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, uint8
 	switch (action) {
 
 		case SQ_SET_TRACK: {
-			struct track_param *p = (struct track_param*) param;
+			struct track_param *p = va_arg(args, struct track_param*);
 			char *ProtoInfo, *uri;
 			char format = mimetype_to_format(p->mimetype);
 
@@ -458,7 +462,7 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, uint8
 			break;
 		}
 		case SQ_VOLUME: {
-			int Volume = *(int*) param, now = gettime_ms();
+			int Volume = va_arg(args, int), now = gettime_ms();
 			int GroupVolume, i;
 
 			// some controllers send a volume < 0 to mute
@@ -517,7 +521,7 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, uint8
 			break;
 		}
 		case SQ_SETNAME:
-			strcpy(Device->sq_config.name, param);
+			strcpy(Device->sq_config.name, va_arg(args, char*));
 			if (glAutoSaveConfigFile) {
 				pthread_mutex_lock(&glUpdateMutex);
 				SaveConfig(glConfigName, glConfigID, false);
@@ -525,14 +529,14 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, uint8
 			}
 			break;
 		case SQ_SETSERVER:
-			strcpy(Device->sq_config.set_server, inet_ntoa(*(struct in_addr*) param));
+			strcpy(Device->sq_config.set_server, inet_ntoa(*va_arg(args, struct in_addr*)));
 			break;
 		default:
 			break;
 	}
 
+	va_end(args);
 	pthread_mutex_unlock(&Device->Mutex);
-
 	return rc;
 }
 
@@ -567,7 +571,7 @@ static void *MRThread(void *args)
 		if (p->ShortTrackWait > 0 && ((p->ShortTrackWait -= elapsed) < 0)) {
 			LOG_WARN("[%p]: stopping on short track timeout", p);
 			p->ShortTrack = false;
-			sq_notify(p->SqueezeHandle, p, SQ_STOP, NULL, &p->ShortTrack);
+			sq_notify(p->SqueezeHandle, SQ_STOP, p->ShortTrack);
 		}
 
 		// hack to deal with players that do not report end of track
@@ -699,7 +703,7 @@ static void _SyncNotifState(char *State, struct sMR* Device)
 
 	// seems that now the inter-domain lock does not exist anymore
 	if (Event != SQ_NONE)
-		sq_notify(Device->SqueezeHandle, Device, Event, NULL, &Param);
+		sq_notify(Device->SqueezeHandle, Event, (int) Param);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -742,7 +746,7 @@ static void _ProcessVolume(char *Volume, struct sMR* Device)
 	*/
 
 	if (UPnPVolume != (int) Device->Volume && now > Master->VolumeStampTx + 1000) {
-		uint16_t ScaledVolume;
+		int32_t ScaledVolume;
 
 		Device->Volume = UPnPVolume;
 		Master->VolumeStampRx = now;
@@ -751,7 +755,7 @@ static void _ProcessVolume(char *Volume, struct sMR* Device)
 		LOG_INFO("[%p]: UPnP Volume local change %d:%d (%s)", Device, UPnPVolume, GroupVolume, Device->Master ? "slave": "master");
 
 		ScaledVolume = GroupVolume < 0 ? (UPnPVolume * 100) / Device->Config.MaxVolume : GroupVolume;
-		sq_notify(Master->SqueezeHandle, Master, SQ_VOLUME, NULL, &ScaledVolume);
+		sq_notify(Master->SqueezeHandle, SQ_VOLUME, ScaledVolume);
 	}
 }
 
@@ -874,12 +878,12 @@ int ActionHandler(Upnp_EventType EventType, const void* Event, void* Cookie) {
 				LOG_DEBUG("[%p]: extended info %s", p, ixmlDocumenttoString(Result));
 				r = XMLGetFirstDocumentItem(Result, "BatteryFlag", true);
 				if (r) {
-					uint16_t Level = atoi(r) << 8;
+					int Level = atoi(r) << 8;
 					NFREE(r);
 					r = XMLGetFirstDocumentItem(Result, "BatteryPercent", true);
 					if (r) {
 						Level |= (uint8_t)atoi(r);
-						sq_notify(p->SqueezeHandle, p, SQ_BATTERY, NULL, &Level);
+						sq_notify(p->SqueezeHandle, SQ_BATTERY, Level);
 					}
 				}
 				NFREE(r);
@@ -902,7 +906,7 @@ int ActionHandler(Upnp_EventType EventType, const void* Event, void* Cookie) {
 						p->ElapsedLast = Elapsed;
 						Elapsed += p->ElapsedOffset;
 					}
-					sq_notify(p->SqueezeHandle, p, SQ_TIME, NULL, &Elapsed);
+					sq_notify(p->SqueezeHandle, SQ_TIME, Elapsed);
 					LOG_DEBUG("[%p]: position %d (cookie %p)", p, Elapsed, Cookie);
 				}
 
@@ -926,7 +930,7 @@ int ActionHandler(Upnp_EventType EventType, const void* Event, void* Cookie) {
 					}
 
 					if (p->ExpectedURI && !strcasecmp(r, p->ExpectedURI)) NFREE(p->ExpectedURI);
-					sq_notify(p->SqueezeHandle, p, SQ_TRACK_INFO, NULL, r);
+					sq_notify(p->SqueezeHandle, SQ_TRACK_INFO, r);
 				}
 
 				NFREE(r);
@@ -1150,7 +1154,7 @@ static void *UpdateThread(void *args)
 							// only update if LMS has not set its own name
 							if (!strcmp(Device->sq_config.name, Device->friendlyName)) {
 								// by notifying LMS, we'll get an update later
-								sq_notify(Device->SqueezeHandle, Device, SQ_SETNAME, NULL, friendlyName);
+								sq_notify(Device->SqueezeHandle, SQ_SETNAME, friendlyName);
 							}
 
 							updated = true;
@@ -1330,6 +1334,9 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	Device->sq_config.wait_underrun = Device->Config.AcceptNextURI == NEXT_UNDERRUN;
 	Device->sq_config.send_icy = Device->Config.SendMetaData ? Device->Config.SendIcy : ICY_NONE;
 	if (Device->sq_config.send_icy && !Device->Config.SendCoverArt) Device->sq_config.send_icy = ICY_TEXT;
+
+	//FIXME
+	strcpy(Device->Config.ForcedMimeTypes, strdup("audio/ogg codecs=flac"));
 
 	strcpy(Device->UDN, UDN);
 	strcpy(Device->DescDocURL, location);
@@ -1825,6 +1832,3 @@ int main(int argc, char *argv[])
 	LOG_INFO("all done", NULL);
 	return true;
 }
-
-
-

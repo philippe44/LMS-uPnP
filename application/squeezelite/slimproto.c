@@ -74,15 +74,6 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels,
 						  u8_t endianness, struct thread_ctx_s *ctx);
 
 /*---------------------------------------------------------------------------*/
-bool ctx_callback(struct thread_ctx_s *ctx, sq_action_t action, u8_t *cookie, void *param)
-{
-	bool rc = false;
-
-	if (ctx->callback) rc = ctx->callback(ctx->self, ctx->MR, action, cookie, param);
-	return rc;
-}
-
-/*---------------------------------------------------------------------------*/
 void send_packet(u8_t *packet, size_t len, sockfd sock) {
 	u8_t *ptr = packet;
 	unsigned try = 0;
@@ -259,7 +250,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 		if (stream_disconnect(ctx))
 			sendSTAT("STMf", 0, ctx);
 		buf_flush(ctx->streambuf);
-		if (ctx->last_command != 'q') ctx_callback(ctx, SQ_STOP, NULL, NULL);
+		if (ctx->last_command != 'q') ctx->callback(ctx->MR, SQ_STOP);
 		break;
 	case 'p':
 		{
@@ -269,7 +260,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 				LOCK_O;
 				ctx->output.state = OUTPUT_WAITING;
 				UNLOCK_O;
-				ctx_callback(ctx, SQ_PAUSE, NULL, NULL);
+				ctx->callback(ctx->MR, SQ_PAUSE);
 				sendSTAT("STMp", 0, ctx);
 			}
 		}
@@ -284,7 +275,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 		{
 			unsigned jiffies = unpackN(&strm->replay_gain);
 			LOG_INFO("[%p] unpause at: %u now: %u", ctx, jiffies, gettime_ms());
-			ctx_callback(ctx, SQ_UNPAUSE, NULL, NULL);
+			ctx->callback(ctx->MR, SQ_UNPAUSE);
 			LOCK_O;
 			ctx->output.state = OUTPUT_RUNNING;
 			ctx->output.start_at = jiffies;
@@ -391,7 +382,7 @@ static void process_aude(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 	LOG_DEBUG("[%p] on/off using aude %d", ctx, ctx->on);
 	UNLOCK_O;
 
-	ctx_callback(ctx, SQ_ONOFF, NULL, &ctx->on);
+	ctx->callback(ctx->MR, SQ_ONOFF, ctx->on);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -406,7 +397,7 @@ static void process_audg(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 
 	gain = (audg->old_gainL + audg->old_gainL) / 2;
 	if (audg->adjust) {
-		ctx_callback(ctx, SQ_VOLUME, NULL, (void*) &gain);
+		ctx->callback(ctx->MR, SQ_VOLUME, gain);
     }
 }
 
@@ -426,7 +417,7 @@ static void process_setd(u8_t *pkt, int len,struct thread_ctx_s *ctx) {
 			LOG_DEBUG("[%p] set name: %s", ctx, setd->data);
 			// confirm change to server
 			sendSETDName(setd->data, ctx->sock);
-			ctx_callback(ctx, SQ_SETNAME, NULL, (void*) ctx->config.name);
+			ctx->callback(ctx->MR, SQ_SETNAME, ctx->config.name);
 		}
 	}
 }
@@ -462,7 +453,7 @@ static void process_serv(u8_t *pkt, int len,struct thread_ctx_s *ctx) {
 		}
 	}
 
-	ctx_callback(ctx, SQ_SETSERVER, NULL, (void*) &ctx->new_server);
+	ctx->callback(ctx->MR, SQ_SETSERVER, ctx->new_server);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -713,7 +704,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 					ctx->output.state = OUTPUT_RUNNING;
 					UNLOCK_O;
 				}
-				ctx_callback(ctx, SQ_PLAY, NULL, NULL);
+				ctx->callback(ctx->MR, SQ_PLAY);
 				// autostart 2 and 3 require cont to be received first
 			}
 
@@ -724,7 +715,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			 exit before playback has started and we don't want to send STMd
 			 before STMs.
 			 Streaming services like Deezer or RP plugin close connection if
-			 stalled for too long (30s), so if STMd is sent too early, once the
+			 stalled for too long (30s), so if STMd is sent too early, once the-
 			 outputbuf is filled, connection will be idle for a while, so need
 			 to wait a bit toward the end of the track before sending STMd.
 			 But when flow mode is used, the stream is regulated by the player
@@ -1214,7 +1205,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 			// non-encoded version is needed as encoded one is always reset
 			if (out->channels) info.metadata.channels = out->channels;
 
-			ret = ctx_callback(ctx, SQ_SET_TRACK, NULL, &info);
+			ret = ctx->callback(ctx->MR, SQ_SET_TRACK, &info);
 
 			LOG_INFO("[%p]: codec:%c, ch:%d, s:%d, r:%d", ctx, out->codec, out->channels, out->sample_size, out->sample_rate);
 		} else metadata_free(&info.metadata);

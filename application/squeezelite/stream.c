@@ -165,6 +165,15 @@ static int connect_socket(bool use_ssl, struct thread_ctx_s *ctx) {
 		return sock;
 	}
 
+	/* This is to force at least Windows to not have gigantic TCP buffer that cause a
+	   FIN_WAIT_2 timeout on low bitrate files of a certain size. With no set of the value,
+	   Windows uses a different amount than what it reports... oh well
+    */
+	unsigned int opt, len = sizeof(opt);
+	getsockopt(sock, SOL_SOCKET, SO_RCVBUF, (void*)&opt, &len);
+	setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (void*) &opt, sizeof(opt));
+	LOG_INFO("[%p] set SO_RCVBUF at %d bytes", ctx, opt);
+
 	set_nonblock(sock);
 	set_nosigpipe(sock);
 

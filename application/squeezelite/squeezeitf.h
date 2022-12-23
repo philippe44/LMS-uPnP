@@ -20,7 +20,7 @@
 #define STREAMBUF_SIZE	(1024*1024)
 
 typedef enum {SQ_NONE, SQ_SET_TRACK, SQ_PLAY, SQ_TRANSITION, SQ_PAUSE, SQ_UNPAUSE,
-			  SQ_STOP, SQ_VOLUME, SQ_TIME, SQ_TRACK_INFO, SQ_ONOFF,
+			  SQ_STOP, SQ_VOLUME, SQ_MUTE, SQ_TIME, SQ_TRACK_INFO, SQ_ONOFF,
 			  SQ_NEXT, SQ_SETNAME, SQ_SETSERVER, SQ_BATTERY} sq_action_t;
 typedef enum { ICY_NONE, ICY_FULL, ICY_TEXT } sq_icy_e;
 typedef enum { L24_PACKED, L24_PACKED_LPCM, L24_TRUNC16, L24_TRUNC16_PCM, L24_UNPACKED_HIGH, L24_UNPACKED_LOW } sq_L24_pack_t;
@@ -65,7 +65,7 @@ struct track_param
 	char		mimetype[STR_LEN];
 };
 
-typedef bool (*sq_callback_t)(sq_dev_handle_t handle, void *caller_id, sq_action_t action, uint8_t *cookie, void *param);
+typedef bool (*sq_callback_t)(void *caller, sq_action_t action, ...);
 
 void				sq_init(struct in_addr host, uint16_t port, char *model_name);
 void				sq_stop(void);
@@ -76,7 +76,7 @@ void				sq_delete_device(sq_dev_handle_t);
 sq_dev_handle_t		sq_reserve_device(void *caller_id, bool on, char *mimecaps[], sq_callback_t callback);
 void				sq_release_device(sq_dev_handle_t);
 
-void				sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, uint8_t *cookie, void *param);
+void				sq_notify(sq_dev_handle_t handle, sq_event_t event, ...);
 uint32_t			sq_get_time(sq_dev_handle_t handle);
 uint32_t			sq_self_time(sq_dev_handle_t handle);
 bool				sq_get_metadata(sq_dev_handle_t handle, struct metadata_s *metadata, int offset);
