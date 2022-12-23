@@ -1,3 +1,6 @@
+2.1.12.6
+ - remove "forced" mimetype test
+ 
 2.1.12.5
  - fix once for all the TCPWindow size issue with Windows
  - cleanup notify/callback and use variadic

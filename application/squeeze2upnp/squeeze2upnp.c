@@ -1335,9 +1335,6 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	Device->sq_config.send_icy = Device->Config.SendMetaData ? Device->Config.SendIcy : ICY_NONE;
 	if (Device->sq_config.send_icy && !Device->Config.SendCoverArt) Device->sq_config.send_icy = ICY_TEXT;
 
-	//FIXME
-	strcpy(Device->Config.ForcedMimeTypes, strdup("audio/ogg codecs=flac"));
-
 	strcpy(Device->UDN, UDN);
 	strcpy(Device->DescDocURL, location);
 
