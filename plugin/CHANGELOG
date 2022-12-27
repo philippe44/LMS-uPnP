@@ -1,3 +1,12 @@
+2.1.12.9
+ - no fade-in/out at all on plugin or helper
+ 
+2.1.12.8
+ - potential build error
+ 
+2.1.12.7
+ - fix some variadic mistakes
+ 
 2.1.12.6
  - remove "forced" mimetype test
  

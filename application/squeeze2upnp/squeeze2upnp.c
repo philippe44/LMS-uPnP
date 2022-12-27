@@ -442,10 +442,8 @@ bool sq_callback(void *caller, sq_action_t action, ...)
 			Device->ShortTrackWait = 0;
 			break;
 		case SQ_PAUSE: {
-			int i;
-
 			// restore volume as/when it has been set to 0 before by LMS
-			for (i = 0; i < MAX_RENDERERS; i++) {
+			for (int i = 0; i < MAX_RENDERERS; i++) {
 				struct sMR *p = glMRDevices + i;
 				if (p->Running && (p->Master == Device || p == Device) && p->PauseVolume != -1) {
 					p->Volume = p->PauseVolume;
@@ -463,7 +461,6 @@ bool sq_callback(void *caller, sq_action_t action, ...)
 		}
 		case SQ_VOLUME: {
 			int Volume = va_arg(args, int), now = gettime_ms();
-			int GroupVolume, i;
 
 			// some controllers send a volume < 0 to mute
 			if (Volume < 0) {
@@ -475,7 +472,7 @@ bool sq_callback(void *caller, sq_action_t action, ...)
 				CtrlSetMute(Device, false, Device->seqN++);
 		   	}
 
-			Volume = LMSVolumeMap[Volume], now = gettime_ms();
+			Volume = LMSVolumeMap[Volume];
 
 			// discard echo commands
 			if (now < Device->VolumeStampRx + 1000) break;
@@ -484,7 +481,7 @@ bool sq_callback(void *caller, sq_action_t action, ...)
 			if ((int) Device->Volume == (Volume * Device->Config.MaxVolume) / 100) break;
 
 			// Sonos group volume API is unreliable, need to create our own
-			GroupVolume = CalcGroupVolume(Device);
+			int GroupVolume = CalcGroupVolume(Device);
 
 			/* Volume is kept as a double in device's context to avoid relative
 			values going to 0 and being stuck there. This works because although
@@ -505,7 +502,7 @@ bool sq_callback(void *caller, sq_action_t action, ...)
 				double Ratio = GroupVolume ? (double) Volume / GroupVolume : 0;
 
 				// for standalone master, GroupVolume equals Device->Volume
-				for (i = 0; i < MAX_RENDERERS; i++) {
+				for (int i = 0; i < MAX_RENDERERS; i++) {
 					struct sMR *p = glMRDevices + i;
 					if (!p->Running || (p != Device && p->Master != Device)) continue;
 
@@ -746,15 +743,13 @@ static void _ProcessVolume(char *Volume, struct sMR* Device)
 	*/
 
 	if (UPnPVolume != (int) Device->Volume && now > Master->VolumeStampTx + 1000) {
-		int32_t ScaledVolume;
-
 		Device->Volume = UPnPVolume;
 		Master->VolumeStampRx = now;
 		GroupVolume = CalcGroupVolume(Master);
 
 		LOG_INFO("[%p]: UPnP Volume local change %d:%d (%s)", Device, UPnPVolume, GroupVolume, Device->Master ? "slave": "master");
 
-		ScaledVolume = GroupVolume < 0 ? (UPnPVolume * 100) / Device->Config.MaxVolume : GroupVolume;
+		int ScaledVolume = GroupVolume < 0 ? (UPnPVolume * 100) / Device->Config.MaxVolume : GroupVolume;
 		sq_notify(Master->SqueezeHandle, SQ_VOLUME, ScaledVolume);
 	}
 }
@@ -878,11 +873,11 @@ int ActionHandler(Upnp_EventType EventType, const void* Event, void* Cookie) {
 				LOG_DEBUG("[%p]: extended info %s", p, ixmlDocumenttoString(Result));
 				r = XMLGetFirstDocumentItem(Result, "BatteryFlag", true);
 				if (r) {
-					int Level = atoi(r) << 8;
+					uint32_t Level = atoi(r) << 8;
 					NFREE(r);
 					r = XMLGetFirstDocumentItem(Result, "BatteryPercent", true);
 					if (r) {
-						Level |= (uint8_t)atoi(r);
+						Level |= (uint8_t) atoi(r);
 						sq_notify(p->SqueezeHandle, SQ_BATTERY, Level);
 					}
 				}

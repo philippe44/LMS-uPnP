@@ -672,7 +672,7 @@ void sq_notify(sq_dev_handle_t handle, sq_event_t event, ...)
 			break;
 		}
 		case SQ_BATTERY: {
-			int voltage = va_arg(args, int);
+			int voltage = va_arg(args, uint32_t);
 			if 	(ctx->voltage != voltage) {
 				LOCK_O;
 				ctx->voltage = voltage;
