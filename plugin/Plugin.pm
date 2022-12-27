@@ -43,7 +43,7 @@ sub hasOutputChannels {
 sub fade_volume {
 	my ($client, $fade, $callback, $callbackargs) = @_;
 	# no fade-in or out, we don't want that flur of commands
-	return $fade_volume->($client, $fade, $callback, $callbackargs) if $client->modelName !~ /UPnPBridge/;
+	return $fade_volume->($client, $fade, $callback, $callbackargs) if $client->modelName !~ /UPnPBridge/ || ($fade > 0 && $client->can('setMute'));
 	return $callback->(@{$callbackargs}) if $callback;
 }
 
