@@ -1,3 +1,7 @@
+2.1.12.11
+ - fix group volume
+ - remove PauseVolume (un-deeded since plugin avoid volume to be set to 0 pause - too bad for Roon)
+ 
 2.1.12.10
  - detect LMS mute correction
  
@@ -18,7 +22,7 @@
  - cleanup notify/callback and use variadic
  
 2.1.12.2
- - move back to original streal as throttle can't work because client must send a FIN when server did send one 
+ - move back to original stream as throttle can't work because client must send a FIN when server did send one 
  and throttle would prevent that to happen in time, creating a TIME_WAIT event and a RST frame on Windows
  - fix underrun logic
 

@@ -102,7 +102,7 @@ struct sMR {
 	struct sMR		*Master;
 	pthread_mutex_t Mutex;
 	pthread_t 		Thread;
-	double			Volume, PauseVolume;
+	double			Volume;
 	bool			Muted;
 	uint32_t		VolumeStampRx, VolumeStampTx;	// timestamps to filter volume loopbacks
 	uint16_t		ErrorCount;                     // UPnP protocol error count

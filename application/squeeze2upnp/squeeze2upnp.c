@@ -422,10 +422,10 @@ bool sq_callback(void *caller, sq_action_t action, ...)
 				// don't want echo, even if sending onPlay
 				Device->VolumeStampTx = gettime_ms();
 
-				// update all devices (master & slaves)
+				// update all devices (master & slaves) and set Master's volume if we don't have any
 				for (i = 0; i < MAX_RENDERERS; i++) {
 					struct sMR *p = glMRDevices + i;
-					if (p->Running && (p->Master == Device || p == Device)) CtrlSetVolume(p, p->Volume, p->seqN++);
+					if (p->Running && (p->Master == Device || p == Device)) CtrlSetVolume(p, p->Volume != -1 ? p->Volume : Device->Volume, p->seqN++);
 				}
 			}
 
@@ -441,24 +441,11 @@ bool sq_callback(void *caller, sq_action_t action, ...)
 			Device->ShortTrack = false;
 			Device->ShortTrackWait = 0;
 			break;
-		case SQ_PAUSE: {
-			// restore volume as/when it has been set to 0 before by LMS
-			for (int i = 0; i < MAX_RENDERERS; i++) {
-				struct sMR *p = glMRDevices + i;
-				if (p->Running && (p->Master == Device || p == Device) && p->PauseVolume != -1) {
-					p->Volume = p->PauseVolume;
-					p->PauseVolume = -1;
-					if (p->Config.VolumeOnPlay != -1) CtrlSetVolume(p, p->Volume, p->seqN++);
-				}
-			}
-
-			// pause after volume has been changed
+		case SQ_PAUSE:
 			if (Device->Config.LivePause || Device->Duration) AVTBasic(Device, "Pause");
 			else AVTBasic(Device, "Stop");
 			Device->sqState = action;
-
 			break;
-		}
 		case SQ_VOLUME: {
 			int Volume = va_arg(args, int), now = gettime_ms();
 
@@ -495,7 +482,6 @@ bool sq_callback(void *caller, sq_action_t action, ...)
 
 			// update context, and set volume only if authorized
 			if (GroupVolume < 0) {
-				if (!Volume) Device->PauseVolume = Device->Volume;
 				Device->Volume = (Volume * Device->Config.MaxVolume) / 100;
 				if (Device->VolumeStampTx == now) CtrlSetVolume(Device, Device->Volume, Device->seqN++);
 			} else {
@@ -506,10 +492,8 @@ bool sq_callback(void *caller, sq_action_t action, ...)
 					struct sMR *p = glMRDevices + i;
 					if (!p->Running || (p != Device && p->Master != Device)) continue;
 
-					// when setting to 0, memorize in case this is a pause
-					if (!Volume) p->PauseVolume = p->Volume;
-
-					if (p->Volume && GroupVolume) p->Volume = min(p->Volume * Ratio, p->Config.MaxVolume);
+					// must set a volume for slave if we have not acquired it already
+					if (p->Volume && p->Volume != -1 && GroupVolume) p->Volume = min(p->Volume * Ratio, p->Config.MaxVolume);
 					else p->Volume = (Volume * p->Config.MaxVolume) / 100;
 
 					if (Device->VolumeStampTx == now) CtrlSetVolume(p, p->Volume, p->seqN++);
@@ -804,7 +788,6 @@ static void ProcessEvent(Upnp_EventType EventType, const void* _Event, void* Coo
 		NFREE(LastChange);
 		return;
 	}
-
 
 	// Feedback volume to LMS if authorized
 	if (Device->Config.VolumeFeedback) {
@@ -1308,7 +1291,6 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	Device->State			= STOPPED;
 	Device->InfoExPoll 		= -1;
 	Device->Volume 			= -1;
-	Device->PauseVolume		= -1;
 	Device->VolumeStampRx 	= Device->VolumeStampTx = gettime_ms() - 2000;
 	Device->LastSeen		= gettime_ms() / 1000;
 	// all this is set to 0 by memset ...
@@ -1465,7 +1447,7 @@ static bool Start(void) {
 	UpnpSetLogLevel(UPNP_CRITICAL);
 	int rc = UpnpInit2(iface, Port);
 
-	LOG_INFO("Binding to iface %s@%s:%hu (http:%u)", iface, inet_ntoa(Host), (unsigned short)UpnpGetServerPort(), Port);
+	LOG_INFO("Binding to iface [%s]@%s:%hu (http:%u)", iface, inet_ntoa(Host), (unsigned short)UpnpGetServerPort(), Port);
 	NFREE(iface);
 
 	if (rc != UPNP_E_SUCCESS) {
