@@ -724,8 +724,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			*/
 			if (ctx->decode.state == DECODE_ERROR || 
 			    (ctx->decode.state == DECODE_COMPLETE && ctx->canSTMdu && output_ready &&
-				(ctx->output.encode.flow || _sendSTMu ||
-				 (!ctx->config.wait_underrun && ctx->status.duration && ctx->status.duration - ctx->status.ms_played < 20 * 1000)))) {
+				(ctx->output.encode.flow || _sendSTMu || !ctx->status.duration || ctx->status.duration - ctx->status.ms_played < 20 * 1000))) {
 				if (ctx->decode.state == DECODE_COMPLETE) _sendSTMd = true;
 				if (ctx->decode.state == DECODE_ERROR)    _sendSTMn = true;
 				ctx->decode.state = DECODE_STOPPED;

@@ -58,7 +58,7 @@
 
 #define MODEL_NAME_STRING	"UPnPBridge"
 
-enum { NEXT_FORCE = -1, NEXT_GAPPED = 0, NEXT_GAPLESS = 1, NEXT_UNDERRUN = 2 };
+enum { NEXT_FORCE = -1, NEXT_GAPPED = 0, NEXT_GAPLESS = 1 };
 
 /*----------------------------------------------------------------------------*/
 /* globals initialized */
@@ -1308,7 +1308,6 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 		Device->sq_config.use_cli = false;
 	}
 
-	Device->sq_config.wait_underrun = Device->Config.AcceptNextURI == NEXT_UNDERRUN;
 	Device->sq_config.send_icy = Device->Config.SendMetaData ? Device->Config.SendIcy : ICY_NONE;
 	if (Device->sq_config.send_icy && !Device->Config.SendCoverArt) Device->sq_config.send_icy = ICY_TEXT;
 

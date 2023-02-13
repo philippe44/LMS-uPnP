@@ -1,6 +1,13 @@
+2.1.13.1
+ - remove wait_underrun option which is too similar to no gapless. Still need to figure out what was the impact for HQPlayer
+ - when missing duration, request next track immediately at end of decoding
+ 
+2.1.13
+ - release
+ 
 2.1.12.11
  - fix group volume
- - remove PauseVolume (un-deeded since plugin avoid volume to be set to 0 pause - too bad for Roon)
+ - remove PauseVolume (un-needed since plugin avoid volume to be set to 0 pause - too bad for Roon)
  
 2.1.12.10
  - detect LMS mute correction
@@ -19,6 +26,7 @@
  
 2.1.12.5
  - fix once for all the TCPWindow size issue with Windows
+ - cleanup notify/callback and use variadic
  - cleanup notify/callback and use variadic
  
 2.1.12.2

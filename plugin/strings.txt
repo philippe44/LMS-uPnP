@@ -166,8 +166,7 @@ PLUGIN_UPNPBRIDGE_STREAMOPTIONS_DESC
 	EN	'no-length' to be used. Use 'if known' to send size only when using pcm audio and duration is known 
 	EN	<br>- Some players support gapless playback and thus automatically move to next track in playlist. This is automatically
 	EN	detected, but you can force it disabled. Others (e.g. Bose) are totally broken and are stuck toward track end. Use 'force'
-	EN	to force them to move to next track. The "underrun" option forces the bridge to wait until the player has stopped before
-	EN	requesting the next track to LMS. This might be needed for ill-design devices that mess-up with HTTP like HQPlayer
+	EN	to force them to move to next track.
 	EN	<br>- If your player does not resume where it was paused, use this to force LMS to restart from memorized position
 	EN	<br>- Some players refuse to pause live streams (webradios). Use this to stop when LMS requests a pause
 	EN	<br>see User Guide for more details (really). 
@@ -193,9 +192,6 @@ PLUGIN_UPNPBRIDGE_ACCEPTNEXTURI
 PLUGIN_UPNPBRIDGE_NEXTFORCE
 	EN	Force
     
-PLUGIN_UPNPBRIDGE_UNDERRUN
-	EN	Underrun
-	
 PLUGIN_UPNPBRIDGE_SEEKAFTERPAUSE
 	EN	Unpause
 	
