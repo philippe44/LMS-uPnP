@@ -908,7 +908,7 @@ int ActionHandler(Upnp_EventType EventType, const void* Event, void* Cookie) {
 					}
 
 					if (p->ExpectedURI && !strcasecmp(r, p->ExpectedURI)) NFREE(p->ExpectedURI);
-					sq_notify(p->SqueezeHandle, SQ_TRACK_INFO, r);
+					if (r) sq_notify(p->SqueezeHandle, SQ_TRACK_INFO, r);
 				}
 
 				NFREE(r);

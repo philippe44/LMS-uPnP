@@ -1,4 +1,7 @@
 2.1.13.1
+ - don't call track_info if no track found
+ 
+2.1.13.1
  - remove wait_underrun option which is too similar to no gapless. Still need to figure out what was the impact for HQPlayer
  - when missing duration, request next track immediately at end of decoding
  
