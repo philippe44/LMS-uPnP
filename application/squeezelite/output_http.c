@@ -168,6 +168,14 @@ static void output_http_thread(struct thread_param_s *param) {
 
 		n = select(sock + 1, &rfds, &wfds, NULL, &timeout);
 
+		// start streaming process if we are waiting
+		if (ctx->stream.state == STREAMING_DELAYED && n > 0) {
+			LOG_INFO("[%p]: Starting delayed LMS streaming", ctx);
+			stream_sock(ctx->stream.strm.ip, ctx->stream.strm.port, ctx->stream.strm.flags & 0x20, ctx->stream.strm.header, 
+						ctx->stream.strm.len, ctx->stream.strm.threshold * 1024, ctx->autostart >= 2, ctx);
+			continue;
+		}
+
 		// need to wait till we have an initialized codec
 		if (!acquired && n > 0) {
 			LOCK_D;

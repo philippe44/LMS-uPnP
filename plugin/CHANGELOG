@@ -1,3 +1,9 @@
+2.1.13.4
+ - don't disable "binding" when XML file does not exist
+ 
+2.1.13.3
+ - try to delay stream_sock to NextURI's HTTP request
+
 2.1.13.1
  - don't call track_info if no track found
  

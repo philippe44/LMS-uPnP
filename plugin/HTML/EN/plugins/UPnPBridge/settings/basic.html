@@ -54,13 +54,13 @@
 	<script type="text/javascript">
 	function lmssocket(item) {
 		var params = document.getElementById('xmlparams') != null;
-		document.getElementById('binding').disabled = item.checked || !params;
-		document.getElementById('baseport_span').style.display = (item.checked && params) ? 'inline' : 'none';
+		document.getElementById('binding').disabled = item.checked;
+		document.getElementById('baseport_span').style.display = item.checked ? 'inline' : 'none';
 	}
 	</script>	
 	
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_BINDING" desc="PLUGIN_UPNPBRIDGE_BINDING_DESC" %]
-		<input type="text" class="stdedit" name="binding" id="binding" value="[% binding %]" size="16" [% IF useLMSsocket || !xmlparams %] disabled [% END %]>
+		<input type="text" class="stdedit" name="binding" id="binding" value="[% binding %]" size="16" [% IF useLMSsocket %] disabled [% END %]>
 		&nbsp<input name="useLMSsocket" type="checkbox" onchange="lmssocket(this)" [% IF useLMSsocket %] checked [% END %]>&nbsp[% "PLUGIN_UPNPBRIDGE_USELMSBINDING" | string %]
 		<span id="baseport_span" [% IF !useLMSsocket || !xmlparams %] hidden [% END %]>
 			[% "PLUGIN_UPNPBRIDGE_BASEPORT" | string %]

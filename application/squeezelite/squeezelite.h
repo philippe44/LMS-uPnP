@@ -267,7 +267,7 @@ void 		send_packet(u8_t *packet, size_t len, sockfd sock);
 void 		wake_controller(struct thread_ctx_s *ctx);
 
 // stream.c
-typedef enum { STOPPED = 0, DISCONNECT, STREAMING_WAIT,
+typedef enum { STOPPED = 0, DISCONNECT, STREAMING_DELAYED, STREAMING_WAIT,
 			   STREAMING_BUFFERING, STREAMING_FILE, STREAMING_HTTP, SEND_HEADERS, RECV_HEADERS } stream_state;
 typedef enum { DISCONNECT_OK = 0, LOCAL_DISCONNECT = 1, REMOTE_DISCONNECT = 2, UNREACHABLE = 3, TIMEOUT = 4 } disconnect_code;
 
@@ -289,6 +289,13 @@ struct streamstate {
 	size_t header_mlen;
 	struct sockaddr_in addr;
 	char host[256];
+	struct {
+		char header[2048];
+		unsigned len, threshold;
+		in_addr_t ip;
+		u16_t port;
+		unsigned flags;
+	} strm;
 };
 
 bool 		stream_thread_init(unsigned streambuf_size, struct thread_ctx_s *ctx);
