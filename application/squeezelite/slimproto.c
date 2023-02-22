@@ -332,8 +332,8 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 				LOCK_S;
 				ctx->stream.state = STREAMING_DELAYED;
 				UNLOCK_S;
-			} else {
 				LOG_INFO("[%p]: Wait for player's HTTP request before streaming", ctx);
+			} else {
 				stream_sock(ip, strm->server_port, strm->flags & 0x20, header, header_len, strm->threshold * 1024, ctx->autostart >= 2, ctx);
 			}
 

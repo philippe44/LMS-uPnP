@@ -637,9 +637,9 @@ static void _SyncNotifState(char *State, struct sMR* Device)
 				Device->ShortTrackWait = 5000;
 				LOG_WARN("[%p]: stop on short track (wait %hd ms for next URI)", Device, Device->ShortTrackWait);
 			} else if (Device->sqState == SQ_PLAY && Device->ExpectedURI && Device->Config.AcceptNextURI == NEXT_GAPLESS) {
-				// gapless player but something went wrong, try to nudge it
-				AVTBasic(Device, "Next");
-				LOG_INFO("[%p]: guessing missed nextURI %s ", Device, Device->NextURI);
+				// gapless player but something went wrong, requesting LMS to got to next track
+				Event = SQ_NEXT_FAILED;
+				LOG_INFO("[%p]: nextURI %s failed, requesting LMS to go next", Device, Device->NextURI);
 			} else {
 				// could generate an overrun event or an underrun
 				Event = SQ_STOP;
@@ -674,7 +674,6 @@ static void _SyncNotifState(char *State, struct sMR* Device)
 	}
 
 	if (!strcmp(State, "PAUSED_PLAYBACK") && Device->State != PAUSED) {
-
 		// detect unsollicited pause, but do not confuse it with a fast pause/play
 		if (Device->sqState != SQ_PAUSE) Param = true;
 		LOG_INFO("%s: uPNP pause", Device->friendlyName);

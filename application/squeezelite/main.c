@@ -687,6 +687,11 @@ void sq_notify(sq_dev_handle_t handle, sq_event_t event, ...)
 			NFREE(rsp);
 			break;
 		}
+		case SQ_NEXT_FAILED: 
+			sprintf(cmd, "%s playlist index +1", ctx->cli_id);
+			rsp = cli_send_cmd(cmd, false, false, ctx);
+			NFREE(rsp);
+			break;
 		default:
 			LOG_WARN("[%p]: unknown notification %u", event);
 			break;
