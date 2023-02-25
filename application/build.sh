@@ -5,7 +5,6 @@ list="x86_64-linux-gnu-gcc x86-linux-gnu-gcc arm-linux-gnueabi-gcc aarch64-linux
       arm64-macos-darwin-cc x86_64-freebsd-gnu-gcc x86_64-solaris-gnu-gcc armv6-linux-gnueabi-gcc \
       armv5-linux-gnueabi-gcc"
 
-
 declare -A alias=( [x86-linux-gnu-gcc]=i686-stretch-linux-gnu-gcc \
                    [x86_64-linux-gnu-gcc]=x86_64-stretch-linux-gnu-gcc \
                    [arm-linux-gnueabi-gcc]=armv7-stretch-linux-gnueabi-gcc \
