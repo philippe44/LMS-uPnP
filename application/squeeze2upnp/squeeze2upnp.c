@@ -639,7 +639,7 @@ static void _SyncNotifState(char *State, struct sMR* Device)
 			} else if (Device->sqState == SQ_PLAY && Device->ExpectedURI && Device->Config.AcceptNextURI == NEXT_GAPLESS) {
 				// gapless player but something went wrong, requesting LMS to got to next track
 				Event = SQ_NEXT_FAILED;
-				LOG_INFO("[%p]: nextURI %s failed, requesting LMS to go next", Device, Device->NextURI);
+				LOG_INFO("[%p]: nextURI %s failed, requesting LMS to go next", Device, Device->ExpectedURI);
 			} else {
 				// could generate an overrun event or an underrun
 				Event = SQ_STOP;

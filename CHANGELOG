@@ -1,3 +1,6 @@
+2.1.14
+ - release
+ 
 2.1.13.6
  - missed nextURI fixed by a LMS "next" request rather an UPnP request
  
