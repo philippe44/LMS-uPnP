@@ -1,3 +1,6 @@
+2.1.16
+ - don't delay stream in flow mode
+ 
 2.1.15
  - delayed stream sock should only be sent once, if codec has not been acquired
  

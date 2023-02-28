@@ -322,7 +322,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 			}
 
 			// delay streaming until we have received the player's request
-			if (ctx->output.state > OUTPUT_STOPPED) {
+			if (ctx->output.state > OUTPUT_STOPPED && !ctx->output.encode.flow) {
 				ctx->stream.strm.ip = ip;
 				ctx->stream.strm.port = strm->server_port;
 				ctx->stream.strm.flags = strm->flags;
