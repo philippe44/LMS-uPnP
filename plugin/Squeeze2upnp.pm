@@ -178,7 +178,7 @@ sub beat {
 		
 		if ($prefs->get('logging')) {
 			open(my $fh, ">>", $class->logFile);
-			print $fh "\nRetarting Squeeze2upnp after load failure or crash: $path @args\n";
+			print $fh "\nRestarting Squeeze2upnp after load failure or crash: $path @args\n";
 			close $fh;
 		}
 		
