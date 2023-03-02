@@ -1,3 +1,6 @@
+2.1.17
+ - libupnp should disable blocking connection (too many jobs)
+ 
 2.1.16
  - don't delay stream in flow mode
  
