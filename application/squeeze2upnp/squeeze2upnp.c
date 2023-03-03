@@ -45,7 +45,7 @@
 #define TOPOLOGY				"urn:schemas-upnp-org:service:ZoneGroupTopology"
 #define GROUP_RENDERING_CTRL	"urn:schemas-upnp-org:service:GroupRenderingControl"
 
-#define DISCOVERY_TIME 		20
+#define DISCOVERY_TIME 		30
 #define PRESENCE_TIMEOUT	(DISCOVERY_TIME * 6)
 
 #define TRACK_POLL  	(1000)
@@ -158,7 +158,7 @@ static const struct cSearchedSRV_s
  int	idx;
  uint32_t  TimeOut;
 } cSearchedSRV[NB_SRV] = {	{AV_TRANSPORT, AVT_SRV_IDX, 0},
-						{RENDERING_CTRL, REND_SRV_IDX, 30},
+						{RENDERING_CTRL, REND_SRV_IDX, 120},
 						{CONNECTION_MGR, CNX_MGR_IDX, 0},
 						{TOPOLOGY, TOPOLOGY_IDX, 0},
 						{GROUP_RENDERING_CTRL, GRP_REND_SRV_IDX, 0},

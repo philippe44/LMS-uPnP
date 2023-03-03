@@ -1,3 +1,9 @@
+2.1.18
+ - release
+ 
+2.1.17.1
+ - increase discovery & auto-renewal timeouts which seems to improve stability a lot
+ 
 2.1.17
  - libupnp should disable blocking connection (too many jobs)
  
