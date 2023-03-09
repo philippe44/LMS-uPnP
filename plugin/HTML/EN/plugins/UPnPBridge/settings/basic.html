@@ -126,6 +126,8 @@
 			<option [% IF entry.1 == accept_nexturi %]selected[% END %] value="[% entry.1 %]">[% entry.0 | string %]</option>
 		[% END %]
 		</select>
+		[% "PLUGIN_UPNPBRIDGE_NEXTDELAY" | string %]
+		<input type="text" class="stdedit" name="next_delay" id="next_delay" value="[% next_delay %]" style="width:20px">		
 		[% "PLUGIN_UPNPBRIDGE_SEEKAFTERPAUSE" | string %]
 		<select class="stdedit" name="seek_after_pause" id="seek_after_pause">
 		[% FOREACH entry IN [ ['', ''],  ['PLUGIN_UPNPBRIDGE_UNPAUSERESUME', '0'], ['PLUGIN_UPNPBRIDGE_UNPAUSESEEK','1'] ] %]

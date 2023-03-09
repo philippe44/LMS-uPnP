@@ -1,3 +1,6 @@
+2.1.19
+ - move back to delaying STMd (30s by default)
+ 
 2.1.18
  - release
  

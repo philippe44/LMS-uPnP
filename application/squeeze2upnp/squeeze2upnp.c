@@ -114,6 +114,7 @@ sq_dev_param_t glDeviceParam = {
 					OUTPUTBUF_SIZE,			// output_buffer_size
 					"aac,ogg,ops,ogf,flc,alc,wav,aif,pcm,mp3",		// codecs
 					"thru",					// mode
+					30,						// next_delay
 					"raw,wav,aif",			// raw_audio_format
 					"?",                    // server
 					96000,			        // sample_rate
@@ -852,7 +853,11 @@ int ActionHandler(Upnp_EventType EventType, const void* Event, void* Cookie) {
 			// extended informations, don't do anything else
 			if (Resp && !strcasecmp(Resp, "GetInfoExResponse")) {
 				// Battery information for devices that have one
-				LOG_DEBUG("[%p]: extended info %s", p, ixmlDocumenttoString(Result));
+				if (*loglevel == lDEBUG) {
+					char *s = ixmlDocumenttoString(Result);
+					LOG_DEBUG("[%p]: extended info %s", p, s);
+					NFREE(s);
+				}
 				r = XMLGetFirstDocumentItem(Result, "BatteryFlag", true);
 				if (r) {
 					uint32_t Level = atoi(r) << 8;
@@ -1354,6 +1359,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	// set remaining items now that we are sure
 	Device->Running = true;
 	strcpy(Device->friendlyName, friendlyName);
+	NFREE(friendlyName);
 		
 	if (!memcmp(Device->sq_config.mac, "\0\0\0\0\0\0", 6)) {
 		char ip[32];

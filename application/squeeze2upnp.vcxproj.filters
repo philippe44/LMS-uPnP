@@ -100,7 +100,7 @@
   </ItemGroup>
   <ItemGroup>
     <Library Include="libcodecs\targets\win32\x86\libcodecs.lib" />
-    <Library Include="libpupnp\targets\win32\x86\libpupnp.lib" />
     <Library Include="libpthreads4w\targets\win32\x86\libpthreadVC3.lib" />
+    <Library Include="libpupnp\targets\win32\x86\libpupnpd.lib" />
   </ItemGroup>
 </Project>

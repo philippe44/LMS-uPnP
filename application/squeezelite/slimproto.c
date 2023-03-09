@@ -321,21 +321,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 				break;
 			}
 
-			// delay streaming until we have received the player's request
-			if (ctx->output.state > OUTPUT_STOPPED && !ctx->output.encode.flow) {
-				ctx->stream.strm.ip = ip;
-				ctx->stream.strm.port = strm->server_port;
-				ctx->stream.strm.flags = strm->flags;
-				ctx->stream.strm.len = header_len;
-				ctx->stream.strm.threshold = strm->threshold;
-				memcpy(ctx->stream.strm.header, header, header_len);
-				LOCK_S;
-				ctx->stream.state = STREAMING_DELAYED;
-				UNLOCK_S;
-				LOG_INFO("[%p]: wait for player's HTTP request before streaming", ctx);
-			} else {
-				stream_sock(ip, strm->server_port, strm->flags & 0x20, header, header_len, strm->threshold * 1024, ctx->autostart >= 2, ctx);
-			}
+			stream_sock(ip, strm->server_port, strm->flags & 0x20, header, header_len, strm->threshold * 1024, ctx->autostart >= 2, ctx);
 
 			sendSTAT("STMc", 0, ctx);
 			ctx->canSTMdu = ctx->sentSTMu = ctx->sentSTMo = ctx->sentSTMl = ctx->sendSTMd = false;
@@ -736,7 +722,9 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			 the end of the track
 			*/
 			if (ctx->decode.state == DECODE_ERROR || 
-			    (ctx->decode.state == DECODE_COMPLETE && ctx->canSTMdu && output_ready)) {
+			    (ctx->decode.state == DECODE_COMPLETE && ctx->canSTMdu && output_ready && 
+				(ctx->output.encode.flow || _sendSTMu || !ctx->config.next_delay || !ctx->status.duration || 
+				 ctx->status.duration - ctx->status.ms_played < ctx->config.next_delay * 1000))) {	
 				if (ctx->decode.state == DECODE_COMPLETE) _sendSTMd = true;
 				if (ctx->decode.state == DECODE_ERROR)    _sendSTMn = true;
 				ctx->decode.state = DECODE_STOPPED;
