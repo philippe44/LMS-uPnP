@@ -1001,6 +1001,8 @@ int MasterHandler(Upnp_EventType EventType, const void *_Event, void *Cookie)
 		struct sService* s;
 		struct sMR* Device = SID2Device(UpnpEventSubscribe_get_SID(_Event));
 
+		free(Cookie);
+
 		if (!CheckAndLock(Device)) break;
 
 		s = EventURL2Service(UpnpEventSubscribe_get_PublisherUrl(_Event), Device->Service);
@@ -1029,13 +1031,10 @@ int MasterHandler(Upnp_EventType EventType, const void *_Event, void *Cookie)
 				strcpy(s->SID, UpnpString_get_String(UpnpEventSubscribe_get_SID(_Event)));
 				s->TimeOut = UpnpEventSubscribe_get_TimeOut(_Event);
 				LOG_INFO("[%p]: subscribe success", Device);
-			}
-			else if (s->Failed++ < 3) {
+			} else if (s->Failed++ < 3) {
 				LOG_INFO("[%p]: subscribe fail, re-trying %u", Device, s->Failed);
-				UpnpSubscribeAsync(glControlPointHandle, s->EventURL, s->TimeOut,
-					MasterHandler, (void*)strdup(Device->UDN));
-			}
-			else {
+				UpnpSubscribeAsync(glControlPointHandle, s->EventURL, s->TimeOut, MasterHandler, (void*)strdup(Device->UDN));
+			} else {
 				LOG_WARN("[%p]: subscribe fail, volume feedback will not work", Device);
 			}
 		}
@@ -1376,7 +1375,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	// virtual players duplicate mac address
 	for (int i = 0; i < MAX_RENDERERS; i++) {
 		if (glMRDevices[i].Running && Device != glMRDevices + i && !memcmp(&glMRDevices[i].sq_config.mac, &Device->sq_config.mac, 6)) {
-			memset(Device->sq_config.mac, 0xcc, 2);
+			memset(Device->sq_config.mac, 0xbb, 2);
 			*(uint32_t*)(Device->sq_config.mac + 2) = hash32(Device->UDN);
 			LOG_INFO("[%p]: duplicated mac ... updating", Device);
 		}

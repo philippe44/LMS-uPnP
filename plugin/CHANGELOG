@@ -1,3 +1,6 @@
+2.1.20
+ - use new libpupnp that fixes giant memory leak
+
 2.1.19
  - move back to delaying STMd (30s by default)
  

@@ -377,14 +377,21 @@ static void output_http_thread(struct thread_param_s *param) {
 	if (store) fclose(store);
 
 	LOCK_O;
+
 	thread->http = -1;
-	thread->running = false;
+	if (thread->running) {
+		// if we self-terminate, nobody will join us so free resources now
+		pthread_detach(thread->thread);
+		thread->running = false;
+	}
+
 	if (ctx->output.encode.flow) {
 		// terminate codec if needed
 		_output_end_stream(NULL, ctx);
 		// need to have slimproto move on in case of stream failure
 		ctx->output.completed = true;
 	}
+
 	UNLOCK_O;
 
 	LOG_INFO("[%p]: end thread %d (%zu bytes)", ctx, thread == ctx->output_thread ? 0 : 1, bytes);

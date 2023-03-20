@@ -141,9 +141,7 @@ static char *cli_decode(char *str) {
 
 /*---------------------------------------------------------------------------*/
 /* IMPORTANT: be sure to free() the returned string after use */
-static char *cli_find_tag(char *str, char *tag)
-
-{
+static char *cli_find_tag(char *str, char *tag) {
 	char *p, *res = NULL;
 	char *buf = malloc(max(strlen(str), strlen(tag)) + 5);
 
