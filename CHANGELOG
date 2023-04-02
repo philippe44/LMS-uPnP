@@ -1,3 +1,6 @@
+2.1.21
+ - remove need of libmvec for x86_64 linux (libc "--disable-libmvec" and compiler with "-fno-fast-math")
+ 
 2.1.20
  - use new libpupnp that fixes giant memory leak
 
