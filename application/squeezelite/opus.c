@@ -72,14 +72,22 @@ static log_level *loglevel = &decode_loglevel;
 
 // called with mutex locked within vorbis_decode to avoid locking O before S
 static int _read_cb(void *datasource, char *ptr, int size) {
-	size_t bytes;
+	size_t bytes = 0;
 	struct thread_ctx_s *ctx = datasource;
 
-	bytes = min(_buf_used(ctx->streambuf), _buf_cont_read(ctx->streambuf));
-	bytes = min(bytes, size);
+	while (1) {
+		LOCK_S;
+		bytes = min(_buf_used(ctx->streambuf), _buf_cont_read(ctx->streambuf));
+		bytes = min(bytes, size);
+		if (bytes || ctx->stream.state <= DISCONNECT) break;
+
+		UNLOCK_S;
+		usleep(50 * 1000);
+	}
 
 	memcpy(ptr, ctx->streambuf->readp, bytes);
 	_buf_inc_readp(ctx->streambuf, bytes);
+	UNLOCK_S;
 
 	return bytes;
 }
@@ -90,7 +98,6 @@ static decode_state opus_decompress( struct thread_ctx_s *ctx) {
 	int n;
 	u8_t *write_buf = NULL;
 
-	LOCK_S;
 	LOCK_O_direct;
 
 	IF_DIRECT(
@@ -102,7 +109,6 @@ static decode_state opus_decompress( struct thread_ctx_s *ctx) {
 
 	if (!frames && ctx->stream.state <= DISCONNECT) {
 		UNLOCK_O_direct;
-		UNLOCK_S;
 		return DECODE_COMPLETE;
 	}
 
@@ -117,7 +123,6 @@ static decode_state opus_decompress( struct thread_ctx_s *ctx) {
 		if ((u->of = OP(&gu, open_callbacks, ctx, &cbs, NULL, 0, &err)) == NULL) {
 			LOG_WARN("open_callbacks error: %d", err);
 			UNLOCK_O_direct;
-			UNLOCK_S;
 			return DECODE_COMPLETE;
 		}
 
@@ -143,7 +148,6 @@ static decode_state opus_decompress( struct thread_ctx_s *ctx) {
 		if (u->channels > 2) {
 			LOG_WARN("[%p]: too many channels: %d", ctx, u->channels);
 			UNLOCK_O_direct;
-			UNLOCK_S;
 			return DECODE_ERROR;
 		}
 	}
@@ -195,7 +199,6 @@ static decode_state opus_decompress( struct thread_ctx_s *ctx) {
 		if (ctx->stream.state <= DISCONNECT) {
 			LOG_INFO("[%p]: partial decode", ctx);
 			UNLOCK_O_direct;
-			UNLOCK_S;
 			return DECODE_COMPLETE;
 		} else {
 			LOG_INFO("[%p]: no frame decoded", ctx);
@@ -210,12 +213,10 @@ static decode_state opus_decompress( struct thread_ctx_s *ctx) {
 
 		LOG_INFO("[%p]: op_read error: %d", ctx, n);
 		UNLOCK_O_direct;
-		UNLOCK_S;
 		return DECODE_COMPLETE;
 	}
 
 	UNLOCK_O_direct;
-	UNLOCK_S;
 
 	return DECODE_RUNNING;
 }

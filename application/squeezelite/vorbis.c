@@ -89,11 +89,19 @@ static size_t _read_cb(void *ptr, size_t size, size_t nmemb, void *datasource) {
 	size_t bytes;
 	struct thread_ctx_s *ctx = datasource;
 
-	bytes = min(_buf_used(ctx->streambuf), _buf_cont_read(ctx->streambuf));
-	bytes = min(bytes, size * nmemb);
+	while (1) {
+		LOCK_S;
+		bytes = min(_buf_used(ctx->streambuf), _buf_cont_read(ctx->streambuf));
+		bytes = min(bytes, size * nmemb);
+		if (bytes || ctx->stream.state <= DISCONNECT) break;
+
+		UNLOCK_S;
+		usleep(50 * 1000);
+	}
 
 	memcpy(ptr, ctx->streambuf->readp, bytes);
 	_buf_inc_readp(ctx->streambuf, bytes);
+	UNLOCK_S;
 
 	return bytes / size;
 }
@@ -109,7 +117,6 @@ static decode_state vorbis_decode( struct thread_ctx_s *ctx) {
 	int bytes, s, n;
 	u8_t *write_buf = NULL;
 
-	LOCK_S;
 	LOCK_O_direct;
 
 	IF_DIRECT(
@@ -121,7 +128,6 @@ static decode_state vorbis_decode( struct thread_ctx_s *ctx) {
 
 	if (!frames && ctx->stream.state <= DISCONNECT) {
 		UNLOCK_O_direct;
-		UNLOCK_S;
 		return DECODE_COMPLETE;
 	}
 
@@ -141,7 +147,6 @@ static decode_state vorbis_decode( struct thread_ctx_s *ctx) {
 		if ((err = OV(&gv, open_callbacks, ctx, v->vf, NULL, 0, cbs)) < 0) {
 			LOG_WARN("[%p]: open_callbacks error: %d", ctx, err);
 			UNLOCK_O_direct;
-			UNLOCK_S;
 			return DECODE_COMPLETE;
 		}
 
@@ -171,7 +176,6 @@ static decode_state vorbis_decode( struct thread_ctx_s *ctx) {
 		if (v->channels > 2) {
 			LOG_WARN("[%p]: too many channels: %d", ctx, v->channels);
 			UNLOCK_O_direct;
-			UNLOCK_S;
 			return DECODE_ERROR;
 		}
 	}
@@ -238,7 +242,6 @@ static decode_state vorbis_decode( struct thread_ctx_s *ctx) {
 		if (ctx->stream.state <= DISCONNECT) {
 			LOG_INFO("[%p]: partial decode", ctx);
 			UNLOCK_O_direct;
-			UNLOCK_S;
 			return DECODE_COMPLETE;
 		} else {
 			LOG_INFO("[%p]: no frame decoded", ctx);
@@ -253,12 +256,10 @@ static decode_state vorbis_decode( struct thread_ctx_s *ctx) {
 
 		LOG_INFO("[%p]: ov_read error: %d", ctx, n);
 		UNLOCK_O_direct;
-		UNLOCK_S;
 		return DECODE_COMPLETE;
 	}
 
 	UNLOCK_O_direct;
-	UNLOCK_S;
 
 	return DECODE_RUNNING;
 }
