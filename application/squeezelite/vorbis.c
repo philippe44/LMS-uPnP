@@ -46,6 +46,10 @@
 #endif
 #endif
 
+#ifdef OGG_ONLY
+#define DEPTH 24
+#endif
+
 #if !LINKALL && !defined(TREMOR_ONLY)
 static bool tremor = false;
 #endif
@@ -98,7 +102,8 @@ static struct {
 #endif
 
 struct vorbis {
-	bool opened;
+	bool opened, eos;
+	int channels;
 #ifndef OGG_ONLY
 	OggVorbis_File* vf;
 #else
@@ -118,7 +123,6 @@ struct vorbis {
 	uint32_t overflow;
 	int rate;
 #endif
-	int channels;
 };
 
 extern log_level decode_loglevel;
@@ -340,6 +344,14 @@ static inline int32_t clip15(int32_t x) {
 	ret -= ((x >= -32768) - 1) & (x + 32768);
 	return ret;
 }
+
+static inline int32_t clip15f(float x) {
+	int32_t ret = x * (1 << (DEPTH-1)) + 0.5f;
+	if (ret > (1 << (DEPTH-1)) - 1) ret = (1 << (DEPTH-1)) - 1;
+	else if (ret < -(1 << (DEPTH-1))) ret = -(1 << (DEPTH-1));
+	return ret;
+
+}
 #endif
 
 static decode_state vorbis_decode( struct thread_ctx_s *ctx) {
@@ -438,7 +450,7 @@ static decode_state vorbis_decode( struct thread_ctx_s *ctx) {
 	} else if (!OG(&go, page_eos, &v->page)) {
 		UNLOCK_O_direct;
 		return DECODE_RUNNING;
-	}
+	} else v->eos = true;
 #endif
 
 	if (n > 0) {
@@ -478,15 +490,15 @@ static decode_state vorbis_decode( struct thread_ctx_s *ctx) {
 				float* iptr_r = pcm[1];
 
 				while (count--) {
-					*optr++ = *iptr_l++ * (65536.f * 32768.f);
-					*optr++ = *iptr_r++ * (65536.f * 32768.f);
+					*optr++ = clip15f(*iptr_l++) << (32 - DEPTH);
+					*optr++ = clip15f(*iptr_r++) << (32 - DEPTH);
 				}
 			}
 			else if (v->channels == 1) {
 				float* iptr = pcm[0];
 				while (count--) {
-					*optr++ = *iptr * 32768.f;
-					*optr++ = *iptr++ * 32768.f;
+					*optr++ = clip15f(*iptr) << (32 - DEPTH);
+					*optr++ = clip15f(*iptr++) << (32 - DEPTH);
 				}
 			}
 		}
@@ -530,7 +542,7 @@ static decode_state vorbis_decode( struct thread_ctx_s *ctx) {
 
 	} else if (n == 0) {
 
-		if (ctx->stream.state <= DISCONNECT) {
+		if (ctx->stream.state <= DISCONNECT && v->eos) {
 			LOG_INFO("[%p]: end of decode", ctx);
 			UNLOCK_O_direct;
 			return DECODE_COMPLETE;
@@ -563,12 +575,11 @@ static void vorbis_open(u8_t size, u32_t rate, u8_t chan, u8_t endianness, struc
 		v->opened = false;
 		v->vf = malloc(sizeof(OggVorbis_File) + 128); // add some padding as struct size may be larger
 		memset(v->vf, 0, sizeof(OggVorbis_File) + 128);
-	} 
-
-	if (v->opened) {
+	} else if (v->opened) {
 		OV(&gv, clear, v->vf);
 		v->opened = false;
 	}
+	v->eos = true;
 #else
 	if (!v) {
 		v = ctx->decode.handle = calloc(1, sizeof(struct vorbis));
@@ -583,6 +594,7 @@ static void vorbis_open(u8_t size, u32_t rate, u8_t chan, u8_t endianness, struc
 		OG(&go, sync_clear, &v->sync);
 	}
 	OG(&go, stream_init, &v->state, -1);
+	v->eos = false;
 	v->opened = false;
 	v->overflow = 0;
 	v->status = OGG_SYNC;
@@ -683,8 +695,8 @@ struct codec *register_vorbis(void) {
 	static struct codec ret = {
 		'o',          // id
 		"ogg",        // types
-		2048,         // min read
-		20480,        // min space
+		8192,         // min read
+		32*1024,      // min space
 		vorbis_open,  // open
 		vorbis_close, // close
 		vorbis_decode,// decode

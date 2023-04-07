@@ -1,3 +1,7 @@
+2.1.23
+ - proper clip in Vorbis raw Ogg mode (unused in this version)
+ - end of decode compatible with raw Ogg mode
+ 
 2.1.22
  - fix opus and vorbis failing to play with very large VorbisComment (artwork)
  

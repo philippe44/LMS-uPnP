@@ -72,6 +72,8 @@ static struct {
 #endif
 
 struct opus {
+	bool eos;
+	int channels;
 #ifndef OGG_ONLY
 	struct OggOpusFile *of;
 #else
@@ -84,8 +86,8 @@ struct opus {
 	int rate, gain, pre_skip;
 	size_t overframes;
 	u8_t *overbuf;
+	bool eos;
 #endif
-	int channels;
 };
 
 extern log_level decode_loglevel;
@@ -337,7 +339,7 @@ static decode_state opus_decompress(struct thread_ctx_s *ctx) {
 	} else if (!OG(&go, page_eos, &u->page)) {
 		UNLOCK_O_direct;
 		return DECODE_RUNNING;
-	}
+	} else u->eos = true;
 #endif
 	
 	if (n > 0) {
@@ -410,6 +412,7 @@ static void opus_open(u8_t size, u32_t rate, u8_t chan, u8_t endianness, struct 
 		OP(&gu, free, u->of);
 		u->of = NULL;
 	}
+	u->eos = true;
 #else
 	if (!u) {
 		u = ctx->decode.handle = calloc(1, sizeof(struct opus));
@@ -422,6 +425,7 @@ static void opus_open(u8_t size, u32_t rate, u8_t chan, u8_t endianness, struct 
 		OG(&go, stream_clear, &u->state);
 		OG(&go, sync_clear, &u->sync);
 	}
+	u->eos = false;
 	u->status = OGG_SYNC;
 	u->overframes = 0;
 #endif
