@@ -206,7 +206,7 @@ int _ov_read(OggVorbis_File* vf, char* pcm, size_t bytes, int *out) {
 }
 #else 
 static int get_ogg_packet(struct thread_ctx_s* ctx) {
-	int status = 0;
+	int status, packet = -1;
 	struct vorbis* v = ctx->decode.handle;
 
 	LOCK_S;
@@ -227,8 +227,12 @@ static int get_ogg_packet(struct thread_ctx_s* ctx) {
 		if (status)	OG(&go, stream_pagein, &v->state, &v->page);
 	}
 
+	// we only return a negative value when there is nothing more to proceed
+	if (status > 0) packet = status;
+	else if (ctx->stream.state > DISCONNECT) packet = 0;
+
 	UNLOCK_S;
-	return status;
+	return packet;
 }
 
 static int read_vorbis_header(struct thread_ctx_s* ctx) {
@@ -438,19 +442,20 @@ static decode_state vorbis_decode( struct thread_ctx_s *ctx) {
 	n = _ov_read(v->vf, (char*)write_buf, bytes, &s);
 #else
 	void** pcm = NULL;
+	int packet = 0;
 
 	if (v->overflow) {
 		n = pcm_out(&v->decoder, &pcm);
 		v->overflow = n - min(n, frames);
-	} else if (get_ogg_packet(ctx) > 0) {
+	} else if ((packet = get_ogg_packet(ctx)) > 0) {
 		n = OV(&gv, synthesis, &v->block, &v->packet);
 		if (n == 0) n = OV(&gv, synthesis_blockin, &v->decoder, &v->block);
 		if (n == 0) n = pcm_out(&v->decoder, &pcm);
 		v->overflow = n - min(n, frames);
-	} else if (!OG(&go, page_eos, &v->page)) {
+	} else if (!packet && !OG(&go, page_eos, &v->page)) {
 		UNLOCK_O_direct;
 		return DECODE_RUNNING;
-	} else v->eos = true;
+	};
 #endif
 
 	if (n > 0) {
@@ -541,8 +546,11 @@ static decode_state vorbis_decode( struct thread_ctx_s *ctx) {
 		LOG_SDEBUG("[%p]: wrote %u frames", ctx, frames);
 
 	} else if (n == 0) {
-
-		if (ctx->stream.state <= DISCONNECT && v->eos) {
+#ifndef OGG_ONLY
+		if (ctx->stream.state <= DISCONNECT) {
+#else
+		if (packet < 0) {
+#endif
 			LOG_INFO("[%p]: end of decode", ctx);
 			UNLOCK_O_direct;
 			return DECODE_COMPLETE;

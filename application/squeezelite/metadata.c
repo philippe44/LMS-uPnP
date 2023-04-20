@@ -31,8 +31,9 @@ void metadata_free(struct metadata_s* const self) {
 }
 
 /*----------------------------------------------------------------------------*/
-struct metadata_s* metadata_clone(struct metadata_s* const self) {
-	struct metadata_s *clone = malloc(sizeof(*self));
+struct metadata_s* metadata_clone(struct metadata_s* const self, struct metadata_s* clone) {
+	if (!clone) clone = malloc(sizeof(*self));
+	else metadata_free(clone);
 	if (!clone) return clone;
 	memcpy(clone, self, sizeof(*self));
 	clone->artist  = __STRDUP__(self->artist);

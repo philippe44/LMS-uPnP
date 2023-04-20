@@ -20,7 +20,7 @@
 #define STREAMBUF_SIZE	(1024*1024)
 
 typedef enum {SQ_NONE, SQ_SET_TRACK, SQ_PLAY, SQ_TRANSITION, SQ_PAUSE, SQ_UNPAUSE,
-			  SQ_STOP, SQ_VOLUME, SQ_MUTE, SQ_TIME, SQ_TRACK_INFO, SQ_ONOFF,
+			  SQ_STOP, SQ_VOLUME, SQ_MUTE, SQ_TIME, SQ_TRACK_INFO, SQ_ONOFF, SQ_NEW_METADATA,
 			  SQ_NEXT, SQ_SETNAME, SQ_SETSERVER, SQ_BATTERY, SQ_NEXT_FAILED} sq_action_t;
 typedef enum { ICY_NONE, ICY_FULL, ICY_TEXT } sq_icy_e;
 typedef enum { L24_PACKED, L24_PACKED_LPCM, L24_TRUNC16, L24_TRUNC16_PCM, L24_UNPACKED_HIGH, L24_UNPACKED_LOW } sq_L24_pack_t;
@@ -79,7 +79,7 @@ void				sq_release_device(sq_dev_handle_t);
 void				sq_notify(sq_dev_handle_t handle, sq_event_t event, ...);
 uint32_t			sq_get_time(sq_dev_handle_t handle);
 uint32_t			sq_self_time(sq_dev_handle_t handle);
-bool				sq_get_metadata(sq_dev_handle_t handle, struct metadata_s *metadata, int offset);
+uint32_t			sq_get_metadata(sq_dev_handle_t handle, struct metadata_s *metadata, int offset);
 void				sq_default_metadata(struct metadata_s *metadata, bool init);
 void 				sq_free_metadata(struct metadata_s *metadata);
 bool 				sq_set_time(sq_dev_handle_t handle, char *pos);

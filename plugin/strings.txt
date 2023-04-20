@@ -365,7 +365,8 @@ PLUGIN_UPNPBRIDGE_ICYTEXT
 
 PLUGIN_UPNPBRIDGE_SENDMETADATA_DESC
 	EN	- When a UPnP player has a display, LMS can send metadata (title, artist, album) to it. 
-	EN	<br>- You can also force resolution of artwork using syntax &ltX&gtx&ltY&gt (leave it empty for default))
+	EN	<br>- You can also force resolution of artwork using syntax &ltX&gtx&ltY&gt. You must use LMS to proxy artwork, not 
+	EN	mysqueezebox.com for that to work (leave it empty for default)
 	EN	<br>- ICY metadata is an option to send live title when playing webradio. Use 'Text only' with players that don't support artwork in ICY.
 	EN	This <b>DOES NOT</b> work if you have set a password for LMS command access
 	

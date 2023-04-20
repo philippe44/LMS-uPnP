@@ -578,14 +578,36 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 		// update playback state when woken or every 100ms
 		now = gettime_ms();
 
-		// check for metadata update (LOCK_O not really necessary here)
-		if (ctx->output.state == OUTPUT_RUNNING && ctx->output.icy.interval &&
-		    (ctx->output.icy.last + ICY_UPDATE_TIME) - now > ICY_UPDATE_TIME) {
-			struct metadata_s metadata;
+		// check for metadata update. No LOCK_O might create race condition 
+		if (ctx->output.state == OUTPUT_RUNNING) {
+			// can use a pointer here as object is static
+			struct metadata_s* metadata = &ctx->output.metadata;
+			bool updated = false;
 
-			sq_get_metadata(ctx->self, &metadata, -1);
-			output_set_icy(&metadata, false, now, ctx);
-			metadata_free(&metadata);
+			// time to get some updated metadata anyway
+			if (ctx->output.live_metadata.enabled && ctx->output.live_metadata.last + METADATA_UPDATE_TIME - now > METADATA_UPDATE_TIME) {
+				struct metadata_s live;
+				ctx->output.live_metadata.last = now;
+				uint32_t hash = sq_get_metadata(ctx->self, &live, -1);
+				LOCK_O;
+				if (ctx->output.live_metadata.hash != hash) {
+					updated = true;
+					ctx->output.live_metadata.hash = hash;
+					// release context's metadata and do a shallow copy
+					metadata_free(metadata);
+					*metadata = live;
+				}
+				UNLOCK_O;
+			}
+
+			// handle icy locally or inform player manager
+			if (ctx->output.icy.interval) {
+				// icy is activated, handle things locally
+				if (updated) output_set_icy(metadata, ctx);
+			} else if ((ctx->output.encode.flow && ctx->output.track_started) || updated) {
+				// the callee must clone metdata if he wants to keep them
+				ctx->callback(ctx->MR, SQ_NEW_METADATA, metadata);
+			}
 		}
 
 		if (wake || now - ctx->slim_run.last > 100 || ctx->slim_run.last > now) {
@@ -931,6 +953,7 @@ void slimproto_close(struct thread_ctx_s *ctx) {
 	pthread_join(ctx->thread, NULL);
 	mutex_destroy(ctx->mutex);
 	mutex_destroy(ctx->cli_mutex);
+	metadata_free(&ctx->output.metadata);
 }
 
 
@@ -985,6 +1008,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 	char *mimetype = NULL, *p, *mode = ctx->config.mode;
 	bool ret = false;
 	s32_t sample_rate;
+	uint32_t now = gettime_ms();
 
 	LOCK_O;
 	out->index++;
@@ -1000,7 +1024,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 	*/
 
 	// get metadata - they must be freed by callee whenever he wants
-	sq_get_metadata(ctx->self, &info.metadata, info.offset);
+	uint32_t hash = sq_get_metadata(ctx->self, &info.metadata, info.offset);
 
 	// skip tracks that are too short
 	if (info.offset && info.metadata.duration && info.metadata.duration < SHORT_TRACK) {
@@ -1009,11 +1033,21 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 		return false;
 	}
 
+	LOCK_O;
+	// do a deep copy of these metadata for self
+	metadata_clone(&info.metadata, &out->metadata);
+
 	// set key parameters
 	out->completed = false;
 	out->duration = info.metadata.duration;
 	out->bitrate = info.metadata.bitrate;
 	out->icy.allowed = false;
+
+	// get live metadata when track repeats or have no duration (livestream)
+	out->live_metadata.enabled = !out->duration || info.metadata.repeating != -1;
+	out->live_metadata.last = now;
+	out->live_metadata.hash = out->live_metadata.enabled ? 0 : hash;
+	UNLOCK_O;
 
 	// read source parameters (if any)
 	if (size == '?') out->sample_size = 0;
@@ -1030,6 +1064,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 
 	// in flow mode we now have eveything, just initialize codec
 	if (out->encode.flow) {
+		if (out->icy.interval) output_set_icy(&info.metadata, ctx);
 		metadata_free(&info.metadata);
 		return codec_open(out->codec, out->sample_size, out->sample_rate,
 						  out->channels, out->in_endian, ctx);
@@ -1059,7 +1094,8 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 
 	// in case of flow, all parameters shall be set
 	if (strcasestr(mode, "flow") && out->encode.mode != ENCODE_THRU) {
-		if (ctx->config.send_icy) output_set_icy(&info.metadata, true, gettime_ms(), ctx);
+		out->icy.allowed = ctx->config.send_icy != ICY_NONE;
+		if (ctx->config.send_icy) output_set_icy(&info.metadata, ctx);
 		metadata_free(&info.metadata);
 		metadata_defaults(&info.metadata);
 
@@ -1068,8 +1104,9 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 		if (!out->encode.sample_size) out->encode.sample_size = 16;
 		out->encode.channels = 2;
 		out->encode.flow = true;
-	} else if (ctx->config.send_icy && (!out->duration || info.metadata.repeating != -1)) {
-		output_set_icy(&info.metadata, true, gettime_ms(), ctx);
+	} else if (ctx->config.send_icy && out->live_metadata.enabled) {
+		out->icy.allowed = true;
+		output_set_icy(&info.metadata, ctx);
 	}
 
 	// set sample rate for re-encoding
@@ -1177,7 +1214,6 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 		
 		LOG_INFO("[%p]: will send %zu mp3 silence blocks", ctx, out->encode.count);
 	}
-
 
 	// matching found in player
 	if (mimetype) {

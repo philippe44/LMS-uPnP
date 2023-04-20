@@ -383,7 +383,7 @@ void 		resample_end(struct thread_ctx_s *ctx);
 #define HTTP_STUB_DEPTH		(2048*1024)
 
 #define ICY_LEN_MAX		(255*16+1)
-#define ICY_UPDATE_TIME	5000
+#define METADATA_UPDATE_TIME	5000
 
 // real value is 576x2=1152 samples@44100kHz = 26.122 ms but we want a bit more blocks
 #define MP3_SILENCE_DURATION 26
@@ -426,6 +426,12 @@ struct outputstate {
 	bool  	track_started;	// track has started to be streamed (trigger, not state)
 	u8_t  	*track_start;   // pointer where track starts in buffer, just for legacy compatibility
 	int		supported_rates[2];	// for resampling (0 = use raw)
+	// for regular metadata update
+	struct metadata_s metadata;
+	struct {
+		u32_t hash, last;
+		bool enabled;
+	} live_metadata;
 	// for icy data
 	struct {
 		bool allowed;
@@ -433,7 +439,6 @@ struct outputstate {
 		size_t size, count;
 		char buffer[ICY_LEN_MAX];
 		char *artist, *title, *artwork;
-		u32_t hash, last;
 		bool  updated;
 	} icy;
 	// for format that requires headers
@@ -481,7 +486,7 @@ bool		output_thread_init(struct thread_ctx_s *ctx);
 void 		output_close(struct thread_ctx_s *ctx);
 bool		output_init(void);
 void		output_end(void);
-void 		output_set_icy(struct metadata_s *metadata, bool init, u32_t now, struct thread_ctx_s *ctx);
+void		output_set_icy(struct metadata_s* metadata, struct thread_ctx_s* ctx);
 void 		output_free_icy(struct thread_ctx_s *ctx);
 
 bool		_output_fill(struct buffer *buf, FILE *store, struct thread_ctx_s *ctx);

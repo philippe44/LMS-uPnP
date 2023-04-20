@@ -72,7 +72,6 @@ static struct {
 #endif
 
 struct opus {
-	bool eos;
 	int channels;
 #ifndef OGG_ONLY
 	struct OggOpusFile *of;
@@ -86,7 +85,6 @@ struct opus {
 	int rate, gain, pre_skip;
 	size_t overframes;
 	u8_t *overbuf;
-	bool eos;
 #endif
 };
 
@@ -162,7 +160,7 @@ static u32_t parse_uint32(const unsigned char* _data) {
 }
 
 static int get_ogg_packet(struct thread_ctx_s* ctx) {
-	int status = 0;
+	int status, packet = -1;
 	struct opus* u = ctx->decode.handle;
 
 	LOCK_S;
@@ -182,6 +180,10 @@ static int get_ogg_packet(struct thread_ctx_s* ctx) {
 		// if we have a new page, put it in
 		if (status)	OG(&go, stream_pagein, &u->state, &u->page);
 	} 
+
+	// we only return a negative value when there is nothing more to proceed
+	if (status > 0) packet = status;
+	else if (ctx->stream.state > DISCONNECT) packet = 0;
 
 	UNLOCK_S;
 	return status;
@@ -254,7 +256,6 @@ static int read_opus_header(struct thread_ctx_s* ctx) {
 static decode_state opus_decompress(struct thread_ctx_s *ctx) {
 	struct opus *u = ctx->decode.handle;
 	frames_t frames;
-	int n = 0;
 	u8_t *write_buf = NULL;
 
 	if (ctx->decode.new_stream) {
@@ -313,15 +314,17 @@ static decode_state opus_decompress(struct thread_ctx_s *ctx) {
 
 #ifndef OGG_ONLY
 	// write the decoded frames into outputbuf then unpack them (they are 16 bits)
-	n = OP(&gu, read, u->of, (opus_int16*) write_buf, frames * u->channels, NULL);
+	int n = OP(&gu, read, u->of, (opus_int16*) write_buf, frames * u->channels, NULL);
 #else
+	int packet, n = 0;
+
 	if (u->overframes) {
 		/* use potential leftover from previous encoding. We know that it will fit this time
 		 * as min_space is >=MAX_OPUS_FRAMES and we start from the beginning of the buffer */
 		memcpy(write_buf, u->overbuf, u->overframes * BYTES_PER_FRAME);
 		n = u->overframes;
 		u->overframes = 0;
-	} else if (get_ogg_packet(ctx) > 0) {
+	} else if ((packet = get_ogg_packet(ctx)) > 0) {
 		if (frames < MAX_OPUS_FRAMES) {
 			// don't have enough contiguous space, use the overflow buffer (still works if n < 0)
 			n = OP(&gu, decode, u->decoder, u->packet.packet, u->packet.bytes, (opus_int16*) u->overbuf, MAX_OPUS_FRAMES, 0);
@@ -336,12 +339,11 @@ static decode_state opus_decompress(struct thread_ctx_s *ctx) {
 			 * outputbuf and streambuf for maybe a long time while we process it all, so don't do that */
 			n = OP(&gu, decode, u->decoder, u->packet.packet, u->packet.bytes, (opus_int16*) write_buf, frames, 0);
 		}
-	} else if (!OG(&go, page_eos, &u->page)) {
+	} else if (!packet && !OG(&go, page_eos, &u->page)) {
 		UNLOCK_O_direct;
 		return DECODE_RUNNING;
-	} else u->eos = true;
+	};
 #endif
-	
 	if (n > 0) {
 		frames_t count;
 		s16_t *iptr;
@@ -378,7 +380,11 @@ static decode_state opus_decompress(struct thread_ctx_s *ctx) {
 
 	} else if (n == 0) {
 
+#ifndef OGG_ONLY
 		if (ctx->stream.state <= DISCONNECT) {
+#else
+		if (packet < 0) {
+#endif
 			LOG_INFO("[%p]: end of decode", ctx);
 			UNLOCK_O_direct;
 			return DECODE_COMPLETE;
@@ -412,7 +418,6 @@ static void opus_open(u8_t size, u32_t rate, u8_t chan, u8_t endianness, struct 
 		OP(&gu, free, u->of);
 		u->of = NULL;
 	}
-	u->eos = true;
 #else
 	if (!u) {
 		u = ctx->decode.handle = calloc(1, sizeof(struct opus));
@@ -425,7 +430,6 @@ static void opus_open(u8_t size, u32_t rate, u8_t chan, u8_t endianness, struct 
 		OG(&go, stream_clear, &u->state);
 		OG(&go, sync_clear, &u->sync);
 	}
-	u->eos = false;
 	u->status = OGG_SYNC;
 	u->overframes = 0;
 #endif
