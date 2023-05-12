@@ -1,3 +1,6 @@
+2.2.2
+ - update various libraries
+ 
 2.2.1
  - fix vorbis & opus end of stream
  - new icy mode (used for cast version)
