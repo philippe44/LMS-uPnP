@@ -213,15 +213,17 @@ static int get_ogg_packet(struct thread_ctx_s* ctx) {
 	size_t bytes = min(_buf_used(ctx->streambuf), _buf_cont_read(ctx->streambuf));
 
 	while (!(status = OG(&go, stream_packetout, &v->state, &v->packet)) && bytes) {
-		do {
+		
+		// if sync_pageout (or sync_pageseek) is not called here, sync buffers build up
+		while (!(status = OG(&go, sync_pageout, &v->sync, &v->page)) && bytes) {
 			size_t consumed = min(bytes, 4096);
-			char* buffer = OG(&gv, sync_buffer, &v->sync, consumed);
+			char* buffer = OG(&go, sync_buffer, &v->sync, consumed);
 			memcpy(buffer, ctx->streambuf->readp, consumed);
-			OG(&gv, sync_wrote, &v->sync, consumed);
+			OG(&go, sync_wrote, &v->sync, consumed);
 
 			_buf_inc_readp(ctx->streambuf, consumed);
 			bytes -= consumed;
-		} while (!(status = OG(&go, sync_pageseek, &v->sync, &v->page)) && bytes);
+		}
 
 		// if we have a new page, put it in
 		if (status)	OG(&go, stream_pagein, &v->state, &v->page);
@@ -229,7 +231,7 @@ static int get_ogg_packet(struct thread_ctx_s* ctx) {
 
 	// we only return a negative value when there is nothing more to proceed
 	if (status > 0) packet = status;
-	else if (ctx->stream.state > DISCONNECT) packet = 0;
+	else if (ctx->stream.state > DISCONNECT || _buf_used(ctx->streambuf)) packet = 0;
 
 	UNLOCK_S;
 	return packet;
@@ -261,7 +263,7 @@ static int read_vorbis_header(struct thread_ctx_s* ctx) {
 		switch (v->status) {
 		case OGG_SYNC:
 			v->status = OGG_ID_HEADER;
-			OG(&go, stream_reset_serialno, &v->state, OG(&go, page_serialno, &v->page));
+			OG(&go, stream_init, &v->state, OG(&go, page_serialno, &v->page));
 			fetch = false;
 			break;
 		case OGG_ID_HEADER:

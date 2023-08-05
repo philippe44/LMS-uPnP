@@ -136,6 +136,7 @@ bool stream_disconnect(struct thread_ctx_s *ctx) {
 		disc = true;
 	}
 	ctx->stream.state = STOPPED;
+	if (ctx->stream.store) fclose(ctx->stream.store);
 	UNLOCK_S;
 	return disc;
 }
@@ -152,6 +153,7 @@ static void _disconnect(stream_state state, disconnect_code disconnect, struct t
 #endif
 	closesocket(ctx->fd);
 	ctx->fd = -1;
+	if (ctx->stream.store) fclose(ctx->stream.store);
 	wake_controller(ctx);
 }
 
@@ -430,6 +432,7 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 					}
 
 					if (n > 0) {
+						if (ctx->stream.store) fwrite(ctx->streambuf->writep, 1, n, ctx->stream.store);
 						_buf_inc_writep(ctx->streambuf, n);
 						ctx->stream.bytes += n;
 						wake_output(ctx);
@@ -604,6 +607,14 @@ void stream_sock(u32_t ip, u16_t port, bool use_ssl, const char *header, size_t 
 	ctx->stream.sent_headers = false;
 	ctx->stream.bytes = 0;
 	ctx->stream.threshold = threshold;
+
+	if (*ctx->config.store_prefix) {
+		char name[STR_LEN];
+		snprintf(name, sizeof(name), "%s/" BRIDGE_URL "%u-in#%u#.%s", ctx->config.store_prefix, ctx->output.index, sock, ctx->codec->types);
+		ctx->stream.store = fopen(name, "wb");
+	} else {
+		ctx->stream.store = NULL;
+	}
 
 	UNLOCK_S;
 }

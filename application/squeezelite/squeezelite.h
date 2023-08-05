@@ -273,6 +273,7 @@ typedef enum { DISCONNECT_OK = 0, LOCAL_DISCONNECT = 1, REMOTE_DISCONNECT = 2, U
 
 struct streamstate {
 	stream_state state;
+	FILE* store;
 	disconnect_code disconnect;
 	char *header;
 	size_t header_len;

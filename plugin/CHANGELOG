@@ -1,3 +1,8 @@
+2.2.3
+  - in opus & vorbis direct decode mode, don't end before DISCONNECT and streambuf empty
+  - fix sync loop (build-up issue) in vorbis & opus direct decode
+  - more storage options
+
 2.2.2
  - update various libraries
  
