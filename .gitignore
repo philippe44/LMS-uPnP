@@ -100,4 +100,5 @@ _backup/
 *.bak
 *.user
 
+application/bin
 

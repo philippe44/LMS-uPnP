@@ -53,6 +53,7 @@ void SaveConfig(char *name, void *ref, bool full) {
 	}
 
 	XMLUpdateNode(doc, root, false, "binding", glBinding);
+	XMLUpdateNode(doc, root, false, "custom_discovery", "%s", glCustomDiscovery);
 	XMLUpdateNode(doc, root, false, "slimproto_log", level2debug(slimproto_loglevel));
 	XMLUpdateNode(doc, root, false, "slimmain_log", level2debug(slimmain_loglevel));
 	XMLUpdateNode(doc, root, false, "stream_log", level2debug(stream_loglevel));
@@ -197,6 +198,7 @@ static void LoadGlobalItem(char *name, char *val)
 	if (!val) return;
 
 	if (!strcmp(name, "binding")) strcpy(glBinding, val);
+	if (!strcmp(name, "custom_discovery")) strcpy(glCustomDiscovery, val);
 	if (!strcmp(name, "slimproto_log")) slimproto_loglevel = debug2level(val);
 	if (!strcmp(name, "slimmain_log")) slimmain_loglevel = debug2level(val);
 	if (!strcmp(name, "stream_log")) stream_loglevel = debug2level(val);

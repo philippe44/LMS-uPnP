@@ -68,6 +68,7 @@ char				glBinding[128] = "?";
 struct sMR			glMRDevices[MAX_RENDERERS];
 pthread_mutex_t 	glMRMutex;
 UpnpClient_Handle 	glControlPointHandle;
+char				glCustomDiscovery[STR_LEN * 8];
 
 log_level	slimproto_loglevel = lINFO;
 log_level	slimmain_loglevel = lWARN;
@@ -151,7 +152,8 @@ typedef struct sUpdate {
 /*----------------------------------------------------------------------------*/
 /* consts or pseudo-const*/
 /*----------------------------------------------------------------------------*/
-#define MEDIA_RENDERER "urn:schemas-upnp-org:device:MediaRenderer"
+static char* glDiscoveryPatterns[8] = { "urn:schemas-upnp-org:device:MediaRenderer:1",
+										"urn:schemas-upnp-org:device:MediaRenderer:2" };
 
 static const struct cSearchedSRV_s
 {
@@ -960,6 +962,7 @@ int MasterHandler(Upnp_EventType EventType, const void *_Event, void *Cookie)
 
 		Update->Type = DISCOVERY;
 		Update->Data = strdup(UpnpString_get_String(UpnpDiscovery_get_Location(_Event)));
+		LOG_DEBUG("received UPnP discover response %s", Update->Data);
 		queue_insert(&glUpdateQueue, Update);
 		pthread_cond_signal(&glUpdateCond);
 
@@ -985,10 +988,10 @@ int MasterHandler(Upnp_EventType EventType, const void *_Event, void *Cookie)
 
 		// if there is a cookie, it's a targeted Sonos search
 		if (!Cookie) {
-			static int Version;
-			char SearchTopic[sizeof(MEDIA_RENDERER) + 2];
-			snprintf(SearchTopic, sizeof(SearchTopic), "%s:%i", MEDIA_RENDERER, (Version++ % 2) + 1);
-			UpnpSearchAsync(glControlPointHandle, DISCOVERY_TIME, SearchTopic, NULL);
+			static int Index;
+			if (!glDiscoveryPatterns[Index]) Index = 0;
+			LOG_INFO("UPnP search for %s", glDiscoveryPatterns[Index]);
+			UpnpSearchAsync(glControlPointHandle, DISCOVERY_TIME, glDiscoveryPatterns[Index++], NULL);
 		}
 
 		break;
@@ -1180,9 +1183,11 @@ static void *UpdateThread(void *args)
 				}
 
 				// not a media renderer but maybe a Sonos group update
-				if (!XMLMatchDocumentItem(DescDoc, "deviceType", MEDIA_RENDERER, false)) {
-					goto cleanup;
+				bool ValidRenderer = false;
+				for (size_t i = 0; !ValidRenderer && glDiscoveryPatterns[i]; i++) {
+					ValidRenderer = XMLMatchDocumentItem(DescDoc, "deviceType", glDiscoveryPatterns[i], false);
 				}
+				if (!ValidRenderer) goto cleanup;
 
 				ModelName = XMLGetFirstDocumentItem(DescDoc, "modelName", true);
 				UDN = XMLGetFirstDocumentItem(DescDoc, "UDN", true);
@@ -1485,8 +1490,11 @@ static bool Start(void) {
 	pthread_create(&glMainThread, NULL, &MainThread, NULL);
 	pthread_create(&glUpdateThread, NULL, &UpdateThread, NULL);
 
-	UpnpSearchAsync(glControlPointHandle, DISCOVERY_TIME, MEDIA_RENDERER ":1", NULL);
-	UpnpSearchAsync(glControlPointHandle, DISCOVERY_TIME, MEDIA_RENDERER ":2", NULL);
+	
+	for (size_t i = 0; glDiscoveryPatterns[i]; i++) {
+		LOG_INFO("UPnP search for %s", glDiscoveryPatterns[i]);
+		UpnpSearchAsync(glControlPointHandle, DISCOVERY_TIME, glDiscoveryPatterns[i], NULL);
+	}
 
 	return true;
 }
@@ -1518,6 +1526,7 @@ static bool Stop(void) {
 	for (int i = 0; i < MAX_RENDERERS; i++)	{
 		pthread_mutex_destroy(&glMRDevices[i].Mutex);
 	}
+
 	// remove discovered items
 	queue_flush(&glUpdateQueue);
 	if (glConfigID) ixmlDocument_free(glConfigID);
@@ -1703,6 +1712,17 @@ int main(int argc, char *argv[])
 	}
 	// load config from xml file
 	glConfigID = (void*) LoadConfig(glConfigName, &glMRConfig, &glDeviceParam);
+
+	// parse custom pattern of SSDP discovery
+	char* token = strtok(glCustomDiscovery, ",;");
+	for (int i = 0; token && i < sizeof(glDiscoveryPatterns) / sizeof(char*); i++) {
+		if (glDiscoveryPatterns[i]) continue;
+		LOG_INFO("adding SSDP discovery %s", token);
+		// we don't need to co^py the tokens, they are valid runtime-wide
+		glDiscoveryPatterns[i] = token;
+		token = strtok(NULL, ",;");	
+	}
+
 	// potentially overwrite with some cmdline parameters
 	if (!ParseArgs(argc, argv)) exit(1);
 	if (glLogFile) {

@@ -70,6 +70,8 @@ typedef struct sMRConfig
 	int			MaxVolume;
 	bool		AutoPlay;
 	char		ForcedMimeTypes[STR_LEN];
+	char		CustomPattern[STR_LEN * 8];
+
 } tMRConfig;
 
 struct sMR {
@@ -111,6 +113,7 @@ struct sMR {
 };
 
 extern UpnpClient_Handle   	glControlPointHandle;
+extern char					glCustomDiscovery[];
 extern char 				glBinding[];
 extern int32_t				glLogLimit;
 extern tMRConfig			glMRConfig;

@@ -51,6 +51,10 @@
 		&nbsp<input name="delconfig" type="submit" value=[% "PLUGIN_UPNPBRIDGE_DELCONFIG" | string %]>
 	[% END %]
 	
+	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_CUSTOMDISCOVERY" desc="PLUGIN_UPNPBRIDGE_CUSTOMDISCOVERY_DESC" %]
+		<input type="text" class="stdedit" name="custom_discovery" id="custom_discovery" value="[% custom_discovery %]" size="64">
+	[% END %]
+	
 	<script type="text/javascript">
 	function lmssocket(item) {
 		var params = document.getElementById('xmlparams') != null;

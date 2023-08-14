@@ -140,6 +140,12 @@ PLUGIN_UPNPBRIDGE_AUTOSAVECONFIG
 PLUGIN_UPNPBRIDGE_DELCONFIG
 	EN	Erase
 	
+PLUGIN_UPNPBRIDGE_CUSTOMDISCOVERY
+	EN	UPnP extra search tokens
+	
+PLUGIN_UPNPBRIDGE_CUSTOMDISCOVERY_DESC
+	EN	UPnP search is using standard tokens "urn:schemas-upnp-org:device:MediaRenderer:1" and "urn:schemas-upnp-org:device:MediaRenderer:2". Some players are creative and use different scheme although they are UPnP. Add here a comma or semi-colon separated list of search tokens
+	
 PLUGIN_UPNPBRIDGE_BINDING
 	EN	Network binding and port
 	
