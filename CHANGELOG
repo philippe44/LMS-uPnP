@@ -1,5 +1,7 @@
 2.3.0
  - option <custom_discovery> to add non-standard UPnP queries
+ - maybe a fix why some server or name were never updated (XML_UpdateNode bug)
+ - display interface upon startup
  
 2.2.3
  - in opus & vorbis direct decode mode, don't end before DISCONNECT and streambuf empty

@@ -1455,7 +1455,7 @@ static bool Start(void) {
 	UpnpSetLogLevel(UPNP_CRITICAL);
 	int rc = UpnpInit2(iface, Port);
 
-	LOG_INFO("Binding to iface [%s]@%s:%hu (http:%u)", iface, inet_ntoa(Host), (unsigned short)UpnpGetServerPort(), Port);
+	LOG_INFO("Binding to iface %s:%hu [%s] (http port %u)", inet_ntoa(Host), (unsigned short)UpnpGetServerPort(), iface, Port);
 	NFREE(iface);
 
 	if (rc != UPNP_E_SUCCESS) {
