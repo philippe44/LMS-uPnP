@@ -1,3 +1,6 @@
+2.3.1
+ - upon UPnP socket error, remove player at next update, don't need to wait timeout especially when playing
+ 
 2.3.0
  - option <custom_discovery> to add non-standard UPnP queries
  - maybe a fix why some server or name were never updated (XML_UpdateNode bug)

@@ -581,7 +581,7 @@ static void *MRThread(void *args)
 		}
 
 		if (!p->on || (p->sqState == SQ_STOP && p->State == STOPPED) ||
-			 p->ErrorCount > MAX_ACTION_ERRORS || p->WaitCookie) goto sleep;
+			 p->ErrorCount < 0 || p->ErrorCount > MAX_ACTION_ERRORS || p->WaitCookie) goto sleep;
 
 		// get track position & CurrentURI
 		if (p->TrackPoll >= TRACK_POLL) {
@@ -923,9 +923,11 @@ int ActionHandler(Upnp_EventType EventType, const void* Event, void* Cookie) {
 			LOG_SDEBUG("Action complete : %i (cookie %p)", EventType, Cookie);
 
 			if (UpnpActionComplete_get_ErrCode(Event) != UPNP_E_SUCCESS) {
-				p->ErrorCount++;
-				LOG_ERROR("Error in action callback -- %d (cookie %p)", UpnpActionComplete_get_ErrCode(Event), Cookie);
-			} else {
+				if (UpnpActionComplete_get_ErrCode(Event) == UPNP_E_SOCKET_CONNECT) p->ErrorCount = -1;
+				else if (p->ErrorCount >= 0) p->ErrorCount++;
+				LOG_ERROR("[%p]: Error %d in action callback (count:%d cookie:%p)", p, UpnpActionComplete_get_ErrCode(Event), p->ErrorCount, Cookie);
+			}
+			else {
 				p->ErrorCount = 0;
 			}
 
@@ -1084,11 +1086,9 @@ static void *UpdateThread(void *args)
 
 				for (int i = 0; i < MAX_RENDERERS; i++) {
 					Device = glMRDevices + i;
-					if (Device->Running && (Device->sqState != SQ_PLAY || Device->State != PLAYING) &&
-						((Device->Config.RemoveTimeout != -1 &&
-						(Device->LastSeen + Device->Config.RemoveTimeout) - now > Device->Config.RemoveTimeout) ||
-						Device->ErrorCount > MAX_ACTION_ERRORS)) {
-
+					if (Device->Running && (((Device->sqState != SQ_PLAY || Device->State != PLAYING) &&
+						((Device->Config.RemoveTimeout != -1 && now - Device->LastSeen > Device->Config.RemoveTimeout) || 
+						 Device->ErrorCount > MAX_ACTION_ERRORS)) || Device->ErrorCount < 0)) {
 						pthread_mutex_lock(&Device->Mutex);
 						LOG_INFO("[%p]: removing unresponsive player (%s)", Device, Device->friendlyName);
 						sq_delete_device(Device->SqueezeHandle);
