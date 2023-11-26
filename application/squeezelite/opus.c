@@ -217,7 +217,7 @@ static int read_opus_header(struct thread_ctx_s* ctx) {
 		switch (u->status) {
 		case OGG_SYNC:
 			u->status = OGG_ID_HEADER;
-			OG(&go, stream_init, &u->state, OG(&go, page_serialno, &u->page));
+			OG(&go, stream_reset_serial_no, &u->state, OG(&go, page_serialno, &u->page));
 			fetch = false;
 			break;
 		case OGG_ID_HEADER:

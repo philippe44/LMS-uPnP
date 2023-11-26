@@ -88,6 +88,7 @@ static struct {
 	void (*vorbis_info_init)(vorbis_info* vi);
 	void (*vorbis_info_clear)(vorbis_info* vi);
 	void (*vorbis_comment_init)(vorbis_comment* vc);
+	void (*vorbis_comment_clear)(vorbis_comment* vc);
 	int (*vorbis_block_init)(vorbis_dsp_state* v, vorbis_block* vb);
 	int (*vorbis_block_clear)(vorbis_block* vb);
 	void (*vorbis_dsp_clear)(vorbis_dsp_state* v);
@@ -263,7 +264,7 @@ static int read_vorbis_header(struct thread_ctx_s* ctx) {
 		switch (v->status) {
 		case OGG_SYNC:
 			v->status = OGG_ID_HEADER;
-			OG(&go, stream_init, &v->state, OG(&go, page_serialno, &v->page));
+			OG(&go, stream_reset_serialno, &v->state, OG(&go, page_serialno, &v->page));
 			fetch = false;
 			break;
 		case OGG_ID_HEADER:
@@ -596,9 +597,9 @@ static void vorbis_open(u8_t size, u32_t rate, u8_t chan, u8_t endianness, struc
 		OG(&go, sync_init, &v->sync);
 	} else {
 		if (v->opened) {
-			OV(&go, block_clear, &v->block);
-			OV(&go, info_clear, &v->info);
-			OV(&go, dsp_clear, &v->decoder);
+			OV(&gv, block_clear, &v->block);
+			OV(&gv, dsp_clear, &v->decoder);
+			OV(&gv, info_clear, &v->info);
 		}
 		OG(&go, stream_clear, &v->state);
 		OG(&go, sync_clear, &v->sync);
@@ -621,9 +622,9 @@ static void vorbis_close(struct thread_ctx_s *ctx) {
 	free(v->vf);
 #else
 	if (v->opened) {
-		OV(&go, block_clear, &v->block);
-		OV(&go, info_clear, &v->info);
-		OV(&go, dsp_clear, &v->decoder);
+		OV(&gv, block_clear, &v->block);
+		OV(&gv, dsp_clear, &v->decoder);
+		OV(&gv, info_clear, &v->info);
 	}
 	OG(&go, stream_clear, &v->state);
 	OG(&go, sync_clear, &v->sync);
@@ -681,6 +682,7 @@ static bool load_vorbis(void) {
 	gv.vorbis_info_init = dlsym(gv.handle, "vorbis_info_init");
 	gv.vorbis_info_clear = dlsym(gv.handle, "vorbis_info_clear");
 	gv.vorbis_comment_init = dlsym(gv.handle, "vorbis_comment_init");
+	gv.vorbis_comment_clear = dlsym(gv.handle, "vorbis_comment_clear");
 	gv.vorbis_block_clear = dlsym(gv.handle, "vorbis_block_clear");
 	gv.vorbis_synthesis_headerin = dlsym(gv.handle, "vorbis_synthesis_headerin");
 	gv.vorbis_synthesis_init = dlsym(gv.handle, "vorbis_synthesis_init");

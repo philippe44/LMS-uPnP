@@ -396,7 +396,7 @@ typedef enum { FADE_INACTIVE = 0, FADE_DUE, FADE_ACTIVE, FADE_PENDING } fade_sta
 typedef enum { FADE_UP = 1, FADE_DOWN, FADE_CROSS } fade_dir;
 typedef enum { FADE_NONE = 0, FADE_CROSSFADE, FADE_IN, FADE_OUT, FADE_INOUT } fade_mode;
 
-typedef enum { ENCODE_THRU, ENCODE_NULL, ENCODE_PCM, ENCODE_FLAC, ENCODE_MP3 } encode_mode;
+typedef enum { ENCODE_THRU, ENCODE_NULL, ENCODE_PCM, ENCODE_FLAC, ENCODE_AAC, ENCODE_MP3 } encode_mode;
 
 // parameters for the output management thread
 struct output_thread_s {
@@ -462,12 +462,14 @@ struct outputstate {
 		u32_t	sample_rate;
 		u8_t 	sample_size;
 		u8_t 	channels;
-		encode_mode mode;	// thru, pcm, flac
+		encode_mode mode;	// thru, pcm, flac, mp3, aac
 		bool  	flow;		// thread do not exit when track ends
 		void 	*codec; 	// re-encoding codec
 		u16_t  	level;      // in flac, compression level, in mp3 bitrate
 		u8_t	*buffer;	// interim codec buffer (optional)
 		size_t	count;		// # of *frames* in buffer or # of silence blocks to send (null mode)
+		long in_samples, out_max_bytes;
+		u8_t* out_buffer;	
 	} encode;				// format of what being sent to player
 };
 

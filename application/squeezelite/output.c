@@ -23,6 +23,9 @@
 #if CODECS
 #include "FLAC/stream_encoder.h"
 #include "layer3.h"
+#if LINKALL
+#include "faac.h"
+#endif
 #endif
 
 extern log_level	output_loglevel;
@@ -371,6 +374,38 @@ bool _output_fill(struct buffer *buf, FILE *store, struct thread_ctx_s *ctx) {
 
 				_buf_write(buf, data, bytes);
 			}
+		 } else if (p->encode.mode == ENCODE_AAC) {
+			s32_t* iptr;
+			s16_t* optr;
+			int i, block;
+
+			if (!p->encode.codec) return false;
+
+			// make sure we have enough space in output
+			if (_buf_space(buf) < p->encode.out_max_bytes) return true;
+
+			frames = min(in / BYTES_PER_FRAME, (p->encode.in_samples / p->encode.channels) - p->encode.count);
+			frames = min(frames, p->encode.sample_rate / MAX_FRAMES_SEC);
+
+			// fading & gain
+			frames = gain_and_fade(frames, 0, ctx);
+
+			// see comment in gain_and_fade
+			if (!frames) return true;
+
+			// aggregate the data in interim buffer
+			iptr = (s32_t*)ctx->outputbuf->readp;
+			optr = (s16_t*)p->encode.buffer + p->encode.count * p->encode.channels;
+			if (p->encode.channels == 2) for (i = 0; i < frames * 2; i++) *optr++ = *iptr++ >> 16;
+			else for (i = 0; i < frames; i++) *optr++ = iptr[2 * i] >> 16;
+			p->encode.count += frames;
+
+			// full block available, encode it
+			if (p->encode.count == p->encode.in_samples / p->encode.channels) {	
+				int bytes = faacEncEncode(p->encode.codec, (int32_t*) p->encode.buffer, p->encode.count * p->encode.channels, p->encode.out_buffer, p->encode.out_max_bytes);
+				_buf_write(buf, p->encode.out_buffer, bytes);
+				p->encode.count = 0;
+			}
 #endif
 		}
 
@@ -523,6 +558,31 @@ void _output_new_stream(struct buffer *obuf, FILE *store, struct thread_ctx_s *c
 								  out->encode.level, out->encode.sample_rate,
 								  out->encode.sample_size, out->encode.channels);
 		}
+	} else if (out->encode.mode == ENCODE_AAC) {
+		out->encode.count = 0;
+		out->encode.codec = (void*) faacEncOpen(out->encode.sample_rate, out->encode.channels, &out->encode.in_samples, &out->encode.out_max_bytes);
+
+		if (out->encode.codec) {
+			// in_samples is the *total* number of samples, not frames and we use 16 bits for aac
+			out->encode.buffer = malloc(out->encode.in_samples * 2);
+			out->encode.out_buffer = malloc(out->encode.out_max_bytes);
+
+			faacEncConfigurationPtr format = faacEncGetCurrentConfiguration(out->encode.codec);
+			format->bitRate = out->encode.level * 1000 / out->encode.channels;
+			format->mpegVersion = MPEG4;
+			format->bandWidth = 0;
+			format->outputFormat = ADTS_STREAM;
+			format->inputFormat = FAAC_INPUT_16BIT;
+			faacEncSetConfiguration(out->encode.codec, format);
+
+			LOG_INFO("[%p]: AAC-%u encoding r:%u s:%u", ctx,
+				out->encode.level, out->encode.sample_rate,
+				out->encode.sample_size);
+		} else {
+			LOG_ERROR("%p]: failed initializing AAC-%u r:%u s:%u c:%u", ctx,
+				out->encode.level, out->encode.sample_rate,
+				out->encode.sample_size, out->encode.channels);
+		}
 #endif
 	}
 
@@ -550,13 +610,13 @@ void _output_end_stream(struct buffer *buf, struct thread_ctx_s *ctx) {
 			LOG_INFO("[%p]: finishing MP3", ctx);
 			if (buf) {
 				int bytes;
-				u8_t *data;
+				u8_t* data;
 
 				// code remaining audio
 				if (out->encode.count) {
 					memset(out->encode.buffer + out->encode.count * out->encode.channels * 2,
-						   0, (shine_samples_per_pass(out->encode.codec) - out->encode.count) * out->encode.channels * 2);
-					data = shine_encode_buffer_interleaved(out->encode.codec, (s16_t*) out->encode.buffer, &bytes);
+						0, (shine_samples_per_pass(out->encode.codec) - out->encode.count) * out->encode.channels * 2);
+					data = shine_encode_buffer_interleaved(out->encode.codec, (s16_t*)out->encode.buffer, &bytes);
 					_buf_write(buf, data, bytes);
 				}
 
@@ -564,8 +624,27 @@ void _output_end_stream(struct buffer *buf, struct thread_ctx_s *ctx) {
 				data = shine_flush(out->encode.codec, &bytes);
 				_buf_write(buf, data, bytes);
 			}
+
 			shine_close(out->encode.codec);
 			out->encode.codec = NULL;
+		} else if (out->encode.mode == ENCODE_AAC) {
+			LOG_INFO("[%p]: finishing AAC", ctx);
+			if (buf) {
+				int bytes;
+
+				// code remaining audio
+				if (out->encode.count) {
+					bytes = faacEncEncode(out->encode.codec, (int32_t*) out->encode.buffer, out->encode.count * out->encode.channels, out->encode.out_buffer, out->encode.out_max_bytes);
+					_buf_write(buf, out->encode.out_buffer, bytes);
+				}
+
+				// final encoder flush
+				bytes = faacEncEncode(out->encode.codec, NULL, 0, out->encode.out_buffer, out->encode.out_max_bytes);
+				_buf_write(buf, out->encode.out_buffer, bytes);
+			}
+			faacEncClose(out->encode.codec);
+			out->encode.codec = NULL;
+			free(out->encode.out_buffer);
 		}
 	}
 #endif

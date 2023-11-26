@@ -1,3 +1,6 @@
+?????
+ - in OGG mode, fix memory leaks
+ 
 2.3.2
  - kd_dump fix
  

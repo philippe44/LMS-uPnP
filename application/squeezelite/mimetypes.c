@@ -220,6 +220,9 @@ char* mimetype_to_dlna(char* mimetype, uint32_t duration) {
 	case 'm':
 		DLNAOrgPN = "DLNA.ORG_PN=MP3;";
 		break;
+	case 'a':
+		DLNAOrgPN = "DLNA.ORG_PN=AAC_ADTS;";
+		break;
 	case 'p':
 		DLNAOrgPN = "DLNA.ORG_PN=LPCM;";
 		break;
