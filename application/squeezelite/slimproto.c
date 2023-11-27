@@ -1072,7 +1072,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 
 	// detect processing mode
 	if (strcasestr(mode, "pcm")) out->encode.mode = ENCODE_PCM;
-	else if (strcasestr(mode, "flc")) out->encode.mode = ENCODE_FLAC;
+	else if (strcasestr(mode, "flc") || strcasestr(mode, "flac")) out->encode.mode = ENCODE_FLAC;
 	else if (strcasestr(mode, "aac")) out->encode.mode = ENCODE_AAC;
 	else if (strcasestr(mode, "mp3")) out->encode.mode = ENCODE_MP3;
 	else if (strcasestr(mode, "null")) out->encode.mode = ENCODE_NULL;
@@ -1186,10 +1186,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 	} else if (out->encode.mode == ENCODE_FLAC) {
 
 		mimetype = mimetype_from_codec('f', ctx->mimetypes, NULL);
-
 		if (out->sample_size > 24) out->encode.sample_size = 24;
-		if ((p = strcasestr(mode, "flc:")) != NULL) out->encode.level = atoi(p+4);
-		if (out->encode.level > 9) out->encode.level = 0;
 
 	} else if (out->encode.mode == ENCODE_MP3) {
 
@@ -1200,11 +1197,6 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 		if (!out->supported_rates[0] || out->supported_rates[0] < -48000 ) out->supported_rates[0] = -48000;
 		else if (out->supported_rates[0] > 48000) out->supported_rates[0] = out->encode.sample_rate = 48000;
 
-		if ((p = strcasestr(mode, "mp3:")) != NULL) {
-			out->encode.level = atoi(p+4);
-			if (out->encode.level > 320) out->encode.level = 320;
-		} else out->encode.level = 192;
-
 	} else if (out->encode.mode == ENCODE_AAC) {
 
 		mimetype = mimetype_from_codec('a', ctx->mimetypes, NULL);
@@ -1213,11 +1205,6 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 		// need to tweak a bit samples rates
 		if (!out->supported_rates[0] || out->supported_rates[0] < -96000) out->supported_rates[0] = -96000;
 		else if (out->supported_rates[0] > 96000) out->supported_rates[0] = out->encode.sample_rate = 96000;
-
-		if ((p = strcasestr(mode, "aac:")) != NULL) {
-			out->encode.level = atoi(p + 4);
-			if (out->encode.level > 320) out->encode.level = 320;
-		} else out->encode.level = 128;
 
 	} else if (out->encode.mode == ENCODE_NULL) {
 

@@ -465,11 +465,9 @@ struct outputstate {
 		encode_mode mode;	// thru, pcm, flac, mp3, aac
 		bool  	flow;		// thread do not exit when track ends
 		void 	*codec; 	// re-encoding codec
-		u16_t  	level;      // in flac, compression level, in mp3 bitrate
+		void* codec_private;	// whatever the codec does not want us to see
 		u8_t	*buffer;	// interim codec buffer (optional)
 		size_t	count;		// # of *frames* in buffer or # of silence blocks to send (null mode)
-		long in_samples, out_max_bytes;
-		u8_t* out_buffer;	
 	} encode;				// format of what being sent to player
 };
 

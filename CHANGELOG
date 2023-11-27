@@ -1,5 +1,9 @@
-?????
+2.4.0
  - in OGG mode, fix memory leaks
+ - add AAC re-encoding using faac
+ - accept 'flc' or 'flac' for mode
+ - ORG_PN for AAC is AAC_ADTS
+ - remove codec's extension in stream URI
  
 2.3.2
  - kd_dump fix

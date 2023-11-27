@@ -64,7 +64,7 @@ sub handler {
 		if ( $params->{encode_mode} ) {
 			if ($params->{encode_mode} eq 'flc') {
 				$params->{mode} .=  ":$params->{encode_level}" if defined $params->{encode_level} && $params->{encode_level} ne '';
-			} elsif ($params->{encode_mode} eq 'mp3') {
+			} elsif ($params->{encode_mode} eq 'mp3' || $params->{encode_mode} eq 'aac') {
 				$params->{mode} .=  ":$params->{encode_bitrate}" if $params->{encode_bitrate};
 			} 
 			if ($params->{encode_mode} && $params->{encode_mode} ne 'thru') {
@@ -329,7 +329,7 @@ sub beforeRender {
 			$item =~ m|([^:]+):*(\d*)|i;
 			$params->{encode_mode} = $1;
 			$params->{encode_level} = $2 if defined $2 && $1 eq 'flc';
-			$params->{encode_bitrate} = $2 if $2 && $1 eq 'mp3';
+			$params->{encode_bitrate} = $2 if $2 && ($1 eq 'mp3' || $1 eq 'aac');
 		}	
 	}	
 }
