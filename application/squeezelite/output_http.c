@@ -427,11 +427,12 @@ static ssize_t send_with_icy(struct thread_ctx_s *ctx, int sock, const void *buf
 							"NStreamTitle='%s%s%s';StreamURL='%s';" :
 							"NStreamTitle='%s%s%s';";
 			// there is room for 1 extra byte at the beginning for length
-			len_16 = sprintf(p->icy.buffer, format,
+			int len = sprintf(p->icy.buffer, format,
 							 p->icy.artist, *p->icy.artist ? " - " : "",
 							 p->icy.title, p->icy.artwork) - 1;
 			LOG_INFO("[%p]: ICY update\n\t%s\n\t%s\n\t%s", ctx, p->icy.artist, p->icy.title, p->icy.artwork);
-			len_16 = (len_16 + 15) / 16;
+			len_16 = (len + 15) / 16;
+			memset(p->icy.buffer + len + 1, 0, len_16 * 16 - len);
 		}
 
 		p->icy.buffer[0] = len_16;

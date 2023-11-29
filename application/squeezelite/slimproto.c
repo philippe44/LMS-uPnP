@@ -1243,8 +1243,11 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 			ret = ctx->callback(ctx->MR, SQ_SET_TRACK, &info);
 
 			LOG_INFO("[%p]: codec:%c, ch:%d, s:%d, r:%d", ctx, out->codec, out->channels, out->sample_size, out->sample_rate);
-		} else metadata_free(&info.metadata);
+		} 
 	}
+
+	// free temporary metadata
+	metadata_free(&info.metadata);
 
 	// need to stop thread if something went wrong
 	if (!ret) {
