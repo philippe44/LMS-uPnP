@@ -336,6 +336,7 @@ bool sq_callback(void *caller, sq_action_t action, ...)
 			NFREE(Device->NextProtoInfo);
 			Device->ElapsedLast = Device->ElapsedOffset = 0;
 			metadata_free(&Device->NextMetaData);
+			// carefull that we modify the caller's metadata
 			if (!Device->Config.SendCoverArt) NFREE(p->metadata.artwork);
 
 			LOG_INFO("[%p]:\n\tartist:%s\n\talbum:%s\n\ttitle:%s\n\tgenre:%s\n\t"
@@ -372,8 +373,7 @@ bool sq_callback(void *caller, sq_action_t action, ...)
 					LOG_INFO("[%p]: next URI gapped (s:%u) %s", Device, Device->ShortTrack, uri);
 					Device->NextURI = uri;
 					Device->NextProtoInfo = ProtoInfo;
-					// this is a structure copy, pointers within remains valid
-					Device->NextMetaData = p->metadata;
+					metadata_clone(&p->metadata, &Device->NextMetaData);
 				} else {
 					// nominal case, use UPnP NextURI feature
 					LOG_INFO("[%p]: next URI gapless %s", Device, uri);
@@ -390,7 +390,6 @@ bool sq_callback(void *caller, sq_action_t action, ...)
 			if (!Device->NextURI) {
 				free(ProtoInfo);
 				free(uri);
-				metadata_free(&p->metadata);
 			}
 
 			break;
