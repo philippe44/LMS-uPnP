@@ -57,6 +57,10 @@ sub binaries {
 		
 	}	
 	
+	if ($os->{'os'} eq 'FreeBSD') {
+		return qw(squeeze2upnp-freebsd-x86_64 squeeze2upnp-freebsd-x86_64-static);
+	}
+	
 	if ($os->{'os'} eq 'Darwin') {
 		return qw(squeeze2upnp-macos squeeze2upnp-macos-static);
 	}

@@ -1,5 +1,6 @@
 2.4.2
  - fix some memory leaks 
+ - FreeBSD name seems to have changed
  
 2.4.1
  - updated libcodecs
