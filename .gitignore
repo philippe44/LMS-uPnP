@@ -80,6 +80,7 @@ Win32
 *.i??
 *.map
 *.tds
+*.pdb
 config.xml
 *.bat
 *-idx*

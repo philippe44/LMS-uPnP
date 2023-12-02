@@ -153,7 +153,8 @@ typedef struct sUpdate {
 /* consts or pseudo-const*/
 /*----------------------------------------------------------------------------*/
 static char* glDiscoveryPatterns[8] = { "urn:schemas-upnp-org:device:MediaRenderer:1",
-										"urn:schemas-upnp-org:device:MediaRenderer:2" };
+										"urn:schemas-upnp-org:device:MediaRenderer:2",
+										 NULL };
 
 static const struct cSearchedSRV_s
 {
@@ -1489,7 +1490,6 @@ static bool Start(void) {
 	// start the main thread
 	pthread_create(&glMainThread, NULL, &MainThread, NULL);
 	pthread_create(&glUpdateThread, NULL, &UpdateThread, NULL);
-
 	
 	for (size_t i = 0; glDiscoveryPatterns[i]; i++) {
 		LOG_INFO("UPnP search for %s", glDiscoveryPatterns[i]);
@@ -1718,7 +1718,7 @@ int main(int argc, char *argv[])
 	for (int i = 0; token && i < sizeof(glDiscoveryPatterns) / sizeof(char*); i++) {
 		if (glDiscoveryPatterns[i]) continue;
 		LOG_INFO("adding SSDP discovery %s", token);
-		// we don't need to co^py the tokens, they are valid runtime-wide
+		// we don't need to copy the tokens, they are valid runtime-wide
 		glDiscoveryPatterns[i] = token;
 		token = strtok(NULL, ",;");	
 	}
