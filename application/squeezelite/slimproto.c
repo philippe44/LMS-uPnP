@@ -1176,9 +1176,10 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 		} else {
 			char format[16] = "";
 
-			// really can't use raw format
-			if (strcasestr(ctx->config.raw_audio_format, "wav")) strcat(format, "wav");
+			// really can't use pcm (raw) format because it will be known after decoder has started
+			if (strcasestr(ctx->config.raw_audio_format, "wav")) strcpy(format, "wav,");
 			if (strcasestr(ctx->config.raw_audio_format, "aif")) strcat(format, "aif");
+			if (format[strlen(format) - 1] == ',') format[strlen(format) - 2] = '\0';
 
 			mimetype = mimetype_from_codec('p', ctx->mimetypes, format);
 		}

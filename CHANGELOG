@@ -1,7 +1,8 @@
 2.4.4
  - previous version had a miss build
  - change a bit some logs
- - fix UPnP alternate searches
+ - fix UPnP alternate searches 
+ - fix options string for mimetype when re-encode is done to raw 
  
 2.4.3
  - updated libraries with more memory leaks fixed
