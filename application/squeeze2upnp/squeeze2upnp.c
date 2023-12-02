@@ -153,8 +153,7 @@ typedef struct sUpdate {
 /* consts or pseudo-const*/
 /*----------------------------------------------------------------------------*/
 static char* glDiscoveryPatterns[8] = { "urn:schemas-upnp-org:device:MediaRenderer:1",
-										"urn:schemas-upnp-org:device:MediaRenderer:2",
-										 NULL };
+										"urn:schemas-upnp-org:device:MediaRenderer:2" };
 
 static const struct cSearchedSRV_s
 {
@@ -992,9 +991,10 @@ int MasterHandler(Upnp_EventType EventType, const void *_Event, void *Cookie)
 		// if there is a cookie, it's a targeted Sonos search
 		if (!Cookie) {
 			static int Index;
-			if (!glDiscoveryPatterns[Index]) Index = 0;
-			LOG_INFO("UPnP search for %s", glDiscoveryPatterns[Index]);
-			UpnpSearchAsync(glControlPointHandle, DISCOVERY_TIME, glDiscoveryPatterns[Index++], NULL);
+			// this is non-re-entrant, so try to avoid misuse of Index
+			int i = Index = !glDiscoveryPatterns[Index + 1] ? 0 : Index + 1;	
+			LOG_INFO("UPnP search for %s", glDiscoveryPatterns[i]);
+			UpnpSearchAsync(glControlPointHandle, DISCOVERY_TIME, glDiscoveryPatterns[i], NULL);
 		}
 
 		break;

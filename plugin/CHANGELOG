@@ -1,6 +1,7 @@
 2.4.4
  - previous version had a miss build
  - change a bit some logs
+ - fix UPnP alternate searches
  
 2.4.3
  - updated libraries with more memory leaks fixed
