@@ -10,6 +10,7 @@
 #pragma once
 
 #include "ixml.h"
+#include "squeeze2upnp.h"
 
 struct sMRConfig;
 struct sMR;

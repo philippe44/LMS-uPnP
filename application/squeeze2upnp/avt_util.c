@@ -1,5 +1,5 @@
 /*
- * AirUPnP - UPnP control utils
+ * UPnP control utils
  *
  * (c) Philippe, philippe_44@outlook.com
  *
@@ -12,7 +12,6 @@
 #include "platform.h"
 #include "ixmlextra.h"
 #include "upnptools.h"
-#include "squeeze2upnp.h"
 #include "cross_log.h"
 #include "avt_util.h"
 
@@ -74,8 +73,6 @@ bool AVTSetURI(struct sMR *Device, char *URI, struct metadata_s *MetaData, char 
 
 	DIDLData = CreateDIDL(URI, ProtoInfo, MetaData, &Device->Config);
 	LOG_DEBUG("[%p]: DIDL header: %s", Device, DIDLData);
-
-	LOG_INFO("[%p]: uPNP setURI %s (cookie %p)", Device, URI, Device->seqN);
 
 	if ((ActionNode = UpnpMakeAction("SetAVTransportURI", Service->Type, 0, NULL)) == NULL) return false;
 	UpnpAddToAction(&ActionNode, "SetAVTransportURI", Service->Type, "InstanceID", "0");
@@ -167,7 +164,7 @@ bool AVTSeek(struct sMR *Device, unsigned Interval)
 	IXML_Document *ActionNode = NULL;
 	char	params[128];
 
-	LOG_INFO("[%p]: uPNP seek (%ds) (cookie %p)", Device, Interval, Device->seqN);
+	LOG_INFO("[%p]: uPNP seek (%.2lf sec) (cookie %p)", Device, Interval / 1000.0, Device->seqN);
 
 	if ((ActionNode =  UpnpMakeAction("Seek", Service->Type, 0, NULL)) == NULL) return false;
 	UpnpAddToAction(&ActionNode, "Seek", Service->Type, "InstanceID", "0");

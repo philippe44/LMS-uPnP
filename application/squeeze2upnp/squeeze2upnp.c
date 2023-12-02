@@ -649,8 +649,8 @@ static void _SyncNotifState(char *State, struct sMR* Device)
 			}
 		} else if (Device->NextProtoInfo) {
 			// non-gapless player or gapped track, manually set next track
+			LOG_INFO("[%p]: gapped transition", Device);
 			NextTrack(Device);
-			LOG_INFO("[%p]: gapped transition %s", Device, Device->NextURI);
 		}
 
 		Device->State = STOPPED;
@@ -746,6 +746,7 @@ static void NextTrack(struct sMR *Device) {
 
 	Device->Duration = Device->NextMetaData.duration;
 	AVTSetURI(Device, Device->NextURI, &Device->NextMetaData, Device->NextProtoInfo);
+	LOG_INFO("[%p]: set URI %s", Device, Device->NextURI);
 
 	NFREE(Device->NextProtoInfo);
 	NFREE(Device->NextURI);
