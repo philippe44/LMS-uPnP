@@ -31,8 +31,6 @@ static log_level 	*loglevel = &output_loglevel;
 
 #define MAX_CHUNK_SIZE	(256*1024)
 #define MAX_BLOCK		(32*1024)
-#define TAIL_SIZE		(2048*1024)
-#define HEAD_SIZE		65536
 #define ICY_INTERVAL	16384
 #define TIMEOUT			50
 #define SLEEP			50
@@ -43,12 +41,18 @@ struct thread_param_s {
 	struct output_thread_s *thread;
 };
 
+struct http_ctx_s {
+	struct buffer header;
+	int index;
+	size_t total, pos;
+};
+
 static void 	output_http_thread(struct thread_param_s *param);
-static ssize_t 	handle_http(struct thread_ctx_s *ctx, int sock, int thread_index,
-						   size_t bytes, struct buffer *obuf, bool *header);
+static bool 	handle_http(struct http_ctx_s *http, struct thread_ctx_s *ctx, int sock, struct buffer *obuf);
 static void 	mirror_header(key_data_t *src, key_data_t *rsp, char *key);
-static ssize_t 	send_with_icy(struct thread_ctx_s *ctx, int sock, const void *buf,
-							 ssize_t *len, int flags);
+static ssize_t 	send_with_icy(struct outputstate *out, struct buffer* backlog, int sock, const void* data, size_t bytes, int flags);
+static ssize_t  send_chunked(bool chunked, struct buffer* backlog, int sock, const void* data, size_t bytes, int flags);
+static ssize_t  send_backlog(struct buffer* backlog, int sock, const void* data, size_t bytes, int flags);
 
 /*---------------------------------------------------------------------------*/
 bool output_start(struct thread_ctx_s *ctx) {
@@ -101,40 +105,37 @@ bool output_abort(struct thread_ctx_s *ctx, int index) {
 	return false;
 }
 
-
-
 /*---------------------------------------------------------------------------*/
 static void output_http_thread(struct thread_param_s *param) {
-	bool http_ready = false, done = false;
+	bool http_ready = false;
 	int sock = -1;
-	char chunk_frame_buf[16] = "", *chunk_frame = chunk_frame_buf;
 	bool acquired = false;
-	size_t hpos = 0, bytes = 0, hsize = 0;
-	ssize_t chunk_count = 0;
-	u8_t *hbuf = malloc(HEAD_SIZE);
 	fd_set rfds, wfds;
-	struct buffer __obuf, *obuf = &__obuf;
+	struct buffer __obuf, *obuf = &__obuf, backlog;
 	struct output_thread_s *thread = param->thread;
 	struct thread_ctx_s *ctx = param->ctx;
 	unsigned drain_count = DRAIN_MAX;
 	u32_t start = gettime_ms();
 	FILE *store = NULL;
+	bool finished = false;
+
+	struct http_ctx_s http_ctx;
+	memset(&http_ctx, 0, sizeof(struct http_ctx_s));
+	http_ctx.index = thread->index;
+	http_ctx.total = http_ctx.pos = 0;
+	buf_init(&http_ctx.header, 65536);
+
+	buf_init(obuf, HTTP_STUB_DEPTH + 512*1024);
+	buf_init(&backlog, max(ctx->output.icy.interval, MAX_BLOCK) + ICY_LEN_MAX + 2 + 16);
 
 	free(param);
-	buf_init(obuf, HTTP_STUB_DEPTH + 512*1024);
 
 	if (*ctx->config.store_prefix) {
 		char name[STR_LEN];
-		snprintf(name, sizeof(name), "%s/" BRIDGE_URL "%u-out#%u#.%s", ctx->config.store_prefix, thread->index, 
+		snprintf(name, sizeof(name), "%s/" BRIDGE_URL "%u-out#%u#.%s", ctx->config.store_prefix, http_ctx.index, 
 			thread->http, mimetype_to_ext(ctx->output.mimetype));
 		store = fopen(name, "wb");
 	}
-
-	/*
-	This function is higly non-linear and painful to read at first, I agree
-	but it's also much easier, at the end, than a series of intricated if/else.
-	Read it carefully, and then it's pretty simple
-	*/
 
 	while (thread->running) {
 		struct timeval timeout = {0, 0};
@@ -151,6 +152,7 @@ static void output_http_thread(struct thread_param_s *param) {
 				sock = accept(thread->http, NULL, NULL);
 				set_nonblock(sock);
 				http_ready = false;
+				buf_flush(&backlog);
 				FD_ZERO(&wfds);
 			}
 
@@ -187,27 +189,14 @@ static void output_http_thread(struct thread_param_s *param) {
 			LOG_INFO("[%p]: drain is %u (waited %u)", ctx, obuf->size, gettime_ms() - start);
 		}
 
-		// should be the HTTP headers (works with non-blocking socket)
+		// should be the HTTP headers
 		if (n > 0 && FD_ISSET(sock, &rfds)) {
-			bool header = false;
-			ssize_t offset = handle_http(ctx, sock, thread->index, bytes, obuf, &header);
-
-			http_ready = res = (offset >= 0 && offset <= bytes + 1);
-
-			// need to re-send header (Sonos)
-			if (http_ready && header) {
-				hpos = hsize;
-				LOG_INFO("[%p]: re-sending header %u bytes", ctx, hpos);
-			} else hpos = 0;
-
-			// reset chunking and
-			*chunk_frame = '\0';
-			chunk_count = 0;
+			http_ready = res = handle_http(&http_ctx, ctx, sock, obuf);
 		}
 
 		// something wrong happened or master connection closed
 		if (n < 0 || !res) {
-			LOG_INFO("[%p]: HTTP close %d (bytes %zd) (n:%d res:%d)", ctx, sock, bytes, n, res);
+			LOG_INFO("[%p]: HTTP close %d (bytes %zd) (n:%d res:%d)", ctx, sock, http_ctx.total, n, res);
 			closesocket(sock);
 			sock = -1;
 			/*
@@ -217,7 +206,7 @@ static void output_http_thread(struct thread_param_s *param) {
 			slimproto (case where bytes == 0).
 			*/
 			LOCK_D;
-			if (n < 0 && !bytes && ctx->decode.state == DECODE_COMPLETE) {
+			if (n < 0 && !http_ctx.total && ctx->decode.state == DECODE_COMPLETE) {
 				ctx->output.completed = true;
 				LOG_ERROR("[%p]: streaming failed, exiting", ctx);
 				UNLOCK_D;
@@ -229,36 +218,6 @@ static void output_http_thread(struct thread_param_s *param) {
 
 		// got a connection but a select timeout, so no HTTP headers yet
 		if (!http_ready) continue;
-
-		// need to send the header as it's a restart (Sonos!) - no ICY
-		if (hpos) {
-			ssize_t sent = send(sock, hbuf + hsize - hpos, hpos, 0);
-			if (sent > 0) hpos -= sent;
-			if (!hpos) {
-				LOG_INFO("[%p]: finished header re-sent", ctx);
-				closesocket(sock);
-				sock = -1;
-			} else {
-				FD_SET(sock, &wfds);
-				LOG_DEBUG("[%p]: sending from head %zd", ctx, sent);
-			}
-			continue;
-		}
-
-		// first send any chunk framing (header, footer)
-		if (*chunk_frame) {
-			if (FD_ISSET(sock, &wfds)) {
-				int n = send(sock, chunk_frame, strlen(chunk_frame), 0);
-				if (n > 0) chunk_frame += n;
-			} else FD_SET(sock, &wfds);
-			continue;
-		}
-
-		// then exit if needed (must be after footer has been sent - if any)
-		if (done) {
-			LOG_INFO("[%p]: self-exit ", ctx);
-			break;
-		}
 
 		LOCK_O;
 
@@ -293,7 +252,6 @@ static void output_http_thread(struct thread_param_s *param) {
 		unlikey that while emptying obuf, the decoder has not restarted if there
 		is a next track
 		*/
-
 		if (ctx->output.encode.flow) {
 			// drain_count is not really time, but close enough
 			if (!_output_fill(obuf, store, ctx) && ctx->decode.state == DECODE_STOPPED) drain_count--;
@@ -304,63 +262,51 @@ static void output_http_thread(struct thread_param_s *param) {
 			ctx->output.completed = true;
 			drain_count = 0;
 			wake_controller(ctx);
-			LOG_INFO("[%p]: draining (%zu bytes)", ctx, bytes);
+			LOG_INFO("[%p]: draining (%zu bytes)", ctx, http_ctx.total);
 		}
 
-		// now are surely running - socket is non blocking, so this is fast
-		if (_buf_used(obuf)) {
-			ssize_t	sent, space;
+		/* now we are surely running but for the forgetful, we need this backlog mechanism because
+		 * we can't use a blocking socket. If we don't, the output buffer gets lock while we block
+		 * in send and the whole slimproto state machine is stalled. Still, the reality of the use
+		 * of it seems to be limited to writing the trailing \r\n in chunked mode, probably because
+		 * we wait for socket to be writable. But in theory, a writable socket does not guarantee
+		 * the avaialable space */
 
-			// we cannot write, so don't bother
-			if (!FD_ISSET(sock, &wfds)) {
-				FD_SET(sock, &wfds);
-				UNLOCK_O;
-				continue;
-			}
+		if (!FD_ISSET(sock, &wfds) && !finished) {
+			// we can't write and we are not finished yet, just wait for select() 
+			FD_SET(sock, &wfds);
+		} else if (_buf_used(&backlog)) {
+			// we have some backlog to send, give that a priority
+			send_backlog(&backlog, sock, NULL, 0, 0);
+		} else if (_buf_used(obuf)) {
+			// only get what we can process (ignore result because all is always sent/backlog'd)
+			size_t bytes = min(_buf_cont_read(obuf), ctx->output.icy.interval ? ctx->output.icy.remain : MAX_BLOCK);
+			send_with_icy(&ctx->output, &backlog, sock, obuf->readp, bytes, 0);
 
-			space = min(_buf_cont_read(obuf), MAX_BLOCK);
-
-			// if chunked mode start by sending the header
-			if (chunk_count) space = min(space, chunk_count);
-			else if (ctx->output.chunked) {
-				chunk_count = min(space, MAX_CHUNK_SIZE);
-				sprintf(chunk_frame_buf, "%zx\r\n", chunk_count);
-				chunk_frame = chunk_frame_buf;
-				UNLOCK_O;
-				continue;
-			}
-
-			sent = send_with_icy(ctx, sock, (void*) obuf->readp, &space, 0);
-
-			if (sent > 0) {
-				if (bytes < HEAD_SIZE) {
-					memcpy(hbuf + bytes, obuf->readp, min(space, HEAD_SIZE - bytes));
-					hsize += min(space, HEAD_SIZE - bytes);
+			// store header (for Sonos) and make accurate HTTP total bytes calculation
+			if (http_ctx.pos < http_ctx.total) {
+				http_ctx.pos += bytes;
+				if (http_ctx.pos >= http_ctx.total) {
+					LOG_INFO("[%p]: finished re-sending at %zu", ctx, http_ctx.pos);
 				}
-
-				// check for end of chunk - space cannot be bigger than chunk!
-				if (chunk_count) {
-					chunk_count -= sent;
-					if (!chunk_count) {
-						strcpy(chunk_frame_buf, "\r\n");
-						chunk_frame = chunk_frame_buf;
-					}
-				}
-
-				_buf_inc_readp(obuf, space);
-				bytes += space;
-
-				LOG_SDEBUG("[%p] sent %u bytes (total: %u)", ctx, space, bytes);
+			} else {
+				http_ctx.total = http_ctx.pos += bytes;
+				_buf_write(&http_ctx.header, obuf->readp, min(bytes, _buf_cont_write(&http_ctx.header) - 1));
 			}
+
+			// some might be in backlog, but they will be sent later
+			_buf_inc_readp(obuf, bytes);
+			LOG_SDEBUG("[%p] sent %u bytes (total: %u)", ctx, bytes, http_ctx.total);
+
+		} else if (finished) {
+			LOG_INFO("[%p]: self-exit", ctx);
+			UNLOCK_O;
+			break;
+		} else if (!drain_count) {
+			// if all has been sent, add a closing empty chunk
+			if (ctx->output.chunked) send_backlog(&backlog, sock, "0\r\n\r\n", 5, 0);
+			finished = true;
 		} else {
-			// check if all sent
-			if (!drain_count) {
-				if (ctx->output.chunked) {
-					strcpy(chunk_frame_buf, "0\r\n\r\n");
-					chunk_frame = chunk_frame_buf;
-				}
-				done = true;
-			}
 			// we don't have anything to send, let select read or sleep
 			FD_ZERO(&wfds);
 		}
@@ -368,7 +314,8 @@ static void output_http_thread(struct thread_param_s *param) {
 		UNLOCK_O;
 	}
 
-	NFREE(hbuf);
+	buf_destroy(&http_ctx.header);
+	buf_destroy(&backlog);
 	buf_destroy(obuf);
 
 	// in chunked mode, a full chunk might not have been sent (due to TCP)
@@ -394,73 +341,89 @@ static void output_http_thread(struct thread_param_s *param) {
 
 	UNLOCK_O;
 
-	LOG_INFO("[%p]: end thread %d (%zu bytes)", ctx, thread == ctx->output_thread ? 0 : 1, bytes);
+	LOG_INFO("[%p]: end thread %d (%zu bytes)", ctx, thread == ctx->output_thread ? 0 : 1, http_ctx.total);
 }
 
 /*----------------------------------------------------------------------------*/
-static ssize_t send_with_icy(struct thread_ctx_s *ctx, int sock, const void *buf, ssize_t *len, int flags) {
-	struct outputstate *p = &ctx->output;
-	ssize_t bytes = 0;
+ssize_t send_backlog(struct buffer *backlog, int sock, const void* data, size_t bytes, int flags) {
+	ssize_t sent = 0;
 
-	// ICY not active, just send
-	if (!p->icy.interval) {
-		bytes = send(sock, buf, *len, flags);
-		if (bytes > 0) *len = bytes;
-		else *len = 0;
-		return *len;
+	// try to flush backlog if any
+	while (_buf_used(backlog) && sent >= 0) {
+		sent = send(sock, backlog->readp, _buf_cont_read(backlog), flags);
+		if (sent > 0) _buf_inc_readp(backlog, sent);
 	}
 
-	/*
-	len is what we are authorized to send, due to chunk encoding so don't go
-	over even if this is to send ICY metadata, we'll have to do it next time,
-	hence this painful "buffer" system
-	*/
+	sent = 0;
+
+	// try to send data if backlog is flushed
+	if (!_buf_used(backlog)) {
+		sent = send(sock, data, bytes, flags);
+		if (sent < 0) sent = 0;
+	}
+
+	// store what we have not sent
+	_buf_write(backlog, (u8_t*) data + sent, bytes - sent);
+	return sent;
+}
+
+/*----------------------------------------------------------------------------*/
+static ssize_t send_chunked(bool chunked, struct buffer *backlog, int sock, const void *data, size_t bytes, int flags) {
+	if (!chunked) {
+		return send_backlog(backlog, sock, data, bytes, flags);
+	}
+
+	char chunk[16];
+	itoa(bytes, chunk, 16);
+	strcat(chunk, "\r\n");
+
+	send_backlog(backlog, sock, chunk, strlen(chunk), flags);
+	bytes = send_backlog(backlog, sock, data, bytes, flags);
+	send_backlog(backlog, sock, "\r\n", 2, flags);
+
+	return bytes;
+}
+
+/*----------------------------------------------------------------------------*/
+static ssize_t send_with_icy(struct outputstate* out, struct buffer *backlog, int sock, const void *data, size_t bytes, int flags) {
+	// first send remaining data bytes wich are always smaller or equal icy.remain
+	bytes = send_chunked(out->chunked, backlog, sock, data, bytes, flags);
+
+	// ICY not active, just send
+	if (!out->icy.interval) return bytes;
+
+	out->icy.remain -= bytes;
 
 	// ICY is active
-	if (!p->icy.remain && !p->icy.count) {
+	if (!out->icy.remain) {
 		int len_16 = 0;
+		char* buffer = calloc(ICY_LEN_MAX, 1);
 
-		LOG_SDEBUG("[%p]: ICY checking", ctx);
+		LOG_DEBUG("[%p]: ICY remains", out, out->icy.remain);
 
-		if (p->icy.updated) {
-			char *format = (p->icy.artwork && *p->icy.artwork) ?
+		if (out->icy.updated) {
+			char *format = (out->icy.artwork && *out->icy.artwork) ?
 							"NStreamTitle='%s%s%s';StreamURL='%s';" :
 							"NStreamTitle='%s%s%s';";
 			// there is room for 1 extra byte at the beginning for length
-			int len = sprintf(p->icy.buffer, format,
-							 p->icy.artist, *p->icy.artist ? " - " : "",
-							 p->icy.title, p->icy.artwork) - 1;
-			LOG_INFO("[%p]: ICY update\n\t%s\n\t%s\n\t%s", ctx, p->icy.artist, p->icy.title, p->icy.artwork);
+			int len = snprintf(buffer, ICY_LEN_MAX, format,
+							 out->icy.artist, *out->icy.artist ? " - " : "",
+							 out->icy.title, out->icy.artwork) - 1;
+			LOG_INFO("[%p]: ICY update\n\t%s\n\t%s\n\t%s", out, out->icy.artist, out->icy.title, out->icy.artwork);
+
 			len_16 = (len + 15) / 16;
-			memset(p->icy.buffer + len + 1, 0, len_16 * 16 - len);
+			memset(buffer + len + 1, 0, len_16 * 16 - len);
+			buffer[0] = len_16;
 		}
 
-		p->icy.buffer[0] = len_16;
-		p->icy.size = p->icy.count = len_16 * 16 + 1;
-		p->icy.remain = p->icy.interval;
-		p->icy.updated = false;
+		send_chunked(out->chunked, backlog, sock, buffer, len_16 * 16 + 1, flags);
+		free(buffer);
+
+		out->icy.remain = out->icy.interval;
+		out->icy.updated = false;
 	}
 
-	// write ICY pending data
-	if (p->icy.count) {
-		bytes = min(*len, p->icy.count);
-		bytes = send(sock, p->icy.buffer + p->icy.size - p->icy.count, bytes, flags);
-		// socket is non-blocking (will prevent data send below as well)
-		if (bytes <= 0) bytes = *len = 0;
-		else p->icy.count -= bytes;
-	}
-
-	// write data if remaining space and no icy to send (if icy send was partial)
-	if (!p->icy.count && bytes < *len) {
-		*len = min(*len - bytes, p->icy.remain);
-		*len = send(sock, buf, *len, flags);
-		// socket is non-blocking
-		if (*len < 0) *len = 0;
-		else p->icy.remain -= *len;
-	} else *len = 0;
-
-	// return 0 when send fails
-	return bytes + *len;
+	return bytes;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -472,30 +435,32 @@ suspend the connection using TCP, but if they close it and want to resume (i.e.
 they request a range, we'll restart from where we were and mostly it will not be
 acceptable by the player, so then use the option seek_after_pause
 */
-static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, int thread_index,
-						   size_t bytes, struct buffer *obuf, bool *header)
+static bool handle_http(struct http_ctx_s *http, struct thread_ctx_s *ctx, int sock, struct buffer *obuf)
 {
-	char *body = NULL, *request = NULL, *str = NULL;
+	char* body = NULL, * request = NULL, * p = NULL;
 	key_data_t headers[64], resp[16] = { { NULL, NULL } };
-	char *head = "HTTP/1.1 200 OK";
 	int len, index;
-	ssize_t res = 0;
-	char format;
-	enum { ANY, SONOS, CHROMECAST } type;
 
 	if (!http_parse_simple(sock, &request, headers, &body, &len)) {
 		LOG_WARN("[%p]: http parsing error %s", ctx, request);
-		res = -1;
-		goto cleanup;
+		NFREE(body);
+		NFREE(request);
+		kd_free(headers);
+		return false;
 	}
 
+	bool http_11 = strstr(request, "HTTP/1.1") != NULL;
+	char* head = NULL, *response = NULL;
+	enum { ANY, SONOS, CHROMECAST } type;
+	bool success = true;
+	
 	LOG_INFO("[%p]: received %s", ctx, request);
 	sscanf(request, "%*[^/]/" BRIDGE_URL "%d", &index);
 
-	LOG_INFO("[%p]: HTTP headers\n%s", ctx, str = kd_dump(headers));
-	NFREE(str);
+	LOG_INFO("[%p]: HTTP headers\n%s", ctx, p = kd_dump(headers));
+	NFREE(p);
 
-	if (((str = kd_lookup(headers, "USER-AGENT")) != NULL) && strcasestr(str, "sonos")) {
+	if (((p = kd_lookup(headers, "USER-AGENT")) != NULL) && strcasestr(p, "sonos")) {
 		type = SONOS;
 		LOG_INFO("[%p]: Sonos mode", ctx);
 	} else if (kd_lookup(headers, "CAST-DEVICE-CAPABILITIES")) {
@@ -508,10 +473,8 @@ static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, int thread_index,
 	ctx->output.chunked = false;
 
 	// check if add ICY metadata is needed (only on live stream)
-	format = mimetype_to_format(ctx->output.mimetype);
-	ctx->output.icy.count = 0;
-	if (ctx->output.icy.allowed && (format == 'm' || format == 'a') &&
-	    ((str = kd_lookup(headers, "Icy-MetaData")) != NULL) && atol(str)) {
+	if (ctx->output.icy.allowed && ((p = kd_lookup(headers, "Icy-MetaData")) != NULL) && atol(p) &&
+		(ctx->output.format == 'm' || ctx->output.format == 'a' || ctx->output.format == '4')) {    
 		kd_vadd(resp, "icy-metaint", "%u", ICY_INTERVAL);
 		LOCK_O;
 		ctx->output.icy.interval = ctx->output.icy.remain = ICY_INTERVAL;
@@ -520,12 +483,12 @@ static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, int thread_index,
 	} else ctx->output.icy.interval = 0;
 
 	// are we opening the expected file
-	if (index != thread_index) {
-		LOG_WARN("wrong file requested, refusing %u %d", index, thread_index);
-		head = "HTTP/1.1 410 Gone";
-		res = -1;
+	if (index != http->index) {
+		LOG_WARN("wrong file requested, refusing %u %d", index, http->index);
+		head = "HTTP/1.0 410 Gone";
+		kd_free(resp);
+		success = false;
 	} else {
-		//kd_add(resp, "Accept-Ranges", "none");
 		kd_add(resp, "Content-Type", ctx->output.mimetype);
 		if (abs(ctx->output.length) > abs(HTTP_CHUNKED)) kd_vadd(resp, "Content-Length", "%zu", ctx->output.length);
 		mirror_header(headers, resp, "transferMode.dlna.org");
@@ -538,57 +501,68 @@ static ssize_t handle_http(struct thread_ctx_s *ctx, int sock, int thread_index,
 
 		if (!strstr(request, "HEAD")) {
 			bool chunked = true;
-			// a range request - might happen even when we said NO RANGE !!!
-			if ((str = kd_lookup(headers, "Range")) != NULL) {
-				int offset = 0;
-				sscanf(str, "bytes=%u", &offset);
+			if ((p = kd_lookup(headers, "Range")) != NULL) {
+				size_t offset = 0;
+				(void) !sscanf(p, "bytes=%zu", &offset);
 				// when range cannot be satisfied, just continue where we were
-				if (offset < bytes) {
-					head = "HTTP/1.1 206 Partial Content";
-					if (type != SONOS) kd_vadd(resp, "Content-Range", "bytes %u-%zu/*", offset, bytes);
-					res = offset + 1;
+				if (offset && offset < http->total) {
+					head = (http_11 && ctx->output.length == -3) ? "HTTP/1.1 206 Partial Content" : "HTTP/1.0 206 Partial Content";
+					if (type != SONOS) kd_vadd(resp, "Content-Range", "bytes %u-%zu/*", offset, http->total);
 					obuf->readp = obuf->buf + offset % obuf->size;
+					http->pos = offset;
+					LOG_INFO("[%p]: resending %zu->%zu (%zu bytes)", ctx, offset, http->total, http->total - offset);
 				} else if (offset) {
-                    LOG_INFO("[%p]: range cannot be satisfied %zu/%zu", ctx, offset, bytes);
+                    LOG_INFO("[%p]: range cannot be satisfied %zu->%zu", ctx, offset, http->total);
                 }
-			} else if (bytes && type == SONOS && !ctx->output.icy.interval) {
-				// Sonos client re-opening the connection, so make it believe we
-				// have a 2G length - thus it will sent a range-request
-				if (ctx->output.length < 0) kd_vadd(resp, "Content-Length", "%zu", INT_MAX);
-				chunked = false;
-				*header = true;
-			} else if (bytes) {
-				// re-opening an existing connection, resend from beginning
-				obuf->readp = obuf->buf;
-				LOG_INFO("[%p]: re-opening a connection at %zu", ctx, bytes);
-				if (bytes > HTTP_STUB_DEPTH) {
-					LOG_WARN("[%p]: head is lost %zu", ctx, bytes);
+			} else if (http->total && type == SONOS && !ctx->output.icy.interval) {
+				/* Sonos is a pile of crap: when paused (on mp3) it will close the connection and then
+				 * re-open it on resume and wants the whole file but of course we don't have it. So we 
+				 * just send the first track's N bytes we have stored so that he sees it's the same file 
+				 * and then we close the connection which forces it to re-open it again with a proper 
+				 * range request this time */
+				kd_vadd(resp, "Content-Length", "%zu", UINT32_MAX);
+				response = http_send(sock, "HTTP/1.0 200 OK", resp);
+				ssize_t sent = send(sock, http->header.buf, _buf_used(&http->header), 0);
+				LOG_INFO("[%p]: Sonos header resend %zd\n%s", ctx, sent, response);
+				success = false;
+			} else if (http->total) {
+				// re-opening an existing connection, resend from the oldest we have
+				if (http->total > obuf->size) {
+					_buf_inc_readp(obuf, _buf_used(obuf) + 1);
+					http->pos = http->total - obuf->size - 1;
+					LOG_WARN("[%p]: re-opening but head is lost (resent from: %zu, sent: %zu)", ctx, http->pos, http->total);
+				} else {
+					obuf->readp = obuf->buf;
+					http->pos = 0;
+					LOG_INFO("[%p]: re-opening from zero (sent %zu)", ctx, http->total);
 				}
 			}
 
 			// set chunked mode
-			if (strstr(request, "1.1") && ctx->output.length == -3 && chunked) {
+			if (http_11 && ctx->output.length == -3 && chunked) {
 				ctx->output.chunked = true;
 				kd_add(resp, "Transfer-Encoding", "chunked");
 			}
 		} else {
 			// do not send body if request is HEAD
-			res = -1;
+			success = false;
 		}
 	}
 
-	str = http_send(sock, head, resp);
+	if (!response) {
+		// unless instructed otherwise use a 200 with the correct HTTP version
+		if (!head) head = ctx->output.chunked ? "HTTP/1.1 200 OK" : "HTTP/1.0 200 OK";
+		response = http_send(sock, head, resp);
+		LOG_INFO("[%p]: responding:\n%s", ctx, response);
+	}
 
-	LOG_INFO("[%p]: responding:\n%s", ctx, str);
-
-cleanup:
 	NFREE(body);
-	NFREE(str);
+	NFREE(response);
 	NFREE(request);
 	kd_free(resp);
 	kd_free(headers);
 
-	return res;
+	return success;
 }
 
 

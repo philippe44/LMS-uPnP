@@ -368,7 +368,7 @@ bool sq_callback(void *caller, sq_action_t action, ...)
 					if (p->metadata.duration && p->metadata.duration < SHORT_TRACK) Device->ShortTrack = true;
 					AVTSetURI(Device, uri, &p->metadata, ProtoInfo);
 					AVTPlay(Device);
-				 } else if (Device->Config.AcceptNextURI != NEXT_GAPLESS || Device->ShortTrack || (p->metadata.duration && p->metadata.duration < SHORT_TRACK)) {
+				} else if (Device->Config.AcceptNextURI != NEXT_GAPLESS || Device->ShortTrack || (p->metadata.duration && p->metadata.duration < SHORT_TRACK)) {
 					// can't use UPnP NextURI capability
 					LOG_INFO("[%p]: next URI gapped (s:%u) %s", Device, Device->ShortTrack, uri);
 					Device->NextURI = uri;
@@ -993,7 +993,7 @@ int MasterHandler(Upnp_EventType EventType, const void *_Event, void *Cookie)
 			static int Index;
 			// this is non-re-entrant, so try to avoid misuse of Index
 			int i = Index = !glDiscoveryPatterns[Index + 1] ? 0 : Index + 1;	
-			LOG_INFO("UPnP search for %s", glDiscoveryPatterns[i]);
+			LOG_DEBUG("UPnP search for %s", glDiscoveryPatterns[i]);
 			UpnpSearchAsync(glControlPointHandle, DISCOVERY_TIME, glDiscoveryPatterns[i], NULL);
 		}
 

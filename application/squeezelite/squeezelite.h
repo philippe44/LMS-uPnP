@@ -437,8 +437,6 @@ struct outputstate {
 	struct {
 		bool allowed;
 		size_t interval, remain;
-		size_t size, count;
-		char buffer[ICY_LEN_MAX];
 		char *artist, *title, *artwork;
 		bool  updated;
 	} icy;
