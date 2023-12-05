@@ -653,6 +653,7 @@ void _output_end_stream(struct buffer *buf, struct thread_ctx_s *ctx) {
 
 			faacEncClose(out->encode.codec);
 			free(aac->buffer);
+			free(aac);
 			out->encode.codec = NULL;
 #endif
 		}

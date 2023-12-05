@@ -92,24 +92,20 @@ bool output_start(struct thread_ctx_s *ctx) {
 
 /*---------------------------------------------------------------------------*/
 bool output_abort(struct thread_ctx_s *ctx, int index) {
-	int i;
-
-	for (i = 0; i < 2; i++) if (ctx->output_thread[i].index == index) {
+	for (int i = 0; i < 2; i++) if (ctx->output_thread[i].index == index) {
 		LOCK_O;
 		ctx->output_thread[i].running = false;
 		UNLOCK_O;
 		pthread_join(ctx->output_thread[i].thread, NULL);
 		return true;
 	}
-
 	return false;
 }
 
 /*---------------------------------------------------------------------------*/
 static void output_http_thread(struct thread_param_s *param) {
-	bool http_ready = false;
 	int sock = -1;
-	bool acquired = false;
+	bool acquired = false, http_ready = false, finished = false;
 	fd_set rfds, wfds;
 	struct buffer __obuf, *obuf = &__obuf, backlog;
 	struct output_thread_s *thread = param->thread;
@@ -117,7 +113,6 @@ static void output_http_thread(struct thread_param_s *param) {
 	unsigned drain_count = DRAIN_MAX;
 	u32_t start = gettime_ms();
 	FILE *store = NULL;
-	bool finished = false;
 
 	struct http_ctx_s http_ctx;
 	memset(&http_ctx, 0, sizeof(struct http_ctx_s));
@@ -199,12 +194,9 @@ static void output_http_thread(struct thread_param_s *param) {
 			LOG_INFO("[%p]: HTTP close %d (bytes %zd) (n:%d res:%d)", ctx, sock, http_ctx.total, n, res);
 			closesocket(sock);
 			sock = -1;
-			/*
-			When streaming fails, decode will be completed but new_stream
-			never happened, so output thread is blocked until the player
-			closes the connection at which point we must exit and release
-			slimproto (case where bytes == 0).
-			*/
+			/* when streaming fails, decode will be completed but new_stream never happened, 
+			 * so output thread is blocked until the player closes the connection at which 
+			 * point we must exit and release slimproto (case where bytes == 0)	*/
 			LOCK_D;
 			if (n < 0 && !http_ctx.total && ctx->decode.state == DECODE_COMPLETE) {
 				ctx->output.completed = true;
@@ -227,31 +219,26 @@ static void output_http_thread(struct thread_param_s *param) {
 			continue;
 		}
 
-		/*
-		Pull some data from outpubuf. In non-flow mode, order of test matters
-		as pulling from	outputbuf should stop once draining has	started,
-		otherwise it will start reading data of next track. Draining starts as
-		soon as decoder	is COMPLETE or ERROR (no LOCK_D, not critical) and STMd
-		will only be requested when "complete" has been set, so two different
-		tracks will never co-exist in outpufbuf
-		In flow mode, STMd will be sent as soon as decode finishes *and* track
-		has already started, so two tracks will co-exist in outputbuf and this
-		is needed for crossfade. Pulling audio from outputbuf must be continuous
-		and draining will self-reset every time a decoding restarts. There is a
-		risk that if a player has a very large buffer, the whole next track is
-		decoded (COMPLETE), sent in outputbuf, transfered to obuf which is then
-		fully sent to the player before that track even starts, so as soon as it
-		actually starts, decoder states moves to STOPPED, STMd is sent but new
-		data does not arrive before the test below happens, so output thread
-		exits. I don't know how to prevent that from happening, except by using
-		horrific timers. Note as well that drain_count is not a proper timer,
-		but it starts only to decrement when decoder is STOPPED and after all
-		outputbuf has been process, so when still sending obuf, the time counted
-		depends when the player releases the wfds, which is not predictible.
-		Still, as soon as obuf is empty, this is chunks of TIMEOUT, so it's very
-		unlikey that while emptying obuf, the decoder has not restarted if there
-		is a next track
-		*/
+		/* pull some data from outpubuf. In non-flow mode, order of test matters as pulling 
+		 * from outputbuf should stop once draining has started, otherwise it will start 
+		 * reading data of next track. Draining starts as soon as decoder is COMPLETE or ERROR
+		 * (no LOCK_D, not critical) and STMd will only be requested when "complete" has been
+		 * set, so two different	tracks will never co-exist in outpufbuf. In flow mode, STMd 
+		 * will be sent as soon as decode finishes *and* track has already started, so two 
+		 * tracks will co-exist in outputbuf and this is needed for crossfade. Pulling audio 
+		 * from outputbuf must be continuous and draining will self-reset every time a decoding
+		 * restarts. There is a risk that if a player has a very large buffer, the whole next 
+		 * track is decoded (COMPLETE), sent in outputbuf, transfered to obuf which is then
+		 * fully sent to the player before that track even starts, so as soon as it actually 
+		 * starts, decoder states moves to STOPPED, STMd is sent but new data does not arrive 
+		 * before the test below happens, so output thread exits. I don't know how to prevent 
+		 * that from happening, except by using horrific timers. Note as well that drain_count
+		 * is not a proper timer, but it starts only to decrement when decoder is STOPPED and 
+		 * after all outputbuf has been process, so when still sending obuf, the time counted
+		 * depends when the player releases the wfds, which is not predictible. Still, as soon 
+		 * as obuf is empty, this is chunks of TIMEOUT, so it's very unlikey that while emptying
+		 * obuf, the decoder has not restarted if there	is a next track */
+
 		if (ctx->output.encode.flow) {
 			// drain_count is not really time, but close enough
 			if (!_output_fill(obuf, store, ctx) && ctx->decode.state == DECODE_STOPPED) drain_count--;
@@ -270,13 +257,13 @@ static void output_http_thread(struct thread_param_s *param) {
 		 * in send and the whole slimproto state machine is stalled. Still, the reality of the use
 		 * of it seems to be limited to writing the trailing \r\n in chunked mode, probably because
 		 * we wait for socket to be writable. But in theory, a writable socket does not guarantee
-		 * the avaialable space */
+		 * there is enough available space */
 
-		if (!FD_ISSET(sock, &wfds) && !finished) {
-			// we can't write and we are not finished yet, just wait for select() 
+		if (!FD_ISSET(sock, &wfds) && (_buf_used(obuf) || _buf_used(&backlog))) {
+			// we can't write but we have to, let's wait for select() 
 			FD_SET(sock, &wfds);
 		} else if (_buf_used(&backlog)) {
-			// we have some backlog to send, give that a priority
+			// we have some backlog, give it priority
 			send_backlog(&backlog, sock, NULL, 0, 0);
 		} else if (_buf_used(obuf)) {
 			// only get what we can process (ignore result because all is always sent/backlog'd)
@@ -294,16 +281,12 @@ static void output_http_thread(struct thread_param_s *param) {
 				_buf_write(&http_ctx.header, obuf->readp, min(bytes, _buf_cont_write(&http_ctx.header) - 1));
 			}
 
-			// some might be in backlog, but they will be sent later
+			// some might be in backlog, but it will be sent later (we never really know anyway what send() does)
 			_buf_inc_readp(obuf, bytes);
 			LOG_SDEBUG("[%p] sent %u bytes (total: %u)", ctx, bytes, http_ctx.total);
 
-		} else if (finished) {
-			LOG_INFO("[%p]: self-exit", ctx);
-			UNLOCK_O;
-			break;
 		} else if (!drain_count) {
-			// if all has been sent, add a closing empty chunk
+			// if all has been sent, add a closing empty chunk if needed
 			if (ctx->output.chunked) send_backlog(&backlog, sock, "0\r\n\r\n", 5, 0);
 			finished = true;
 		} else {
@@ -312,6 +295,12 @@ static void output_http_thread(struct thread_param_s *param) {
 		}
 
 		UNLOCK_O;
+
+		// all have been sent
+		if (finished && !_buf_used(&backlog)) {
+			LOG_INFO("[%p]: self-exit", ctx);
+			break;
+		}
 	}
 
 	buf_destroy(&http_ctx.header);
@@ -369,10 +358,8 @@ ssize_t send_backlog(struct buffer *backlog, int sock, const void* data, size_t 
 
 /*----------------------------------------------------------------------------*/
 static ssize_t send_chunked(bool chunked, struct buffer *backlog, int sock, const void *data, size_t bytes, int flags) {
-	if (!chunked) {
-		return send_backlog(backlog, sock, data, bytes, flags);
-	}
-
+	if (!chunked) return send_backlog(backlog, sock, data, bytes, flags);
+	
 	char chunk[16];
 	itoa(bytes, chunk, 16);
 	strcat(chunk, "\r\n");
@@ -386,7 +373,7 @@ static ssize_t send_chunked(bool chunked, struct buffer *backlog, int sock, cons
 
 /*----------------------------------------------------------------------------*/
 static ssize_t send_with_icy(struct outputstate* out, struct buffer *backlog, int sock, const void *data, size_t bytes, int flags) {
-	// first send remaining data bytes wich are always smaller or equal icy.remain
+	// first send remaining data bytes wich are always smaller or equal to icy.remain
 	bytes = send_chunked(out->chunked, backlog, sock, data, bytes, flags);
 
 	// ICY not active, just send
@@ -426,15 +413,14 @@ static ssize_t send_with_icy(struct outputstate* out, struct buffer *backlog, in
 	return bytes;
 }
 
-/*----------------------------------------------------------------------------*/
-/*
-So far, the diversity of behavior of UPnP devices is too large to do anything
-that work for enough of them and handle byte seeking. So, we are either with
-chunking or not and that's it. All this works very well with player that simply
-suspend the connection using TCP, but if they close it and want to resume (i.e.
-they request a range, we'll restart from where we were and mostly it will not be
-acceptable by the player, so then use the option seek_after_pause
-*/
+/* so far, the diversity of behavior of UPnP devices is too large to do anything
+ * that works well for enough with all of them and handle byte seeking. All this 
+ * works very well with players that simply suspend the connection using TCP, but
+ * if they close it and want to resume (i.e. they request a range, we'll restart 
+ * from as far as we can but we only have obuf size in memory. The seek_after_pause 
+ * option can the be used as well to handle that within LMS */
+
+ /*----------------------------------------------------------------------------*/
 static bool handle_http(struct http_ctx_s *http, struct thread_ctx_s *ctx, int sock, struct buffer *obuf)
 {
 	char* body = NULL, * request = NULL, * p = NULL;
@@ -449,6 +435,7 @@ static bool handle_http(struct http_ctx_s *http, struct thread_ctx_s *ctx, int s
 		return false;
 	}
 
+	// we could always claim to be 1.1 though
 	bool http_11 = strstr(request, "HTTP/1.1") != NULL;
 	char* head = NULL, *response = NULL;
 	enum { ANY, SONOS, CHROMECAST } type;
@@ -515,11 +502,12 @@ static bool handle_http(struct http_ctx_s *http, struct thread_ctx_s *ctx, int s
                     LOG_INFO("[%p]: range cannot be satisfied %zu->%zu", ctx, offset, http->total);
                 }
 			} else if (http->total && type == SONOS && !ctx->output.icy.interval) {
-				/* Sonos is a pile of crap: when paused (on mp3) it will close the connection and then
-				 * re-open it on resume and wants the whole file but of course we don't have it. So we 
-				 * just send the first track's N bytes we have stored so that he sees it's the same file 
-				 * and then we close the connection which forces it to re-open it again with a proper 
-				 * range request this time */
+				/* Sonos is a pile of crap: when paused (on mp3) it will close the connection, re-open 
+				 * it on resume and wants the whole file but of course we don't have it. We fool it by
+				 * just sending the track's first N bytes we have stored and so that he sees it's the 
+				 * same file. Then we close the connection which forces it to re-open it again with a 
+				 * proper range request this time but we need to answer with no content-length (which 
+				 * is not compliant) or if fails */
 				kd_vadd(resp, "Content-Length", "%zu", UINT32_MAX);
 				response = http_send(sock, "HTTP/1.0 200 OK", resp);
 				ssize_t sent = send(sock, http->header.buf, _buf_used(&http->header), 0);

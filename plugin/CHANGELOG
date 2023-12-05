@@ -1,3 +1,10 @@
+2.5.0 
+ - refactor output_http entirely
+ - add command line -g to set HTTP content-length 
+ - use -c instead of -o
+ - fix live metadata memory leak
+ - fix aac end of encode memory leak
+
 2.4.4
  - previous version had a miss build
  - change a bit some logs

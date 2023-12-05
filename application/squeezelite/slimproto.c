@@ -596,6 +596,8 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 					// release context's metadata and do a shallow copy
 					metadata_free(metadata);
 					*metadata = live;
+				} else {
+					metadata_free(&live);
 				}
 				UNLOCK_O;
 			}
@@ -1200,7 +1202,9 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 
 	} else if (out->encode.mode == ENCODE_AAC) {
 
-		mimetype = mimetype_from_codec('a', ctx->mimetypes, NULL);
+		// aac is not well described in ProtocolInfo, so better force it instead of getting audio/m4a or audio/mp4
+		mimetype = mimetype_from_codec('m', ctx->mimetypes, NULL);
+		if (mimetype) strcpy(mimetype, "audio/aac");
 		out->encode.sample_size = 16;
 
 		// need to tweak a bit samples rates
