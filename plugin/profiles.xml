@@ -1,16 +1,4 @@
 <squeeze2upnp>
-	<stream_length>-3</stream_length>
-	<mode>thru</mode>
-	<flac_header>1</flac_header>
-	<accept_nexturi>1</accept_nexturi>
-	<seek_after_pause>0</seek_after_pause>
-	<codecs>dsf,dff,aif,pcm,flc,mp3,ogg,ogf,aac,alc</codecs>
-	<sample_rate>48000</sample_rate>
-	<send_metadata>1</send_metadata>
-	<raw_audio_format>raw,wav</raw_audio_format>
-	<L24_format>2</L24_format>
-	<max_volume>100</max_volume>
-	<send_icy>1</send_icy>
 	<profile name=''></profile>
 	<profile name='_safe mode'>
 		<accept_nexturi>0</accept_nexturi>
@@ -31,6 +19,7 @@
 		<forced_mimetypes>audio/aac</forced_mimetypes>
 	</profile>
 	<profile name='Sonos'>
+		<sample_rate>48000</sample_rate>
 		<codecs>-ogg</codecs>
 		<raw_audio_format>wav,aif</raw_audio_format>
 		<forced_mimetypes>audio/aac</forced_mimetypes>

@@ -170,6 +170,8 @@ PLUGIN_UPNPBRIDGE_STREAMOPTIONS_DESC
 	EN	Options for streaming to UPnP player (see user guide)
 	EN	<br>- LMS does not provide the file size to be sent. The best HTTP mode is to use 'chunked' but some UPnP players require
 	EN	'no-length' to be used. Use 'if known' to send size only when using pcm audio and duration is known 
+	EN	<br>- To satisfy player's request for HTTP seek, a cache is used. It can be in memory, reported limited or infinite or on
+	EN	disk (fallback in memory when live streaming or using flow)
 	EN	<br>- Some players support gapless playback and thus automatically move to next track in playlist. This is automatically
 	EN	detected, but you can force it disabled. Others (e.g. Bose) are totally broken and are stuck toward track end. Use 'force'
 	EN	to force them to move to next track.
@@ -193,6 +195,18 @@ PLUGIN_UPNPBRIDGE_HTTPMODENOLENGTH
 	
 PLUGIN_UPNPBRIDGE_HTTPMODEFIXED
 	EN	fixed
+	
+PLUGIN_UPNPBRIDGE_CACHE
+	EN	Cache	
+	
+PLUGIN_UPNPBRIDGE_CACHEMEMORY
+	EN	memory	
+	
+PLUGIN_UPNPBRIDGE_CACHEINFINITE
+	EN	infinite		
+	
+PLUGIN_UPNPBRIDGE_CACHEDISK
+	EN	disk
 
 PLUGIN_UPNPBRIDGE_ACCEPTNEXTURI
 	EN	Gapless 
@@ -283,6 +297,8 @@ PLUGIN_UPNPBRIDGE_ENCODEPARAMS_DESC
 	EN	in which case truncation is only made for "raw". 
 	EN	<br><i>- Flac header:</i> when seeking, LMS removes flac header but most UPnP requires it. Headers contain "total number 
 	EN	of samples" and different values can be tried (flac standard says 0 should work but it does not always)
+	EN	<br><i>- Use MP4:</i> some players can't handle mp4 format (container for alac and aac) when using HTTP mode with no
+	EN	length. Disabling mp4 support remove ALAC codec and forces use of ADTS raw frames for AAC (when possible)
 	EN	<br><i>- Flac compression:</i> in flac mode, set the compression level. 0 = lowest compression & CPU load
 	EN	<br><i>- MP3/AAC bitrate:</i> in mp3/aac mode, set bitrate
 	EN	<br><i>- Resample rate:</i> resample rate for re-encoding. When "No higher" is set, resampling will only happen if rate is
@@ -313,6 +329,9 @@ PLUGIN_UPNPBRIDGE_ENCODEFLOW
 	
 PLUGIN_UPNPBRIDGE_FLACHEADER
 	EN	FLAC header
+	
+PLUGIN_UPNPBRIDGE_MP4
+	EN	Use mp4
 
 PLUGIN_UPNPBRIDGE_L24FORMAT
 	EN	24 bits PCM

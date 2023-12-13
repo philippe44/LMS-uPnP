@@ -110,11 +110,13 @@ static uint8_t LMSVolumeMap[129] = {
 		};
 
 sq_dev_param_t glDeviceParam = {
-					HTTP_CHUNKED, 	 		// stream_length
+					HTTP_LENGTH_CHUNKED, 	// stream_length
 					STREAMBUF_SIZE,			// stream_buffer_size
 					OUTPUTBUF_SIZE,			// output_buffer_size
 					"aac,ogg,ops,ogf,flc,alc,wav,aif,pcm,mp3",		// codecs
 					"thru",					// mode
+					HTTP_CACHE_INFINITE,	// cache
+					true,					// mp4
 					30,						// next_delay
 					"raw,wav,aif",			// raw_audio_format
 					"?",                    // server
@@ -199,23 +201,27 @@ static char usage[] =
 		   "Usage: [options]\n"
 		   "  -s <server>[:<port>] connect to specified server, otherwise uses autodiscovery to find server\n"
 		   "  -b <address|iface>]  network address (or interface name) to bind to\n"
-	       "  -g -3|-2|-1|0	       HTTP content-length (-3:chunked, -2:if known, -1:none, 0:fixed large)\n"
+	       "  -g -3|-2|-1|0|<n>    HTTP content-length (-3:chunked(*), -2:if known, -1:none, 0:estimated, <n>: your value )\n"
+		   "  -C <mode>            HTTP caching mode (0=memory, 1=memory but claim it's infinite(*), 2=on disk)\n"
+		   "  -P                   pause means stop live streams (always) or tracks (flow only)\n"
 		   "  -M <modelname>       set the squeezelite player model name sent to the server (default: " MODEL_NAME_STRING ")\n"
 		   "  -x <config file>     read config from file (default is ./config.xml)\n"
 		   "  -i <config file>     discover players, save <config file> and exit\n"
 		   "  -I                   auto save config at every network scan\n"
-		   "  -d <log>=<level>     set logging level, logs: all|slimproto|slimmain|stream|decode|output|web|main|util|upnp, level: error|warn|info|debug|sdebug\n"
+		   "  -d <log>=<level>     set logging level\n"
+	       "                       logs: all|slimproto|slimmain|stream|decode|output|web|main|util|upnp\n"
+		   "                       level: error|warn|info|debug|sdebug\n"
 		   "  -f <logfile>         write debug to logfile\n"
 		   "  -p <pid file>        write PID in file\n"
-		   "  -c thru|[pcm|flc[:<q>]|mp3[:<r>]|aac[:<r>][,r:[-]<rate>][,s:<8:16:24>][,flow]] transcode mode\n"
+		   "  -c thru|[pcm|flc[:<q>]|mp3[:<r>]|aac[:<r>][,r:[-]<rate>][,s:<8:16:24>][,flow]] transcode mode (thru)\n"
 		   "  -o is equivalent to -c but is deprecated\n"
 		   
 #if LINUX || FREEBSD || SUNOS
-		   "  -z \t\t\tDaemonize\n"
+		   "  -z                   daemonize\n"
 #endif
-		   "  -Z \t\t\tNOT interactive\n"
-		   "  -k \t\t\tImmediate exit on SIGQUIT and SIGTERM\n"
-		   "  -t \t\t\tLicense terms\n"
+		   "  -Z                   NOT interactive (can't type command)\n"
+		   "  -k                   immediate exit on SIGQUIT and SIGTERM\n"
+		   "  -t                   license terms\n"
 		   "\n"
 		   "Build options:"
 #if LINUX
@@ -331,8 +337,7 @@ bool sq_callback(void *caller, sq_action_t action, ...)
 		case SQ_SET_TRACK: {
 			struct track_param *p = va_arg(args, struct track_param*);
 			char *ProtoInfo, *uri;
-			char format = mimetype_to_format(p->mimetype);
-
+			
 			// when this is received the next track has been processed
 			NFREE(Device->NextURI);
 			NFREE(Device->ExpectedURI);
@@ -349,14 +354,15 @@ bool sq_callback(void *caller, sq_action_t action, ...)
 					div(p->metadata.duration,1000).rem, p->metadata.size,
 					p->metadata.artwork ? p->metadata.artwork : "", p->offset);
 
-			// passing DLNAfeatures back is really ugly
-			ProtoInfo = MakeProtoInfo(p->mimetype, p->metadata.duration);
+			char *DLNAfeatures = format_to_dlna(p->format, Device->sq_config.cache != HTTP_CACHE_MEMORY, !p->metadata.duration && !p->flow);
+			(void)!asprintf(&ProtoInfo, "http-get:*:%s:%s", p->mimetype, DLNAfeatures);
+			free(DLNAfeatures);
 
 			// Sonos requires special prefix for ICY but it can't be a repeating stream (must have no duration)
 			if ((!p->metadata.duration || p->metadata.repeating != -1) && (*Device->Service[TOPOLOGY_IDX].ControlURL) &&
-				(format == 'm' || format == 'a')) {
+				(p->format == 'm' || p->format == 'a') && Device->sq_config.send_icy) {
 				(void) !asprintf(&uri, "x-rincon-mp3radio://%s", p->uri);
-				if (format == 'a') (void)! asprintf(&Device->ExpectedURI, "aac://%s", p->uri);
+				if (p->format == 'a') (void)! asprintf(&Device->ExpectedURI, "aac://%s", p->uri);
 				LOG_INFO("[%p]: Sonos live stream", Device);
 			} else uri = strdup(p->uri);
 
@@ -514,9 +520,12 @@ bool sq_callback(void *caller, sq_action_t action, ...)
 				pthread_mutex_unlock(&glUpdateMutex);
 			}
 			break;
-		case SQ_SETSERVER:
-			strcpy(Device->sq_config.set_server, inet_ntoa(*va_arg(args, struct in_addr*)));
+		case SQ_SETSERVER: {
+			struct in_addr server;
+			server.s_addr = va_arg(args, uint32_t);
+			strcpy(Device->sq_config.set_server, inet_ntoa(server));
 			break;
+		}
 		default:
 			break;
 	}
@@ -1368,12 +1377,12 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	Device->Running = true;
 	strcpy(Device->friendlyName, friendlyName);
 	NFREE(friendlyName);
+
+	char ip[32];
+	sscanf(location, "http://%[^:]", ip);
 		
 	if (!memcmp(Device->sq_config.mac, "\0\0\0\0\0\0", 6)) {
-		char ip[32];
 		uint32_t mac_size = 6;
-
-		sscanf(location, "http://%[^:]", ip);
 		if (SendARP(inet_addr(ip), INADDR_ANY, Device->sq_config.mac, &mac_size)) {
 			*(uint32_t*)(Device->sq_config.mac + 2) = hash32(Device->UDN);
 			LOG_INFO("[%p]: creating MAC", Device);
@@ -1393,7 +1402,8 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	if (Device->Master) {
 		LOG_INFO("[%p] skipping Sonos slave %s", Device, Device->friendlyName);
 	} else {
-		LOG_INFO("[%p]: adding renderer (%s) with mac %hX-%X", Device, Device->friendlyName, *(uint16_t*)Device->sq_config.mac, *(uint32_t*)(Device->sq_config.mac + 2));
+		LOG_INFO("[%p]: adding renderer (%s) %s with mac %hX-%X", Device, Device->friendlyName, ip,
+				 *(uint16_t*)Device->sq_config.mac, *(uint32_t*)(Device->sq_config.mac + 2));
 	}
 
 	// get the protocol info
@@ -1604,10 +1614,10 @@ bool ParseArgs(int argc, char **argv) {
 	}
 	while (optind < argc && strlen(argv[optind]) >= 2 && argv[optind][0] == '-') {
 		char *opt = argv[optind] + 1;
-		if (strstr("sxdfpibcMogrL", opt) && optind < argc - 1) {
+		if (strstr("sxdfpibcMogrLC", opt) && optind < argc - 1) {
 			optarg = argv[optind + 1];
 			optind += 2;
-		} else if (strstr("tzZIk", opt)) {
+		} else if (strstr("tzZIkP", opt)) {
 			optarg = NULL;
 			optind += 1;
 		} else {
@@ -1615,9 +1625,14 @@ bool ParseArgs(int argc, char **argv) {
 			return false;
 		}
 		switch (opt[0]) {
+		case 'P':
+			glMRConfig.LivePause = false;
+			break;
+		case 'C':
+			glDeviceParam.cache = atoi(optarg);
+			break;
 		case 'g':
-			glDeviceParam.stream_length = atoi(optarg);
-			if (!glDeviceParam.stream_length) glDeviceParam.stream_length = HTTP_LARGE;
+			glDeviceParam.stream_length = atoll(optarg);
 			break;
 		case 'L':
 			strcpy(glDeviceParam.store_prefix, optarg);

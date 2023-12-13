@@ -138,6 +138,8 @@ typedef int16_t  s16_t;
 typedef uint8_t  u8_t;
 typedef int8_t   s8_t;
 
+#define ARRAY_COUNT(A) (sizeof(A) / sizeof(A[0]))
+
 #define MAX_HEADER 4096 // do not reduce as icy-meta max is 4080
 
 #define STREAM_THREAD_STACK_SIZE (1024 * 64)
@@ -381,7 +383,6 @@ void 		resample_end(struct thread_ctx_s *ctx);
 // output.c
 
 #define	OUTPUTBUF_IDLE_SIZE (256*1024)
-#define HTTP_STUB_DEPTH		(2048*1024)
 
 #define ICY_LEN_MAX		(255*16+1)
 #define METADATA_UPDATE_TIME	5000
@@ -400,7 +401,7 @@ typedef enum { ENCODE_THRU, ENCODE_NULL, ENCODE_PCM, ENCODE_FLAC, ENCODE_AAC, EN
 
 // parameters for the output management thread
 struct output_thread_s {
-		bool			running;
+		bool			running, lingering;
 		thread_type 	thread;
 		int				http;			// listening socket of http server
 		int 			index;
@@ -419,7 +420,7 @@ struct outputstate {
 	u32_t 	duration;       // duration of track in ms, 0 if unknown
 	u32_t	offset;			// offset of track in ms (for flow mode)
 	u32_t	bitrate;	  	// as per name
-	ssize_t length;			// HTTP content-length (-1:no chunked, -3 chunked if possible, >0 fake length)
+	int64_t length;			// HTTP content-length (-1:no chunked, -3 chunked if possible, >=0 fake length)
 	u16_t  	index;			// 16 bits track counter(see output_thread)
 	u16_t	port;			// port of latest thread (mainy used for codc)
 	bool 	chunked;		// chunked mode

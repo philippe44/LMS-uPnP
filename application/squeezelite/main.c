@@ -272,8 +272,7 @@ char *cli_send_cmd(char *cmd, bool req, bool decode, struct thread_ctx_s *ctx) {
 }
 
 /*--------------------------------------------------------------------------*/
-u32_t sq_get_time(sq_dev_handle_t handle)
-{
+u32_t sq_get_time(sq_dev_handle_t handle) {
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
 	char cmd[128];
 	char *rsp;
@@ -301,8 +300,7 @@ u32_t sq_get_time(sq_dev_handle_t handle)
 
 
 /*---------------------------------------------------------------------------*/
-bool sq_set_time(sq_dev_handle_t handle, char *pos)
-{
+bool sq_set_time(sq_dev_handle_t handle, char *pos) {
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
 	char cmd[128];
 	char *rsp;
@@ -328,8 +326,7 @@ bool sq_set_time(sq_dev_handle_t handle, char *pos)
 }
 
 /*--------------------------------------------------------------------------*/
-uint32_t sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, int offset)
-{
+uint32_t sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, int offset) {
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
 	char cmd[1024];
 	char *rsp, *p, *cur;
@@ -482,8 +479,7 @@ uint32_t sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, int offse
 }
 
 /*--------------------------------------------------------------------------*/
-u32_t sq_self_time(sq_dev_handle_t handle)
-{
+u32_t sq_self_time(sq_dev_handle_t handle) {
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
 	u32_t time;
 	u32_t now = gettime_ms();
@@ -502,10 +498,8 @@ u32_t sq_self_time(sq_dev_handle_t handle)
 	return time;
 }
 
-
 /*---------------------------------------------------------------------------*/
-void sq_notify(sq_dev_handle_t handle, sq_event_t event, ...)
-{
+void sq_notify(sq_dev_handle_t handle, sq_event_t event, ...) {
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
 	char cmd[128], *rsp;
 
@@ -701,10 +695,8 @@ void sq_notify(sq_dev_handle_t handle, sq_event_t event, ...)
 	 va_end(args);
  }
 
-
-/*---------------------------------------------------------------------------*/
-void sq_init(struct in_addr host, u16_t port, char *model_name)
-{
+ /*---------------------------------------------------------------------------*/
+void sq_init(struct in_addr host, u16_t port, char *model_name) {
 	sq_local_host = host;
 	sq_local_port = port;
 	strcpy(sq_model_name, model_name);
@@ -728,8 +720,7 @@ void sq_stop() {
 }
 
 /*---------------------------------------------------------------------------*/
-void sq_release_device(sq_dev_handle_t handle)
-{
+void sq_release_device(sq_dev_handle_t handle) {
 	if (handle) {
 		struct thread_ctx_s *ctx = thread_ctx + handle - 1;
 		int i;
@@ -740,21 +731,18 @@ void sq_release_device(sq_dev_handle_t handle)
 }
 
 /*---------------------------------------------------------------------------*/
-sq_dev_handle_t sq_reserve_device(void *MR, bool on, char *mimetypes[], sq_callback_t callback)
-{
+sq_dev_handle_t sq_reserve_device(void *MR, bool on, char *mimetypes[], sq_callback_t callback) {
 	int idx, i;
 	struct thread_ctx_s *ctx;
 
 	/* find a free thread context - this must be called in a LOCKED context */
-	for  (idx = 0; idx < MAX_PLAYER; idx++)
-		if (!thread_ctx[idx].in_use) break;
+	for  (idx = 0; idx < MAX_PLAYER; idx++) if (!thread_ctx[idx].in_use) break;
 
 	if (idx < MAX_PLAYER) 	{
 		// this sets a LOT of data to proper defaults (NULL, false ...)
 		memset(&thread_ctx[idx], 0, sizeof(struct thread_ctx_s));
 		thread_ctx[idx].in_use = true;
-	}
-	else return false;
+	} else return false;
 
 	ctx = thread_ctx + idx;
 	ctx->self = idx + 1;
@@ -770,8 +758,7 @@ sq_dev_handle_t sq_reserve_device(void *MR, bool on, char *mimetypes[], sq_callb
 
 
 /*---------------------------------------------------------------------------*/
-bool sq_run_device(sq_dev_handle_t handle, sq_dev_param_t *param)
-{
+bool sq_run_device(sq_dev_handle_t handle, sq_dev_param_t *param) {
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
 
 	memcpy(&ctx->config, param, sizeof(sq_dev_param_t));
@@ -779,6 +766,12 @@ bool sq_run_device(sq_dev_handle_t handle, sq_dev_param_t *param)
 #if !CODECS
 	strcpy(ctx->config.mode, "thru");
 #endif
+
+	// we might need to eliminate ALAC
+	if (!strcasecmp(ctx->config.mode, "thru") && !ctx->config.mp4) {
+		char* p = strcasestr(ctx->config.codecs, "alc");
+		if (p) memmove(p, p + 4, strlen(p + 4) + 1);
+	}
 
 	sprintf(ctx->cli_id, "%02x:%02x:%02x:%02x:%02x:%02x",
 						  ctx->config.mac[0], ctx->config.mac[1], ctx->config.mac[2],
@@ -798,9 +791,6 @@ bool sq_run_device(sq_dev_handle_t handle, sq_dev_param_t *param)
 }
 
 /*--------------------------------------------------------------------------*/
-void *sq_get_ptr(sq_dev_handle_t handle)
-{
-	if (!handle) return NULL;
-	else return thread_ctx + handle - 1;
+void *sq_get_ptr(sq_dev_handle_t handle) {
+	return handle ? thread_ctx + handle - 1 : NULL;
 }
-

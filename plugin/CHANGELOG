@@ -1,3 +1,16 @@
+3.0.0
+ - add cache option
+ - estimate content-length when needed for length 0
+ - duration not set to 0 at first flow call
+ - "enable_mp4" renamed "mp4"
+ - finalize refactor of handle_http and make it aligne to spotconnect
+ - mdnssvc stopping eats all CPU in busy loop in Windows (select can't have all null's)
+  
+2.5.1
+ - fix SET_SERVER bug (wrong variadic sent)
+ - DLNA_ORG.OP should be 01 as we allow some seeking (let some players pause)
+ - add "enable_mp4" option for players that don't properly support mp4 files (alc/aac) with no content-length 
+ 
 2.5.0 
  - refactor output_http entirely
  - add command line -g to set HTTP content-length 

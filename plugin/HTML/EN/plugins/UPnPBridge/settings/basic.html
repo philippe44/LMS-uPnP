@@ -124,6 +124,12 @@
 			<option label="[% entry.0 | string %]" [% IF entry.1 == stream_length %]selected[% END %] value="[% entry.1 %]">
 		[% END %]
 		</select>
+		[% "PLUGIN_UPNPBRIDGE_CACHE" | string %]
+		<select class="stdedit" name="cache" id="cache">
+		[% FOREACH entry IN [ ['', ''], ['PLUGIN_UPNPBRIDGE_CACHEMEMORY', '0'], ['PLUGIN_UPNPBRIDGE_CACHEINFINITE', '1'], ['PLUGIN_UPNPBRIDGE_CACHEDISK', '2'] ] %]
+			<option [% IF entry.1 == cache %]selected[% END %] value="[% entry.1 %]">[% entry.0 | string %]</option>
+		[% END %]
+		</select>		
 		[% "PLUGIN_UPNPBRIDGE_ACCEPTNEXTURI" | string %]
 		<select class="stdedit" name="accept_nexturi" id="accept_nexturi">
 		[% FOREACH entry IN [ ['', ''], ['PLUGIN_UPNPBRIDGE_YES','1'], ['PLUGIN_UPNPBRIDGE_NO', '0'], ['PLUGIN_UPNPBRIDGE_NEXTFORCE','-1'] ] %]
@@ -224,6 +230,12 @@
 				<select class="stdedit" name="flac_header" id="flac_header">
 				[% FOREACH entry IN [ ['',''], ['none','0'], ['normal','1'], ['maximum','2'], ['adjusted', '3'] ] %]
 					<option [% IF entry.1 == flac_header %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+				[% END %]
+				</select>&nbsp
+				[% "PLUGIN_UPNPBRIDGE_MP4" | string %]&nbsp
+				<select class="stdedit" name="mp4" id="mp4">
+				[% FOREACH entry IN YESNOBOX %] 
+					<option [% IF entry.1 == mp4 %]selected[% END %] value="[% entry.1 %]">[% entry.0 | string %]</option>
 				[% END %]
 				</select>&nbsp
 			</span>

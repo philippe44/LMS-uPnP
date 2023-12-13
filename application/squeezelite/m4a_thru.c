@@ -295,7 +295,7 @@ static void m4adts_close(struct thread_ctx_s *ctx) {
 
 struct codec *register_m4a_thru(void) {
 	static struct codec ret = {
-		'4',          // id
+		'A',          // id
 		"aac",        // types
 		WRAPBUF_LEN,  // min read
 		20480,        // min space

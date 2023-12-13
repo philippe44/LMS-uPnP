@@ -205,7 +205,9 @@ bool _output_fill(struct buffer *buf, FILE *store, struct thread_ctx_s *ctx) {
 	Output buffer (buf) cannot have an alignement due to additon of header  for
 	wav and aif files
 	*/
-	if (bytes < HTTP_STUB_DEPTH) return true;
+
+	// when we're full, then we are obviously not done but can't proceed
+	if (!bytes) return true;
 
 	// write header pending data if any and exit
 	if (p->header.buffer) {
@@ -425,6 +427,7 @@ bool _output_fill(struct buffer *buf, FILE *store, struct thread_ctx_s *ctx) {
 void _output_new_stream(struct buffer *obuf, FILE *store, struct thread_ctx_s *ctx) {
 	struct outputstate *out = &ctx->output;
 	u8_t *writep = obuf->writep;
+	int bitrate;
 
 	if (!out->encode.sample_rate) out->encode.sample_rate = out->sample_rate;
 	if (!out->encode.channels) out->encode.channels = out->channels;
@@ -434,19 +437,19 @@ void _output_new_stream(struct buffer *obuf, FILE *store, struct thread_ctx_s *c
 	}
 
 	if (out->encode.mode == ENCODE_PCM) {
-		size_t length;
+		int64_t length;
 
-		/*
-		do not create a size (content-length) when we really don't know it but
-		when we set a content-length (http_mode > 0) then at least the headers
-		should be consistent
-		*/
-		if (!out->duration || out->encode.flow) {
-			if (ctx->config.stream_length < 0) length = HTTP_LARGE;
+		if (!out->duration) {
+			if (ctx->config.stream_length <= 0) length = HTTP_LENGTH_LARGE;
 			else length = ctx->config.stream_length;
-			length = (length / ((u64_t) out->encode.sample_rate * out->encode.channels * out->encode.sample_size /8)) *
+			length = (length / ((u64_t) out->encode.sample_rate * out->encode.channels * out->encode.sample_size / 8)) *
 					 (u64_t) out->encode.sample_rate * out->encode.channels * out->encode.sample_size / 8;
-		} else length = (((u64_t) out->duration * out->encode.sample_rate) / 1000) * out->encode.channels * (out->encode.sample_size / 8);
+		} else {
+			length = (((u64_t) out->duration * out->encode.sample_rate) / 1000) * out->encode.channels * (out->encode.sample_size / 8);
+		}
+
+		// we need a 32 bits length for wav and aif
+		uint32_t len32 = min(length, HTTP_LENGTH_LARGE);
 
 		switch (out->format) {
 		case 'w': {
@@ -458,9 +461,9 @@ void _output_new_stream(struct buffer *obuf, FILE *store, struct thread_ctx_s *c
 			little32(&h->sample_rate, out->encode.sample_rate);
 			little32(&h->byte_rate, out->encode.sample_rate * out->encode.channels * (out->encode.sample_size / 8));
 			little16(&h->block_align, out->encode.channels * (out->encode.sample_size / 8));
-			little32(&h->subchunk2_size, length);
-			little32(&h->chunk_size, 36 + length);
-			length += 36 + 8;
+			little32(&h->subchunk2_size, len32);
+			little32(&h->chunk_size, 36 + len32);
+			len32 += 36 + 8;
 			out->header.buffer = (u8_t*) h;
 			out->header.size = out->header.count = sizeof(struct wave_header_s);
 		   }
@@ -472,10 +475,10 @@ void _output_new_stream(struct buffer *obuf, FILE *store, struct thread_ctx_s *c
 			big16(h->channels, out->encode.channels);
 			big16(h->sample_size, out->encode.sample_size);
 			big16(h->sample_rate_num, out->encode.sample_rate);
-			big32(&h->data_size, length + 8);
-			big32(&h->chunk_size, (length+8+8) + (18+8) + 4);
-			big32(&h->frames, length / (out->encode.channels * (out->encode.sample_size / 8)));
-			length += (8+8) + (18+8) + 4 + 8;
+			big32(&h->data_size, len32 + 8);
+			big32(&h->chunk_size, (len32+8+8) + (18+8) + 4);
+			big32(&h->frames, len32 / (out->encode.channels * (out->encode.sample_size / 8)));
+			len32 += (8+8) + (18+8) + 4 + 8;
 			out->header.buffer = (u8_t*) h;
 			out->header.size = out->header.count = 54; // can't count on structure due to alignment
 			}
@@ -497,15 +500,18 @@ void _output_new_stream(struct buffer *obuf, FILE *store, struct thread_ctx_s *c
 			break;
 		}
 
-		if (ctx->config.stream_length > 0 || ctx->config.stream_length == HTTP_PCM_LENGTH) ctx->output.length = length;
+		// set length if required (all the time or only wehn known) but use 32 bits value with wav and aif
+		if (out->length == 0 || out->length == HTTP_LENGTH_IFKNOWN) out->length = out->format == 'p' ? length : len32;
 
-		LOG_INFO("[%p]: PCM encoding r:%u s:%u f:%c", ctx, out->encode.sample_rate,
-											out->encode.sample_size, out->format);
-		LOG_INFO("[%p]: HTTP %d, estimated len %zu", ctx, ctx->config.stream_length, length);
+		LOG_INFO("[%p]: PCM encoding r:%u s:%u f:%c", ctx, out->encode.sample_rate,	out->encode.sample_size, out->format);
+		LOG_INFO("[%p]: HTTP %" PRId64 " (accurate length : %" PRId64 ")", ctx, ctx->config.stream_length, length);
 #if CODECS
 	} else if (out->encode.mode == ENCODE_FLAC) {
 		int level = 5;
 		if (sscanf(ctx->config.mode, "%*[^:]:%d", &level) && level > 9) level = 9;
+
+		// we take a max of 80% of original bitrate
+		bitrate = (out->encode.channels * out->encode.sample_size * out->encode.sample_rate * 8) * 80 / (100 * 1000);
 
 		FLAC__StreamEncoder* codec = FLAC(f, stream_encoder_new);
 		bool ok = FLAC(f, stream_encoder_set_verify,codec, false);
@@ -531,7 +537,7 @@ void _output_new_stream(struct buffer *obuf, FILE *store, struct thread_ctx_s *c
 	} else if (out->encode.mode == ENCODE_MP3) {
 		shine_config_t config;
 
-		int bitrate = 192;
+		bitrate = 192;
 		if (sscanf(ctx->config.mode, "%*[^:]:%d", &bitrate) && bitrate > 320) bitrate = 320;
 
 		shine_set_config_mpeg_defaults(&config.mpeg);
@@ -558,7 +564,7 @@ void _output_new_stream(struct buffer *obuf, FILE *store, struct thread_ctx_s *c
 #if LINKALL
 		struct aac_private* aac = malloc(sizeof(struct aac_private));
 
-		int bitrate = 128;
+		bitrate = 128;
 		if (sscanf(ctx->config.mode, "%*[^:]:%d", &bitrate) && bitrate > 320) bitrate = 320;
 
 		out->encode.codec = (void*) faacEncOpen(out->encode.sample_rate, out->encode.channels, &aac->in_samples, &aac->out_max_bytes);
@@ -589,9 +595,19 @@ void _output_new_stream(struct buffer *obuf, FILE *store, struct thread_ctx_s *c
 		LOG_INFO("AAC not linked");
 #endif
 #endif
+	} else {
+		bitrate = out->bitrate;
 	}
 
-	 if (store) {
+	// set content-length if not already done above or erase it if we have no duration
+	if (out->length == 0) {
+		// estimate length with a 25% margin on bitrate or set 32 bits length is unknown
+		if (out->duration) out->length = bitrate ? (bitrate * 1.25 * out->duration) / 8 : HTTP_LENGTH_LARGE;
+		else out->length = HTTP_LENGTH_NONE;
+		LOG_INFO("[%p]: HTTP %" PRId64 " (estimated length : %" PRId64 ")", ctx, ctx->config.stream_length, out->length);
+	}
+
+	if (store) {
 		size_t out, bytes = (obuf->writep - writep) % obuf->size;
 		out = min(bytes, obuf->wrap - writep);
 		fwrite(writep, out, 1, store);
@@ -668,8 +684,6 @@ void _output_end_stream(struct buffer *buf, struct thread_ctx_s *ctx) {
 
 /*---------------------------------------------------------------------------*/
 void output_flush(struct thread_ctx_s *ctx) {
-	int i;
-
 	LOCK_O;
 
 	ctx->render.ms_played = 0;
@@ -680,7 +694,8 @@ void output_flush(struct thread_ctx_s *ctx) {
 	*/
 	if (ctx->output.state != OUTPUT_OFF) ctx->output.state = OUTPUT_STOPPED;
 
-	for (i = 0; i < 2; i++) if (ctx->output_thread[i].running) {
+	for (int i = 0; i < ARRAY_COUNT(ctx->output_thread); i++) {
+		if (!ctx->output_thread[i].running) continue;
 		ctx->output_thread[i].running = false;
 		UNLOCK_O;
 		pthread_join(ctx->output_thread[i].thread, NULL);

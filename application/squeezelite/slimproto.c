@@ -19,18 +19,16 @@
  *
  */
 
-/*
- This works almost like squeezelite, but with a big difference: the STMd which
-tells LMS to send the next track is only sent once the full current track has
-been accepted by the player (long buffer). This makes a whole difference in term
-of track boundaries management and overlap between decode and output that does
-not exist at all. A decoder runs first, the output starts, then the decoder
-finishes, the output finish and then, only then, another decoder can start. This
-does not cause any real time issue as http players have large buffers but it
-simplifies extremely buffer management. To some extend, the output buffer
-pointers could be reset at the begining every time an output exit because no
-decoder is running at that time
-*/
+/* This works almost like squeezelite, but with a big difference: the STMd which
+ * tells LMS to send the next track is only sent once the full current track has
+ * been accepted by the player (long buffer). This makes a whole difference in term
+ * of track boundaries management and overlap between decode and output that does
+ * not exist at all. A decoder runs first, the output starts, then the decoder
+ * finishes, the output finish and then, only then, another decoder can start. This
+ * does not cause any real time issue as http players have large buffers but it
+ * simplifies extremely buffer management. To some extend, the output buffer
+ * pointers could be reset at the begining every time an output exit because no
+ * decoder is running at that time */
 
 /* TODO
 - move from CLI to COMET
@@ -1016,6 +1014,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 	out->index++;
 	// try to handle next track failed stream where we jump over N tracks
 	info.offset = ctx->render.index != -1 ? out->index - ctx->render.index : 0;
+	info.flow = out->encode.flow;
 	_buf_resize(ctx->outputbuf, ctx->config.outputbuf_size);
 	UNLOCK_O;
 
@@ -1097,13 +1096,13 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 
 	// in case of flow, all parameters shall be set
 	if (strcasestr(mode, "flow") && out->encode.mode != ENCODE_THRU) {
+		out->duration = 0;
 		out->icy.allowed = ctx->config.send_icy != ICY_NONE;
 		if (ctx->config.send_icy) output_set_icy(&info.metadata, ctx);
 		metadata_free(&info.metadata);
 		metadata_defaults(&info.metadata);
 
 		if (!sample_rate || sample_rate < 0) sample_rate = 44100;
-
 		if (!out->encode.sample_size) out->encode.sample_size = 16;
 		out->encode.channels = 2;
 		out->encode.flow = true;
@@ -1137,21 +1136,25 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 										 ctx->mimetypes, ctx->config.raw_audio_format);
 			out->encode.mode = ENCODE_PCM;
 		} else {
-			char *options;
+			/* when having codec 'a', it can be mp4/aac (5) or 2 (adts/aac). In case of mp4, if the
+			 * mimetype of the player only has aac, we'll use out mp4-to-adts unwrapper codec. In
+			 * case of adts, audio/aac is preferred (and should be returned in priority if found)
+			 * but if audio/mp4|m4a is the only option, then we'll override it with audio/aac. As
+			 * some players don't handle properly mp4 with no content-length, we can also fully
+			 * disable it (means that ALAC should be disabled in codecs) */
 
-			if (out->codec == 'd') {
-				if (out->sample_size == '0') options = "dsf";
-				else if (out->sample_size == '1') options = "dff";
-				else options = "dsd";
-			} else if (out->codec == 'f' && out->sample_size == 'o') {
-				options = "ogg";
-			} else options = NULL;
+			mimetype = mimetype_from_codec(out->codec, ctx->mimetypes, out->sample_size);
+			out->codec = '*';
 
-			mimetype = mimetype_from_codec(out->codec, ctx->mimetypes, options);
-
-			if (out->codec == 'a' && out->sample_size == '5' && mimetype && strstr(mimetype, "aac")) out->codec = '4';
-			else if (out->codec == 'f' && out->sample_size != 'o') out->codec ='c';
-			else out->codec = '*';
+			if (format == 'a' && mimetype) {
+				if (out->sample_size == '2' && !strstr(mimetype, "aac")) {
+					strcpy(mimetype, "audio/aac");
+				} else if (out->sample_size == '5' && (strstr(mimetype, "aac") || !ctx->config.mp4)) {
+					out->codec = 'A';
+					strcpy(mimetype, "audio/aac");
+					LOG_INFO("[%p]: forcing mp4 => adts locally", ctx);
+				}
+			} else if (format == 'f' && out->sample_size != 'o') out->codec = 'F';
 		}
 
 	} else if (out->encode.mode == ENCODE_PCM) {
@@ -1188,12 +1191,12 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 		
 	} else if (out->encode.mode == ENCODE_FLAC) {
 
-		mimetype = mimetype_from_codec('f', ctx->mimetypes, NULL);
+		mimetype = mimetype_from_codec('f', ctx->mimetypes, '\0');
 		if (out->sample_size > 24) out->encode.sample_size = 24;
 
 	} else if (out->encode.mode == ENCODE_MP3) {
 
-		mimetype = mimetype_from_codec('m', ctx->mimetypes, NULL);
+		mimetype = mimetype_from_codec('m', ctx->mimetypes);
 		out->encode.sample_size = 16;
 
 		// need to tweak a bit samples rates
@@ -1203,8 +1206,8 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 	} else if (out->encode.mode == ENCODE_AAC) {
 
 		// aac is not well described in ProtocolInfo, so better force it instead of getting audio/m4a or audio/mp4
-		mimetype = mimetype_from_codec('m', ctx->mimetypes, NULL);
-		if (mimetype) strcpy(mimetype, "audio/aac");
+		mimetype = mimetype_from_codec('a', ctx->mimetypes, '2');
+		if (mimetype && !strstr(mimetype, "aac")) strcpy(mimetype, "audio/aac");
 		out->encode.sample_size = 16;
 
 		// need to tweak a bit samples rates
@@ -1225,7 +1228,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 		strcpy(out->mimetype, mimetype);
 		free(mimetype);
 
-		out->format = mimetype_to_format(out->mimetype);
+		info.format = out->format = mimetype_to_format(out->mimetype);
 		out->out_endian = (out->format == 'w');
 		out->length = ctx->config.stream_length;
 
@@ -1236,10 +1239,8 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 			sprintf(info.uri, "http://%s:%hu/" BRIDGE_URL "%u.%s", inet_ntoa(sq_local_host),
 					out->port, out->index, mimetype_to_ext(out->mimetype));
 
-			/*
-			in THRU/PCM mode these values are known when we receive pcm and in
-			PCM, they are known if values are forced. Otherwise we can't know
-			*/
+			/* in THRU/PCM mode these values are known when we receive pcm and in
+			 * PCM, they are known if values are forced. Otherwise we can't know */
 			info.metadata.sample_rate = out->encode.sample_rate;
 			info.metadata.sample_size = out->encode.sample_size;
 			// non-encoded version is needed as encoded one is always reset

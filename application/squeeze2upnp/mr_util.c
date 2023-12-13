@@ -591,8 +591,6 @@ void CheckCodecs(char *Codecs, char *Sink, char *Forced) {
 		if (strstr(p,"flc")) _CheckCodecs(Codecs, Sink, Forced, NULL, "flc", 1, "flac");
 		if (strstr(p,"wma")) _CheckCodecs(Codecs, Sink, Forced, NULL, "wma", 1, "wma");
 		if (strstr(p,"ogg")) _CheckCodecs(Codecs, Sink, Forced, NULL, "ogg", 1, "ogg");
-		if (strstr(p,"ops")) _CheckCodecs(Codecs, Sink, Forced, "codecs=opus", "ops", 1, "ogg");
-		if (strstr(p,"ogf")) _CheckCodecs(Codecs, Sink, Forced, "codecs=flac", "ogf", 1, "ogg");
 		if (strstr(p,"aac")) _CheckCodecs(Codecs, Sink, Forced, NULL, "aac", 3, "aac", "m4a", "mp4");
 		if (strstr(p,"alc")) _CheckCodecs(Codecs, Sink, Forced, NULL, "alc", 2, "m4a", "mp4");
 		if (strstr(p,"pcm")) _CheckCodecs(Codecs, Sink, Forced, NULL, "pcm", 2, "wav", "audio/L");
@@ -600,20 +598,17 @@ void CheckCodecs(char *Codecs, char *Sink, char *Forced) {
 		if (strstr(p,"aif")) _CheckCodecs(Codecs, Sink, Forced, NULL, "aif", 3, "aif", "wav", "audio/L");
 		if (strstr(p,"dsf")) _CheckCodecs(Codecs, Sink, Forced, NULL, "dsf", 2, "dsf", "dsd");
 		if (strstr(p,"dff")) _CheckCodecs(Codecs, Sink, Forced, NULL, "dff", 2, "dff", "dsd");
+		// ProtocolInfo never contains such details, so be flexible (can always remove codec)
+#ifdef CODECS_STRICT
+		if (strstr(p,"ops")) _CheckCodecs(Codecs, Sink, Forced, "codecs=opus", "ops", 1, "ogg");
+		if (strstr(p,"ogf")) _CheckCodecs(Codecs, Sink, Forced, "codecs=flac", "ogf", 1, "ogg");
+#else
+		if (strstr(p, "ops")) _CheckCodecs(Codecs, Sink, Forced, NULL, "ops", 1, "ogg");
+		if (strstr(p, "ogf")) _CheckCodecs(Codecs, Sink, Forced, NULL, "ogf", 1, "ogg");
+#endif
 
 		p = (q) ? q + 1 : NULL;
 	}
 
 	NFREE(buf);
-}
-
-/*----------------------------------------------------------------------------*/
-char *MakeProtoInfo(char *MimeType, uint32_t duration) {
-	char *buf, *DLNAfeatures;
-
-	DLNAfeatures = mimetype_to_dlna(MimeType, duration);
-	(void) !asprintf(&buf, "http-get:*:%s:%s", MimeType, DLNAfeatures);
-	free(DLNAfeatures);
-
-	return buf;
 }

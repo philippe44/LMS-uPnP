@@ -66,7 +66,7 @@ void SaveConfig(char *name, void *ref, bool full) {
 
 	XMLUpdateNode(doc, common, false, "streambuf_size", "%d", (uint32_t) glDeviceParam.streambuf_size);
 	XMLUpdateNode(doc, common, false, "output_size", "%d", (uint32_t) glDeviceParam.outputbuf_size);
-	XMLUpdateNode(doc, common, false, "stream_length", "%d", (uint32_t) glDeviceParam.stream_length);
+	XMLUpdateNode(doc, common, false, "stream_length", "%" PRId64, (int64_t) glDeviceParam.stream_length);
 	XMLUpdateNode(doc, common, false, "enabled", "%d", (int) glMRConfig.Enabled);
 	XMLUpdateNode(doc, common, false, "remove_timeout", "%d", (int) glMRConfig.RemoveTimeout);
 	XMLUpdateNode(doc, common, false, "codecs", glDeviceParam.codecs);
@@ -76,6 +76,8 @@ void SaveConfig(char *name, void *ref, bool full) {
 	XMLUpdateNode(doc, common, false, "L24_format", "%d", (int) glDeviceParam.L24_format);
 	XMLUpdateNode(doc, common, false, "flac_header", "%d", (int) glDeviceParam.flac_header);
 	XMLUpdateNode(doc, common, false, "roon_mode", "%d", (int) glDeviceParam.roon_mode);
+	XMLUpdateNode(doc, common, false, "mp4", "%d", (int)glDeviceParam.mp4);
+	XMLUpdateNode(doc, common, false, "cache", "%d", (int)glDeviceParam.cache);
 	XMLUpdateNode(doc, common, false, "forced_mimetypes", "%s", glMRConfig.ForcedMimeTypes);
 	XMLUpdateNode(doc, common, false, "seek_after_pause", "%d", (int) glMRConfig.SeekAfterPause);
 	XMLUpdateNode(doc, common, false, "live_pause", "%d", (int)glMRConfig.LivePause);
@@ -154,13 +156,15 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 
 	if (!strcmp(name, "streambuf_size")) sq_conf->streambuf_size = atol(val);
 	if (!strcmp(name, "output_size")) sq_conf->outputbuf_size = atol(val);
-	if (!strcmp(name, "stream_length")) sq_conf->stream_length = atol(val);
+	if (!strcmp(name, "stream_length")) sq_conf->stream_length = atoll(val);
 	if (!strcmp(name, "send_icy")) Conf->SendIcy = atol(val);
 	if (!strcmp(name, "enabled")) Conf->Enabled = atol(val);
 	if (!strcmp(name, "remove_timeout")) Conf->RemoveTimeout = atol(val);
 	if (!strcmp(name, "codecs")) strcpy(sq_conf->codecs, val);
 	if (!strcmp(name, "mode")) strcpy(sq_conf->mode, val);
 	if (!strcmp(name, "roon_mode")) sq_conf->roon_mode = atol(val);
+	if (!strcmp(name, "mp4")) sq_conf->mp4 = atol(val);
+	if (!strcmp(name, "cache")) sq_conf->cache = atol(val);
 	if (!strcmp(name, "raw_audio_format")) strcpy(sq_conf->raw_audio_format, val);
 	if (!strcmp(name, "store_prefix")) strcpy(sq_conf->store_prefix, val);			//RO
 	if (!strcmp(name, "sample_rate")) sq_conf->sample_rate = atol(val);

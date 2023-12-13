@@ -71,86 +71,85 @@ typedef enum {
 	DLNA_ORG_FLAG_DLNA_V15 = (1 << 20),
 } dlna_org_flags_t;
 
-#define DLNA_ORG_OP (DLNA_ORG_OPERATION_RANGE)
-
-#define DLNA_ORG_FLAG ( DLNA_ORG_FLAG_S0_INCREASE | DLNA_ORG_FLAG_STREAMING_TRANSFERT_MODE | \
-                        DLNA_ORG_FLAG_BACKGROUND_TRANSFERT_MODE | DLNA_ORG_FLAG_CONNECTION_STALL | \
-                        DLNA_ORG_FLAG_DLNA_V15 )
-
 /*----------------------------------------------------------------------------*/
 static char* _lookup(char* mimetypes[], char* details, int n, ...) {
-	char* mimetype, ** p;
+	char* mimetype = NULL;
 	va_list args;
-
 	va_start(args, n);
 
-	while (n--) {
-		mimetype = va_arg(args, char*);
-		p = mimetypes;
-		while (*p) {
-			if (**p == '*' || (strstr(*p, mimetype) && (!details || strstr(*p, details)))) {
-				va_end(args);
-				return strdup(*p);
+	while (!mimetype && n--) {
+		char *needle = va_arg(args, char*);
+		for (char** p = mimetypes; *p && !mimetype; p++) {
+#ifdef CODECS_STRICT
+			if (**p == '*' || (strstr(*p, needle) && (!details || strstr(*p, details)))) {
+				mimetype = strdup(*p);
 			}
-			p++;
+#else
+			if (**p == '*' || strstr(*p, needle)) {
+				if (!details) mimetype = strdup(needle);
+				else asprintf(&mimetype, "%s;%s", *p, details);
+			}
+#endif
 		}
 	}
 
 	va_end(args);
-
-	return NULL;
+	return mimetype;
 }
 
 /*---------------------------------------------------------------------------*/
-char* mimetype_from_codec(char codec, char* mimetypes[], char* options) {
+char* mimetype_from_codec(char codec, char* mimetypes[], ...) {
+	va_list args;
+
+	// in variadic, char are promoted to int
 	switch (codec) {
 	case 'm': return _lookup(mimetypes, NULL, 3, "audio/mp3", "audio/mpeg", "audio/mpeg3");
 	case 'w': return _lookup(mimetypes, NULL, 2, "audio/wma", "audio/x-wma");
-	case 'o': return _lookup(mimetypes, NULL, 2, "audio/ogg", "audio/x-ogg");
+	case 'o': return _lookup(mimetypes, "codecs=vorbis", 2, "audio/ogg", "audio/x-ogg");
 	case 'u': return _lookup(mimetypes, "codecs=opus", 2, "audio/ogg", "audio/x-ogg");
-	case 'a': return _lookup(mimetypes, NULL, 4, "audio/aac", "audio/x-aac", "audio/m4a", "audio/mp4");
-	case 'l': return _lookup(mimetypes, NULL, 2, "audio/m4a", "audio/mp4");
-	case 'c':
-	case 'f':
-		if (options && !strcmp(options, "ogg")) return _lookup(mimetypes, "codecs=flac", 2, "audio/ogg", "audio/x-ogg");
+	case 'l': return _lookup(mimetypes, NULL, 2, "audio/mp4", "audio/m4a");
+	case 'a': {
+		va_start(args, mimetypes);
+		bool mp4 = (va_arg(args, int) == '5');
+		va_end(args);
+
+		if (mp4) return _lookup(mimetypes, NULL, 4, "audio/mp4", "audio/m4a", "audio/aac", "audio/x-aac");
+		else return _lookup(mimetypes, NULL, 4, "audio/aac", "audio/x-aac", "audio/mp4", "audio/m4a");
+	}
+	case 'F':
+	case 'f': {
+		va_start(args, mimetypes);
+		bool ogg = (va_arg(args, int) == 'o');
+		va_end(args);
+
+		if (ogg) return _lookup(mimetypes, "codecs=flac", 2, "audio/ogg", "audio/x-ogg");
 		else return _lookup(mimetypes, NULL, 2, "audio/flac", "audio/x-flac");
+	}
 	case 'd': {
-		char* mimetype;
+		va_start(args, mimetypes);
+		char *mimetype, type = va_arg(args, int);
+		va_end(args);
 
-		if (strstr(options, "dsf")) {
-			mimetype = _lookup(mimetypes, NULL, 2, "audio/dsf", "audio/x-dsf");
-			if (mimetype) return mimetype;
-		}
-
-		if (strstr(options, "dff")) {
-			mimetype = _lookup(mimetypes, NULL, 2, "audio/dff", "audio/x-dff");
-			if (mimetype) return mimetype;
-		}
-
-		mimetype = _lookup(mimetypes, NULL, 2, "audio/dsd", "audio/x-dsd");
-		if (mimetype) return mimetype;
-		else return strdup("audio/dsd");
+		if (type == '0') mimetype = _lookup(mimetypes, NULL, 2, "audio/dsf", "audio/x-dsf");
+		else if (type == '1') mimetype = _lookup(mimetypes, NULL, 2, "audio/dff", "audio/x-dff");
+		else mimetype = _lookup(mimetypes, NULL, 2, "audio/dsd", "audio/x-dsd");
+		
+		return mimetype;
 	}
 	case 'p': {
-		char fmt[8];
-		char* mimetype;
+		va_start(args, mimetypes);
+		char fmt[8], * mimetype = NULL, * codecs = va_arg(args, char*);
+		va_end(args);
 
-		while (1) {
-			if (sscanf(options, "%[^,]", fmt) <= 0) return NULL;
+		while (codecs && !mimetype && sscanf(codecs, "%[^,]", fmt) > 0) {
+			codecs = strchr(codecs, ',');
+			if (codecs) codecs++;
 
-			if (strstr(fmt, "wav")) {
-				mimetype = _lookup(mimetypes, NULL, 3, "audio/wav", "audio/x-wav", "audio/wave");
-				if (mimetype) return mimetype;
-			}
-
-			if (strstr(fmt, "aif")) {
-				mimetype = _lookup(mimetypes, NULL, 4, "audio/aiff", "audio/x-aiff", "audio/aif", "audio/x-aif");
-				if (mimetype) return mimetype;
-			}
-
-			options += strlen(fmt);
-			if (*options) options++;
+			if (strstr(fmt, "wav")) mimetype = _lookup(mimetypes, NULL, 3, "audio/wav", "audio/x-wav", "audio/wave");
+			else if (strstr(fmt, "aif")) mimetype = _lookup(mimetypes, NULL, 4, "audio/aiff", "audio/x-aiff", "audio/aif", "audio/x-aif");
 		}
+
+		return mimetype;
 	}
 	}
 
@@ -159,67 +158,77 @@ char* mimetype_from_codec(char codec, char* mimetypes[], char* options) {
 
 /*---------------------------------------------------------------------------*/
 char* mimetype_from_pcm(uint8_t* sample_size, bool truncable, uint32_t sample_rate,
-	uint8_t channels, char* mimetypes[], char* options) {
-	char* mimetype, fmt[8];
+						uint8_t channels, char* mimetypes[], char* codecs) {
+						char* mimetype = NULL, fmt[8];
 	uint8_t size = *sample_size;
 
-	while (1) {
-
-		if (sscanf(options, "%[^,]", fmt) <= 0) return NULL;
+	while (codecs && !mimetype && sscanf(codecs, "%[^,]", fmt) > 0) {
+		codecs = strchr(codecs, ',');
+		if (codecs) codecs++;
 
 		while (strstr(fmt, "raw")) {
-			char** p, a[16], r[16], c[16];
+			char a[16], r[16], c[16];
 
 			// find audio/Lxx
-			p = mimetypes;
 			sprintf(a, "audio/L%hhu", *sample_size);
 			sprintf(r, "rate=%u", sample_rate);
 			sprintf(c, "channels=%hhu", channels);
-			while (*p) {
+			for (char** p = mimetypes; *p; p++) {
 				if (**p == '*' ||
 					(strstr(*p, a) &&
 						(!strstr(*p, "rate=") || strstr(*p, r)) &&
 						(!strstr(*p, "channels=") || strstr(*p, c)))) {
-					char* rsp;
 
-					(void)! asprintf(&rsp, "%s;%s;%s", a, r, c);
-					return rsp;
+					(void)! asprintf(&mimetype, "%s;%s;%s", a, r, c);
+					return mimetype;
 				}
-				p++;
 			}
 
-			if (*sample_size == 24 && truncable) *sample_size = 16;
-			else {
+			// if we have no found anything with 24 bist, try 16 bits if authorized
+			if (*sample_size == 24 && truncable) {
+				*sample_size = 16;
+			} else {
 				*sample_size = size;
 				break;
 			}
 		}
 
-		if (strstr(fmt, "wav")) {
-			mimetype = _lookup(mimetypes, NULL, 3, "audio/wav", "audio/x-wav", "audio/wave");
-			if (mimetype) return mimetype;
-		}
-
-		if (strstr(fmt, "aif")) {
-			mimetype = _lookup(mimetypes, NULL, 4, "audio/aiff", "audio/x-aiff", "audio/aif", "audio/x-aif");
-			if (mimetype) return mimetype;
-		}
-
-		// try next one
-		options += strlen(fmt);
-		if (*options) options++;
+		if (strstr(fmt, "wav")) mimetype = _lookup(mimetypes, NULL, 3, "audio/wav", "audio/x-wav", "audio/wave");
+		else if (strstr(fmt, "aif")) mimetype = _lookup(mimetypes, NULL, 4, "audio/aiff", "audio/x-aiff", "audio/aif", "audio/x-aif");
 	}
+
+	return mimetype;
 }
 
 /*---------------------------------------------------------------------------*/
-char* mimetype_to_dlna(char* mimetype, uint32_t duration) {
-	char* buf;
-	char* DLNAOrgPN;
+char mimetype_to_format(char *mimetype) {
+	char* p;
 
-	switch (mimetype_to_format(mimetype)) {
+	if ((p = strstr(mimetype, "audio/x-")) != NULL) p += strlen("audio/x-");
+	else if ((p = strstr(mimetype, "audio/")) != NULL) p += strlen("audio/");
+
+	if (strstr(p, "wav")) return 'w';
+	if (strstr(p, "aif")) return 'i';
+	if (p[0] == 'L' || p[0] == '*') return 'p';
+	if (strstr(p, "flac") || strstr(p, "flc")) return 'f';
+	if (strstr(p, "mp3") || strstr(p, "mpeg")) return 'm';
+	if (strstr(p, "ogg")) return 'o';
+	if (strstr(p, "aac")) return 'a';
+	if (strstr(p, "mp4") || strstr(p, "m4a")) return '4';
+	if (strstr(p, "dsd") || strstr(p, "dsf") || strstr(p, "dff")) return 'd';
+
+	return '\0';
+}
+
+/*---------------------------------------------------------------------------*/
+char* format_to_dlna(char format, bool full_cache, bool live) {
+	char* buf, * DLNAOrgPN;
+
+	switch (format) {
 	case 'm':
 		DLNAOrgPN = "DLNA.ORG_PN=MP3;";
 		break;
+	case 'A':
 	case 'a':
 		DLNAOrgPN = "DLNA.ORG_PN=AAC_ADTS;";
 		break;
@@ -230,16 +239,34 @@ char* mimetype_to_dlna(char* mimetype, uint32_t duration) {
 		DLNAOrgPN = "";
 	}
 
-	(void)!asprintf(&buf, "%sDLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=%08x000000000000000000000000",
-		DLNAOrgPN, DLNA_ORG_FLAG | (duration ? 0 : DLNA_ORG_FLAG_SN_INCREASE));
+	/* OP set means that the full resource must be accessible, but Sn can still increase. It
+	 * is exclusive with b29 (DLNA_ORG_FLAG_BYTE_BASED_SEEK) of FLAGS which is limited random 
+	 * access and when that is set, player shall not expect full access to already received 
+	 * bytes and for example, S0 can increase (it does not have to). When live is set, either 
+	 * because we have no duration (it's a webradio) or we are in flow, we have to set S0 
+	 * because we lose track of the head and we can't have full cache. 
+	 * The value for Sn is questionable as it actually changes only for live stream but we 
+	 * don't have access to it until we have received full content. As it is supposed to 
+	 * represent what is accessible, not the media, we'll always set it. We can still use
+	 * in-memory cache, so b29 shall be set (then OP shall not be). If user has opted-out 
+	 * file-cache, we can only do b29. In any case, we don't support time-based seek */
+
+	uint32_t org_op = full_cache ? DLNA_ORG_OPERATION_RANGE : 0;
+	uint32_t org_flags = DLNA_ORG_FLAG_STREAMING_TRANSFERT_MODE | DLNA_ORG_FLAG_BACKGROUND_TRANSFERT_MODE |
+					 	 DLNA_ORG_FLAG_CONNECTION_STALL | DLNA_ORG_FLAG_DLNA_V15 |
+						 DLNA_ORG_FLAG_SN_INCREASE;
+
+	if (live) org_flags |= DLNA_ORG_FLAG_S0_INCREASE;
+	if (!full_cache) org_flags |= DLNA_ORG_FLAG_BYTE_BASED_SEEK;
+
+	(void)!asprintf(&buf, "%sDLNA.ORG_OP=%02u;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=%08x000000000000000000000000",
+						   DLNAOrgPN, org_op, org_flags);
 
 	return buf;
 }
 
-
 /*---------------------------------------------------------------------------*/
-char* mimetype_to_ext(char* mimetype)
-{
+char* mimetype_to_ext(char* mimetype) {
 	char* p;
 
 	if (!mimetype) return "";
@@ -264,25 +291,4 @@ char* mimetype_to_ext(char* mimetype)
 	if (strstr(mimetype, "dff") == p) return "dff";
 
 	return "nil";
-
-}
-
-/*---------------------------------------------------------------------------*/
-char mimetype_to_format(char* mimetype)
-{
-	if (!mimetype) return '\0';
-
-	if (strstr(mimetype, "wav")) return 'w';
-	if (strstr(mimetype, "audio/L") || mimetype[0] == '*') return 'p';
-	if (strstr(mimetype, "flac") || strstr(mimetype, "flc")) return 'f';
-	if (strstr(mimetype, "mp3") || strstr(mimetype, "mpeg")) return 'm';
-	if (strstr(mimetype, "ogg") && strstr(mimetype, "codecs=opus")) return 'u';
-	if (strstr(mimetype, "ogg") && strstr(mimetype, "codecs=flac")) return 'f';
-	if (strstr(mimetype, "ogg")) return 'o';
-	if (strstr(mimetype, "aif")) return 'i';
-	if (strstr(mimetype, "aac")) return 'a';
-	if (strstr(mimetype, "mp4") || strstr(mimetype, "m4a")) return '4';
-	if (strstr(mimetype, "dsd") || strstr(mimetype, "dsf") || strstr(mimetype, "dff")) return 'd';
-
-	return '*';
 }

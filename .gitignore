@@ -101,6 +101,7 @@ _backup/
 *.bak
 *.user
 *.pdb
+*.odt
 
 application/bin
 

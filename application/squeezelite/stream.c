@@ -435,7 +435,6 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 						if (ctx->stream.store) fwrite(ctx->streambuf->writep, 1, n, ctx->stream.store);
 						_buf_inc_writep(ctx->streambuf, n);
 						ctx->stream.bytes += n;
-						wake_output(ctx);
 						if (ctx->stream.meta_interval) {
 							ctx->stream.meta_next -= n;
 						}

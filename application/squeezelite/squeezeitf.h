@@ -29,12 +29,20 @@ typedef enum { FLAC_NO_HEADER = 0, FLAC_DEFAULT_HEADER = 1, FLAC_MAX_HEADER = 2,
 typedef	sq_action_t sq_event_t;
 typedef	int	sq_dev_handle_t;
 
+// make sure compiler uses 64 bits for these
+#define HTTP_LENGTH_NONE	((int64_t) -1) 
+#define HTTP_LENGTH_IFKNOWN ((int64_t) -2) 
+#define HTTP_LENGTH_CHUNKED ((int64_t) -3) 
+#define HTTP_LENGTH_LARGE   ((int64_t) UINT32_MAX - 8192)
+
 typedef	struct sq_dev_param_s {
-	enum { HTTP_NO_LENGTH = -1, HTTP_PCM_LENGTH = -2, HTTP_CHUNKED = -3, HTTP_LARGE = (UINT_MAX - 8192) } stream_length;
+	int64_t		stream_length;
 	unsigned 	streambuf_size;
 	unsigned 	outputbuf_size;
 	char		codecs[STR_LEN];
 	char		mode[STR_LEN];
+	enum { HTTP_CACHE_MEMORY = 0, HTTP_CACHE_INFINITE = 1, HTTP_CACHE_DISK = 2 } cache;
+	bool		mp4;
 	int			next_delay;
 	char 		raw_audio_format[STR_LEN];
 	char		server[STR_LEN];
@@ -63,6 +71,8 @@ struct track_param
 	metadata_t	metadata;
 	char		uri[STR_LEN];
 	char		mimetype[STR_LEN];
+	char		format;
+	bool		flow;
 };
 
 typedef bool (*sq_callback_t)(void *caller, sq_action_t action, ...);

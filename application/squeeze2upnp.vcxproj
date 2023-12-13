@@ -31,6 +31,7 @@
     <ClCompile Include="squeeze2upnp\squeeze2upnp.c" />
     <ClCompile Include="squeezelite\alac.c" />
     <ClCompile Include="squeezelite\buffer.c" />
+    <ClCompile Include="squeezelite\cache.c" />
     <ClCompile Include="squeezelite\decode.c" />
     <ClCompile Include="squeezelite\faad.c" />
     <ClCompile Include="squeezelite\flac.c" />

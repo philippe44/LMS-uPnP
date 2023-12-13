@@ -2,7 +2,7 @@
  *  Squeezelite - lightweight headless squeezebox emulator
  *
  *  (c) Adrian Smith 2012-2014, triode1@btinternet.com
- *	(c) Philippe 2015-2017, philippe_44@outlook.com
+ *	(c) Philippe 2015-2023, philippe_44@outlook.com
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@
  */
 
 #include "squeezelite.h"
+#include "cache.h"
 
 extern log_level	output_loglevel;
 static log_level 	*loglevel = &output_loglevel;
@@ -29,51 +30,50 @@ static log_level 	*loglevel = &output_loglevel;
 #define LOCK_D   mutex_lock(ctx->decode.mutex)
 #define UNLOCK_D mutex_unlock(ctx->decode.mutex)
 
-#define MAX_CHUNK_SIZE	(256*1024)
 #define MAX_BLOCK		(32*1024)
 #define ICY_INTERVAL	16384
 #define TIMEOUT			50
-#define SLEEP			50
 #define DRAIN_MAX		(5000 / TIMEOUT)
 
 struct thread_param_s {
-	struct thread_ctx_s *ctx;
-	struct output_thread_s *thread;
+	struct thread_ctx_s* ctx;
+	struct output_thread_s* thread;
 };
 
-struct http_ctx_s {
-	struct buffer header;
-	int index;
-	size_t total, pos;
-};
-
-static void 	output_http_thread(struct thread_param_s *param);
-static bool 	handle_http(struct http_ctx_s *http, struct thread_ctx_s *ctx, int sock, struct buffer *obuf);
-static void 	mirror_header(key_data_t *src, key_data_t *rsp, char *key);
+static void     output_http_thread(struct thread_param_s *param);
+static bool     handle_http(struct thread_ctx_s* ctx, cache_buffer* cache, bool* use_cache, int index, int sock);
 static ssize_t 	send_with_icy(struct outputstate *out, struct buffer* backlog, int sock, const void* data, size_t bytes, int flags);
 static ssize_t  send_chunked(bool chunked, struct buffer* backlog, int sock, const void* data, size_t bytes, int flags);
 static ssize_t  send_backlog(struct buffer* backlog, int sock, const void* data, size_t bytes, int flags);
 
 /*---------------------------------------------------------------------------*/
 bool output_start(struct thread_ctx_s *ctx) {
-	struct thread_param_s *param = malloc(sizeof(struct thread_param_s));
-	int i = 0;
+	struct thread_param_s *param = calloc(sizeof(struct thread_param_s), 1);
 
 	// start the http server thread (get an available one first)
-	if (ctx->output_thread[0].running) param->thread = ctx->output_thread + 1;
-	else param->thread = ctx->output_thread;
+	for (param->thread = ctx->output_thread; 
+		 param->thread->running && !param->thread->lingering && param->thread < ctx->output_thread + ARRAY_COUNT(ctx->output_thread);
+		 param->thread++);
 
+	if (param->thread->lingering) {
+		param->thread->running = false;
+		pthread_join(param->thread->thread, NULL);
+	}
+
+	// it's calloc
 	param->thread->index = ctx->output.index;
 	param->thread->running = true;
+	param->thread->lingering = false;
 	param->ctx = ctx;
 
 	// find a free port
 	ctx->output.port = sq_local_port;
-	do {
+	for (int i = 0; i < 2 * MAX_PLAYER && param->thread->http <= 0; i++) {
 		struct in_addr host;
 		host.s_addr = INADDR_ANY;
 		param->thread->http = bind_socket(host, &ctx->output.port, SOCK_STREAM);
-	} while (param->thread->http < 0 && ctx->output.port++ && i++ < 2 * MAX_PLAYER);
+		if (param->thread->http <= 0) ctx->output.port++;
+	}
 
 	// and listen to it
 	if (param->thread->http <= 0 || listen(param->thread->http, 1)) {
@@ -83,8 +83,7 @@ bool output_start(struct thread_ctx_s *ctx) {
 		return false;
 	}
 
-	LOG_INFO("[%p]: start thread %d", ctx, param->thread == ctx->output_thread ? 0 : 1);
-
+	LOG_INFO("[%p]: start thread %d", ctx, (param->thread - ctx->output_thread) / sizeof(ctx->output_thread[0]));
 	pthread_create(&param->thread->thread, NULL, (void *(*)(void*)) &output_http_thread, param);
 
 	return true;
@@ -105,7 +104,7 @@ bool output_abort(struct thread_ctx_s *ctx, int index) {
 /*---------------------------------------------------------------------------*/
 static void output_http_thread(struct thread_param_s *param) {
 	int sock = -1;
-	bool acquired = false, http_ready = false, finished = false;
+	bool use_cache = false, acquired = false, http_ready = false;
 	fd_set rfds, wfds;
 	struct buffer __obuf, *obuf = &__obuf, backlog;
 	struct output_thread_s *thread = param->thread;
@@ -114,31 +113,26 @@ static void output_http_thread(struct thread_param_s *param) {
 	u32_t start = gettime_ms();
 	FILE *store = NULL;
 
-	struct http_ctx_s http_ctx;
-	memset(&http_ctx, 0, sizeof(struct http_ctx_s));
-	http_ctx.index = thread->index;
-	http_ctx.total = http_ctx.pos = 0;
-	buf_init(&http_ctx.header, 65536);
+	enum cache_type_e cache_type = CACHE_INFINITE;
+	if (ctx->config.cache == HTTP_CACHE_MEMORY) cache_type = CACHE_RING;
+	else if (ctx->config.cache == HTTP_CACHE_DISK && ctx->output.duration) cache_type = CACHE_FILE;
+	cache_buffer *cache = cache_create(cache_type, 0);
 
-	buf_init(obuf, HTTP_STUB_DEPTH + 512*1024);
+	buf_init(obuf, 128*1024);
 	buf_init(&backlog, max(ctx->output.icy.interval, MAX_BLOCK) + ICY_LEN_MAX + 2 + 16);
 
 	free(param);
 
 	if (*ctx->config.store_prefix) {
 		char name[STR_LEN];
-		snprintf(name, sizeof(name), "%s/" BRIDGE_URL "%u-out#%u#.%s", ctx->config.store_prefix, http_ctx.index, 
+		snprintf(name, sizeof(name), "%s/" BRIDGE_URL "%u-out#%u#.%s", ctx->config.store_prefix, thread->index, 
 			thread->http, mimetype_to_ext(ctx->output.mimetype));
 		store = fopen(name, "wb");
 	}
 
 	while (thread->running) {
-		struct timeval timeout = {0, 0};
-		bool res = true;
-		int n;
-
 		if (sock == -1) {
-			struct timeval timeout = {0, TIMEOUT*1000};
+			struct timeval timeout = { 0, 100 * 1000 };
 
 			FD_ZERO(&rfds);
 			FD_SET(thread->http, &rfds);
@@ -149,6 +143,7 @@ static void output_http_thread(struct thread_param_s *param) {
 				http_ready = false;
 				buf_flush(&backlog);
 				FD_ZERO(&wfds);
+				FD_ZERO(&rfds);
 			}
 
 			if (sock != -1 && ctx->running) {
@@ -156,55 +151,47 @@ static void output_http_thread(struct thread_param_s *param) {
 			} else continue;
 		}
 
-		FD_ZERO(&rfds);
+		// don't need to loop too fast as we use a write fd
 		FD_SET(sock, &rfds);
-
-		// short wait if obuf has free space and there is something to process
-		timeout.tv_usec = _buf_used(ctx->outputbuf) && _buf_space(obuf) > HTTP_STUB_DEPTH ?
-									TIMEOUT*1000 / 10 : TIMEOUT*1000;
-
-		n = select(sock + 1, &rfds, &wfds, NULL, &timeout);
-
+		bool res = true;
+		struct timeval timeout = { 0, TIMEOUT * 1000 };
+		int n = select(sock + 1, &rfds, &wfds, NULL, &timeout);
+		
 		// need to wait till we have an initialized codec
 		if (!acquired && n > 0) {
-			LOCK_D;
+			// don't bother locking decoder, there is no race condition
 			if (ctx->decode.new_stream) {
-				UNLOCK_D;
-				// not very elegant but let's not consume all CPU
-				usleep(SLEEP*1000);
+				// and yes, Windows is so bad that we can't use select() as a timer...
+				usleep(TIMEOUT * 1000);
 				continue;
 			}
 			acquired = true;
-			UNLOCK_D;
 
 			LOCK_O;
 			_output_new_stream(obuf, store, ctx);
 			UNLOCK_O;
 
-			LOG_INFO("[%p]: drain is %u (waited %u)", ctx, obuf->size, gettime_ms() - start);
+			LOG_INFO("[%p]: got codec, drain is %u (waited %u)", ctx, obuf->size, gettime_ms() - start);
 		}
 
 		// should be the HTTP headers
 		if (n > 0 && FD_ISSET(sock, &rfds)) {
-			http_ready = res = handle_http(&http_ctx, ctx, sock, obuf);
+			http_ready = res = handle_http(ctx, cache, &use_cache, thread->index, sock);
 		}
-
+	
 		// something wrong happened or master connection closed
 		if (n < 0 || !res) {
-			LOG_INFO("[%p]: HTTP close %d (bytes %zd) (n:%d res:%d)", ctx, sock, http_ctx.total, n, res);
+			LOG_INFO("[%p]: HTTP close %d (bytes %zd) (n:%d res:%d)", ctx, sock, cache->total, n, res);
 			closesocket(sock);
 			sock = -1;
 			/* when streaming fails, decode will be completed but new_stream never happened, 
 			 * so output thread is blocked until the player closes the connection at which 
 			 * point we must exit and release slimproto (case where bytes == 0)	*/
-			LOCK_D;
-			if (n < 0 && !http_ctx.total && ctx->decode.state == DECODE_COMPLETE) {
+			if (n < 0 && !cache->total && ctx->decode.state == DECODE_COMPLETE) {
 				ctx->output.completed = true;
 				LOG_ERROR("[%p]: streaming failed, exiting", ctx);
-				UNLOCK_D;
 				break;
 			}
-			UNLOCK_D;
 			continue;
 		}
 
@@ -219,25 +206,27 @@ static void output_http_thread(struct thread_param_s *param) {
 			continue;
 		}
 
-		/* pull some data from outpubuf. In non-flow mode, order of test matters as pulling 
-		 * from outputbuf should stop once draining has started, otherwise it will start 
-		 * reading data of next track. Draining starts as soon as decoder is COMPLETE or ERROR
-		 * (no LOCK_D, not critical) and STMd will only be requested when "complete" has been
-		 * set, so two different	tracks will never co-exist in outpufbuf. In flow mode, STMd 
-		 * will be sent as soon as decode finishes *and* track has already started, so two 
-		 * tracks will co-exist in outputbuf and this is needed for crossfade. Pulling audio 
-		 * from outputbuf must be continuous and draining will self-reset every time a decoding
-		 * restarts. There is a risk that if a player has a very large buffer, the whole next 
-		 * track is decoded (COMPLETE), sent in outputbuf, transfered to obuf which is then
-		 * fully sent to the player before that track even starts, so as soon as it actually 
-		 * starts, decoder states moves to STOPPED, STMd is sent but new data does not arrive 
-		 * before the test below happens, so output thread exits. I don't know how to prevent 
-		 * that from happening, except by using horrific timers. Note as well that drain_count
-		 * is not a proper timer, but it starts only to decrement when decoder is STOPPED and 
-		 * after all outputbuf has been process, so when still sending obuf, the time counted
-		 * depends when the player releases the wfds, which is not predictible. Still, as soon 
+		/* _output_fill pulls some data from outpubuf and make it ready in obuf for HTTP layer. It
+		 * returns true if there is still data to process, whether it actually produces bytes or 
+		 * not. So it is important to call and test it before checking decoder state as we should 
+		 * only bother when there is nothing more to do (for the current track) as we don't want to
+		 * consume next track's data. Draining starts as soon as decoder is COMPLETE or ERROR (no 
+		 * LOCK_D, not critical) and STMd will only be requested when "complete" has been set, so 2
+		 * different tracks will never co-exist in outpufbuf. In flow mode, STMd will be sent as soon
+		 * as decode finishes *and* track has already started, so two tracks will co-exist in outputbuf
+		 * and this is needed for crossfade. Pulling audio from outputbuf must be continuous and 
+		 * draining will self-reset every time a decoding restarts. There is a risk that if a player 
+		 * has a very large buffer, the whole next track is decoded (COMPLETE), sent in outputbuf, 
+		 * transfered to obuf which is then fully sent to the player before that track even starts, so
+		 * as soon as it actually starts, decoder states moves to STOPPED, STMd is sent but new data 
+		 * does not arrive before the test below happens, so output closes the socks and lingers. Note
+		 * as well that drain_count is not a proper timer, but it starts only to decrement when decoder
+		 * is STOPPED and after all outputbuf has been process, so when still sending obuf, the time 
+		 * counted depends when the player releases the wfds, which is not predictible. Still, as soon 
 		 * as obuf is empty, this is chunks of TIMEOUT, so it's very unlikey that while emptying
-		 * obuf, the decoder has not restarted if there	is a next track */
+		 * obuf, the decoder has not restarted if there	is a next track. The lingering mode is here so
+		 * that players that re-open the connection even after everything has been sent (Sonos during a
+		 * pause) can be served */
 
 		if (ctx->output.encode.flow) {
 			// drain_count is not really time, but close enough
@@ -249,7 +238,7 @@ static void output_http_thread(struct thread_param_s *param) {
 			ctx->output.completed = true;
 			drain_count = 0;
 			wake_controller(ctx);
-			LOG_INFO("[%p]: draining (%zu bytes)", ctx, http_ctx.total);
+			LOG_INFO("[%p]: draining (%zu bytes)", ctx, cache->total);
 		}
 
 		/* now we are surely running but for the forgetful, we need this backlog mechanism because
@@ -259,53 +248,60 @@ static void output_http_thread(struct thread_param_s *param) {
 		 * we wait for socket to be writable. But in theory, a writable socket does not guarantee
 		 * there is enough available space */
 
-		if (!FD_ISSET(sock, &wfds) && (_buf_used(obuf) || _buf_used(&backlog))) {
+		if (!FD_ISSET(sock, &wfds) && (use_cache || _buf_used(obuf) || _buf_used(&backlog))) {
 			// we can't write but we have to, let's wait for select() 
 			FD_SET(sock, &wfds);
 		} else if (_buf_used(&backlog)) {
 			// we have some backlog, give it priority
 			send_backlog(&backlog, sock, NULL, 0, 0);
-		} else if (_buf_used(obuf)) {
+		} else if (use_cache || _buf_used(obuf)) {
 			// only get what we can process (ignore result because all is always sent/backlog'd)
-			size_t bytes = min(_buf_cont_read(obuf), ctx->output.icy.interval ? ctx->output.icy.remain : MAX_BLOCK);
-			send_with_icy(&ctx->output, &backlog, sock, obuf->readp, bytes, 0);
+			size_t chunk = ctx->output.icy.interval ? ctx->output.icy.remain : MAX_BLOCK, bytes = chunk;
+			uint8_t* readp = NULL;
 
-			// store header (for Sonos) and make accurate HTTP total bytes calculation
-			if (http_ctx.pos < http_ctx.total) {
-				http_ctx.pos += bytes;
-				if (http_ctx.pos >= http_ctx.total) {
-					LOG_INFO("[%p]: finished re-sending at %zu", ctx, http_ctx.pos);
-				}
-			} else {
-				http_ctx.total = http_ctx.pos += bytes;
-				_buf_write(&http_ctx.header, obuf->readp, min(bytes, _buf_cont_write(&http_ctx.header) - 1));
+			// try to source from cache first if we have to
+			if (use_cache) {
+				readp = cache->read_inner(cache, &bytes);
+				if (!readp) use_cache = false;
+			}
+
+			// if nothing in cache, then we are (back to) normal source
+			if (!readp && _buf_used(obuf)) {
+				bytes = min(_buf_cont_read(obuf), chunk);
+				cache->write(cache, obuf->readp, bytes);
+				readp = obuf->readp;
+				_buf_inc_readp(obuf, bytes);
 			}
 
 			// some might be in backlog, but it will be sent later (we never really know anyway what send() does)
-			_buf_inc_readp(obuf, bytes);
-			LOG_SDEBUG("[%p] sent %u bytes (total: %u)", ctx, bytes, http_ctx.total);
+			if (readp) send_with_icy(&ctx->output, &backlog, sock, readp, bytes, 0);
+			else FD_ZERO(&wfds);
 
+			// if we have no cache, no obuf and drain count is 0, we are done except for chunked
+			if (!use_cache && !_buf_used(obuf) && !drain_count) {
+				if (ctx->output.chunked) send_backlog(&backlog, sock, "0\r\n\r\n", 5, 0);
+				thread->lingering = true;
+				LOG_INFO("[%p]: full data sent (%zu) now lingering", ctx, cache->total);
+			}
+		
+			LOG_SDEBUG("[%p] sent %u bytes (total: %u)", ctx, bytes, cache->total);
 		} else if (!drain_count) {
-			// if all has been sent, add a closing empty chunk if needed
-			if (ctx->output.chunked) send_backlog(&backlog, sock, "0\r\n\r\n", 5, 0);
-			finished = true;
+			shutdown_socket(sock);
+			sock = -1;
+			LOG_INFO("[%p]: socket closed", ctx);
 		} else {
 			// we don't have anything to send, let select read or sleep
 			FD_ZERO(&wfds);
 		}
 
 		UNLOCK_O;
-
-		// all have been sent
-		if (finished && !_buf_used(&backlog)) {
-			LOG_INFO("[%p]: self-exit", ctx);
-			break;
-		}
 	}
 
-	buf_destroy(&http_ctx.header);
+	LOG_INFO("[%p]: exiting, sent %zu bytes", ctx, cache->total);
+
 	buf_destroy(&backlog);
 	buf_destroy(obuf);
+	cache_delete(cache);
 
 	// in chunked mode, a full chunk might not have been sent (due to TCP)
 	if (sock != -1) shutdown_socket(sock);
@@ -322,20 +318,21 @@ static void output_http_thread(struct thread_param_s *param) {
 	}
 
 	if (ctx->output.encode.flow) {
-		// terminate codec if needed
 		_output_end_stream(NULL, ctx);
 		// need to have slimproto move on in case of stream failure
 		ctx->output.completed = true;
 	}
 
 	UNLOCK_O;
-
-	LOG_INFO("[%p]: end thread %d (%zu bytes)", ctx, thread == ctx->output_thread ? 0 : 1, http_ctx.total);
+	LOG_INFO("[%p]: exited thread %d", ctx, (thread - ctx->output_thread) / sizeof(*thread));
 }
 
 /*----------------------------------------------------------------------------*/
 ssize_t send_backlog(struct buffer *backlog, int sock, const void* data, size_t bytes, int flags) {
 	ssize_t sent = 0;
+
+	// if there is no backlog buffer, it should be a blocking socket so just send
+	if (!backlog) return send(sock, data, bytes, flags);
 
 	// try to flush backlog if any
 	while (_buf_used(backlog) && sent >= 0) {
@@ -413,19 +410,12 @@ static ssize_t send_with_icy(struct outputstate* out, struct buffer *backlog, in
 	return bytes;
 }
 
-/* so far, the diversity of behavior of UPnP devices is too large to do anything
- * that works well for enough with all of them and handle byte seeking. All this 
- * works very well with players that simply suspend the connection using TCP, but
- * if they close it and want to resume (i.e. they request a range, we'll restart 
- * from as far as we can but we only have obuf size in memory. The seek_after_pause 
- * option can the be used as well to handle that within LMS */
-
- /*----------------------------------------------------------------------------*/
-static bool handle_http(struct http_ctx_s *http, struct thread_ctx_s *ctx, int sock, struct buffer *obuf)
+/*----------------------------------------------------------------------------*/
+static bool handle_http(struct thread_ctx_s *ctx, cache_buffer* cache, bool *use_cache, int index, int sock)
 {
 	char* body = NULL, * request = NULL, * p = NULL;
 	key_data_t headers[64], resp[16] = { { NULL, NULL } };
-	int len, index;
+	int len, id;
 
 	if (!http_parse_simple(sock, &request, headers, &body, &len)) {
 		LOG_WARN("[%p]: http parsing error %s", ctx, request);
@@ -436,13 +426,12 @@ static bool handle_http(struct http_ctx_s *http, struct thread_ctx_s *ctx, int s
 	}
 
 	// we could always claim to be 1.1 though
-	bool http_11 = strstr(request, "HTTP/1.1") != NULL;
 	char* head = NULL, *response = NULL;
 	enum { ANY, SONOS, CHROMECAST } type;
-	bool success = true;
+	bool send_body = strstr(request, "HEAD") == NULL;
 	
 	LOG_INFO("[%p]: received %s", ctx, request);
-	sscanf(request, "%*[^/]/" BRIDGE_URL "%d", &index);
+	sscanf(request, "%*[^/]/" BRIDGE_URL "%d", &id);
 
 	LOG_INFO("[%p]: HTTP headers\n%s", ctx, p = kd_dump(headers));
 	NFREE(p);
@@ -455,13 +444,11 @@ static bool handle_http(struct http_ctx_s *http, struct thread_ctx_s *ctx, int s
 		LOG_INFO("[%p]: Chromecast mode", ctx);
 	} else type = ANY;
 
-	kd_add(resp, "Server", "squeezebox-bridge");
-	kd_add(resp, "Connection", "close");
-	ctx->output.chunked = false;
+	ctx->output.chunked = strstr(request, "HTTP/1.1") != NULL && ctx->output.length == HTTP_LENGTH_CHUNKED;
 
 	// check if add ICY metadata is needed (only on live stream)
 	if (ctx->output.icy.allowed && ((p = kd_lookup(headers, "Icy-MetaData")) != NULL) && atol(p) &&
-		(ctx->output.format == 'm' || ctx->output.format == 'a' || ctx->output.format == '4')) {    
+		(ctx->output.format == 'm' || ctx->output.format == 'a' || ctx->output.format == 'A')) {    
 		kd_vadd(resp, "icy-metaint", "%u", ICY_INTERVAL);
 		LOCK_O;
 		ctx->output.icy.interval = ctx->output.icy.remain = ICY_INTERVAL;
@@ -469,80 +456,87 @@ static bool handle_http(struct http_ctx_s *http, struct thread_ctx_s *ctx, int s
 		UNLOCK_O;
 	} else ctx->output.icy.interval = 0;
 
+	// handle various DLNA headers
+	if ((p = kd_lookup(headers, "transferMode.dlna.org")) != NULL) kd_add(resp, "transferMode.dlna.org", p);
+	if (kd_lookup(headers, "getcontentFeatures.dlna.org")) {
+		char* dlna_features = format_to_dlna(ctx->output.format, cache->infinite, !ctx->output.duration && !ctx->output.encode.flow);
+		kd_add(resp, "contentFeatures.dlna.org", dlna_features);
+		free(dlna_features);
+	}
+	if (kd_lookup(headers, "getAvailableSeekRange.dlna.org")) {
+		kd_vadd(resp, "availableSeekRange.dlna.org", "0 bytes=%zu-%zu", 
+			    cache->total - cache->level(cache),  cache->total - 1);
+	}
+
 	// are we opening the expected file
-	if (index != http->index) {
-		LOG_WARN("wrong file requested, refusing %u %d", index, http->index);
+	if (id != index) {
+		LOG_WARN("wrong file requested, refusing %u %d", id, index);
 		head = "HTTP/1.0 410 Gone";
 		kd_free(resp);
-		success = false;
+		send_body = false;
 	} else {
-		kd_add(resp, "Content-Type", ctx->output.mimetype);
-		if (abs(ctx->output.length) > abs(HTTP_CHUNKED)) kd_vadd(resp, "Content-Length", "%zu", ctx->output.length);
-		mirror_header(headers, resp, "transferMode.dlna.org");
+		// by defautl use cache and restart from 0 (will be changed below if needed)
+		*use_cache = true;
+		cache->set_offset(cache, 0);
+		int64_t length = ctx->output.length;
 
-		if (kd_lookup(headers, "getcontentFeatures.dlna.org")) {
-			char *dlna_features = mimetype_to_dlna(ctx->output.mimetype, ctx->output.duration);
-			kd_add(resp, "contentFeatures.dlna.org", dlna_features);
-			free(dlna_features);
+		/* Sonos is a pile of crap: when paused (on mp3 or flac) it will leave the connection open, 
+		 * then closes and and re-opens it on resume but request the whole file. Still, even if given
+		 * properly the whole resource, it fails once it has received about what he already got. We 
+		 * can fool it by sending ANYTHING with a content-length (required) of an insane value. Then 
+		 * we close the connection which forces it to re-open it again and this time it asks for a 
+		 * proper range request but we need to answer 206 without a content-range (which is not 
+		 * compliant) or it fails as well */
+
+		if ((p = kd_lookup(headers, "Range")) != NULL && cache->total) {
+			size_t offset = 0;
+			(void) !sscanf(p, "bytes=%zu", &offset);
+
+			if (offset && cache->scope(cache, offset) == 0) {
+				// resend range with proper range header except for Sonos...
+				head = ctx->output.chunked ? "HTTP/1.1 206 Partial Content" : "HTTP/1.0 206 Partial Content";
+				if (type != SONOS) kd_vadd(resp, "Content-Range", "bytes %u-%zu/*", offset, cache->total - 1);
+				cache->set_offset(cache, offset);
+				length = 0;
+				LOG_INFO("[%p]: serving partial content %zu->%zu", ctx, offset, cache->total - 1);
+			} else if (offset) {
+				// when range cannot be satisfied fail the requestor
+				send_body = false;
+				head = "416 Range Not Satisfiable";
+				kd_free(resp);
+				kd_vadd(resp, "Content-Range", "*/%zu", cache->total);
+				LOG_INFO("[%p]: range cannot be satisfied %zu->%zu", ctx, offset, cache->total);
+            }
+		} else if (cache->total) {
+			// see Sonos above but also Sonos re-opens stream when icy to add it (not a resume!)
+			if (type == SONOS && !ctx->output.icy.interval) length = UINT32_MAX;
+			LOG_INFO("[%p]: serving with cache from %zu (cached:%zu)", ctx, cache->total - cache->level(cache), cache->total);
+		} else {
+			// normal request, don't use cache
+			*use_cache = false;
 		}
 
-		if (!strstr(request, "HEAD")) {
-			bool chunked = true;
-			if ((p = kd_lookup(headers, "Range")) != NULL) {
-				size_t offset = 0;
-				(void) !sscanf(p, "bytes=%zu", &offset);
-				// when range cannot be satisfied, just continue where we were
-				if (offset && offset < http->total) {
-					head = (http_11 && ctx->output.length == -3) ? "HTTP/1.1 206 Partial Content" : "HTTP/1.0 206 Partial Content";
-					if (type != SONOS) kd_vadd(resp, "Content-Range", "bytes %u-%zu/*", offset, http->total);
-					obuf->readp = obuf->buf + offset % obuf->size;
-					http->pos = offset;
-					LOG_INFO("[%p]: resending %zu->%zu (%zu bytes)", ctx, offset, http->total, http->total - offset);
-				} else if (offset) {
-                    LOG_INFO("[%p]: range cannot be satisfied %zu->%zu", ctx, offset, http->total);
-                }
-			} else if (http->total && type == SONOS && !ctx->output.icy.interval) {
-				/* Sonos is a pile of crap: when paused (on mp3) it will close the connection, re-open 
-				 * it on resume and wants the whole file but of course we don't have it. We fool it by
-				 * just sending the track's first N bytes we have stored and so that he sees it's the 
-				 * same file. Then we close the connection which forces it to re-open it again with a 
-				 * proper range request this time but we need to answer with no content-length (which 
-				 * is not compliant) or if fails */
-				kd_vadd(resp, "Content-Length", "%zu", UINT32_MAX);
-				response = http_send(sock, "HTTP/1.0 200 OK", resp);
-				ssize_t sent = send(sock, http->header.buf, _buf_used(&http->header), 0);
-				LOG_INFO("[%p]: Sonos header resend %zd\n%s", ctx, sent, response);
-				success = false;
-			} else if (http->total) {
-				// re-opening an existing connection, resend from the oldest we have
-				if (http->total > obuf->size) {
-					_buf_inc_readp(obuf, _buf_used(obuf) + 1);
-					http->pos = http->total - obuf->size - 1;
-					LOG_WARN("[%p]: re-opening but head is lost (resent from: %zu, sent: %zu)", ctx, http->pos, http->total);
-				} else {
-					obuf->readp = obuf->buf;
-					http->pos = 0;
-					LOG_INFO("[%p]: re-opening from zero (sent %zu)", ctx, http->total);
-				}
-			}
+		// add normal headers
+		kd_add(resp, "Server", "squeezebox-bridge");
+		kd_add(resp, "Content-Type", ctx->output.mimetype);
+		kd_add(resp, "Connection", "close");
 
-			// set chunked mode
-			if (http_11 && ctx->output.length == -3 && chunked) {
-				ctx->output.chunked = true;
+		if (send_body) {
+			kd_add(resp, "Accept-Ranges", "bytes");
+			// size might have been updated, last chance to update chunked mode
+			if (length > 0) {
+				ctx->output.chunked = false;
+				kd_vadd(resp, "Content-Length", "%" PRId64, length);
+			} else if (ctx->output.chunked) {
 				kd_add(resp, "Transfer-Encoding", "chunked");
 			}
-		} else {
-			// do not send body if request is HEAD
-			success = false;
 		}
 	}
 
-	if (!response) {
-		// unless instructed otherwise use a 200 with the correct HTTP version
-		if (!head) head = ctx->output.chunked ? "HTTP/1.1 200 OK" : "HTTP/1.0 200 OK";
-		response = http_send(sock, head, resp);
-		LOG_INFO("[%p]: responding:\n%s", ctx, response);
-	}
+	// unless instructed otherwise use a 200 with the correct HTTP version
+	if (!head) head = ctx->output.chunked ? "HTTP/1.1 200 OK" : "HTTP/1.0 200 OK";
+	response = http_send(sock, head, resp);
+	LOG_INFO("[%p]: responding:\n%s", ctx, response);
 
 	NFREE(body);
 	NFREE(response);
@@ -550,19 +544,5 @@ static bool handle_http(struct http_ctx_s *http, struct thread_ctx_s *ctx, int s
 	kd_free(resp);
 	kd_free(headers);
 
-	return success;
-}
-
-
-/*----------------------------------------------------------------------------*/
-static void mirror_header(key_data_t *src, key_data_t *rsp, char *key) {
-	char *data;
-
-	data = kd_lookup(src, key);
-	if (data) kd_add(rsp, key, data);
-}
-
-/*---------------------------------------------------------------------------*/
-void wake_output(struct thread_ctx_s *ctx) {
-	return;
+	return send_body;
 }

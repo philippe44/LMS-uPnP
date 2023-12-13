@@ -32,7 +32,6 @@ char* XMLGetChangeItem(IXML_Document *doc, char *Tag, char *SearchAttr, char *Se
 
 char* uPNPEvent2String(Upnp_EventType S);
 
-char*			MakeProtoInfo(char *MimeType, uint32_t duration);
 char** 			ParseProtocolInfo(char *Info, char* Forced);
 void 			CheckCodecs(char *Codecs, char *Sink, char *Forced);
 

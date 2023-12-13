@@ -200,7 +200,7 @@ static void flac_close(struct thread_ctx_s *ctx) {
 /*---------------------------------------------------------------------------*/
 struct codec *register_flac_thru(void) {
 	static struct codec ret = {
-		'c',         // id = flac in thru-mode
+		'F',         // id = flac in thru-mode
 		"flc", 		 // types
 		4096,        // min read
 		16*1024,     // min space

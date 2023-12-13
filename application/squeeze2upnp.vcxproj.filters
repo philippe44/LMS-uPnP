@@ -97,10 +97,13 @@
     <ClCompile Include="squeezelite\vorbis.c">
       <Filter>squeezelite</Filter>
     </ClCompile>
+    <ClCompile Include="squeezelite\cache.c">
+      <Filter>squeezelite</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Library Include="libcodecs\targets\win32\x86\libcodecs.lib" />
     <Library Include="libpthreads4w\targets\win32\x86\libpthreadVC3.lib" />
-    <Library Include="libpupnp\targets\win32\x86\libpupnpd.lib" />
+    <Library Include="libpupnp\targets\win32\x86\libpupnp.lib" />
   </ItemGroup>
 </Project>

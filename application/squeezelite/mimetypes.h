@@ -10,9 +10,9 @@
 
 #define MAX_MIMETYPES	128
  
-char* mimetype_from_codec(char codec, char* mimetypes[], char* options);
+char* mimetype_from_codec(char codec, char* mimetypes[], ...);
 char* mimetype_from_pcm(uint8_t* sample_size, bool truncable, uint32_t sample_rate, uint8_t channels, char* mimetypes[], char* options);
-char* mimetype_to_dlna(char* mimetype, uint32_t duration);
 char* mimetype_to_ext(char* mimetype);
 char  mimetype_to_format(char* mimetype);
+char* format_to_dlna(char format, bool live, bool full_cache);
 
