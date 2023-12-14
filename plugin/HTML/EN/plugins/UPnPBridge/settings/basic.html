@@ -120,7 +120,7 @@
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_STREAMOPTIONS" desc="PLUGIN_UPNPBRIDGE_STREAMOPTIONS_DESC" %]
 		[% "PLUGIN_UPNPBRIDGE_HTTPMODE" | string %]
 		<select class="stdedit" id="stream_length" name="stream_length">
-		[% FOREACH entry IN [ ['',''], ['PLUGIN_UPNPBRIDGE_HTTPMODECHUNKED','-3'], ['PLUGIN_UPNPBRIDGE_HTTPMODEIFKNOWN', '-2'], ['PLUGIN_UPNPBRIDGE_HTTPMODENOLENGTH','-1'], ['PLUGIN_UPNPBRIDGE_HTTPMODEFIXED', '2048000000'] ] %]
+		[% FOREACH entry IN [ ['',''], ['PLUGIN_UPNPBRIDGE_HTTPMODECHUNKED','-3'], ['PLUGIN_UPNPBRIDGE_HTTPMODEIFKNOWN', '-2'], ['PLUGIN_UPNPBRIDGE_HTTPMODENOLENGTH','-1'], ['PLUGIN_UPNPBRIDGE_HTTPMODEAUTO', '0'], ['PLUGIN_UPNPBRIDGE_HTTPMODEFIXED', '4294967295'] ] %]
 			<option label="[% entry.0 | string %]" [% IF entry.1 == stream_length %]selected[% END %] value="[% entry.1 %]">
 		[% END %]
 		</select>
