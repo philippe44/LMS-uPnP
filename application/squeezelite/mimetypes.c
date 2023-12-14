@@ -72,6 +72,21 @@ typedef enum {
 } dlna_org_flags_t;
 
 /*----------------------------------------------------------------------------*/
+bool mimetype_match_codec(char* mimetypes[], int n, ...) {
+	bool match = false;
+	va_list args;
+	va_start(args, n);
+
+	while (!match && n--) {
+		char* needle = va_arg(args, char*);
+		for (char** p = mimetypes; *p && !match; p++) if (strstr(*p, needle)) return match = true;
+	}
+
+	va_end(args);
+	return match;
+}
+
+/*----------------------------------------------------------------------------*/
 static char* _lookup(char* mimetypes[], char* details, int n, ...) {
 	char* mimetype = NULL;
 	va_list args;

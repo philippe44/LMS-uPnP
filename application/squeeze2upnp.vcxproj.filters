@@ -97,7 +97,7 @@
     <ClCompile Include="squeezelite\vorbis.c">
       <Filter>squeezelite</Filter>
     </ClCompile>
-    <ClCompile Include="squeezelite\cache.c">
+    <ClCompile Include="..\..\LMS-Cast\application\squeezelite\cache.c">
       <Filter>squeezelite</Filter>
     </ClCompile>
   </ItemGroup>

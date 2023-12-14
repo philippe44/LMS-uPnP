@@ -20,8 +20,8 @@ typedef struct metadata_s {
 	char* remote_title;
 	char* artwork;
 	char *genre;
-	// TODO: shall this tow be merged?
-	uint32_t track, index;
+	// TODO: shall this two be merged?
+	uint32_t track, index, disc;
 	uint32_t duration, live_duration;
 	uint32_t size;
 	uint32_t sample_rate;

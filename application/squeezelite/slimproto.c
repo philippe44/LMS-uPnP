@@ -980,7 +980,7 @@ void slimproto_thread_init(struct thread_ctx_s *ctx) {
 	ctx->new_server = 0;
 
 	// only use successfully loaded codecs in full processing mode
-	if (!strcasestr(ctx->config.mode, "thru")) {
+	if (!strcasestr(ctx->config.mode, "thru") && !strcasestr(ctx->config.mode, "auto")) {
 		char item[4], *p = ctx->config.codecs;
 		int i;
 
@@ -1002,10 +1002,10 @@ void slimproto_thread_init(struct thread_ctx_s *ctx) {
 
 /*---------------------------------------------------------------------------*/
 static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_t endianness,
-						  struct thread_ctx_s *ctx) {
-	struct outputstate *out = &ctx->output;
+	struct thread_ctx_s* ctx) {
+	struct outputstate* out = &ctx->output;
 	struct track_param info;
-	char *mimetype = NULL, *p, *mode = ctx->config.mode;
+	char* mimetype = NULL, * p, * mode = ctx->config.mode;
 	bool ret = false;
 	s32_t sample_rate;
 	uint32_t now = gettime_ms();
@@ -1056,8 +1056,8 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 	else out->sample_size = pcm_sample_size[size - '0'];
 	out->sample_rate = (rate != '?') ? pcm_sample_rate[rate - '0'] : 0;
 	if (ctx->output.sample_rate > ctx->config.sample_rate) {
-		 LOG_WARN("[%p]: Sample rate %u error suspected, forcing to %u", ctx, out->sample_rate, ctx->config.sample_rate);
-		 out->sample_rate = ctx->config.sample_rate;
+		LOG_WARN("[%p]: Sample rate %u error suspected, forcing to %u", ctx, out->sample_rate, ctx->config.sample_rate);
+		out->sample_rate = ctx->config.sample_rate;
 	}
 	out->channels = (channels != '?') ? pcm_channels[channels - '1'] : 0;
 	out->in_endian = (endianness != '?') ? endianness - '0' : 0xff;
@@ -1068,20 +1068,21 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 		if (out->icy.interval) output_set_icy(&info.metadata, ctx);
 		metadata_free(&info.metadata);
 		return codec_open(out->codec, out->sample_size, out->sample_rate,
-						  out->channels, out->in_endian, ctx);
+			out->channels, out->in_endian, ctx);
 	}
 
 	// detect processing mode
-	if (strcasestr(mode, "pcm")) out->encode.mode = ENCODE_PCM;
+	if (strcasestr(mode, "thru")) out->encode.mode = ENCODE_THRU;
+	else if (strcasestr(mode, "pcm")) out->encode.mode = ENCODE_PCM;
 	else if (strcasestr(mode, "flc") || strcasestr(mode, "flac")) out->encode.mode = ENCODE_FLAC;
 	else if (strcasestr(mode, "aac")) out->encode.mode = ENCODE_AAC;
 	else if (strcasestr(mode, "mp3")) out->encode.mode = ENCODE_MP3;
 	else if (strcasestr(mode, "null")) out->encode.mode = ENCODE_NULL;
-	else {
-		// make sure we have a stable default mode
-		strcpy(mode, "thru");
+	else if (!out->duration && ctx->config.send_icy != ICY_NONE &&
+			 ((format == 'm' && mimetype_match_codec(ctx->mimetypes, 2, "mp3", "mpeg")) ||
+		      (format == 'a' && mimetype_match_codec(ctx->mimetypes, 3, "aac", "mp4", "m4a") && out->sample_size == '2')))
 		out->encode.mode = ENCODE_THRU;
-	}	
+	else out->encode.mode = ENCODE_FLAC;
 
 	// force read of re-encoding parameters
 	if ((p = strcasestr(mode, "r:")) != NULL) sample_rate = atoi(p+2);

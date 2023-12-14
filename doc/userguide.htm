@@ -1,7 +1,7 @@
 <html>
 
 <head>
-<meta http-equiv=Content-Type content="text/html; charset=windows-1252">
+<meta http-equiv=Content-Type content="text/html; charset=utf-8">
 <meta name=Generator content="Microsoft Word 15 (filtered)">
 <style>
 <!--
@@ -119,7 +119,7 @@ lang=EN-GB style='font-size:7.0pt'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span><
 lang=EN-GB style='font-size:14.0pt;font-family:"Liberation Sans"'>What Is It?</span></h2>
 
 <p class=MsoNormal><span lang=EN-GB style='color:black'>This program
-(squeeze2upnp – a.k.a sq2u or the bridge) turns UPnP/DLNA players into
+(squeeze2upnp â€“ a.k.a sq2u or the bridge) turns UPnP/DLNA players into
 squeezeboxes to they can be used by the Logitech Media Server as regular SB
 devices. It automatically scans local network for UPnP devices and creates an
 instance of a modified squeezelite for each one found.</span></p>
@@ -127,8 +127,8 @@ instance of a modified squeezelite for each one found.</span></p>
 <p class=MsoNormal><span lang=EN-GB style='color:black'>It works on any
 computer running Windows, macOS (arm and x64), or Linux (x86/64, arm, aarch64,
 sparc, mips, ppc), FreeBSD (x64) and Solaris (x64). Most builds have a normal
-and a –static version. The –static version removes the dependency with shared
-libraries. It’s convenient on some NAS platform that often are not full Linux
+and a â€“static version. The â€“static version removes the dependency with shared
+libraries. Itâ€™s convenient on some NAS platform that often are not full Linux
 systems, but the drawback is that libraries updates to your system will be not
 be used.</span></p>
 
@@ -160,16 +160,16 @@ using &lt;codec&gt;</span></p>
 <p class=MsoNormal><span lang=EN-US>1.2.1 Pass-through mode</span></p>
 
 <p class=MsoNormal><span lang=EN-US>In this mode, the bridge simply forwards
-the coded (mp3, flac …) audio received from LMS to the UPnP player, without
+the coded (mp3, flac â€¦) audio received from LMS to the UPnP player, without
 decoding it. Only very simple alterations are made in case of flac, aac (when
-encapsulated in m4a files) and pcm. It’s the simplest mode, but the decoding
+encapsulated in m4a files) and pcm. Itâ€™s the simplest mode, but the decoding
 success totally relies on the UPnP player and mileage will vary from track to
 track as the UPnP player might not be able to recognize some formats (use
 &lt;codecs&gt;, &lt;mp4&gt; and &lt;forced_mimetype&gt; parameters to tweak
 this).</span></p>
 
 <p class=MsoNormal><span lang=EN-US>Except when the source audio from LMS is
-un-coded (either because it’s and aif or wav file or because you’ve setup LMS
+un-coded (either because itâ€™s and aif or wav file or because youâ€™ve setup LMS
 to send only un-coded audio), replay gain and transition (fading) will not work.
 </span></p>
 
@@ -186,7 +186,7 @@ and ogg (vorbis/opus/flac) tracks.</span></p>
 <p class=MsoNormal><span lang=EN-GB style='color:black'>This enables replay
 gain and transition (fade in, out, in-out but not cross-fading) on all tracks.
 To add cross-fading, tracks must be sent to the UPnP player as a continuous
-stream (webradio) and this is what the “flow” mode extension does.
+stream (webradio) and this is what the â€œflowâ€ mode extension does.
 Unfortunately, in this mode, metadata can be sent only when using mp3 or aac
 and are limited to title/artist/album and sometimes artwork (no duration). See
 the &lt;send_metadata&gt; and &lt;send_icy&gt; parameters.</span></p>
@@ -200,7 +200,7 @@ then requires the next one to LMS. </span><span lang=EN-US>Some UPnP players
 have a gapless option that allows controllers to send a command for the next
 track while the current one is playing (see option &lt;accept_nexturi</span><span
 lang=EN-US style='font-size:11.0pt'>&gt;</span><span lang=EN-US>. Still, many
-players either don’t report the support of that feature or fail on track’s
+players either donâ€™t report the support of that feature or fail on trackâ€™s
 transition.</span></p>
 
 <h2 style='margin-top:12.0pt;margin-right:0cm;margin-bottom:6.0pt;margin-left:
@@ -213,7 +213,7 @@ lang=EN-GB style='font-size:14.0pt;font-family:"Liberation Sans"'>Configuration<
 command lines options to tweak it, or it can take its configuration from an XML
 config file. That file does NOT create the players, it just provides
 configuration information for when they are detected. There are global
-settings, common settings that apply by default to all players and player’s
+settings, common settings that apply by default to all players and playerâ€™s
 specific settings that override the common ones.</span></p>
 
 <h1 style='margin-top:24.0pt;margin-right:0cm;margin-bottom:10.0pt;margin-left:
@@ -223,24 +223,24 @@ name="__RefHeading__524_1289253441"></a><b><span lang=EN-GB style='font-size:
 
 <p class=MsoNormal><span lang=EN-GB style='color:black'>In LMS, the bridge is
 automatically available as third party plugins and all you have to do is
-install it and go in its settings to select the “binary helper” (the
+install it and go in its settings to select the â€œbinary helperâ€ (the
 application doing the actual work). If you want to try the development version,
 add the following repository to LMS: </span><span class=InternetLink><span
 lang=EN-US>http://downloads.sourceforge.net/project/lms-to-upnp/dev/repo-sf.xml.</span></span></p>
 
 <p class=MsoNormal><span lang=EN-US>Once the plugin is installed, just enable
 the binary helper, wait for about 30 seconds and refresh your page, the list of
-discovered players will be displayed. There is a “generate” button that is
+discovered players will be displayed. There is a â€œgenerateâ€ button that is
 really optional, if you want to scan and re-create a config file <b>now.</b>
-From there, you can tweak all settings, common and player’s specific. Just use
+From there, you can tweak all settings, common and playerâ€™s specific. Just use
 the info bubble for basic help. Players are added to the configuration file as
-they are discovered, unless you disable the “autosave” option.</span></p>
+they are discovered, unless you disable the â€œautosaveâ€ option.</span></p>
 
 <p class=MsoNormal><span lang=EN-US>You can also just run the
 squeeze2upnp-xxx-yyy application wherever you want on your network, it does not
-have to coexist with LMS on the same machine. If you need a config file, you’ll
+have to coexist with LMS on the same machine. If you need a config file, youâ€™ll
 have to edit it manually, but it can still be generated, see command line
-options. Type “exit” when the program runs to terminate it (it also responds to
+options. Type â€œexitâ€ when the program runs to terminate it (it also responds to
 kill signal).</span></p>
 
 <p class=MsoNormal><u><span lang=EN-GB style='color:black'>README on firewall</span></u><span
@@ -259,11 +259,11 @@ up mode of operation</span></h5>
 <p class=MsoNormal><span lang=EN-GB style='color:black'>As mentioned above, the
 bridge can operate in two very different modes: pass-through and full
 processing, set by the &lt;mode&gt; parameters </span><span lang=EN-US>and a
-special “null” variant which replaces all audio by silent mp3 frames to use the
+special â€œnullâ€ variant which replaces all audio by silent mp3 frames to use the
 UPnP player just as a display. </span></p>
 
-<p class=MsoNormal style='background:white'><span lang=EN-GB style='color:black'>2.1.1
-Pass-through mode</span></p>
+<p class=MsoNormal style='background:white'><u><span lang=EN-GB
+style='color:black'>2.1.1 Pass-through mode</span></u></p>
 
 <p class=MsoNormal style='background:white'><span lang=EN-GB style='color:black'>In
 pass-through mode, the selection of &lt;codecs&gt; is very important. You can
@@ -278,13 +278,13 @@ codec, just add it through the &lt;forced_mimetypes&gt; option.</span></p>
 list is not perfect because some details cannot be guessed. For example, if
 your player supports flac but not 24 bits samples, then it will successfully
 play all 8 and 16 bits tracks but fail with 24 bits. As well, formats like alac
-and aac are often not explicitly reported, only “mp4” (which is a container) is
-set. Same problem exists for opus, vorbis and “flac in ogg” where only ogg
+and aac are often not explicitly reported, only â€œmp4â€ (which is a container) is
+set. Same problem exists for opus, vorbis and â€œflac in oggâ€ where only ogg
 (container as well) is reported. You just have to try then and remove non
 supported codecs from &lt;codec&gt; option (a small trick: the &lt;codec&gt;
-list of a player can contain tokens like “+xxx” or “-xxx” which means to use
+list of a player can contain tokens like â€œ+xxxâ€ or â€œ-xxxâ€ which means to use
 the default list but add or remove xxx). Similarly, the maximum sample rate
-supported by the player cannot be guessed in most cases, so you’ll have to tweak
+supported by the player cannot be guessed in most cases, so youâ€™ll have to tweak
 it if the default is not enough.</span></p>
 
 <p class=MsoNormal style='background:white'><span lang=EN-GB style='color:black'>Although
@@ -295,7 +295,7 @@ pcm/wav/aif audio tracks. </span></p>
 style='color:black'>FLAC</span></b><span lang=EN-GB style='color:black'>: When
 seeking in a track, LMS does not send a flac header which can cause playback
 failure. The parameter &lt;flac_header&gt; let the bridge insert a pseudo flac
-header on the fly when it’s missing.<b> </b></span></p>
+header on the fly when itâ€™s missing.<b> </b></span></p>
 
 <p class=MsoNormal style='background:white'><b><span lang=EN-GB
 style='color:black'>PCM/WAV/AIF: </span></b><span lang=EN-GB style='color:black'>As
@@ -305,11 +305,11 @@ truncate the samples to 16 bits using the &lt;L24_format&gt; option.</span></p>
 
 <p class=MsoNormal style='background:white'><b><span lang=EN-CA>AAC:</span></b><span
 lang=EN-CA> Such codec can be carried inside a mp4 container or as raw adts
-frames. The codec name is still “aac” as far as LMS is concerned but it can
-send either or. As soon as “audio/mp4” or audio/m4a is reported by a player, it
-is assumed that adts and mp4 container are supported. When receiving “mp4
+frames. The codec name is still â€œaacâ€ as far as LMS is concerned but it can
+send either or. As soon as â€œaudio/mp4â€ or audio/m4a is reported by a player, it
+is assumed that adts and mp4 container are supported. When receiving â€œmp4
 tracks form LMS, the bridge will simply forward these unless the player has
-only reported only “audio/aac”. In that case, the bridge unwraps the adts frame
+only reported only â€œaudio/aacâ€. In that case, the bridge unwraps the adts frame
 from the container and sends them directly. Unfortunately, sometimes mp4
 container is poorly supported but adts is very well and so you can unset
 &lt;mp4&gt; option to force unwrapping.</span></p>
@@ -317,21 +317,21 @@ container is poorly supported but adts is very well and so you can unset
 <p class=MsoNormal style='background:white'><b><span lang=EN-CA>DSF/DSD:</span></b><span
 lang=EN-CA> Mileage will vary as there does not seem to be an agreed standard
 on how to send these over UPnP/DLNA. You might have to manually add mimetypes
-to &lt;forced_mimetypes&gt; parameter. I don’t have a lot of passion for these
-useless formats, so it’s not where I spend most attention and time..</span></p>
+to &lt;forced_mimetypes&gt; parameter. I donâ€™t have a lot of passion for these
+useless formats, so itâ€™s not where I spend most attention and time..</span></p>
 
 <p class=MsoNormal style='background:white'><b><span lang=EN-CA>OGG</span></b><span
 lang=EN-CA>: It is a container not a codec (often confused with vorbis) and can
-be used to wrap vorbis, opus or flac (ogg, ops and ogf in LMS’ codec terminology).
-Like for mp4, most players won’t indicate what they actually support, beyond
+be used to wrap vorbis, opus or flac (ogg, ops and ogf in LMSâ€™ codec terminology).
+Like for mp4, most players wonâ€™t indicate what they actually support, beyond
 audio/ogg (the proper syntax for such mimetypes is audio/ogg;codecs=vorbis,
 audio/ogg;codecs=opus and audio/ogg;codecs=flac). The bridge is non-strict and
 will allow ogg, ops and ogf if audio/ogg is found, but it will send the full
 mimetype details to the player. If this fails, simply manually remove
 ogg/ops/of from the codecs list.</span></p>
 
-<p class=MsoNormal style='background:white'><span lang=EN-GB style='color:black'>2.1.2
-Full processing mode</span></p>
+<p class=MsoNormal style='background:white'><u><span lang=EN-GB
+style='color:black'>2.1.2 Full processing mode</span></u></p>
 
 <p class=MsoNormal style='background:white'><span lang=EN-GB style='color:black'>In
 full processing mode, the bridge decodes pcm, wav, aif, ogf, flc, alc, mp3,
@@ -345,7 +345,7 @@ bridge does the decoding. Similarly, as the &lt;sample_rate&gt; is just an
 indication for LMS when to do resampling, just set it to 192000 and let the
 bridge do all the resampling/transcoding using the &lt;mode&gt; parameter. You
 can still let &lt;sample_rate&gt; to be the actual maximum player rate, but
-you’ll likely end with some resampling done in LMS and some done in the Bridge
+youâ€™ll likely end with some resampling done in LMS and some done in the Bridge
 which might be confusing.</span></p>
 
 <p class=MsoNormal style='background:white'><span lang=EN-GB style='color:black'>Here
@@ -354,16 +354,27 @@ or just use whatever is the received format</span></p>
 
 <p class=MsoNormal style='background:white'><span lang=EN-GB style='color:black'>Because
 audio is decoded, replay gain will always work as well as fade-in, out and
-in-out. If you want cross-fade in addition, the use the “flow” option but then
+in-out. If you want cross-fade in addition, the use the â€œflowâ€ option but then
 you <b>must</b> set the sample rate and size as all tracks become a continuous
 stream like a webradio. When receiving such stream, players cannot get tracks
 metadata unless you use mp3 or aac re-encoding and have enabled
-&lt;send_metadata&gt; and &lt;send_icy&gt; and your player supports “icy” mode.</span></p>
+&lt;send_metadata&gt; and &lt;send_icy&gt; and your player supports â€œicyâ€ mode.</span></p>
 
 <p class=MsoNormal style='background:white'><span lang=EN-GB style='color:black'>Another
 issue of flow mode is that the bridge purely relies on timing to detect track
-change. So if LMS does not provide track’s duration, that will not work which
-means you can’t have a password on LMS.</span></p>
+change. So if LMS does not provide trackâ€™s duration, that will not work which
+means you canâ€™t have a password on LMS.</span></p>
+
+<p class=MsoNormal style='background:white'><u><span lang=EN-GB
+style='color:black'>2.1.2 Auto mode</span></u></p>
+
+<p class=MsoNormal style='background:white'><span lang=EN-GB style='color:black'>This
+mode is simply (which the default) is simply a combination of the previous two.
+Every track is converted to flac in full processing mode, keeping its sample
+rate and size *except* webradio in mp3, aac or ogg which are passthrough *if*
+you have enabled ICY metadata usage. The objective is to have the benefits of a
+stable, well-recognized format but keep the benefit of ICY metadata when
+relevant.</span></p>
 
 <h1 style='margin-top:12.0pt;margin-right:0cm;margin-bottom:6.0pt;margin-left:
 21.6pt;text-indent:-21.6pt;page-break-after:avoid'><a
@@ -383,7 +394,7 @@ server and communication</span></h2>
 black'>The player grabs the audio data (passthrough or re-encoded) from the
 bridge through an HTTP server. One of the main difficulties is that players
 usually expect an audio track to be fully and always available on the server,
-its length communicated with a parameter named “content-length) and will try to
+its length communicated with a parameter named â€œcontent-length) and will try to
 seek trough it randomly. Obviously, this cannot be the case with the bridge as
 LMS does not tell the size of the file (he does not even know it when it
 transcodes or seeks) and it is received on the fly. In addition, many UPnP
@@ -395,30 +406,30 @@ standards so various options are to be tried. The following applies to
 
 <p class=MsoNormal style='margin-bottom:0cm'><b><span lang=EN-US>Chunked (-3): </span></b><span
 lang=EN-US>This is the default for HTTP 1.1 and is made to handle exactly the
-problem of unknown file size. The server sends data by “chunks” and never tells
+problem of unknown file size. The server sends data by â€œchunksâ€ and never tells
 the full length to the player. This is the preferred option when supported
-(some claim to be HTTP 1.1 and don’t).</span></p>
+(some claim to be HTTP 1.1 and donâ€™t).</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm'><b><span lang=EN-US>&nbsp;</span></b></p>
 
 <p class=MsoNormal style='margin-bottom:0cm'><b><span lang=EN-US>No-Length
-(-1): </span></b><span lang=EN-US>It’s perfectly legit for an HTTP server to
-never indicate the “content-length” of what it sends. Some players don’t like
+(-1): </span></b><span lang=EN-US>Itâ€™s perfectly legit for an HTTP server to
+never indicate the â€œcontent-lengthâ€ of what it sends. Some players donâ€™t like
 it and will try to seek trough the file, toward the end to guess the size and
 that cannot work (again, the bridge does not have the whole file)</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm'><b><span lang=EN-US>&nbsp;</span></b></p>
 
 <p class=MsoNormal style='margin-bottom:0cm'><b><span lang=EN-US>If-Known (-2):
-</span></b><span lang=EN-US> When sending pcm/wav and aif, as long as we know
+</span></b><span lang=EN-US>Â When sending pcm/wav and aif, as long as we know
 the duration, the size can be deduced from the sample rate and size. Whenever
-that is possible, then bridge will populate “content-length” with that
+that is possible, then bridge will populate â€œcontent-lengthâ€ with that
 calculated value.</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm'><span lang=EN-US>&nbsp;</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm'><b><span lang=EN-US>Estimated (0):
-</span></b><span lang=EN-US>Last resort is to always force a “content-length”
+</span></b><span lang=EN-US>Last resort is to always force a â€œcontent-lengthâ€
 through an educated guess, based on bitrate and duration (with comfortable
 margin). When no data is available, the maximum 32 bits-integer (2^32-1) will
 be used. Note that in flow mode or when streaming live content, it fallbacks to
@@ -445,21 +456,21 @@ all what we could).</span></p>
 these options, players will try to seek through the file they want to GET with
 HTTP for various reasons. Some players open a connection once, close it and
 then re-open right away, expecting to have the same file (regardless of UPnP
-settings that could tell them that this file is a changing stream…). Or others
+settings that could tell them that this file is a changing streamâ€¦). Or others
 like Sonos close the connection on pause (although UPnP option indicate that
-the bridge support “connection stalling”), re-open a connection upon resume and
+the bridge support â€œconnection stallingâ€), re-open a connection upon resume and
 seek into some of the recent past sent bytes. </span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm'><span lang=EN-US>&nbsp;</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm'><span lang=EN-US>The bridge is
 trying to serve these requests as best as possible by caching the already
-received audio. The &lt;cache&gt; option lets you tweak that behavior. It’s an
+received audio. The &lt;cache&gt; option lets you tweak that behavior. Itâ€™s an
 8MB memory cache which should be enough to look into the past. No player should
 require the same resource from the beginning after a long while. Still, if it
 happens, the cache can be on the disk in which case the past audio will be
 fully accessible. Note than when playing a webradio or in flow mode, disk cache
-falls back to memory cache for obvious reasons. The file is in you system’s
+falls back to memory cache for obvious reasons. The file is in you systemâ€™s
 temp folder.</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm'><span lang=EN-US>&nbsp;</span></p>
@@ -471,9 +482,9 @@ like does the head or the tail of the audio progresses. The vast majority of UPn
 players ignore these indications but when one does not, it can be a problem to
 tell the truth. For example, if the bridge reports it only has a portion of the
 file in cache, some players will refuse to pause any track because they
-estimate it’s a live stream. The solution is to either use a disk cache or
+estimate itâ€™s a live stream. The solution is to either use a disk cache or
 claim that our cache is complete although just a part is in memory (a reward
-for lying…). </span></p>
+for lyingâ€¦). </span></p>
 
 <h2 style='margin-top:12.0pt;margin-right:0cm;margin-bottom:6.0pt;margin-left:
 0cm;page-break-after:avoid;background:white'><span lang=EN-GB style='font-size:
@@ -496,17 +507,17 @@ uncompressed audio:</span></p>
 <p class=MsoListParagraph style='margin:0cm'><span lang=EN-GB>&nbsp;</span></p>
 
 <p class=MsoListParagraph style='margin-bottom:0cm;text-indent:-18.0pt'><span
-lang=EN-GB style='font-family:Symbol'>·</span><span lang=EN-GB
+lang=EN-GB style='font-family:Symbol'>Â·</span><span lang=EN-GB
 style='font-size:7.0pt'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span><span
 lang=EN-GB>RAW (pcm) audio data (no header) with most significant byte first</span></p>
 
 <p class=MsoListParagraph style='margin-bottom:0cm;text-indent:-18.0pt'><span
-lang=EN-GB style='font-family:Symbol'>·</span><span lang=EN-GB
+lang=EN-GB style='font-family:Symbol'>Â·</span><span lang=EN-GB
 style='font-size:7.0pt'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span><span
 lang=EN-GB>WAV audio files with least significant byte first (needs a header)</span></p>
 
 <p class=MsoListParagraph style='margin-bottom:0cm;text-indent:-18.0pt'><span
-lang=EN-GB style='font-family:Symbol'>·</span><span lang=EN-GB
+lang=EN-GB style='font-family:Symbol'>Â·</span><span lang=EN-GB
 style='font-size:7.0pt'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span><span
 lang=EN-GB>AIFF audio files with most significant byte first (needs a header)</span></p>
 
@@ -514,7 +525,7 @@ lang=EN-GB>AIFF audio files with most significant byte first (needs a header)</s
 
 <p class=MsoListParagraph style='margin:0cm'><span lang=EN-GB>The parameter
 &lt;raw_audio_format&gt; let you control what format the bridge is allowed to
-send to the player. This is an ordered list, combining ‘raw’, ‘wav’ and ‘aif’
+send to the player. This is an ordered list, combining â€˜rawâ€™, â€˜wavâ€™ and â€˜aifâ€™
 (items are tried by order).<a name=move42809342119></a> Sending a wav or an aif
 files to a player requires the addition of a header that tells the total file
 size (the formats are not good for streaming, really). This limits the duration
@@ -522,13 +533,13 @@ of playback, but the bridge also needs to guess the file size. It does that
 based on track duration, sample rate and sample size (rounding error is below
 1ms). These format are more or less equivalents so the bridge can transmute
 them, but not all of them are accepted by the player. Unsupported items (per
-player’s query) will be removed unless they are forced using
+playerâ€™s query) will be removed unless they are forced using
 &lt;forced_mimetypes&gt;</span></p>
 
 <p class=MsoListParagraph style='margin:0cm'><span lang=EN-GB>&nbsp;</span></p>
 
 <p class=MsoListParagraph style='margin:0cm'><span lang=EN-GB>If track duration
-is unavailable (LMS metadata is inaccessible for any reason – you might have
+is unavailable (LMS metadata is inaccessible for any reason â€“ you might have
 set a password), then the bridge uses 2^31 or 2^63 for length. When the whole
 file has been sent, the bridge terminates the connection and the player,
 although it has not received the full expected size should simply moves to the
@@ -567,7 +578,7 @@ set her will take precedence over the &lt;L24_format&gt; option. </span></p>
 28.8pt;text-indent:-28.8pt;page-break-after:avoid;background:white'><span
 lang=EN-GB style='font-size:14.0pt;font-family:"Liberation Sans"'>3.3</span><span
 lang=EN-GB style='font-size:7.0pt'>&nbsp;&nbsp; </span><span lang=EN-GB
-style='font-size:14.0pt;font-family:"Liberation Sans"'>Using player’s local
+style='font-size:14.0pt;font-family:"Liberation Sans"'>Using playerâ€™s local
 commands (remote/buttons)</span></h2>
 
 <p class=MsoNormal><span lang=EN-GB style='color:black'>LMS takes full control
@@ -579,11 +590,11 @@ of LMS.</span></p>
 
 <p class=MsoNormal><span lang=EN-GB>Having to switch an UPnP player off every
 time you want to use it independently from LMS might be inconvenient.
-Unfortunately, LMS can send volume commands even to a “stopped” player. To
-avoid these “spurious” volume commands, unless LMS plays, set the option
+Unfortunately, LMS can send volume commands even to a â€œstoppedâ€ player. To
+avoid these â€œspuriousâ€ volume commands, unless LMS plays, set the option
 &lt;volume_on_play&gt; to 1. </span><span lang=EN-GB style='color:black'>If you
 want to control volume only from the player and ignore all LMS volume commands,
-set &lt;volume_on_play&gt; to -1 and LMS will have no influence on the player’s
+set &lt;volume_on_play&gt; to -1 and LMS will have no influence on the playerâ€™s
 volume. </span></p>
 
 <p class=MsoListParagraph style='margin:0cm'><span lang=EN-GB style='color:
@@ -599,8 +610,8 @@ disabled&nbsp; by setting &lt;volume_feedback&gt; to 0</span></p>
 black'>&nbsp;</span></p>
 
 <p class=MsoListParagraph style='margin:0cm'><span lang=EN-GB style='color:
-black'>Using player’s control ‘stop’ button does not work well, unless you
-first use ‘pause’ then, and only the, ‘stop’. If you press ‘stop’ at first, LMS
+black'>Using playerâ€™s control â€˜stopâ€™ button does not work well, unless you
+first use â€˜pauseâ€™ then, and only the, â€˜stopâ€™. If you press â€˜stopâ€™ at first, LMS
 will either immediately move to the next track, or resume the current track
 sometimes a delay.</span></p>
 
@@ -608,8 +619,8 @@ sometimes a delay.</span></p>
 black'>&nbsp;</span></p>
 
 <p class=MsoListParagraph style='margin:0cm'><span lang=EN-GB style='color:
-black'>Using “next” or “previous on the player directly does not work, and
-never will as UPnP does not allow a player to forward such a command to it’s
+black'>Using â€œnextâ€ or â€œprevious on the player directly does not work, and
+never will as UPnP does not allow a player to forward such a command to itâ€™s
 controller.</span></p>
 
 <p class=MsoListParagraph style='margin:0cm'><span lang=EN-GB style='color:
@@ -622,14 +633,14 @@ name="__DdeLink__1712_568257573"></a><a name="__RefHeading__1532_593273442"></a>
 
 <p class=MsoListParagraph style='margin:0cm'><span lang=EN-GB style='color:
 black'>There is a detailed log that can be viewed and searched through,
-accessible the plugin’s settings (it’s also spit out on screen – stderr – when
+accessible the pluginâ€™s settings (itâ€™s also spit out on screen â€“ stderr â€“ when
 the bridge is launched manually)</span></p>
 
 <h2 style='margin-top:12.0pt;margin-right:0cm;margin-bottom:10.0pt;margin-left:
 28.8pt;text-indent:-28.8pt;page-break-after:avoid;background:white'><b><span
-lang=EN-GB style='color:black'>No player  is detected: </span></b><span
+lang=EN-GB style='color:black'>No playerÂ  is detected: </span></b><span
 lang=EN-GB style='color:black'>make sure you are not behind a NAT, like in a
-docker not in “host” mode or in a Virtual Machine.</span></h2>
+docker not in â€œhostâ€ mode or in a Virtual Machine.</span></h2>
 
 <h2 style='margin-top:12.0pt;margin-right:0cm;margin-bottom:10.0pt;margin-left:
 28.8pt;text-indent:-28.8pt;page-break-after:avoid;background:white'><b><span
@@ -648,12 +659,12 @@ although it reports it. Set &lt;enable_nexturi&gt; to 0. Try various
 <p class=MsoNormal><b><span lang=EN-GB style='color:black'>Player does not
 pause: </span></b><span lang=EN-GB style='color:black'>read the section on HTTP
 server and try different values for &lt;stream_length&gt;. Make sure
-&lt;cache&gt; is set to 1 or 2. It can also happen that players won’t pause a
+&lt;cache&gt; is set to 1 or 2. It can also happen that players wonâ€™t pause a
 stream they believe is a live stream. For example, Sonos refuse to pause
-anything that is receiving metadata through the “icy” protocol. Try to set
+anything that is receiving metadata through the â€œicyâ€ protocol. Try to set
 &lt;send_icy&gt; to 0 which disables metadata. Try to set &lt;live_pause&gt; to
 0 so that pausing actually stops live streams instead of just pausing them
-(you’ll lose whatever was buffer by the player). </span></p>
+(youâ€™ll lose whatever was buffer by the player). </span></p>
 
 <h2 style='margin-top:12.0pt;margin-right:0cm;margin-bottom:10.0pt;margin-left:
 28.8pt;text-indent:-28.8pt;page-break-after:avoid;background:white'><b><span
@@ -662,27 +673,27 @@ lang=EN-GB style='color:black'>see above but if nothing works, try setting
 &lt;seek_on_resume&gt; to 1 which forces LMS to do a time seek where it paused
 (brute force solution, last resort).</span></h2>
 
-<p class=MsoNormal><b><span lang=EN-GB style='color:black'>I don’t understand
-“full processing”: </span></b><span lang=EN-GB style='color:black'>in that
+<p class=MsoNormal><b><span lang=EN-GB style='color:black'>I donâ€™t understand
+â€œfull processingâ€: </span></b><span lang=EN-GB style='color:black'>in that
 mode, all tracks are decoded by the bridge as if they were about to be played
 locally. But the bridge re-encodes them in mp3/aac/flac/wav/aif/pcm before
 sending them to the player</span></p>
 
-<p class=MsoNormal><b><span lang=EN-GB style='color:black'>Sure, but what’s the
+<p class=MsoNormal><b><span lang=EN-GB style='color:black'>Sure, but whatâ€™s the
 point: </span></b><span lang=EN-GB style='color:black'>you can send always the
 exact same format to your player once you know it works well. In addition, you
 have fade in/out/in-out.</span></p>
 
-<p class=MsoNormal><b><span lang=EN-GB style='color:black'>What is that “flow”
+<p class=MsoNormal><b><span lang=EN-GB style='color:black'>What is that â€œflowâ€
 thing: </span></b><span lang=EN-GB style='color:black'>think about a broadcast
 radio where all tracks are sent in a continuous stream, no interruption. You
 have true gapless and cross-fade. There is the possibility to insert, in the
 stream, some limited metadata (artist/title/album/artwok) but then must be mp3
-or aac. It’s also more brittle as the bridge can only rely on cumulated time to
+or aac. Itâ€™s also more brittle as the bridge can only rely on cumulated time to
 known when a track boundary ahs been crossed and report to LMS.</span></p>
 
 <p class=MsoNormal><b><span lang=EN-GB style='color:black'>FLAC files do not
-seek or resume:</span></b><span lang=EN-GB style='color:black'>  this is a
+seek or resume:</span></b><span lang=EN-GB style='color:black'>Â  this is a
 passthrough issue due to the lack of flac header in LMS. The bridge might
 reconstruct it incorrectly. You can use full processing mode or create a custom
 transcoding rule that forces LMS to re-encode flac files during seeking,
@@ -708,15 +719,15 @@ color:#333333'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [flac] -cs - -</span></p>
 <p class=MsoNormal><b><span lang=EN-GB style='color:black'>MP4 files do not
 play or pause/resume: </span></b><span lang=EN-GB style='color:black'>usually
 in passthrough mode only.<b> S</b>ee below for general pause/resume issue. In addition,
-some players can’t handle mp4 when using HTTP with no content-length. Try
+some players canâ€™t handle mp4 when using HTTP with no content-length. Try
 changing &lt;stream_length&gt; to another option or set &lt;mp4&gt; to 0 so
 that aac in mp4 is unwrapped (this disables usage of mp4 container in general,
-so alac is removed from &lt;codec&gt;). Try removing “alc” in &lt;codec&gt; to
+so alac is removed from &lt;codec&gt;). Try removing â€œalcâ€ in &lt;codec&gt; to
 remove use of mp4 for alac is this is an alac-only issue.</span></p>
 
 <p class=MsoNormal><b><span lang=EN-GB style='color:black'>OGG files do not
 play</span></b><span lang=EN-GB style='color:black'>: players like Sonos report
-“audio/ogg” but actually only support flac in ogg, so disable “ogg” and “ops”
+â€œaudio/oggâ€ but actually only support flac in ogg, so disable â€œoggâ€ and â€œopsâ€
 in &lt;codec&gt;</span></p>
 
 <p class=MsoNormal style='margin-bottom:20.0pt'><b><span lang=EN-GB
@@ -734,7 +745,7 @@ specific case</span></h2>
 
 <p class=MsoNormal><span lang=EN-GB>Sonos groups are supported. When a group is
 created, all slave devices disappear from LMS and only the master remains.
-Slaves enter into a “stealth” mode where they are only used for volume
+Slaves enter into a â€œstealthâ€ mode where they are only used for volume
 management as the bridge tries to preserve relative volume. Slaves will
 re-appear maximum 30s after they are un-grouped using the Sonos application (in
 general, any group change requires up to a 30s update delay). Similarly, when
@@ -742,16 +753,16 @@ starting the bridge, it can take up to 30s for groups to be reported
 accurately. Do no try to change volume or play immediately after updating
 groups, volume can be inaccurate.</span></p>
 
-<p class=MsoNormal><span lang=EN-GB>When changing the master’s volume form LMS,
+<p class=MsoNormal><span lang=EN-GB>When changing the masterâ€™s volume form LMS,
 all devices in a group are updated proportionally to their existing volume. To
 change volume individually (the ratios), the Sonos controller must be used.
 From LMS, it is possible to reset all players to the same volume by setting the
-master’s volume to 0 then setting it again to another value. Note than when
+masterâ€™s volume to 0 then setting it again to another value. Note than when
 pausing, the volume will go to 0 for a quick second and then will be restored.
 It seems that this can cause some issues</span></p>
 
 <p class=MsoListParagraph style='margin:0cm'><span lang=EN-US style='color:
-black'>There is a fair bit of code to handle Sonos’ strange HTTP behavior with
+black'>There is a fair bit of code to handle Sonosâ€™ strange HTTP behavior with
 regards to pausing. They close the connection upon pause and re-open it from
 the beginning after resume, then close it again and re-open a last time with a
 proper start byte position. </span></p>
@@ -771,82 +782,82 @@ font-family:"Liberation Sans"'>5.1 Command line</span></h2>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-s
-&lt;server&gt;[:&lt;port&gt;]     connect to specified server, otherwise uses
-autodiscovery to find server                  &lt;server</span></p>
+&lt;server&gt;[:&lt;port&gt;] Â Â Â  connect to specified server, otherwise uses
+autodiscovery to find serverÂ Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â  &lt;server</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-b
-&lt;address|iface&gt;]      network address (or interface name) to bind to                                              &lt;binding&gt;</span></p>
+&lt;address|iface&gt;]Â  Â Â Â  network address (or interface name) to bind toÂ Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â  Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â  &lt;binding&gt;</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-g
--3|-2|-1|0|&lt;n&gt;        HTTP content-length (-3:chunked(*), -2:if known,
+-3|-2|-1|0|&lt;n&gt;Â Â Â  Â Â Â  HTTP content-length (-3:chunked(*), -2:if known,
 -1:none, 0:fixed large, &lt;n&gt;: your value ) &lt;stream_length&gt;</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-C
-&lt;0|1|2&gt;               HTTP caching mode (0=memory, 1=memory but claim
-it's infinite(*), 2=on disk)                   &lt;cache&gt;</span></p>
+&lt;0|1|2&gt;Â Â Â Â Â Â Â Â  Â  Â Â Â  HTTP caching mode (0=memory, 1=memory but claim
+it's infinite(*), 2=on disk)Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â  &lt;cache&gt;</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
-lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-P                 
-    pause means stop live streams (always) or tracks (flow only)                                 &lt;live_pause&gt;</span></p>
+lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-PÂ Â Â Â Â Â Â Â Â Â Â Â Â Â Â  Â 
+Â Â Â  pause means stop live streams (always) or tracks (flow only)Â Â Â Â Â Â Â Â  Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â  &lt;live_pause&gt;</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>&nbsp;</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-c
-thru|[pcm|flc[:&lt;q&gt;]|mp3[:&lt;r&gt;]|aac[:&lt;r&gt;][,r:[-]&lt;rate&gt;][,s:&lt;8|16|24&gt;][,flow]]
-transcode mode (thru)                  &lt;mode&gt;</span></p>
+auto|thru|[pcm|flc[:&lt;q&gt;]|mp3[:&lt;r&gt;]|aac[:&lt;r&gt;][,r:[-]&lt;rate&gt;][,s:&lt;8|16|24&gt;][,flow]]
+transcode mode (auto)Â Â Â Â Â Â Â  Â Â Â Â Â  &lt;mode&gt;</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:black'>&nbsp;</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-M
-&lt;modelname&gt;       set the squeezelite player model name sent to the
+&lt;modelname&gt;Â Â Â Â Â Â  set the squeezelite player model name sent to the
 server (default: </span><span lang=EN-US style='font-size:9.5pt;font-family:
 "Cascadia Mono";color:black'>UPnPBridge</span><span lang=EN-US
 style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>)</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-x
-&lt;config file&gt;     read config from file (default is ./config.xml)</span></p>
+&lt;config file&gt;Â Â Â Â  read config from file (default is ./config.xml)</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-i
-&lt;config file&gt;     discover players, save &lt;config file&gt; and exit</span></p>
+&lt;config file&gt;Â Â Â Â  discover players, save &lt;config file&gt; and exit</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
-lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-I                  
+lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-IÂ Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â 
 auto save config at every network scan</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-d
-&lt;log&gt;=&lt;level&gt;     set logging level, logs:
+&lt;log&gt;=&lt;level&gt;Â Â Â Â  set logging level, logs:
 all|slimproto|slimmain|stream|decode|output|web|main|util|upnp, level:
 error|warn|info|debug|sdebug</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-f
-&lt;logfile&gt;         write debug to logfile</span></p>
+&lt;logfile&gt;Â Â Â Â Â Â Â Â  write debug to logfile</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-p
-&lt;pid file&gt;        write PID in file</span></p>
+&lt;pid file&gt;Â Â Â Â Â Â Â  write PID in file</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-z
-                 daemonize</span></p>
+Â Â Â Â Â Â Â Â Â Â Â Â Â Â  Â Â daemonize</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-Z
-                 NOT interactive</span></p>
+Â Â Â Â Â Â Â Â Â Â Â Â Â Â  Â Â NOT interactive</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-k
-                 immediate exit on SIGQUIT and SIGTERM</span></p>
+Â Â Â Â Â Â Â Â Â Â Â Â Â Â  Â Â immediate exit on SIGQUIT and SIGTERM</span></p>
 
 <h2 style='margin-top:12.0pt;margin-right:0cm;margin-bottom:6.0pt;margin-left:
 28.8pt;text-indent:-28.8pt;page-break-after:avoid;background:white'><span
@@ -869,8 +880,8 @@ style='font-size:11.0pt;color:black'>&lt;?xml version=&quot;1.0&quot;?&gt;</span
 <p class=MsoNormal><span lang=EN-GB style='font-size:11.0pt;color:black'>&nbsp;<i>Global
 options</i></span></p>
 
-<p class=MsoNormal><b><span lang=EN-US style='font-size:11.0pt;color:black'>&nbsp;&lt;binding&gt;[ip|iface]:[port
-&gt; 49152] | ?]&lt;/binding&gt; </span></b><i><span lang=EN-US
+<p class=MsoNormal><b><span lang=EN-US style='font-size:11.0pt;color:black'>&nbsp;&lt;binding&gt;ip|iface]:[port
+&gt; 49152] | ?&lt;/binding&gt; </span></b><i><span lang=EN-US
 style='font-size:11.0pt;color:black'>default = ?</span></i></p>
 
 <p class=MsoNormal style='margin-top:5.0pt'><i><span lang=EN-GB
@@ -885,7 +896,7 @@ Ethernet interface is used.</span></i></p>
 socket to use]</span></p>
 
 <p class=MsoNormal style='margin-top:20.0pt'><b><span lang=EN-US
-style='font-size:11.0pt;color:black'>&nbsp;&lt;custom_discovery&gt;[item1][;item2]…[;itemN]&lt;/custom_discovery&gt;</span></b><i><span
+style='font-size:11.0pt;color:black'>&nbsp;&lt;custom_discovery&gt;item1;item2;â€¦itemN&lt;/custom_discovery&gt;</span></b><i><span
 lang=EN-US style='font-size:11.0pt;color:black'> </span></i></p>
 
 <p class=MsoNormal style='margin-top:5.0pt'><i><span lang=EN-GB
@@ -905,9 +916,9 @@ lang=EN-GB style='font-size:11.0pt;color:black'>&nbsp;&nbsp;[UPnP extra search
 tokens]</span></p>
 
 <p class=MsoNormal style='margin-top:20.0pt'><b><span lang=EN-US
-style='font-size:11.0pt;color:black'>&lt;log_limit&gt;[-1 |
-value]&lt;/log_limit&gt; </span></b><i><span lang=EN-US style='font-size:11.0pt;
-color:black'>default = -1</span></i></p>
+style='font-size:11.0pt;color:black'>&lt;log_limit&gt;-1 | value&lt;/log_limit&gt;
+</span></b><i><span lang=EN-US style='font-size:11.0pt;color:black'>default =
+-1</span></i></p>
 
 <p class=MsoNormal style='margin-top:5.0pt'><i><span lang=EN-GB
 style='font-size:11.0pt;color:black'>Sets the maximum size (in MB) of a
@@ -915,32 +926,32 @@ logfile. Set to -1 for unlimited</span></i></p>
 
 <p class=MsoNormal><span lang=EN-GB style='font-size:11.0pt;color:black'>[Logging
 options </span><span lang=EN-GB style='font-size:11.0pt;font-family:Wingdings;
-color:black'>è</span><span lang=EN-GB style='font-size:11.0pt;color:black'> Max
+color:black'>Ã¨</span><span lang=EN-GB style='font-size:11.0pt;color:black'> Max
 size (MB)]</span></p>
 
-<p class=MsoNormal><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;slimproto_log&gt;[error
-| warn | info | debug | sdebug]&lt;/slimproto_log&gt;</span></b></p>
+<p class=MsoNormal><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;slimproto_log&gt;error
+| warn | info | debug | sdebug&lt;/slimproto_log&gt;</span></b></p>
 
-<p class=MsoNormal><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;stream_log&gt;[error
-| warn | info | debug | sdebug]&lt;/stream_log&gt;</span></b></p>
+<p class=MsoNormal><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;stream_log&gt;error
+| warn | info | debug | sdebug&lt;/stream_log&gt;</span></b></p>
 
-<p class=MsoNormal><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;output_log&gt;[error
-| warn | info | debug | sdebug]&lt;/output_log&gt;</span></b></p>
+<p class=MsoNormal><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;output_log&gt;error
+| warn | info | debug | sdebug&lt;/output_log&gt;</span></b></p>
 
-<p class=MsoNormal><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;decode_log&gt;[error
-| warn | info | debug | sdebug]&lt;/decode_log&gt;</span></b></p>
+<p class=MsoNormal><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;decode_log&gt;error
+| warn | info | debug | sdebug&lt;/decode_log&gt;</span></b></p>
 
-<p class=MsoNormal><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;web_log&gt;[error
-| warn | info | debug | sdebug]&lt;/web_log&gt;</span></b></p>
+<p class=MsoNormal><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;web_log&gt;error
+| warn | info | debug | sdebug&lt;/web_log&gt;</span></b></p>
 
-<p class=MsoNormal><b><span lang=EN-US style='font-size:11.0pt;color:black'>&lt;upnp_log&gt;[error
-| warn | info | debug | sdebug]&lt;/upnp_log&gt;</span></b></p>
+<p class=MsoNormal><b><span lang=EN-US style='font-size:11.0pt;color:black'>&lt;upnp_log&gt;error
+| warn | info | debug | sdebug&lt;/upnp_log&gt;</span></b></p>
 
-<p class=MsoNormal><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;main_log&gt;[error
-| warn | info | debug | sdebug]&lt;/main_log&gt;</span></b></p>
+<p class=MsoNormal><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;main_log&gt;error
+| warn | info | debug | sdebug&lt;/main_log&gt;</span></b></p>
 
-<p class=MsoNormal><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;slimmain_log&gt;[error
-| warn | info | debug | sdebug]&lt;/slimmain_log&gt;</span></b></p>
+<p class=MsoNormal><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;slimmain_log&gt;error
+| warn | info | debug | sdebug&lt;/slimmain_log&gt;</span></b></p>
 
 <p class=MsoNormal><i><span lang=EN-GB style='font-size:11.0pt;color:black'>Level
 of debugging for each sub-item of sq2upnp.&nbsp; Leave these at info in the
@@ -959,10 +970,8 @@ default behaviour for all players. Any option can be repeated in the
 &lt;device&gt; section of a given player to override the &lt;common&gt; option.</span></i></p>
 
 <p class=MsoNormal style='margin-top:20.0pt;margin-right:0cm;margin-bottom:
-0cm;margin-left:0cm'><span lang=EN-US style='font-size:11.0pt;color:black'>&nbsp;</span><b><span
-style='font-size:11.0pt;color:black'>&lt;server&gt;[ip[:port] |
-?]&lt;/server&gt;</span></b><i><span style='font-size:11.0pt;color:black'>
-default = ?</span></i></p>
+0cm;margin-left:0cm'><span style='font-size:11.0pt;color:black'>&nbsp;<b>&lt;server&gt;ip[:port]
+| ?&lt;/server&gt;</b><i> default = ?</i></span></p>
 
 <p class=MsoNormal style='margin-top:5.0pt'><i><span lang=EN-GB
 style='font-size:11.0pt;color:black'>ip = IP address or network name, port =
@@ -975,28 +984,28 @@ port number (usually 3483) of your LMS server.&nbsp; </span></i></p>
 can be overridden in the command line with the -s option.</span></i></p>
 
 <p class=MsoNormal style='margin-top:20.0pt;margin-right:0cm;margin-bottom:
-0cm;margin-left:0cm'><b><span lang=EN-US style='font-size:11.0pt;color:black'>&lt;enabled&gt;[0
-| 1]&lt;/enabled&gt;</span></b><i><span lang=EN-US style='font-size:11.0pt;
+0cm;margin-left:0cm'><b><span lang=EN-US style='font-size:11.0pt;color:black'>&lt;enabled&gt;0
+| 1&lt;/enabled&gt;</span></b><i><span lang=EN-US style='font-size:11.0pt;
 color:black'> default = 1</span></i></p>
 
 <p class=MsoNormal style='margin-top:5.0pt'><i><span lang=EN-GB
-style='font-size:11.0pt;color:black'>‘1’ to automatically add any discovered
+style='font-size:11.0pt;color:black'>â€˜1â€™ to automatically add any discovered
 UPnP player to LMS players, even if there is no &lt;device&gt; section
 referring to it. '0' to prevent this.</span></i></p>
 
 <p class=MsoNormal><span lang=EN-GB style='font-size:11.0pt;color:black'>[Player
 discover options </span><span lang=EN-GB style='font-size:11.0pt;font-family:
-Wingdings;color:black'>è</span><span lang=EN-GB style='font-size:11.0pt;
+Wingdings;color:black'>Ã¨</span><span lang=EN-GB style='font-size:11.0pt;
 color:black'> Player is enabled]</span></p>
 
 <p class=MsoNormal style='margin-top:20.0pt;margin-right:0cm;margin-bottom:
 0cm;margin-left:0cm'><span lang=EN-GB style='font-size:11.0pt;color:black'>&nbsp;<b>&lt;</b></span><b><span
-lang=EN-US style='font-size:11.0pt;color:black'>remove_timeout&gt;[-1 | value
-&gt; 0]&lt;/remove_timeout&gt;</span></b><i><span lang=EN-US style='font-size:
+lang=EN-US style='font-size:11.0pt;color:black'>remove_timeout&gt;-1 | value
+&gt; 0&lt;/remove_timeout&gt;</span></b><i><span lang=EN-US style='font-size:
 11.0pt;color:black'> default = 0</span></i></p>
 
 <p class=MsoNormal style='margin-top:5.0pt'><i><span lang=EN-GB
-style='font-size:11.0pt;color:black'>Player’s discovery is managed using UPnP
+style='font-size:11.0pt;color:black'>Playerâ€™s discovery is managed using UPnP
 protocol, which means that a player sends regular keep-alive messages and a bye
 when disconnecting. Some faulty UPnP stack implementations do not always send
 keep-alive messages, so the bridge is disconnecting them regularly. As a
@@ -1011,20 +1020,20 @@ remove player &lt;value&gt; seconds after missing keep-alive</span></i></p>
 
 <p class=MsoNormal><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&nbsp;</span></b><span
 lang=EN-GB style='font-size:11.0pt;color:black'>[Player discover options </span><span
-lang=EN-GB style='font-size:11.0pt;font-family:Wingdings;color:black'>è</span><span
+lang=EN-GB style='font-size:11.0pt;font-family:Wingdings;color:black'>Ã¨</span><span
 lang=EN-GB style='font-size:11.0pt;color:black'> Remove timeout]</span></p>
 
 <p class=MsoNormal style='margin-top:20.0pt;margin-right:0cm;margin-bottom:
-0cm;margin-left:0cm'><b><span style='font-size:11.0pt;color:black'>&lt;roon_mode&gt;[0
-| 1]&lt;/roon_mode&gt; default = 0</span></b></p>
+0cm;margin-left:0cm'><b><span style='font-size:11.0pt;color:black'>&lt;roon_mode&gt;0
+| 1&lt;/roon_mode&gt; default = 0</span></b></p>
 
 <p class=MsoNormal style='margin-top:5.0pt'><i><span lang=EN-GB
-style='font-size:11.0pt;color:black'>Set to ‘1’ to if you intend to use this
+style='font-size:11.0pt;color:black'>Set to â€˜1â€™ to if you intend to use this
 player from a Roon server.</span></i></p>
 
 <p class=MsoNormal style='margin-top:20.0pt;margin-right:0cm;margin-bottom:
-0cm;margin-left:0cm'><b><span lang=EN-US style='font-size:11.0pt;color:black'>&lt;streambuf_size&gt;[value
-&gt; 500000]&lt;/streambuf_size&gt; default = 524288</span></b></p>
+0cm;margin-left:0cm'><b><span lang=EN-US style='font-size:11.0pt;color:black'>&lt;streambuf_size&gt;500000â€¦n&lt;/streambuf_size&gt;
+default = 524288</span></b></p>
 
 <p class=MsoNormal style='margin-top:5.0pt'><i><span lang=EN-GB
 style='font-size:11.0pt;color:black'>Size of the internal memory buffer used to
@@ -1033,7 +1042,7 @@ slow you may need to increase it.</span></i></p>
 
 <p class=MsoNormal style='margin-top:20.0pt;margin-right:0cm;margin-bottom:
 0cm;margin-left:0cm'><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;output_size&gt;<a
-name="__DdeLink__1856_1756514966">[value &gt; 2000000]</a>&lt;/output_size&gt; </span></b><i><span
+name="__DdeLink__1856_1756514966">1000000â€¦n</a>&lt;/output_size&gt; </span></b><i><span
 lang=EN-GB style='font-size:11.0pt;color:black'>default = 4194304</span></i></p>
 
 <p class=MsoNormal style='margin-top:5.0pt'><i><span lang=EN-GB
@@ -1042,15 +1051,15 @@ size of this buffer determines how much cross-fading can be done, it must 110%
 of the cross-fading duration * sample rate * 8 bytes</span></i></p>
 
 <p class=MsoNormal style='margin-top:20.0pt;margin-right:0cm;margin-bottom:
-0cm;margin-left:0cm'><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;stream_length&gt;[0
-| -1 |&nbsp;-3 | &lt;value&gt; 1000000000]&lt;/stream_length&gt; default = -3</span></b></p>
+0cm;margin-left:0cm'><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;stream_length&gt;0
+| -1 |&nbsp;-3 | &lt;value&gt; 1000000000&lt;/stream_length&gt; default = -3</span></b></p>
 
 <p class=MsoNormal style='margin-top:5.0pt;margin-right:0cm;margin-bottom:0cm;
 margin-left:0cm'><i><span lang=EN-GB style='font-size:11.0pt;color:black'>HTTP
 header content-length value reponsed to player</span></i></p>
 
 <p class=MsoNormal style='margin-top:5.0pt'><i><span lang=EN-GB
-style='font-size:11.0pt;color:black'> 0 : estimate a value based on duration</span></i></p>
+style='font-size:11.0pt;color:black'>Â 0 : estimate a value based on duration</span></i></p>
 
 <p class=MsoNormal style='margin-top:5.0pt'><i><span lang=EN-GB
 style='font-size:11.0pt;color:black'>-1 : no content-length header, using
@@ -1071,8 +1080,8 @@ lang=EN-GB style='font-size:11.0pt;color:black'>[Chunked]</span></p>
 force the size to be always a fixed value (not recommended)</span></i></p>
 
 <p class=MsoNormal style='margin-top:20.0pt;margin-right:0cm;margin-bottom:
-0cm;margin-left:0cm'><b><span lang=EN-US style='font-size:11.0pt'>&lt;cache&gt;[0
-| 1 | 2]&lt;/cache&gt;</span></b><span lang=EN-US> </span><i><span lang=EN-US
+0cm;margin-left:0cm'><b><span lang=EN-US style='font-size:11.0pt'>&lt;cache&gt;0
+| 1 | 2&lt;/cache&gt;</span></b><span lang=EN-US> </span><i><span lang=EN-US
 style='font-size:11.0pt'>default = 2</span></i></p>
 
 <p class=MsoNormal style='margin-top:5.0pt;margin-right:0cm;margin-bottom:0cm;
@@ -1080,7 +1089,7 @@ margin-left:0cm'><i><span lang=EN-GB style='font-size:11.0pt;color:black'>Set
 cache mode for HTTP range request</span></i></p>
 
 <p class=MsoNormal style='margin-top:5.0pt'><i><span lang=EN-GB
-style='font-size:11.0pt;color:black'> 0 : use in-memory cache of 8MB and report
+style='font-size:11.0pt;color:black'>Â 0 : use in-memory cache of 8MB and report
 accurately what we have stored</span></i></p>
 
 <p class=MsoNormal style='margin-top:5.0pt'><i><span lang=EN-GB
@@ -1092,54 +1101,54 @@ use disk cache for the whole file (fallback to 1 when duration is unknown)</span
 
 <p class=MsoNormal style='margin-top:20.0pt;margin-right:0cm;margin-bottom:
 0cm;margin-left:0cm'><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;seek_after_pause
-&gt;[0 | 1]&lt;/seek_after_pause&gt;</span></b><span lang=EN-GB
-style='font-size:11.0pt;color:black'> <i>default = 0</i></span></p>
+&gt;0 | 1&lt;/seek_after_pause&gt;</span></b><span lang=EN-GB style='font-size:
+11.0pt;color:black'> <i>default = 0</i></span></p>
 
 <p class=MsoNormal style='margin-top:5.0pt'><i><span lang=EN-GB
 style='font-size:11.0pt;color:black'>The best option to pause DLNA players is
-to “stall” the TCP connection. However, some players do not support this and
-will not pause or resume. This option transforms the LMS ‘pause’ request into a
-‘stop’ command to the player. Upon ‘resume’, the bridge will issue a
-‘reposition’ request to LMS and restart the track. This uses the CLI interface
+to â€œstallâ€ the TCP connection. However, some players do not support this and
+will not pause or resume. This option transforms the LMS â€˜pauseâ€™ request into a
+â€˜stopâ€™ command to the player. Upon â€˜resumeâ€™, the bridge will issue a
+â€˜repositionâ€™ request to LMS and restart the track. This uses the CLI interface
 to instruct LMS to cue (approximately) to the paused position, so if you have a
 login/password set, it will fail as there is no option today to have the bridge
 to use a login/password. </span></i></p>
 
 <p class=MsoNormal><span lang=EN-GB style='font-size:11.0pt;color:black'>[Pause/Resume
 management </span><span lang=EN-GB style='font-size:11.0pt;font-family:Wingdings;
-color:black'>è</span><span lang=EN-GB style='font-size:11.0pt;color:black'>
+color:black'>Ã¨</span><span lang=EN-GB style='font-size:11.0pt;color:black'>
 Seek on resume]</span></p>
 
 <p class=MsoNormal style='margin-top:20.0pt;margin-right:0cm;margin-bottom:
-0cm;margin-left:0cm'><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;<b>volume_on_play&gt;[-1
-| 0 | 1]&lt;/volume_on_play&gt;</b> <i>default = 1</i></span></p>
+0cm;margin-left:0cm'><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;<b>volume_on_play&gt;-1
+| 0 | 1&lt;/volume_on_play&gt;</b> <i>default = 1</i></span></p>
 
 <p class=MsoNormal style='margin-top:5.0pt'><i><span lang=EN-GB
 style='font-size:11.0pt;color:black'>LMS sends a volume control command (set to
 0) whenever a new player is registered (at startup or any other time). This can
 be an annoying and unwanted effect when such player is not actively controlled
 by LMS (although it is registered). One way to avoid this is to set the player
-“off” in LMS.&nbsp; However, you may want to use the player for other purposes
-without having to switch it “off” in LMS. With this parameter set to 1 the
+â€œoffâ€ in LMS.&nbsp; However, you may want to use the player for other purposes
+without having to switch it â€œoffâ€ in LMS. With this parameter set to 1 the
 bridge will not obey any volume command from LMS until it is requested to
-“play” a track (volume command are still memorized, though). If you want to
-ignore all volume commands sent by LMS and only use the player’s own volume
-control, set this to -1. Note also that when “off” or when stopped, the bridge
+â€œplayâ€ a track (volume command are still memorized, though). If you want to
+ignore all volume commands sent by LMS and only use the playerâ€™s own volume
+control, set this to -1. Note also that when â€œoffâ€ or when stopped, the bridge
 will ignore all UPnP events to avoid unsolicited reaction from LMS when a UPnP
-player is being controlled by some other mean than LMS. “Master” volume is the
+player is being controlled by some other mean than LMS. â€œMasterâ€ volume is the
 output controlled by the bridge</span></i></p>
 
 <p class=MsoNormal><span lang=EN-GB style='font-size:11.0pt;color:black'>[Player
 volume management </span><span lang=EN-GB style='font-size:11.0pt;font-family:
-Wingdings;color:black'>è</span><span lang=EN-GB style='font-size:11.0pt;
+Wingdings;color:black'>Ã¨</span><span lang=EN-GB style='font-size:11.0pt;
 color:black'> LMS volume changes]</span></p>
 
 <p class=MsoNormal style='margin-top:20.0pt;margin-right:0cm;margin-bottom:
-0cm;margin-left:0cm'><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;<b>volume_feedback&gt;[0
-| 1]&lt;/volume_feedback&gt;</b> <i>default = 1</i></span></p>
+0cm;margin-left:0cm'><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;<b>volume_feedback&gt;0
+| 1&lt;/volume_feedback&gt;</b> <i>default = 1</i></span></p>
 
 <p class=MsoNormal style='margin-top:5.0pt'><i><span lang=EN-GB
-style='font-size:11.0pt;color:black'>When the <u>Master’s</u> volume is changed
+style='font-size:11.0pt;color:black'>When the <u>Masterâ€™s</u> volume is changed
 directly on the player, the new value is sent (feedback) to LMS so that both
 keep in sync. Setting this parameter to 0 disables such feedback loop, but be
 aware that LMS overrules volume at the start of each new song. When
@@ -1149,12 +1158,12 @@ blocked.</span></i></p>
 
 <p class=MsoNormal><span lang=EN-GB style='font-size:11.0pt;color:black'>&nbsp;[Player
 volume management </span><span lang=EN-GB style='font-size:11.0pt;font-family:
-Wingdings;color:black'>è</span><span lang=EN-GB style='font-size:11.0pt;
+Wingdings;color:black'>Ã¨</span><span lang=EN-GB style='font-size:11.0pt;
 color:black'> Feedback to LMS]</span></p>
 
 <p class=MsoNormal style='margin-top:20.0pt;margin-right:0cm;margin-bottom:
 0cm;margin-left:0cm'><a name="__DdeLink__513_1956274692"><b><span
-style='font-size:11.0pt'>&lt;max_volume&gt;[ 1..xxx] &lt;/max_volume&gt;</span></b></a>
+style='font-size:11.0pt'>&lt;max_volume&gt;1..n&lt;/max_volume&gt;</span></b></a>
 <i><span style='font-size:11.0pt'>default = 100</span></i></p>
 
 <p class=MsoNormal style='margin-top:5.0pt'><i><span lang=EN-GB
@@ -1165,23 +1174,23 @@ volume calculated using &lt;volume_curve&gt; by a ratio of
 
 <p class=MsoNormal><span lang=EN-GB style='font-size:11.0pt;color:black'>[Player
 volume management </span><span lang=EN-GB style='font-size:11.0pt;font-family:
-Wingdings;color:black'>è</span><span lang=EN-GB style='font-size:11.0pt;
+Wingdings;color:black'>Ã¨</span><span lang=EN-GB style='font-size:11.0pt;
 color:black'> Maximum volume]</span></p>
 
 <p class=MsoNormal style='margin-top:20.0pt;margin-right:0cm;margin-bottom:
-0cm;margin-left:0cm'><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;accept_nexturi&gt;[-1
-| 0 | 1]&lt;/accept_nexturi &gt;</span></b><span lang=EN-GB style='font-size:
+0cm;margin-left:0cm'><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;accept_nexturi&gt;-1
+| 0 | 1&lt;/accept_nexturi &gt;</span></b><span lang=EN-GB style='font-size:
 11.0pt;color:black'> <i>default = 1</i></span></p>
 
 <p class=MsoNormal style='margin-top:5.0pt'><i><span lang=EN-GB
-style='font-size:11.0pt;color:black'>Gapless play is by setting a “current
-track/URI” and a “next track/URI” in UPnP players. When they reach the end of
-“current track/URI”, players move to the next one automatically. Some players
-do not support this feature and will stop when the “current track/URI” ends.
+style='font-size:11.0pt;color:black'>Gapless play is by setting a â€œcurrent
+track/URIâ€ and a â€œnext track/URIâ€ in UPnP players. When they reach the end of
+â€œcurrent track/URIâ€, players move to the next one automatically. Some players
+do not support this feature and will stop when the â€œcurrent track/URIâ€ ends.
 This options forces the next track to be played on faulty players, but there
-will be a gap.&nbsp; Some players buffer the “next track/URI” while playing the
-“currentURI” to do real gapless. Other players, although they support “next
-track/URI”, wait for the end of the current track before buffering the next
+will be a gap.&nbsp; Some players buffer the â€œnext track/URIâ€ while playing the
+â€œcurrentURIâ€ to do real gapless. Other players, although they support â€œnext
+track/URIâ€, wait for the end of the current track before buffering the next
 one, and that will create a gap.</span></i></p>
 
 <p class=MsoNormal><i><span lang=EN-GB style='font-size:11.0pt;color:black'>Faulty
@@ -1190,13 +1199,13 @@ the end of a track. Use -1 to use elapsed time to detect end of track and
 manually move to the next one.</span></i></p>
 
 <p class=MsoNormal><span lang=EN-US style='font-size:11.0pt;color:black'>[Streaming
-options </span><span style='font-size:11.0pt;font-family:Wingdings;color:black'>è</span><span
+options </span><span style='font-size:11.0pt;font-family:Wingdings;color:black'>Ã¨</span><span
 lang=EN-US style='font-size:11.0pt;color:black'> Gapless]</span></p>
 
 <p class=MsoNormal style='margin-top:20.0pt;margin-right:0cm;margin-bottom:
-0cm;margin-left:0cm'><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;next_delay&gt;[0..N]
-&lt;/next_delay &gt;</span></b><span lang=EN-GB style='font-size:11.0pt;
-color:black'> <i>default = 30</i></span></p>
+0cm;margin-left:0cm'><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;next_delay&gt;0..n&lt;/next_delay
+&gt;</span></b><span lang=EN-GB style='font-size:11.0pt;color:black'> <i>default
+= 30</i></span></p>
 
 <p class=MsoNormal style='margin-top:5.0pt;margin-right:0cm;margin-bottom:0cm;
 margin-left:0cm'><i><span lang=EN-GB style='font-size:11.0pt;color:black'>When
@@ -1207,25 +1216,25 @@ before the end of the current track, when the next one is requested (0 allows
 request immediately)</span></i></p>
 
 <p class=MsoNormal><span lang=EN-US style='font-size:11.0pt;color:black'>[Streaming
-options </span><span style='font-size:11.0pt;font-family:Wingdings;color:black'>è</span><span
+options </span><span style='font-size:11.0pt;font-family:Wingdings;color:black'>Ã¨</span><span
 lang=EN-US style='font-size:11.0pt;color:black'> Delay]</span></p>
 
 <p class=MsoNormal style='margin-top:20.0pt;margin-right:0cm;margin-bottom:
-0cm;margin-left:0cm'><b><span lang=EN-US style='font-size:11.0pt'>&lt;live_pause&gt;[0
-| 1]&lt;/live_pause &gt;</span></b><span lang=EN-US> </span><i><span
-lang=EN-US style='font-size:11.0pt'>default = 1</span></i></p>
+0cm;margin-left:0cm'><b><span lang=EN-US style='font-size:11.0pt'>&lt;live_pause&gt;0
+| 1&lt;/live_pause &gt;</span></b><span lang=EN-US> </span><i><span lang=EN-US
+style='font-size:11.0pt'>default = 1</span></i></p>
 
 <p class=MsoNormal style='margin-top:5.0pt;margin-right:0cm;margin-bottom:0cm;
 margin-left:0cm'><i><span lang=EN-GB style='font-size:11.0pt;color:black'>Some
-players will not pause when playing live streams (e.g.webradio). It’s correct
-that although you can buffer or “timeshift” livestream, in most case it does
+players will not pause when playing live streams (e.g.webradio). Itâ€™s correct
+that although you can buffer or â€œtimeshiftâ€ livestream, in most case it does
 not make sense as gap with real time increases forever, at every pause. For
-such players, the bridge can commute LMS’ pause request into a stop (only when
+such players, the bridge can commute LMSâ€™ pause request into a stop (only when
 playing a livestream)</span></i></p>
 
 <p class=MsoNormal style='margin-top:20.0pt;margin-right:0cm;margin-bottom:
-0cm;margin-left:0cm'><b><span lang=EN-US style='font-size:11.0pt;color:black'>&nbsp;&lt;codecs&gt;[+/-][codec1,
-codec2, …]&lt;/codecs&gt;</span></b><span lang=EN-US style='font-size:11.0pt;
+0cm;margin-left:0cm'><b><span lang=EN-US style='font-size:11.0pt;color:black'>&nbsp;&lt;codecs&gt;[+/-]codec1,
+codec2, â€¦&lt;/codecs&gt;</span></b><span lang=EN-US style='font-size:11.0pt;
 color:black'> <i>default = aac,ogg,ops,ogf,flc,alc,wav,aif,pcm,mp3</i></span></p>
 
 <p class=MsoNormal style='margin-top:5.0pt;margin-right:0cm;margin-bottom:0cm;
@@ -1235,9 +1244,9 @@ encoded in a non-supported format, LMS will apply transcoding rules. The codecs
 are treated in priority preference order, so if, say, pcm is first, it will be
 the chosen codec if the source can be made available in that codec .In passthru
 mode, any codec set here that is not detected in the player will be
-automatically removed at startup, unless it’s forced in
+automatically removed at startup, unless itâ€™s forced in
 &lt;forced_mimetypes&gt;. Any codec amongst ogf, flc, pcm, wav, aif, mp3, aac,
-ogg, ops, wma, alc can be tried, but unless you’re looking for troubles, better
+ogg, ops, wma, alc can be tried, but unless youâ€™re looking for troubles, better
 limit the list to flc,pcm and mp3. For pcm audio, 24 bits samples will be
 processed according to &lt;L24_format&gt; and &lt;raw_audio_format&gt; will
 determine what is ultimately sent to the player.</span></i></p>
@@ -1251,70 +1260,77 @@ parameters</span></i></p>
 <p class=MsoNormal><i><span lang=EN-GB style='font-size:11.0pt;color:black'>When
 set in device-specific section, every codec can be predicated with + or -, in
 which case the codec is added to or remove from the default codec list. <u>Note
-that a single codec with + or –make the whole list handled as a difference to
+that a single codec with + or â€“make the whole list handled as a difference to
 the default list</u></span></i></p>
 
 <p class=MsoNormal><span lang=EN-US style='font-size:11.0pt;color:black'>[Audio
 codec parameters </span><span lang=EN-GB style='font-size:11.0pt;font-family:
-Wingdings;color:black'>è</span><span lang=EN-GB style='font-size:11.0pt;
+Wingdings;color:black'>Ã¨</span><span lang=EN-GB style='font-size:11.0pt;
 color:black'> </span><span lang=EN-US style='font-size:11.0pt;color:black'>codecs]</span></p>
 
 <p class=MsoNormal style='margin-top:20.0pt;margin-right:0cm;margin-bottom:
-0cm;margin-left:0cm'><b><span lang=EN-US style='font-size:11.0pt;color:black'>&lt;mode&gt;[thru|pcm|flc[:&lt;q&gt;]|aac[:&lt;r&gt;]|mp3[:&lt;r&gt;]][,r:[-]&lt;rate&gt;][,s:&lt;8|16|24&gt;][,flow]&lt;/mode&gt;</span></b><span
+0cm;margin-left:0cm'><b><span lang=EN-US style='font-size:11.0pt;color:black'>&lt;mode&gt;auto|thru|pcm|flc[:&lt;q&gt;]|aac[:&lt;r&gt;]|mp3[:&lt;r&gt;]][,r:[-]&lt;rate&gt;][,s:&lt;8|16|24&gt;][,flow]&lt;/mode&gt;</span></b><span
 lang=EN-US style='font-size:11.0pt;color:black'> <i>default = thru</i></span></p>
 
-<p class=MsoNormal style='margin-top:5.0pt;margin-right:0cm;margin-bottom:0cm;
-margin-left:0cm'><i><span lang=EN-GB style='font-size:11.0pt;color:black'>The
-first parameter must be either thru, pcm, flc or mp3 is mandatory and sets the
-processing mode.</span></i></p>
+<p class=MsoNormal style='margin-top:5.0pt'><i><span lang=EN-GB
+style='font-size:11.0pt;color:black'>The first parameter must be either thru,
+pcm, flc or mp3 is mandatory and sets the processing mode.</span></i></p>
 
-<p class=MsoNormal><i><span lang=EN-GB style='font-size:11.0pt;color:black'>“thru”:
+<p class=MsoNormal><i><span lang=EN-GB style='font-size:11.0pt;color:black'>â€œautoâ€:
+re-encode tracks in flac except for webradio in mp3, aac and ogg and if send_metadata
++ send_icy are set.</span></i></p>
+
+<p class=MsoNormal><i><span lang=EN-GB style='font-size:11.0pt;color:black'>â€œthruâ€:
 simple passthru mode, audio data is simply forwarded to the player, except for
 flac header insertion and sample resizing when receiving pcm audio</span></i></p>
 
-<p class=MsoNormal><i><span lang=EN-GB style='font-size:11.0pt;color:black'>“null”:
+<p class=MsoNormal><i><span lang=EN-GB style='font-size:11.0pt;color:black'>â€œnullâ€:
 replaces all audio by 64Kbps mp3 silent frames. This can be used to turn the CC
 into a metadata display-only device</span></i></p>
 
-<p class=MsoNormal><i><span lang=EN-GB style='font-size:11.0pt;color:black'>“pcm”:
+<p class=MsoNormal><i><span lang=EN-GB style='font-size:11.0pt;color:black'>â€œpcmâ€:
 audio is decoded (&lt;codecs&gt; must amongst ogf, flc, alc, wav, pcm, mp3,
-ogg, ogf, ops and aac) and then sent in pcm format to the player. Use “r:”,
-“s:” and &lt;L24_format&gt; and &lt;raw_audio_format&gt; to tweak what is sent</span></i></p>
+ogg, ogf, ops and aac) and then sent in pcm format to the player. Use â€œr:â€,
+â€œs:â€ and &lt;L24_format&gt; and &lt;raw_audio_format&gt; to tweak what is sent</span></i></p>
 
-<p class=MsoNormal><i><span lang=EN-GB style='font-size:11.0pt;color:black'>“flc”:
-audio is decoded, then re-encoded into flc. Use “flc:&lt;q&gt;” to set
+<p class=MsoNormal><i><span lang=EN-GB style='font-size:11.0pt;color:black'>â€œflcâ€:
+audio is decoded, then re-encoded into flc. Use â€œflc:&lt;q&gt;â€ to set
 compression level from 0 to 9 (default = 0, saves a lot of CPU)</span></i></p>
 
-<p class=MsoNormal><i><span lang=EN-GB style='font-size:11.0pt;color:black'>“mp3”:
-audio is decoded, then re-encoded into mp3. Use “mp3:&lt;r&gt;” to set bitrate
-(max 320)</span></i></p>
+<p class=MsoNormal><i><span lang=EN-GB style='font-size:11.0pt;color:black'>â€œaacâ€:
+audio is decoded, then re-encoded into aac. Use â€œaac:&lt;r&gt;â€ to set bitrate
+(max 320, default 128)</span></i></p>
 
-<p class=MsoNormal><i><span lang=EN-GB style='font-size:11.0pt;color:black'>&nbsp;“r:[-]&lt;rate&gt;”:
-set the sample rate used in full processing mode. Use ‘-‘ to set the maximum
-sample rate allowed, any value above this will cause down-sampling. If “r:” is
+<p class=MsoNormal><i><span lang=EN-GB style='font-size:11.0pt;color:black'>â€œmp3â€:
+audio is decoded, then re-encoded into mp3. Use â€œmp3:&lt;r&gt;â€ to set bitrate
+(max 320, default 192)</span></i></p>
+
+<p class=MsoNormal><i><span lang=EN-GB style='font-size:11.0pt;color:black'>&nbsp;â€œr:[-]&lt;rate&gt;â€:
+set the sample rate used in full processing mode. Use â€˜-â€˜ to set the maximum
+sample rate allowed, any value above this will cause down-sampling. If â€œr:â€ is
 not set, the original sample rate will be preserve, unless flow is used</span></i></p>
 
-<p class=MsoNormal><i><span lang=EN-GB style='font-size:11.0pt;color:black'>&nbsp;“s:&lt;8,16,24&gt;”:
+<p class=MsoNormal><i><span lang=EN-GB style='font-size:11.0pt;color:black'>&nbsp;â€œs:&lt;8,16,24&gt;â€:
 set the sample size used in full processing mode. If not specified, then
 original sample size will be preserve, unless flow is used</span></i></p>
 
-<p class=MsoNormal><i><span lang=EN-GB style='font-size:11.0pt;color:black'>“flow”:
-activates flow mode (only valid when used together with “pcm”, “flc” or “mp3”).
-In flow mode, a continuous flow of audio is sent to the player, enabling
-gapless and crossfade. Note that sample rate and size *must* be set to a
-specific value as the format of audio sent to the player must always be the
+<p class=MsoNormal><i><span lang=EN-GB style='font-size:11.0pt;color:black'>â€œflowâ€:
+activates flow mode (only valid when used together with â€œpcmâ€, â€œflcâ€, â€œaacâ€ or
+â€œmp3â€). In flow mode, a continuous flow of audio is sent to the player,
+enabling gapless and crossfade. Note that sample rate and size *must* be set to
+a specific value as the format of audio sent to the player must always be the
 same. By default 44.1kHz / 16 bits will be used if not specified. Note as well
 that in flow mode, metadata will not be displayed on the player, unless mp3 is
 used, ICY metadata is enabled and your player supports it.</span></i></p>
 
 <p class=MsoNormal><span lang=EN-US style='font-size:11.0pt;color:black'>&nbsp;[Audio
 codec parameters </span><span lang=EN-GB style='font-size:11.0pt;font-family:
-Wingdings;color:black'>è</span><span lang=EN-GB style='font-size:11.0pt;
+Wingdings;color:black'>Ã¨</span><span lang=EN-GB style='font-size:11.0pt;
 color:black'> </span><span lang=EN-US style='font-size:11.0pt;color:black'>Encode]</span></p>
 
 <p class=MsoNormal style='margin-top:20.0pt;margin-right:0cm;margin-bottom:
-0cm;margin-left:0cm'><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;sample_rate&gt;[32000
-| 44100 | 48000 | 88200 | 96000 | 176400 | 192000]&lt;/sample_rate&gt;</span></b><span
+0cm;margin-left:0cm'><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;sample_rate&gt;32000
+| 44100 | 48000 | 88200 | 96000 | 176400 | 192000&lt;/sample_rate&gt;</span></b><span
 lang=EN-GB style='font-size:11.0pt;color:black'> <i>default = 48000</i></span></p>
 
 <p class=MsoNormal style='margin-top:5.0pt;margin-right:0cm;margin-bottom:0cm;
@@ -1323,19 +1339,19 @@ is the maximum sample rate accepted by the UPnP player that will be reported to
 LMS. If a track is encoded at a higher rate, LMS will apply resampling rules,
 according to its configuration. Note that this is not the sample rate used by
 the bridge in full processing mode, this is just what is reported to LMS. In
-full processing mode, it’s better (but not mandatory) to set
-&lt;sample_rate&gt; to 192000 and manage player’s capabilities through the
+full processing mode, itâ€™s better (but not mandatory) to set
+&lt;sample_rate&gt; to 192000 and manage playerâ€™s capabilities through the
 &lt;mode&gt; parameter. </span></i></p>
 
 <p class=MsoNormal><span lang=EN-US style='font-size:11.0pt;color:black'>[Audio
 codec parameters </span><span lang=EN-GB style='font-size:11.0pt;font-family:
-Wingdings;color:black'>è</span><span lang=EN-GB style='font-size:11.0pt;
+Wingdings;color:black'>Ã¨</span><span lang=EN-GB style='font-size:11.0pt;
 color:black'> </span><span lang=EN-US style='font-size:11.0pt;color:black'>Max
 Sample Rate]</span></p>
 
 <p class=MsoNormal style='margin-top:20.0pt;margin-right:0cm;margin-bottom:
-0cm;margin-left:0cm'><b><span style='font-size:11.0pt'>&lt;L24_format&gt;[0 | 1
-| 2 | 3]&lt;/L24_format&gt;</span></b><span style='font-size:11.0pt'> <i>default
+0cm;margin-left:0cm'><b><span style='font-size:11.0pt'>&lt;L24_format&gt;0 | 1
+| 2 | 3&lt;/L24_format&gt;</span></b><span style='font-size:11.0pt'> <i>default
 = 1</i></span></p>
 
 <p class=MsoNormal style='margin-top:5.0pt;margin-right:0cm;margin-bottom:0cm;
@@ -1357,12 +1373,12 @@ truncate 24 bits into 16 bits, except for wav and aif </span></i></p>
 
 <p class=MsoNormal><span lang=EN-US style='font-size:11.0pt;color:black'>[Audio
 codec parameters </span><span lang=EN-GB style='font-size:11.0pt;font-family:
-Wingdings;color:black'>è</span><span lang=EN-US style='font-size:11.0pt;
+Wingdings;color:black'>Ã¨</span><span lang=EN-US style='font-size:11.0pt;
 color:black'> 24 bits PCM]</span></p>
 
 <p class=MsoNormal style='margin-top:20.0pt;margin-right:0cm;margin-bottom:
-0cm;margin-left:0cm'><b><span lang=EN-US style='font-size:11.0pt;color:black'>&lt;raw_audio_format&gt;[format1,
-format2, …]&lt;/raw_audio_format&gt;</span></b><span lang=EN-US
+0cm;margin-left:0cm'><b><span lang=EN-US style='font-size:11.0pt;color:black'>&lt;raw_audio_format&gt;format1,
+format2, â€¦&lt;/raw_audio_format&gt;</span></b><span lang=EN-US
 style='font-size:11.0pt;color:black'> <i>default = wav,aif,raw</i></span></p>
 
 <p class=MsoNormal style='margin-top:5.0pt;margin-right:0cm;margin-bottom:0cm;
@@ -1379,18 +1395,18 @@ lang=EN-GB style='font-size:11.0pt;color:black'> above.</span></i></p>
 <p class=MsoNormal><i><span lang=EN-GB style='font-size:11.0pt;color:black'>When
 set in device-specific section, every format can be predicated with + or -, in
 which case the format is added to or remove from the default format list. <u>Note
-that a single format with + or –make the whole list handled as a difference to
+that a single format with + or â€“make the whole list handled as a difference to
 the default list</u></span></i></p>
 
 <p class=MsoNormal><span lang=EN-US style='font-size:11.0pt;color:black'>[Audio
 codec parameters </span><span lang=EN-GB style='font-size:11.0pt;font-family:
-Wingdings;color:black'>è</span><span lang=EN-GB style='font-size:11.0pt;
+Wingdings;color:black'>Ã¨</span><span lang=EN-GB style='font-size:11.0pt;
 color:black'> </span><span lang=EN-US style='font-size:11.0pt;color:black'>Uncompressed
 format]</span></p>
 
 <p class=MsoNormal style='margin-top:20.0pt;margin-right:0cm;margin-bottom:
-0cm;margin-left:0cm'><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;flac_header&gt;[0
-| 1 | 2 [ 3]&lt;/flac_header&gt;</span></b><span lang=EN-GB style='font-size:
+0cm;margin-left:0cm'><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;flac_header&gt;0
+| 1 | 2 | 3&lt;/flac_header&gt;</span></b><span lang=EN-GB style='font-size:
 11.0pt;color:black'> <i>default = 1</i></span></p>
 
 <p class=MsoNormal style='margin-top:5.0pt;margin-right:0cm;margin-bottom:0cm;
@@ -1421,13 +1437,13 @@ first frame index</span></i></p>
 
 <p class=MsoNormal><span lang=EN-US style='font-size:11.0pt;color:black'>[Audio
 codec parameters </span><span lang=EN-GB style='font-size:11.0pt;font-family:
-Wingdings;color:black'>è</span><span lang=EN-GB style='font-size:11.0pt;
+Wingdings;color:black'>Ã¨</span><span lang=EN-GB style='font-size:11.0pt;
 color:black'> </span><span lang=EN-US style='font-size:11.0pt;color:black'>FLAC
 header]</span></p>
 
 <p class=MsoNormal style='margin-top:20.0pt;margin-right:0cm;margin-bottom:
-0cm;margin-left:0cm'><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;mp4&gt;[0
-| 1]&lt;/mp4&gt;</span></b><span lang=EN-GB style='font-size:11.0pt;color:black'>
+0cm;margin-left:0cm'><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;mp4&gt;0
+| 1&lt;/mp4&gt;</span></b><span lang=EN-GB style='font-size:11.0pt;color:black'>
 <i>default = 1</i></span></p>
 
 <p class=MsoNormal style='margin-top:5.0pt;margin-right:0cm;margin-bottom:0cm;
@@ -1450,14 +1466,14 @@ enable mp4</span></i></p>
 
 <p class=MsoNormal><span lang=EN-US style='font-size:11.0pt;color:black'>[Audio
 codec parameters </span><span lang=EN-GB style='font-size:11.0pt;font-family:
-Wingdings;color:black'>è</span><span lang=EN-GB style='font-size:11.0pt;
+Wingdings;color:black'>Ã¨</span><span lang=EN-GB style='font-size:11.0pt;
 color:black'> </span><span lang=EN-US style='font-size:11.0pt;color:black'>FLAC
 header]</span></p>
 
 <p class=MsoNormal style='margin-top:20.0pt;margin-right:0cm;margin-bottom:
-0cm;margin-left:0cm'><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;forced_mimetypes&gt;[type1,
-type2, …]&lt;/forced_mimetypes&gt;</span></b><span lang=EN-GB style='font-size:
-11.0pt;color:black'> <i>default =””</i></span></p>
+0cm;margin-left:0cm'><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;forced_mimetypes&gt;type1,
+type2, â€¦&lt;/forced_mimetypes&gt;</span></b><span lang=EN-GB style='font-size:
+11.0pt;color:black'> <i>default =â€â€</i></span></p>
 
 <p class=MsoNormal style='margin-top:5.0pt;margin-right:0cm;margin-bottom:0cm;
 margin-left:0cm'><i><span lang=EN-GB style='font-size:11.0pt;color:black'>Some
@@ -1466,8 +1482,8 @@ This will force a list of types to be accepted. Each type is of a form
 audio/xxx, for example audio/flac to force flac or audio/aac to force aac</span></i></p>
 
 <p class=MsoNormal style='margin-top:20.0pt;margin-right:0cm;margin-bottom:
-0cm;margin-left:0cm'><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;send_metadata&gt;[0
-| 1]&lt;/send_metadata&gt;</span></b><span lang=EN-GB style='font-size:11.0pt;
+0cm;margin-left:0cm'><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;send_metadata&gt;0
+| 1&lt;/send_metadata&gt;</span></b><span lang=EN-GB style='font-size:11.0pt;
 color:black'> <i>default = 1</i></span></p>
 
 <p class=MsoNormal style='margin-top:5.0pt;margin-right:0cm;margin-bottom:0cm;
@@ -1481,7 +1497,7 @@ badly the handling of uncompressed audio format</span> </u></span></i></p>
 LMS metadata to player]</span></p>
 
 <p class=MsoNormal style='margin-top:20.0pt;margin-right:0cm;margin-bottom:
-0cm;margin-left:0cm'><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;coverart&gt;[&lt;X&gt;x&lt;Y&gt;]&lt;/coverart&gt;</span></b><span
+0cm;margin-left:0cm'><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;coverart&gt;&lt;X&gt;x&lt;Y&gt;&lt;/coverart&gt;</span></b><span
 lang=EN-GB style='font-size:11.0pt;color:black'> <i>default = empty</i></span></p>
 
 <p class=MsoNormal style='margin-top:5.0pt;margin-right:0cm;margin-bottom:0cm;
@@ -1492,8 +1508,8 @@ the resolution of coverart sent to the UPnP Player</span></i></p>
 11.0pt;color:black'>[at resolution]</span></p>
 
 <p class=MsoNormal style='margin-top:20.0pt;margin-right:0cm;margin-bottom:
-0cm;margin-left:0cm'><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;send_icy&gt;[0
-| 1 | 2]&lt;/send_icy&gt;</span></b><span lang=EN-GB style='font-size:11.0pt;
+0cm;margin-left:0cm'><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;send_icy&gt;0
+| 1 | 2&lt;/send_icy&gt;</span></b><span lang=EN-GB style='font-size:11.0pt;
 color:black'> <i>default = 1</i></span></p>
 
 <p class=MsoNormal style='margin-top:5.0pt;margin-right:0cm;margin-bottom:0cm;
@@ -1517,12 +1533,12 @@ player might fail when receiving it</span></i></p>
 
 <p class=MsoNormal><span lang=EN-US style='font-size:11.0pt;color:black'>[Send
 LMS metadata to player </span><span lang=EN-US style='font-size:11.0pt;
-font-family:Wingdings;color:black'>è</span><span lang=EN-US style='font-size:
+font-family:Wingdings;color:black'>Ã¨</span><span lang=EN-US style='font-size:
 11.0pt;color:black'> Send ICY metadata]</span></p>
 
 <p class=MsoNormal style='margin-top:20.0pt;margin-right:0cm;margin-bottom:
-0cm;margin-left:0cm'><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;send_coverart&gt;[0
-| 1]&lt;/send_coverart&gt;</span></b><span lang=EN-GB style='font-size:11.0pt;
+0cm;margin-left:0cm'><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;send_coverart&gt;0
+| 1&lt;/send_coverart&gt;</span></b><span lang=EN-GB style='font-size:11.0pt;
 color:black'> <i>default = 1</i></span></p>
 
 <p class=MsoNormal style='margin-top:5.0pt;margin-right:0cm;margin-bottom:0cm;
@@ -1532,12 +1548,12 @@ password for the LMS CLI interface, set this to 0.&nbsp; Version 0.2.5.0 on.</sp
 
 <p class=MsoNormal style='margin-top:10.0pt'><span lang=EN-US style='font-size:
 11.0pt;color:black'>[Send LMS metadata to player </span><span lang=EN-US
-style='font-size:11.0pt;font-family:Wingdings;color:black'>è</span><span
+style='font-size:11.0pt;font-family:Wingdings;color:black'>Ã¨</span><span
 lang=EN-US style='font-size:11.0pt;color:black'> include cover art]</span></p>
 
 <p class=MsoNormal style='margin-top:20.0pt;margin-right:0cm;margin-bottom:
-0cm;margin-left:0cm'><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;auto_play&gt;[0
-| 1]&lt;/auto_play&gt;</span></b><span lang=EN-GB style='font-size:11.0pt;
+0cm;margin-left:0cm'><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;auto_play&gt;0
+| 1&lt;/auto_play&gt;</span></b><span lang=EN-GB style='font-size:11.0pt;
 color:black'> <i>default = 0</i></span></p>
 
 <p class=MsoNormal style='margin-top:5.0pt'><i><span lang=EN-GB
@@ -1553,7 +1569,7 @@ is the beginning of the sections that describes each device. There must be one
 &lt;common&gt; can be repeated here, to override the defaults.</span></i></p>
 
 <p class=MsoNormal><i><span lang=EN-GB style='font-size:11.0pt;color:black'>first
-device …</span></i></p>
+device â€¦</span></i></p>
 
 <p class=MsoNormal><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;device&gt;</span></b></p>
 
@@ -1561,35 +1577,35 @@ device …</span></i></p>
 
 <p class=MsoNormal><i><span lang=EN-GB style='font-size:11.0pt;color:black'>!!!
 DO NOT EDIT THIS !!!&nbsp; It is the UPnP device unique identifier for that
-player – this is discovered automatically. The example is is for a Sonos
+player â€“ this is discovered automatically. The example is is for a Sonos
 player.</span></i></p>
 
 <p class=MsoNormal><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;<b>friendly_name&gt;</b>192.168.2.20
 - Sonos PLAY:3&lt;<b>friendly_name&gt;</b></span></p>
 
 <p class=MsoNormal><i><span lang=EN-GB style='font-size:11.0pt;color:black'>!!!
-DO NOT EDIT THIS !!!&nbsp; It is the UPnP device name set by player – this is
+DO NOT EDIT THIS !!!&nbsp; It is the UPnP device name set by player â€“ this is
 discovered automatically. The example is is for a Sonos player.</span></i></p>
 
-<p class=MsoNormal><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;name&gt;[string]&lt;/name&gt;</span></b></p>
+<p class=MsoNormal><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;name&gt;string&lt;/name&gt;</span></b></p>
 
 <p class=MsoNormal><i><span lang=EN-GB style='font-size:11.0pt;color:black'>The
-name of the player as seen in LMS – can be set to whatever you want, from the
-LMS web interface or from the plugin’s settings.&nbsp; Defaults to the “UPnP
-friendly” name.</span></i></p>
+name of the player as seen in LMS â€“ can be set to whatever you want, from the
+LMS web interface or from the pluginâ€™s settings.&nbsp; Defaults to the â€œUPnP
+friendlyâ€ name.</span></i></p>
 
-<p class=MsoNormal><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;mac&gt;[xx:xx:xx:xx:xx:xx]&lt;/mac&gt;</span></b></p>
+<p class=MsoNormal><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;mac&gt;xx:xx:xx:xx:xx:xx&lt;/mac&gt;</span></b></p>
 
 <p class=MsoNormal><i><span lang=EN-GB style='font-size:11.0pt;color:black'>The
 mac address of the player, note that <u>all players must have unique mac for
 LMS to work properly. </u>If this parameter is omitted, the bridge will try to
-discover the true physical address and replace the first 2 bytes with ‘bb’(this
+discover the true physical address and replace the first 2 bytes with â€˜bbâ€™(this
 is needed to make sure mac is unique across different bridge plugins). If it
 cannot be discovered, then a random unique value will be generated, again with
-the first 2 bytes set to ‘bb’</span></i></p>
+the first 2 bytes set to â€˜bbâ€™</span></i></p>
 
-<p class=MsoNormal><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;enabled&gt;[0
-| 1]&lt;/enabled&gt;</span></b><span lang=EN-GB style='font-size:11.0pt;
+<p class=MsoNormal><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;enabled&gt;0
+| 1&lt;/enabled&gt;</span></b><span lang=EN-GB style='font-size:11.0pt;
 color:black'> <i>default = 1</i></span></p>
 
 <p class=MsoNormal><i><span lang=EN-GB style='font-size:11.0pt;color:black'>Set
@@ -1601,11 +1617,11 @@ of the uuids should you ever need them.</span></i></p>
 
 <p class=MsoNormal><b><span style='font-size:11.0pt;color:black'>&lt;/device&gt;</span></b></p>
 
-<p class=MsoNormal><i><span style='font-size:11.0pt;color:black'>next device …</span></i></p>
+<p class=MsoNormal><i><span style='font-size:11.0pt;color:black'>next device â€¦</span></i></p>
 
 <p class=MsoNormal><b><span style='font-size:11.0pt;color:black'>&lt;device&gt;</span></b></p>
 
-<p class=MsoNormal><i><span style='font-size:11.0pt;color:black'>…</span></i></p>
+<p class=MsoNormal><i><span style='font-size:11.0pt;color:black'>â€¦</span></i></p>
 
 <p class=MsoNormal><b><span style='font-size:11.0pt;color:black'>&lt;/device&gt;</span></b></p>
 

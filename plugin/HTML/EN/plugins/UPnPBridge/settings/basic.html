@@ -180,17 +180,17 @@
 	[% WRAPPER setting title="PLUGIN_UPNPBRIDGE_ENCODEPARAMS" desc="PLUGIN_UPNPBRIDGE_ENCODEPARAMS_DESC" %]
 		<script type="text/javascript">
 		function modechange(input) {
-			var mode = input.options[input.selectedIndex].value || 'thru';
+			var mode = input.options[input.selectedIndex].value || 'auto';
 			var process = document.getElementsByClassName('encode_process');
 			var	thru = document.getElementById('encode_thru');
 			var	flac = document.getElementById('encode_flac');
 			var	mp3_aac = document.getElementById('encode_mp3_aac');
 
 			thru.style.display = flac.style.display = mp3_aac.style.display = 'none';
-			document.getElementById('L24').style.display = (mode === 'mp3' || mode === 'aac' || mode == 'null') ? 'none' : 'inline';
+			document.getElementById('L24').style.display = (mode === 'mp3' || mode === 'aac' || mode === 'auto' || mode === 'null') ? 'none' : 'inline';
 			document.getElementById('advanced').style.display = (mode == 'null') ? 'none' : 'inline';
 			for (var i = 0; i < process.length; i++) {
-				process[i].style.display = (mode === 'thru' || mode === 'null') ? 'none' : 'inline';
+				process[i].style.display = (mode === 'thru' || mode === 'auto' || mode === 'null') ? 'none' : 'inline';
 			}
 												
 			if (mode === 'thru') {
@@ -205,14 +205,14 @@
 		
 		[% "PLUGIN_UPNPBRIDGE_ENCODEMODE" | string %]
 		<select class="stdedit" name="encode_mode" id="encode_mode" onchange="modechange(this)">
-		[% FOREACH entry IN [ ['',''], ['none','thru'], ['pcm','pcm'], ['flac', 'flc'], ['mp3', 'mp3'], ['aac', 'aac'], ['silent','null'] ] %]
+		[% FOREACH entry IN [ ['',''], ['auto', 'auto'], ['none','thru'], ['pcm','pcm'], ['flac', 'flc'], ['mp3', 'mp3'], ['aac', 'aac'], ['silent','null'] ] %]
 			<option [% IF entry.1 == encode_mode %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
 		[% END %]
 		</select>&nbsp
-		<span class="encode_process" [% IF !encode_mode || encode_mode == 'thru' || encode_mode == 'null' %]hidden[% END %]>
+		<span class="encode_process" [% IF !encode_mode || encode_mode == 'thru' || encode_mode == 'auto' || encode_mode == 'null' %]hidden[% END %]>
 			<input name="encode_flow" type="checkbox" [% IF encode_flow %] checked [% END %]>&nbsp[% "PLUGIN_UPNPBRIDGE_ENCODEFLOW" | string %]&nbsp
 		</span>
-		<span id="L24" [% IF encode_mode == 'null' || encode_mode == 'mp3' || encode_mode == 'aac' %]hidden[% END %]>
+		<span id="L24" [% IF encode_mode == 'null' || encode_mode == 'auto' || encode_mode == 'mp3' || encode_mode == 'aac' %]hidden[% END %]>
 			[% "PLUGIN_UPNPBRIDGE_L24FORMAT" | string %]
 			<select class="stdedit" name="L24_format" id="L24_format">
 			[% FOREACH entry IN [ ['',''], ['PLUGIN_UPNPBRIDGE_L24PLAIN','0'], ['PLUGIN_UPNPBRIDGE_L24PACKED1','1'] ['PLUGIN_UPNPBRIDGE_L24ALWAYS16','2'] ['PLUGIN_UPNPBRIDGE_L24RAWONLY16', '3'] ] %]
@@ -239,7 +239,7 @@
 				[% END %]
 				</select>&nbsp
 			</span>
-			<span class="encode_process" [% IF !encode_mode || encode_mode == 'thru' || encode_mode == 'null' %]hidden[% END %]>
+			<span class="encode_process" [% IF !encode_mode || encode_mode == 'thru' || encode_mode == 'auto' || encode_mode == 'null' %]hidden[% END %]>
 				<span id="encode_flac" [% IF encode_mode != 'flc' %]hidden[% END %]>
 					[% "PLUGIN_UPNPBRIDGE_ENCODEFLACLEVEL" | string %]
 					<select class="stdedit" name="encode_level" id="encode_level">

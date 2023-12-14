@@ -1,3 +1,6 @@
+3.0.0-3
+ - add 'auto' mode
+ 
 3.0.0
  - add cache option
  - estimate content-length when needed for length 0

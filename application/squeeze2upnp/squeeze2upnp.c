@@ -114,7 +114,7 @@ sq_dev_param_t glDeviceParam = {
 					STREAMBUF_SIZE,			// stream_buffer_size
 					OUTPUTBUF_SIZE,			// output_buffer_size
 					"aac,ogg,ops,ogf,flc,alc,wav,aif,pcm,mp3",		// codecs
-					"thru",					// mode
+					"auto",					// mode
 					HTTP_CACHE_INFINITE,	// cache
 					true,					// mp4
 					30,						// next_delay
@@ -213,7 +213,7 @@ static char usage[] =
 		   "                       level: error|warn|info|debug|sdebug\n"
 		   "  -f <logfile>         write debug to logfile\n"
 		   "  -p <pid file>        write PID in file\n"
-		   "  -c thru|[pcm|flc[:<q>]|mp3[:<r>]|aac[:<r>][,r:[-]<rate>][,s:<8:16:24>][,flow]] transcode mode (thru)\n"
+		   "  -c auto|thru|[pcm|flc[:<q>]|mp3[:<r>]|aac[:<r>][,r:[-]<rate>][,s:<8:16:24>][,flow]] transcode mode (auto)\n"
 		   "  -o is equivalent to -c but is deprecated\n"
 		   
 #if LINUX || FREEBSD || SUNOS
@@ -1300,6 +1300,13 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 
 	DeltaOptions(glDeviceParam.codecs, Device->sq_config.codecs);
 	DeltaOptions(glDeviceParam.raw_audio_format, Device->sq_config.raw_audio_format);
+
+	// we need at least a valid config mode and don't want typos
+	if (!strcasestr(Device->sq_config.mode, "thru") && !strcasestr(Device->sq_config.mode, "auto") &&
+		!strcasestr(Device->sq_config.mode, "mp3") && !strcasestr(Device->sq_config.mode, "aac") &&
+		!strcasestr(Device->sq_config.mode, "flac") && !strcasestr(Device->sq_config.mode, "flc") &&
+		!strcasestr(Device->sq_config.mode, "pcm"))
+		strcpy(Device->sq_config.mode, "auto");
 
 	// Read key elements from description document
 	friendlyName = XMLGetFirstDocumentItem(DescDoc, "friendlyName", true);
