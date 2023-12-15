@@ -41,7 +41,7 @@ struct thread_param_s {
 };
 
 static void     output_http_thread(struct thread_param_s *param);
-static bool     handle_http(struct thread_ctx_s* ctx, cache_buffer* cache, bool* use_cache, int index, int sock);
+static bool     handle_http(struct thread_ctx_s* ctx, cache_buffer* cache, bool* use_cache, bool lingering, int index, int sock);
 static ssize_t 	send_with_icy(struct outputstate *out, struct buffer* backlog, int sock, const void* data, size_t bytes, int flags);
 static ssize_t  send_chunked(bool chunked, struct buffer* backlog, int sock, const void* data, size_t bytes, int flags);
 static ssize_t  send_backlog(struct buffer* backlog, int sock, const void* data, size_t bytes, int flags);
@@ -104,7 +104,7 @@ bool output_abort(struct thread_ctx_s *ctx, int index) {
 /*---------------------------------------------------------------------------*/
 static void output_http_thread(struct thread_param_s *param) {
 	int sock = -1;
-	bool use_cache = false, acquired = false, http_ready = false;
+	bool use_cache = false, acquired = false, http_ready = false, finished = false;
 	fd_set rfds, wfds;
 	struct buffer __obuf, *obuf = &__obuf, backlog;
 	struct output_thread_s *thread = param->thread;
@@ -140,7 +140,7 @@ static void output_http_thread(struct thread_param_s *param) {
 			if (select(thread->http + 1, &rfds, NULL, NULL, &timeout) > 0) {
 				sock = accept(thread->http, NULL, NULL);
 				set_nonblock(sock);
-				http_ready = false;
+				http_ready = finished = false;
 				buf_flush(&backlog);
 				FD_ZERO(&wfds);
 				FD_ZERO(&rfds);
@@ -176,7 +176,7 @@ static void output_http_thread(struct thread_param_s *param) {
 
 		// should be the HTTP headers
 		if (n > 0 && FD_ISSET(sock, &rfds)) {
-			http_ready = res = handle_http(ctx, cache, &use_cache, thread->index, sock);
+			http_ready = res = handle_http(ctx, cache, &use_cache, thread->lingering, thread->index, sock);
 		}
 	
 		// something wrong happened or master connection closed
@@ -276,19 +276,17 @@ static void output_http_thread(struct thread_param_s *param) {
 			// some might be in backlog, but it will be sent later (we never really know anyway what send() does)
 			if (readp) send_with_icy(&ctx->output, &backlog, sock, readp, bytes, 0);
 			else FD_ZERO(&wfds);
-
-			// if we have no cache, no obuf and drain count is 0, we are done except for chunked
-			if (!use_cache && !_buf_used(obuf) && !drain_count) {
-				if (ctx->output.chunked) send_backlog(&backlog, sock, "0\r\n\r\n", 5, 0);
-				thread->lingering = true;
-				LOG_INFO("[%p]: full data sent (%zu) now lingering", ctx, cache->total);
-			}
-		
+	
 			LOG_SDEBUG("[%p] sent %u bytes (total: %u)", ctx, bytes, cache->total);
-		} else if (!drain_count) {
+		} else if (finished) {
+			thread->lingering = true;
 			shutdown_socket(sock);
 			sock = -1;
-			LOG_INFO("[%p]: socket closed", ctx);
+			LOG_INFO("[%p]: socket closed, now lingering", ctx);
+		} else if (!drain_count) {
+			if (ctx->output.chunked) send_backlog(&backlog, sock, "0\r\n\r\n", 5, 0);
+			finished = true;
+			LOG_INFO("[%p]: full data sent (%zu)", ctx, cache->total);
 		} else {
 			// we don't have anything to send, let select read or sleep
 			FD_ZERO(&wfds);
@@ -411,7 +409,7 @@ static ssize_t send_with_icy(struct outputstate* out, struct buffer *backlog, in
 }
 
 /*----------------------------------------------------------------------------*/
-static bool handle_http(struct thread_ctx_s *ctx, cache_buffer* cache, bool *use_cache, int index, int sock)
+static bool handle_http(struct thread_ctx_s *ctx, cache_buffer* cache, bool *use_cache, bool lingering, int index, int sock)
 {
 	char* body = NULL, * request = NULL, * p = NULL;
 	key_data_t headers[64], resp[16] = { { NULL, NULL } };
@@ -492,21 +490,32 @@ static bool handle_http(struct thread_ctx_s *ctx, cache_buffer* cache, bool *use
 			size_t offset = 0;
 			(void) !sscanf(p, "bytes=%zu", &offset);
 
-			if (offset && cache->scope(cache, offset) == 0) {
-				// resend range with proper range header except for Sonos...
-				head = ctx->output.chunked ? "HTTP/1.1 206 Partial Content" : "HTTP/1.0 206 Partial Content";
-				if (type != SONOS) kd_vadd(resp, "Content-Range", "bytes %u-%zu/*", offset, cache->total - 1);
-				cache->set_offset(cache, offset);
-				length = 0;
-				LOG_INFO("[%p]: serving partial content %zu->%zu", ctx, offset, cache->total - 1);
-			} else if (offset) {
-				// when range cannot be satisfied fail the requestor
-				send_body = false;
-				head = "416 Range Not Satisfiable";
-				kd_free(resp);
-				kd_vadd(resp, "Content-Range", "*/%zu", cache->total);
-				LOG_INFO("[%p]: range cannot be satisfied %zu->%zu", ctx, offset, cache->total);
-            }
+			// this is not an initial request (there is cache), so if offset is 0, we are all set
+			if (offset) {
+				if (cache->scope(cache, offset) == 0) {
+					// resend range with proper range header except for Sonos...
+					head = ctx->output.chunked ? "HTTP/1.1 206 Partial Content" : "HTTP/1.0 206 Partial Content";
+					if (type != SONOS) kd_vadd(resp, "Content-Range", "bytes %zu-%zu/*", offset, cache->total - 1);
+					cache->set_offset(cache, offset);
+					length = 0;
+					LOG_INFO("[%p]: serving partial content %zu->%zu", ctx, offset, cache->total - 1);
+				} else if (lingering &&  offset >= cache->total) {
+					// there is an offset out of scope and we are drained, we are tapping in estimated length
+					send_body = false;
+					head = "HTTP/1.0 416 Range Not Satisfiable";
+					kd_free(resp);
+					kd_vadd(resp, "Content-Range", "*/%zu", cache->total);
+					LOG_INFO("[%p]: range cannot be satisfied %zu->%zu", ctx, offset, cache->total);
+				} else {
+					// this likely means we are being probed toward the end of the file (which we don't have)
+					head = ctx->output.chunked ? "HTTP/1.1 206 Partial Content" : "HTTP/1.0 206 Partial Content";
+					kd_vadd(resp, "Content-Range", "bytes %zu-%" PRId64 "/%" PRId64, offset, length - 1, length);
+					cache->set_offset(cache, cache->total - (length - offset));
+					LOG_INFO("[%p]: being probed at %zu but have %zu/%" PRIu64 ", offset at %" PRIu64, ctx, offset,
+							 cache->total, length, cache->total - (length - offset));
+					length = 0;
+				}
+			}
 		} else if (cache->total) {
 			// see Sonos above but also Sonos re-opens stream when icy to add it (not a resume!)
 			if (type == SONOS && !ctx->output.icy.interval) length = UINT32_MAX;

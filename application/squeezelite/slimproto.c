@@ -1193,7 +1193,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 	} else if (out->encode.mode == ENCODE_FLAC) {
 
 		mimetype = mimetype_from_codec('f', ctx->mimetypes, '\0');
-		if (out->sample_size > 24) out->encode.sample_size = 24;
+		if (out->encode.sample_size > 24) out->encode.sample_size = 24;
 
 	} else if (out->encode.mode == ENCODE_MP3) {
 

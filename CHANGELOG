@@ -1,3 +1,11 @@
+3.0.0.5
+ - change mp3 default rate to 224 and aac to 160
+ - tweak flac ratio and only use 20% headroom for content-length estimate
+ - fix flac processing level could use 24 bits when receiving format with sample_size set
+ - don't use auto mode if player does not support flac
+ - try to handle players that start by probing toward end of file to guess duration (fb2k, mp3 only)
+ - lingering could be missed if output_fill finished together with obuf (add a state)
+
 3.0.0.4
  - add "automatic" HTTP length
  

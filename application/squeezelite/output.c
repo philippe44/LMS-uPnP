@@ -510,8 +510,9 @@ void _output_new_stream(struct buffer *obuf, FILE *store, struct thread_ctx_s *c
 		int level = 5;
 		if (sscanf(ctx->config.mode, "%*[^:]:%d", &level) && level > 9) level = 9;
 
-		// we take a max of 80% of original bitrate
-		bitrate = (out->encode.channels * out->encode.sample_size * out->encode.sample_rate * 8) * 80 / (100 * 1000);
+		// level are estimates absed on various tests
+		double ratio[] = { 0.8, 0.79, 0.78, 0.75, 0.72, 0.71, 0.70, 0.68, 0.65 };
+		bitrate = (out->encode.channels * out->encode.sample_size * out->encode.sample_rate * ratio[level]) / 1000;
 
 		FLAC__StreamEncoder* codec = FLAC(f, stream_encoder_new);
 		bool ok = FLAC(f, stream_encoder_set_verify,codec, false);
@@ -537,7 +538,7 @@ void _output_new_stream(struct buffer *obuf, FILE *store, struct thread_ctx_s *c
 	} else if (out->encode.mode == ENCODE_MP3) {
 		shine_config_t config;
 
-		bitrate = 192;
+		bitrate = 224;
 		if (sscanf(ctx->config.mode, "%*[^:]:%d", &bitrate) && bitrate > 320) bitrate = 320;
 
 		shine_set_config_mpeg_defaults(&config.mpeg);
@@ -564,7 +565,7 @@ void _output_new_stream(struct buffer *obuf, FILE *store, struct thread_ctx_s *c
 #if LINKALL
 		struct aac_private* aac = malloc(sizeof(struct aac_private));
 
-		bitrate = 128;
+		bitrate = 160;
 		if (sscanf(ctx->config.mode, "%*[^:]:%d", &bitrate) && bitrate > 320) bitrate = 320;
 
 		out->encode.codec = (void*) faacEncOpen(out->encode.sample_rate, out->encode.channels, &aac->in_samples, &aac->out_max_bytes);
@@ -601,8 +602,8 @@ void _output_new_stream(struct buffer *obuf, FILE *store, struct thread_ctx_s *c
 
 	// set content-length if not already done above or erase it if we have no duration
 	if (out->length == 0) {
-		// estimate length with a 25% margin on bitrate or set 32 bits length is unknown
-		if (out->duration) out->length = bitrate ? (bitrate * 1.25 * out->duration) / 8 : HTTP_LENGTH_LARGE;
+		// estimate length with a 20% margin on bitrate or set 32 bits length is unknown
+		if (out->duration) out->length = bitrate ? (bitrate * 1.20 * out->duration) / 8 : HTTP_LENGTH_LARGE;
 		else out->length = HTTP_LENGTH_NONE;
 		LOG_INFO("[%p]: HTTP %" PRId64 " (estimated length : %" PRId64 ")", ctx, ctx->config.stream_length, out->length);
 	}

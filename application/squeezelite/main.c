@@ -644,12 +644,9 @@ void sq_notify(sq_dev_handle_t handle, sq_event_t event, ...) {
 
 			uri = strstr(uri, BRIDGE_URL);
 			if (!uri) break;
-			/*
-			if we detect a change of track then update render context. Still,
-			we have to wait	for PLAY status before claiming track has started.
-			make sure as well that renderer track number is not from an old
-			context
-			*/
+			/* if we detect a change of track then update render context. Still, we have to wait
+			 * for PLAY status before claiming track has started. Make sure as well that renderer
+			 * track number is not from an old context */
 			sscanf(uri, BRIDGE_URL "%u", &index);
 			LOCK_O;
 			if (ctx->output.state > OUTPUT_STOPPED && ctx->render.index != index && ctx->output.index == index) {

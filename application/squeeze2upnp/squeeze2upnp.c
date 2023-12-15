@@ -1419,6 +1419,12 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 		Device->Sink = strdup("");
 	}
 
+	// crude check that "auto" mode can work 
+	if (strcasestr(Device->sq_config.mode, "auto") && !strcasestr(Device->Sink, "flac")) {
+		strcpy(Device->sq_config.mode, "thru");
+		LOG_WARN("[%p]: WARNING: can't use \"auto\" mode as your player does not support flac", Device);
+	}
+
 	// only check codecs in thru mode
 	if (strcasestr(Device->sq_config.mode, "thru"))
 		CheckCodecs(Device->sq_config.codecs, Device->Sink, Device->Config.ForcedMimeTypes);
