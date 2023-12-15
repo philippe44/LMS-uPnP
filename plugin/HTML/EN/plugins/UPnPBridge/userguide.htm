@@ -80,7 +80,7 @@ span.InternetLink
 	font-family:"Calibri",sans-serif;}
 .MsoPapDefault
 	{margin-bottom:8.0pt;
-	line-height:104%;
+	line-height:103%;
 	text-autospace:ideograph-other;}
  /* Page Definitions */
  @page WordSection1
@@ -692,13 +692,20 @@ stream, some limited metadata (artist/title/album/artwok) but then must be mp3
 or aac. It’s also more brittle as the bridge can only rely on cumulated time to
 known when a track boundary ahs been crossed and report to LMS.</span></p>
 
+<p class=MsoNormal><b><span lang=EN-GB style='color:black'>MP3 files do play
+when using an HTTP length:</span></b><span lang=EN-GB style='color:black'>  Some
+players (e.g. fb2k when networking is set to allow HTTP seeking) “probe” the
+end of an mp3 file when a content-length is set. That cannot work as the bridge
+does not have the full file, obviously. Use one of  &lt;stream_length&gt; mode that
+does not have content-length (-3, -2 or -1)</span></p>
+
 <p class=MsoNormal><b><span lang=EN-GB style='color:black'>FLAC files do not
 seek or resume:</span></b><span lang=EN-GB style='color:black'>  this is a
 passthrough issue due to the lack of flac header in LMS. The bridge might
 reconstruct it incorrectly. You can use full processing mode or create a custom
 transcoding rule that forces LMS to re-encode flac files during seeking,
-instead of simply sending them from an offset.&nbsp;Edit the custom-convert.conf
-file on your system with:</span></p>
+instead of simply sending them from an offset.&nbsp;Edit the
+custom-convert.conf file on your system with:</span></p>
 
 <p class=MsoNormal style='margin-left:1.0cm'><i><span lang=EN-GB
 style='font-size:10.0pt;color:black'>(if you copy-paste below,be careful with
@@ -718,9 +725,9 @@ color:#333333'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [flac] -cs - -</span></p>
 
 <p class=MsoNormal><b><span lang=EN-GB style='color:black'>MP4 files do not
 play or pause/resume: </span></b><span lang=EN-GB style='color:black'>usually
-in passthrough mode only.<b> S</b>ee below for general pause/resume issue. In addition,
-some players can’t handle mp4 when using HTTP with no content-length. Try
-changing &lt;stream_length&gt; to another option or set &lt;mp4&gt; to 0 so
+in passthrough mode only.<b> S</b>ee below for general pause/resume issue. In
+addition, some players can’t handle mp4 when using HTTP with no content-length.
+Try changing &lt;stream_length&gt; to another option or set &lt;mp4&gt; to 0 so
 that aac in mp4 is unwrapped (this disables usage of mp4 container in general,
 so alac is removed from &lt;codec&gt;). Try removing “alc” in &lt;codec&gt; to
 remove use of mp4 for alac is this is an alac-only issue.</span></p>
@@ -782,8 +789,8 @@ font-family:"Liberation Sans"'>5.1 Command line</span></h2>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-s
-&lt;server&gt;[:&lt;port&gt;]     connect to specified server, otherwise uses
-autodiscovery to find server                  &lt;server</span></p>
+&lt;server&gt;[:&lt;port&gt;]     connect to specified server, otherwise uses autodiscovery
+to find server                  &lt;server</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-b
@@ -809,7 +816,7 @@ lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>&nb
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-c
 auto|thru|[pcm|flc[:&lt;q&gt;]|mp3[:&lt;r&gt;]|aac[:&lt;r&gt;][,r:[-]&lt;rate&gt;][,s:&lt;8|16|24&gt;][,flow]]
-transcode mode (auto)              &lt;mode&gt;</span></p>
+transcode mode (auto)              &lt;mode&gt;</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:black'>&nbsp;</span></p>
@@ -916,9 +923,9 @@ lang=EN-GB style='font-size:11.0pt;color:black'>&nbsp;&nbsp;[UPnP extra search
 tokens]</span></p>
 
 <p class=MsoNormal style='margin-top:20.0pt'><b><span lang=EN-US
-style='font-size:11.0pt;color:black'>&lt;log_limit&gt;-1 | value&lt;/log_limit&gt;
-</span></b><i><span lang=EN-US style='font-size:11.0pt;color:black'>default =
--1</span></i></p>
+style='font-size:11.0pt;color:black'>&lt;log_limit&gt;-1 |
+value&lt;/log_limit&gt; </span></b><i><span lang=EN-US style='font-size:11.0pt;
+color:black'>default = -1</span></i></p>
 
 <p class=MsoNormal style='margin-top:5.0pt'><i><span lang=EN-GB
 style='font-size:11.0pt;color:black'>Sets the maximum size (in MB) of a
@@ -970,8 +977,9 @@ default behaviour for all players. Any option can be repeated in the
 &lt;device&gt; section of a given player to override the &lt;common&gt; option.</span></i></p>
 
 <p class=MsoNormal style='margin-top:20.0pt;margin-right:0cm;margin-bottom:
-0cm;margin-left:0cm'><span style='font-size:11.0pt;color:black'>&nbsp;<b>&lt;server&gt;ip[:port]
-| ?&lt;/server&gt;</b><i> default = ?</i></span></p>
+0cm;margin-left:0cm'><span lang=EN-US style='font-size:11.0pt;color:black'>&nbsp;</span><b><span
+style='font-size:11.0pt;color:black'>&lt;server&gt;ip[:port] | ?&lt;/server&gt;</span></b><i><span
+style='font-size:11.0pt;color:black'> default = ?</span></i></p>
 
 <p class=MsoNormal style='margin-top:5.0pt'><i><span lang=EN-GB
 style='font-size:11.0pt;color:black'>ip = IP address or network name, port =
@@ -1277,8 +1285,8 @@ style='font-size:11.0pt;color:black'>The first parameter must be either thru,
 pcm, flc or mp3 is mandatory and sets the processing mode.</span></i></p>
 
 <p class=MsoNormal><i><span lang=EN-GB style='font-size:11.0pt;color:black'>“auto”:
-re-encode tracks in flac except for webradio in mp3, aac and ogg and if send_metadata
-+ send_icy are set.</span></i></p>
+re-encode tracks in flac except for webradio in mp3, aac and ogg and if
+send_metadata + send_icy are set.</span></i></p>
 
 <p class=MsoNormal><i><span lang=EN-GB style='font-size:11.0pt;color:black'>“thru”:
 simple passthru mode, audio data is simply forwarded to the player, except for
