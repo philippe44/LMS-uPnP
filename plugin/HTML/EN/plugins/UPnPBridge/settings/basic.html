@@ -232,10 +232,10 @@
 					<option [% IF entry.1 == flac_header %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
 				[% END %]
 				</select>&nbsp
-				[% "PLUGIN_UPNPBRIDGE_MP4" | string %]&nbsp
-				<select class="stdedit" name="mp4" id="mp4">
+				[% "PLUGIN_UPNPBRIDGE_FORCEAAC" | string %]&nbsp
+				<select class="stdedit" name="force_aac" id="force_aac">
 				[% FOREACH entry IN YESNOBOX %] 
-					<option [% IF entry.1 == mp4 %]selected[% END %] value="[% entry.1 %]">[% entry.0 | string %]</option>
+					<option [% IF entry.1 == force_aac %]selected[% END %] value="[% entry.1 %]">[% entry.0 | string %]</option>
 				[% END %]
 				</select>&nbsp
 			</span>

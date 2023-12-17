@@ -199,22 +199,23 @@ static char usage[] =
 			VERSION "\n"
 		   "See -t for license terms\n"
 		   "Usage: [options]\n"
-		   "  -s <server>[:<port>] connect to specified server, otherwise uses autodiscovery to find server\n"
-		   "  -b <address|iface>]  network address (or interface name) to bind to\n"
-	       "  -g -3|-2|-1|0|<n>    HTTP content-length (-3:chunked(*), -2:if known, -1:none, 0:estimated, <n>: your value )\n"
-		   "  -C <mode>            HTTP caching mode (0=memory, 1=memory but claim it's infinite(*), 2=on disk)\n"
-		   "  -P                   pause means stop live streams (always) or tracks (flow only)\n"
-		   "  -M <modelname>       set the squeezelite player model name sent to the server (default: " MODEL_NAME_STRING ")\n"
-		   "  -x <config file>     read config from file (default is ./config.xml)\n"
-		   "  -i <config file>     discover players, save <config file> and exit\n"
-		   "  -I                   auto save config at every network scan\n"
-		   "  -d <log>=<level>     set logging level\n"
-	       "                       logs: all|slimproto|slimmain|stream|decode|output|web|main|util|upnp\n"
-		   "                       level: error|warn|info|debug|sdebug\n"
-		   "  -f <logfile>         write debug to logfile\n"
-		   "  -p <pid file>        write PID in file\n"
-		   "  -c auto|thru|[pcm|flc[:<q>]|mp3[:<r>]|aac[:<r>][,r:[-]<rate>][,s:<8:16:24>][,flow]] transcode mode (auto)\n"
-		   "  -o is equivalent to -c but is deprecated\n"
+		   "  -s <server>[:<port>]  connect to specified server, otherwise uses autodiscovery to find server\n"
+		   "  -b <address|iface>]   network address (or interface name) to bind to\n"
+	       "  -g -3|-2|-1|0|<n>     HTTP content-length (-3:chunked(*), -2:if known, -1:none, 0:estimated, <n>: your value )\n"
+		   "  -A <mode>             HTTP caching mode (0=memory, 1=memory but claim it's infinite(*), 2=on disk)\n"
+		   "  -P                    pause means stop live streams (always) or tracks (flow only)\n"
+		   "  -M <modelname>        set the squeezelite player model name sent to the server (default: " MODEL_NAME_STRING ")\n"
+		   "  -x <config file>      read config from file (default is ./config.xml)\n"
+		   "  -i <config file>      discover players, save <config file> and exit\n"
+		   "  -I                    auto save config at every network scan\n"
+		   "  -d <log>=<level>      set logging level\n"
+	       "                        logs: all|slimproto|slimmain|stream|decode|output|web|main|util|upnp\n"
+		   "                        level: error|warn|info|debug|sdebug\n"
+		   "  -f <logfile>          write debug to logfile\n"
+		   "  -p <pid file>         write PID in file\n"
+		   "  -C [-]<codec>,<codec> list of authorized codecs (aac,ogg,ops,ogf,flc,alc,wav,aif,pcm,mp3). '-' removes codecs from default\n"
+		   "  -4                    keep aac/adts frames in a mp4 container (unwrap otherwise)\n"
+		   "  -c (or -o) auto|thru|[pcm|flc[:<q>]|mp3[:<r>]|aac[:<r>][,r:[-]<rate>][,s:<8:16:24>][,flow]] transcode mode (auto)\n"
 		   
 #if LINUX || FREEBSD || SUNOS
 		   "  -z                   daemonize\n"
@@ -1627,10 +1628,10 @@ bool ParseArgs(int argc, char **argv) {
 	}
 	while (optind < argc && strlen(argv[optind]) >= 2 && argv[optind][0] == '-') {
 		char *opt = argv[optind] + 1;
-		if (strstr("sxdfpibcMogrLC", opt) && optind < argc - 1) {
+		if (strstr("sxdfpibcMogrLCA", opt) && optind < argc - 1) {
 			optarg = argv[optind + 1];
 			optind += 2;
-		} else if (strstr("tzZIkP", opt)) {
+		} else if (strstr("tzZIkP4", opt)) {
 			optarg = NULL;
 			optind += 1;
 		} else {
@@ -1638,10 +1639,16 @@ bool ParseArgs(int argc, char **argv) {
 			return false;
 		}
 		switch (opt[0]) {
+		case '4':
+			glDeviceParam.force_aac = false;
+			break;
+		case 'C':
+			strcpy(glDeviceParam.codecs, optarg);
+			break;
 		case 'P':
 			glMRConfig.LivePause = false;
 			break;
-		case 'C':
+		case 'A':
 			glDeviceParam.cache = atoi(optarg);
 			break;
 		case 'g':

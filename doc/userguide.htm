@@ -80,7 +80,7 @@ span.InternetLink
 	font-family:"Calibri",sans-serif;}
 .MsoPapDefault
 	{margin-bottom:8.0pt;
-	line-height:103%;
+	line-height:102%;
 	text-autospace:ideograph-other;}
  /* Page Definitions */
  @page WordSection1
@@ -162,11 +162,11 @@ using &lt;codec&gt;</span></p>
 <p class=MsoNormal><span lang=EN-US>In this mode, the bridge simply forwards
 the coded (mp3, flac …) audio received from LMS to the UPnP player, without
 decoding it. Only very simple alterations are made in case of flac, aac (when
-encapsulated in m4a files) and pcm. It’s the simplest mode, but the decoding
+encapsulated in mp4 files) and pcm. It’s the simplest mode, but the decoding
 success totally relies on the UPnP player and mileage will vary from track to
 track as the UPnP player might not be able to recognize some formats (use
-&lt;codecs&gt;, &lt;mp4&gt; and &lt;forced_mimetype&gt; parameters to tweak
-this).</span></p>
+&lt;codecs&gt;, &lt;force_aac&gt; and &lt;forced_mimetype&gt; parameters to
+tweak this).</span></p>
 
 <p class=MsoNormal><span lang=EN-US>Except when the source audio from LMS is
 un-coded (either because it’s and aif or wav file or because you’ve setup LMS
@@ -306,13 +306,14 @@ truncate the samples to 16 bits using the &lt;L24_format&gt; option.</span></p>
 <p class=MsoNormal style='background:white'><b><span lang=EN-CA>AAC:</span></b><span
 lang=EN-CA> Such codec can be carried inside a mp4 container or as raw adts
 frames. The codec name is still “aac” as far as LMS is concerned but it can
-send either or. As soon as “audio/mp4” or audio/m4a is reported by a player, it
-is assumed that adts and mp4 container are supported. When receiving “mp4
+send either or. As soon as ‘audio/mp4’ or ‘audio/m4a’ is reported by a player,
+it is assumed that adts and mp4 container are supported. When receiving ‘mp4’
 tracks form LMS, the bridge will simply forward these unless the player has
 only reported only “audio/aac”. In that case, the bridge unwraps the adts frame
 from the container and sends them directly. Unfortunately, sometimes mp4
-container is poorly supported but adts is very well and so you can unset
-&lt;mp4&gt; option to force unwrapping.</span></p>
+container is poorly supported but adts is very well and so the parameter &lt;force_aac&gt;
+is set by default to force unwrapping. Disable it if you still want mp4 containers
+to be sent.</span></p>
 
 <p class=MsoNormal style='background:white'><b><span lang=EN-CA>DSF/DSD:</span></b><span
 lang=EN-CA> Mileage will vary as there does not seem to be an agreed standard
@@ -693,11 +694,11 @@ or aac. It’s also more brittle as the bridge can only rely on cumulated time t
 known when a track boundary ahs been crossed and report to LMS.</span></p>
 
 <p class=MsoNormal><b><span lang=EN-GB style='color:black'>MP3 files do play
-when using an HTTP length:</span></b><span lang=EN-GB style='color:black'>  Some
-players (e.g. fb2k when networking is set to allow HTTP seeking) “probe” the
-end of an mp3 file when a content-length is set. That cannot work as the bridge
-does not have the full file, obviously. Use one of  &lt;stream_length&gt; mode that
-does not have content-length (-3, -2 or -1)</span></p>
+when using an HTTP length:</span></b><span lang=EN-GB style='color:black'> 
+Some players (e.g. fb2k when networking is set to allow HTTP seeking) “probe”
+the end of an mp3 file when a content-length is set. That cannot work as the
+bridge does not have the full file, obviously. Use one of 
+&lt;stream_length&gt; mode that does not have content-length (-3, -2 or -1)</span></p>
 
 <p class=MsoNormal><b><span lang=EN-GB style='color:black'>FLAC files do not
 seek or resume:</span></b><span lang=EN-GB style='color:black'>  this is a
@@ -725,12 +726,12 @@ color:#333333'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [flac] -cs - -</span></p>
 
 <p class=MsoNormal><b><span lang=EN-GB style='color:black'>MP4 files do not
 play or pause/resume: </span></b><span lang=EN-GB style='color:black'>usually
-in passthrough mode only.<b> S</b>ee below for general pause/resume issue. In
-addition, some players can’t handle mp4 when using HTTP with no content-length.
-Try changing &lt;stream_length&gt; to another option or set &lt;mp4&gt; to 0 so
-that aac in mp4 is unwrapped (this disables usage of mp4 container in general,
-so alac is removed from &lt;codec&gt;). Try removing “alc” in &lt;codec&gt; to
-remove use of mp4 for alac is this is an alac-only issue.</span></p>
+in passthrough mode only.<b> S</b>ee other topic regarding general pause/resume
+issue. In addition, some players can’t handle mp4 at all (they claim ‘mp4’ but
+they mean aac/adts) or only when using HTTP with no content-length. Try
+changing &lt;stream_length&gt; to another option or set &lt;force_aac&gt; to 1
+so that aac in mp4 is unwrapped. Try removing “alc” in &lt;codec&gt; to remove
+use of mp4 for alac is this is an alac-only issue.</span></p>
 
 <p class=MsoNormal><b><span lang=EN-GB style='color:black'>OGG files do not
 play</span></b><span lang=EN-GB style='color:black'>: players like Sonos report
@@ -789,82 +790,89 @@ font-family:"Liberation Sans"'>5.1 Command line</span></h2>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-s
-&lt;server&gt;[:&lt;port&gt;]     connect to specified server, otherwise uses autodiscovery
-to find server                  &lt;server</span></p>
+&lt;server&gt;[:&lt;port&gt;]  connect to specified server, otherwise uses
+autodiscovery to find server                         &lt;server</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-b
-&lt;address|iface&gt;]      network address (or interface name) to bind to                                              &lt;binding&gt;</span></p>
+&lt;address|iface&gt;]   network address (or interface name) to bind to                                         
+       &lt;binding&gt;</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-g
--3|-2|-1|0|&lt;n&gt;        HTTP content-length (-3:chunked(*), -2:if known,
--1:none, 0:fixed large, &lt;n&gt;: your value ) &lt;stream_length&gt;</span></p>
+-3|-2|-1|0|&lt;n&gt;     HTTP content-length (-3:chunked(*), -2:if known,
+-1:none, 0:fixed large, &lt;n&gt;: your value )       &lt;stream_length&gt;</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
-lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-C
-&lt;0|1|2&gt;               HTTP caching mode (0=memory, 1=memory but claim
-it's infinite(*), 2=on disk)                   &lt;cache&gt;</span></p>
+lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-A
+0|1|2             HTTP caching mode (0=memory, 1=memory but claim it's
+infinite(*), 2=on disk)                        &lt;cache&gt;</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-P                 
-    pause means stop live streams (always) or tracks (flow only)                                 &lt;live_pause&gt;</span></p>
+ pause means stop live streams (always) or tracks (flow only)                                   
+&lt;live_pause&gt;</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
-lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>&nbsp;</span></p>
+lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-C
+[-]&lt;codec&gt;,&lt;codec&gt; list of authorized codecs
+(aac,ogg,ops,ogf,flc,alc,wav,aif,pcm,mp3). '-' removes codecs from default
+&lt;codecs&gt;</span></p>
+
+<p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
+lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-4                   
+keep aac/adts frames in a mp4 container (unwrap otherwise)                                     
+&lt;force_aac&gt;   </span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-c
 auto|thru|[pcm|flc[:&lt;q&gt;]|mp3[:&lt;r&gt;]|aac[:&lt;r&gt;][,r:[-]&lt;rate&gt;][,s:&lt;8|16|24&gt;][,flow]]
-transcode mode (auto)              &lt;mode&gt;</span></p>
-
-<p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
-lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:black'>&nbsp;</span></p>
+transcode mode (auto)                   &lt;mode&gt;</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-M
-&lt;modelname&gt;       set the squeezelite player model name sent to the
+&lt;modelname&gt;        set the squeezelite player model name sent to the
 server (default: </span><span lang=EN-US style='font-size:9.5pt;font-family:
 "Cascadia Mono";color:black'>UPnPBridge</span><span lang=EN-US
 style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>)</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-x
-&lt;config file&gt;     read config from file (default is ./config.xml)</span></p>
+&lt;config file&gt;      read config from file (default is ./config.xml)</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-i
-&lt;config file&gt;     discover players, save &lt;config file&gt; and exit</span></p>
+&lt;config file&gt;      discover players, save &lt;config file&gt; and exit</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-I                  
-auto save config at every network scan</span></p>
+ auto save config at every network scan</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-d
-&lt;log&gt;=&lt;level&gt;     set logging level, logs:
+&lt;log&gt;=&lt;level&gt;      set logging level, logs:
 all|slimproto|slimmain|stream|decode|output|web|main|util|upnp, level:
 error|warn|info|debug|sdebug</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-f
-&lt;logfile&gt;         write debug to logfile</span></p>
+&lt;logfile&gt;          write debug to logfile</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-p
-&lt;pid file&gt;        write PID in file</span></p>
+&lt;pid file&gt;         write PID in file</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-z
-                 daemonize</span></p>
+                  daemonize</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-Z
-                 NOT interactive</span></p>
+                  NOT interactive</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-k
-                 immediate exit on SIGQUIT and SIGTERM</span></p>
+                  immediate exit on SIGQUIT and SIGTERM</span></p>
 
 <h2 style='margin-top:12.0pt;margin-right:0cm;margin-bottom:6.0pt;margin-left:
 28.8pt;text-indent:-28.8pt;page-break-after:avoid;background:white'><span
@@ -1450,33 +1458,33 @@ color:black'> </span><span lang=EN-US style='font-size:11.0pt;color:black'>FLAC
 header]</span></p>
 
 <p class=MsoNormal style='margin-top:20.0pt;margin-right:0cm;margin-bottom:
-0cm;margin-left:0cm'><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;mp4&gt;0
-| 1&lt;/mp4&gt;</span></b><span lang=EN-GB style='font-size:11.0pt;color:black'>
-<i>default = 1</i></span></p>
+0cm;margin-left:0cm'><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;force_aac&gt;0
+| 1&lt;/force_aac&gt;</span></b><span lang=EN-GB style='font-size:11.0pt;
+color:black'> <i>default = 1</i></span></p>
 
 <p class=MsoNormal style='margin-top:5.0pt;margin-right:0cm;margin-bottom:0cm;
-margin-left:0cm'><i><span lang=EN-US style='font-size:11.0pt;color:black'>Prevents
-the bridge from sending mp4 files to the player. This disables ALAC support </span></i><i><span
-lang=EN-GB style='font-size:11.0pt;color:black'>and LMS will have to transcode
-but AAC in mp4 will still be supported by stripping mp4 container and sending
-raw adts frames to the player, providing it has mp4,m4a or aac in its
-capabilities.</span></i></p>
+margin-left:0cm'><i><span lang=EN-US style='font-size:11.0pt;color:black'>When
+the bridge received aac inside a mp4 container, they can be unwrapped locally
+so that only adts frames are sent to the player</span></i><i><span lang=EN-GB
+style='font-size:11.0pt;color:black'>. This is usually a better compatibility
+than mp4 container as many players declare a, ‘audio/mp4’ capability but in
+fact can’t handle alac or even aac in mp4, they just do adts frames</span></i></p>
 
 <p class=MsoNormal><i><u><span lang=EN-GB style='font-size:11.0pt;color:black'>This
 only applies to passthrough mode</span></u></i><i><span lang=EN-GB
 style='font-size:11.0pt;color:black'>.</span></i></p>
 
 <p class=MsoNormal><i><span lang=EN-GB style='font-size:11.0pt;color:black'>0 :
-disable mp4</span></i></p>
+don’t force unwrapping</span></i></p>
 
-<p class=MsoNormal><i><span lang=EN-GB style='font-size:11.0pt;color:black'>1:
-enable mp4</span></i></p>
+<p class=MsoNormal><i><span lang=EN-GB style='font-size:11.0pt;color:black'>1: force
+unwrappin</span></i></p>
 
 <p class=MsoNormal><span lang=EN-US style='font-size:11.0pt;color:black'>[Audio
 codec parameters </span><span lang=EN-GB style='font-size:11.0pt;font-family:
 Wingdings;color:black'>è</span><span lang=EN-GB style='font-size:11.0pt;
-color:black'> </span><span lang=EN-US style='font-size:11.0pt;color:black'>FLAC
-header]</span></p>
+color:black'> Force AAC</span><span lang=EN-US style='font-size:11.0pt;
+color:black'>]</span></p>
 
 <p class=MsoNormal style='margin-top:20.0pt;margin-right:0cm;margin-bottom:
 0cm;margin-left:0cm'><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;forced_mimetypes&gt;type1,

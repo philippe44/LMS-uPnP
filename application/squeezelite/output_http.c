@@ -509,10 +509,11 @@ static bool handle_http(struct thread_ctx_s *ctx, cache_buffer* cache, bool *use
 				} else {
 					// this likely means we are being probed toward the end of the file (which we don't have)
 					head = ctx->output.chunked ? "HTTP/1.1 206 Partial Content" : "HTTP/1.0 206 Partial Content";
-					kd_vadd(resp, "Content-Range", "bytes %zu-%" PRId64 "/%" PRId64, offset, length - 1, length);
-					cache->set_offset(cache, cache->total - (length - offset));
-					LOG_INFO("[%p]: being probed at %zu but have %zu/%" PRIu64 ", offset at %" PRIu64, ctx, offset,
-							 cache->total, length, cache->total - (length - offset));
+					size_t avail = min(cache->total, length - offset);
+					cache->set_offset(cache, cache->total - avail);
+					kd_vadd(resp, "Content-Range", "bytes %zu-%zu/%zu", offset, offset + avail - 1, (size_t) length);
+					LOG_INFO("[%p]: being probed at %zu but have %zu/%" PRIu64 ", using offset at %zu", ctx, offset,
+							 cache->total, length, cache->total - avail);
 					length = 0;
 				}
 			}
@@ -527,11 +528,11 @@ static bool handle_http(struct thread_ctx_s *ctx, cache_buffer* cache, bool *use
 
 		// add normal headers
 		kd_add(resp, "Server", "squeezebox-bridge");
+		kd_add(resp, "Accept-Ranges", "bytes");
 		kd_add(resp, "Content-Type", ctx->output.mimetype);
 		kd_add(resp, "Connection", "close");
 
 		if (send_body) {
-			kd_add(resp, "Accept-Ranges", "bytes");
 			// size might have been updated, last chance to update chunked mode
 			if (length > 0) {
 				ctx->output.chunked = false;

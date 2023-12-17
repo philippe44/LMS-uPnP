@@ -764,12 +764,6 @@ bool sq_run_device(sq_dev_handle_t handle, sq_dev_param_t *param) {
 	strcpy(ctx->config.mode, "thru");
 #endif
 
-	// we might need to eliminate ALAC
-	if (!strcasecmp(ctx->config.mode, "thru") && !ctx->config.mp4) {
-		char* p = strcasestr(ctx->config.codecs, "alc");
-		if (p) memmove(p, p + 4, strlen(p + 4) + 1);
-	}
-
 	sprintf(ctx->cli_id, "%02x:%02x:%02x:%02x:%02x:%02x",
 						  ctx->config.mac[0], ctx->config.mac[1], ctx->config.mac[2],
 				   		  ctx->config.mac[3], ctx->config.mac[4], ctx->config.mac[5]);

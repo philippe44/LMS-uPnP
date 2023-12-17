@@ -1,3 +1,10 @@
+3.0.0.6
+ - send accept-range header in HEAD and 416 cases
+ - fix range in 216 when not enougn data in cache
+ - use force_aac instead of mp4 which means that alc must be removed manually if required
+ - change cache -C by -A
+ - add -C <codec>,...<codec> on command line
+  
 3.0.0.5
  - change mp3 default rate to 224 and aac to 160
  - tweak flac ratio and only use 20% headroom for content-length estimate

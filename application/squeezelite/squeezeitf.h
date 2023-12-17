@@ -42,8 +42,8 @@ typedef	struct sq_dev_param_s {
 	char		codecs[STR_LEN];
 	char		mode[STR_LEN];
 	enum { HTTP_CACHE_MEMORY = 0, HTTP_CACHE_INFINITE = 1, HTTP_CACHE_DISK = 2 } cache;
-	bool		mp4;
-	int			next_delay;
+	bool		force_aac;
+	int         next_delay;
 	char 		raw_audio_format[STR_LEN];
 	char		server[STR_LEN];
 	uint32_t 	sample_rate;

@@ -301,8 +301,8 @@ PLUGIN_UPNPBRIDGE_ENCODEPARAMS_DESC
 	EN	in which case truncation is only made for "raw". 
 	EN	<br><i>- Flac header:</i> when seeking, LMS removes flac header but most UPnP requires it. Headers contain "total number 
 	EN	of samples" and different values can be tried (flac standard says 0 should work but it does not always)
-	EN	<br><i>- Use MP4:</i> some players can't handle mp4 format (container for alac and aac) when using HTTP mode with no
-	EN	length. Disabling mp4 support remove ALAC codec and forces use of ADTS raw frames for AAC (when possible)
+	EN	<br><i>- Force AAC:</i> some players report mp4 support but mean AAC/ADTS frames or can't handle mp4 containers with no
+	EN	no HTTP content-length. This forces adts frames to be unwrapped and sent raw to player.
 	EN	<br><i>- Flac compression:</i> in flac mode, set the compression level. 0 = lowest compression & CPU load
 	EN	<br><i>- MP3/AAC bitrate:</i> in mp3/aac mode, set bitrate
 	EN	<br><i>- Resample rate:</i> resample rate for re-encoding. When "No higher" is set, resampling will only happen if rate is
@@ -334,8 +334,8 @@ PLUGIN_UPNPBRIDGE_ENCODEFLOW
 PLUGIN_UPNPBRIDGE_FLACHEADER
 	EN	FLAC header
 	
-PLUGIN_UPNPBRIDGE_MP4
-	EN	Use mp4
+PLUGIN_UPNPBRIDGE_FORCEAAC
+	EN	Force AAC
 
 PLUGIN_UPNPBRIDGE_L24FORMAT
 	EN	24 bits PCM

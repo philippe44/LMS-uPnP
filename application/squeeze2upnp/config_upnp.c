@@ -76,7 +76,7 @@ void SaveConfig(char *name, void *ref, bool full) {
 	XMLUpdateNode(doc, common, false, "L24_format", "%d", (int) glDeviceParam.L24_format);
 	XMLUpdateNode(doc, common, false, "flac_header", "%d", (int) glDeviceParam.flac_header);
 	XMLUpdateNode(doc, common, false, "roon_mode", "%d", (int) glDeviceParam.roon_mode);
-	XMLUpdateNode(doc, common, false, "mp4", "%d", (int)glDeviceParam.mp4);
+	XMLUpdateNode(doc, common, false, "force_aac", "%d", (int)glDeviceParam.force_aac);
 	XMLUpdateNode(doc, common, false, "cache", "%d", (int)glDeviceParam.cache);
 	XMLUpdateNode(doc, common, false, "forced_mimetypes", "%s", glMRConfig.ForcedMimeTypes);
 	XMLUpdateNode(doc, common, false, "seek_after_pause", "%d", (int) glMRConfig.SeekAfterPause);
@@ -163,7 +163,7 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "codecs")) strcpy(sq_conf->codecs, val);
 	if (!strcmp(name, "mode")) strcpy(sq_conf->mode, val);
 	if (!strcmp(name, "roon_mode")) sq_conf->roon_mode = atol(val);
-	if (!strcmp(name, "mp4")) sq_conf->mp4 = atol(val);
+	if (!strcmp(name, "force_aac")) sq_conf->force_aac = atol(val);
 	if (!strcmp(name, "cache")) sq_conf->cache = atol(val);
 	if (!strcmp(name, "raw_audio_format")) strcpy(sq_conf->raw_audio_format, val);
 	if (!strcmp(name, "store_prefix")) strcpy(sq_conf->store_prefix, val);			//RO

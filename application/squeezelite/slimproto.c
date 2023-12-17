@@ -1150,7 +1150,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 			if (format == 'a' && mimetype) {
 				if (out->sample_size == '2' && !strstr(mimetype, "aac")) {
 					strcpy(mimetype, "audio/aac");
-				} else if (out->sample_size == '5' && (strstr(mimetype, "aac") || !ctx->config.mp4)) {
+				} else if (out->sample_size == '5' && (strstr(mimetype, "aac") || ctx->config.force_aac)) {
 					out->codec = 'A';
 					strcpy(mimetype, "audio/aac");
 					LOG_INFO("[%p]: forcing mp4 => adts locally", ctx);
