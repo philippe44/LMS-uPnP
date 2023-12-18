@@ -80,7 +80,6 @@ span.InternetLink
 	font-family:"Calibri",sans-serif;}
 .MsoPapDefault
 	{margin-bottom:8.0pt;
-	line-height:102%;
 	text-autospace:ideograph-other;}
  /* Page Definitions */
  @page WordSection1
@@ -169,9 +168,8 @@ track as the UPnP player might not be able to recognize some formats (use
 tweak this).</span></p>
 
 <p class=MsoNormal><span lang=EN-US>Except when the source audio from LMS is
-un-coded (either because it’s and aif or wav file or because you’ve setup LMS
-to send only un-coded audio), replay gain and transition (fading) will not work.
-</span></p>
+un-coded (either because it’s an aif or wav file or because you’ve setup LMS to
+send only un-coded audio), replay gain and transition (fading) will not work. </span></p>
 
 <p class=MsoNormal><span lang=EN-GB style='color:black'>1.2.2 Full processing</span></p>
 
@@ -226,7 +224,7 @@ automatically available as third party plugins and all you have to do is
 install it and go in its settings to select the “binary helper” (the
 application doing the actual work). If you want to try the development version,
 add the following repository to LMS: </span><span class=InternetLink><span
-lang=EN-US>http://downloads.sourceforge.net/project/lms-to-upnp/dev/repo-sf.xml.</span></span></p>
+lang=EN-US>http://downloads.sourceforge.net/project/lms-plugins-philippe44/dev/repo-sf.xml.</span></span></p>
 
 <p class=MsoNormal><span lang=EN-US>Once the plugin is installed, just enable
 the binary helper, wait for about 30 seconds and refresh your page, the list of
@@ -311,9 +309,9 @@ it is assumed that adts and mp4 container are supported. When receiving ‘mp4�
 tracks form LMS, the bridge will simply forward these unless the player has
 only reported only “audio/aac”. In that case, the bridge unwraps the adts frame
 from the container and sends them directly. Unfortunately, sometimes mp4
-container is poorly supported but adts is very well and so the parameter &lt;force_aac&gt;
-is set by default to force unwrapping. Disable it if you still want mp4 containers
-to be sent.</span></p>
+container is poorly supported but adts is very well and so the parameter
+&lt;force_aac&gt; is set by default to force unwrapping. Disable it if you
+still want mp4 containers to be sent.</span></p>
 
 <p class=MsoNormal style='background:white'><b><span lang=EN-CA>DSF/DSD:</span></b><span
 lang=EN-CA> Mileage will vary as there does not seem to be an agreed standard
@@ -323,13 +321,13 @@ useless formats, so it’s not where I spend most attention and time..</span></p
 
 <p class=MsoNormal style='background:white'><b><span lang=EN-CA>OGG</span></b><span
 lang=EN-CA>: It is a container not a codec (often confused with vorbis) and can
-be used to wrap vorbis, opus or flac (ogg, ops and ogf in LMS’ codec terminology).
-Like for mp4, most players won’t indicate what they actually support, beyond
-audio/ogg (the proper syntax for such mimetypes is audio/ogg;codecs=vorbis,
-audio/ogg;codecs=opus and audio/ogg;codecs=flac). The bridge is non-strict and
-will allow ogg, ops and ogf if audio/ogg is found, but it will send the full
-mimetype details to the player. If this fails, simply manually remove
-ogg/ops/of from the codecs list.</span></p>
+be used to wrap vorbis, opus or flac (ogg, ops and ogf in LMS’ codec
+terminology). Like for mp4, most players won’t indicate what they actually
+support, beyond audio/ogg (the proper syntax for such mimetypes is
+audio/ogg;codecs=vorbis, audio/ogg;codecs=opus and audio/ogg;codecs=flac). The
+bridge is non-strict and will allow ogg, ops and ogf if audio/ogg is found, but
+it will send the full mimetype details to the player. If this fails, simply
+manually remove ogg/ops/of from the codecs list.</span></p>
 
 <p class=MsoNormal style='background:white'><u><span lang=EN-GB
 style='color:black'>2.1.2 Full processing mode</span></u></p>
@@ -621,7 +619,7 @@ black'>&nbsp;</span></p>
 
 <p class=MsoListParagraph style='margin:0cm'><span lang=EN-GB style='color:
 black'>Using “next” or “previous on the player directly does not work, and
-never will as UPnP does not allow a player to forward such a command to it’s
+never will as UPnP does not allow a player to forward such a command to its
 controller.</span></p>
 
 <p class=MsoListParagraph style='margin:0cm'><span lang=EN-GB style='color:
@@ -790,77 +788,77 @@ font-family:"Liberation Sans"'>5.1 Command line</span></h2>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-s
-&lt;server&gt;[:&lt;port&gt;]  connect to specified server, otherwise uses
-autodiscovery to find server                         &lt;server</span></p>
+&lt;server&gt;[:&lt;port&gt;]  connect to specified server, otherwise uses
+autodiscovery to find server                           &lt;server</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-b
-&lt;address|iface&gt;]   network address (or interface name) to bind to                                         
-       &lt;binding&gt;</span></p>
+&lt;address|iface&gt;]   network address (or interface name) to bind to                                         
+         &lt;binding&gt;</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-g
--3|-2|-1|0|&lt;n&gt;     HTTP content-length (-3:chunked(*), -2:if known,
--1:none, 0:fixed large, &lt;n&gt;: your value )       &lt;stream_length&gt;</span></p>
+-3|-2|-1|0|&lt;n&gt;     HTTP content-length (-3:chunked(*), -2:if known,
+-1:none, 0:fixed large, &lt;n&gt;: your value )         &lt;stream_length&gt;</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-A
-0|1|2             HTTP caching mode (0=memory, 1=memory but claim it's
-infinite(*), 2=on disk)                        &lt;cache&gt;</span></p>
+0|1|2             HTTP caching mode (0=memory, 1=memory but claim it's
+infinite(*), 2=on disk)                    &lt;cache&gt;</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
-lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-P                 
- pause means stop live streams (always) or tracks (flow only)                                   
+lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-P                  
+pause means stop live streams (always) or tracks (flow only)                                     
 &lt;live_pause&gt;</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-C
-[-]&lt;codec&gt;,&lt;codec&gt; list of authorized codecs
+[-]&lt;codec&gt;,&lt;codec&gt; list of potential codecs
 (aac,ogg,ops,ogf,flc,alc,wav,aif,pcm,mp3). '-' removes codecs from default
 &lt;codecs&gt;</span></p>
 
-<p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
-lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-4                   
-keep aac/adts frames in a mp4 container (unwrap otherwise)                                     
-&lt;force_aac&gt;   </span></p>
+<p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><a
+name="_Hlk153726613"><span lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";
+color:#A31515'>-4                    keep aac/adts frames in a mp4 container
+(unwrap otherwise)                                        &lt;force_aac&gt; </span></a></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-c
 auto|thru|[pcm|flc[:&lt;q&gt;]|mp3[:&lt;r&gt;]|aac[:&lt;r&gt;][,r:[-]&lt;rate&gt;][,s:&lt;8|16|24&gt;][,flow]]
-transcode mode (auto)                   &lt;mode&gt;</span></p>
+transcode mode (auto)               &lt;mode&gt;</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-M
-&lt;modelname&gt;        set the squeezelite player model name sent to the
+&lt;modelname&gt;        set the squeezelite player model name sent to the
 server (default: </span><span lang=EN-US style='font-size:9.5pt;font-family:
 "Cascadia Mono";color:black'>UPnPBridge</span><span lang=EN-US
 style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>)</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-x
-&lt;config file&gt;      read config from file (default is ./config.xml)</span></p>
+&lt;config file&gt;      read config from file (default is ./config.xml)</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-i
-&lt;config file&gt;      discover players, save &lt;config file&gt; and exit</span></p>
+&lt;config file&gt;      discover players, save &lt;config file&gt; and exit</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
-lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-I                  
- auto save config at every network scan</span></p>
+lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-I                   
+auto save config at every network scan</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-d
-&lt;log&gt;=&lt;level&gt;      set logging level, logs:
+&lt;log&gt;=&lt;level&gt;      set logging level, logs:
 all|slimproto|slimmain|stream|decode|output|web|main|util|upnp, level:
 error|warn|info|debug|sdebug</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-f
-&lt;logfile&gt;          write debug to logfile</span></p>
+&lt;logfile&gt;          write debug to logfile</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-p
-&lt;pid file&gt;         write PID in file</span></p>
+&lt;pid file&gt;         write PID in file</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-z
@@ -1458,9 +1456,9 @@ color:black'> </span><span lang=EN-US style='font-size:11.0pt;color:black'>FLAC
 header]</span></p>
 
 <p class=MsoNormal style='margin-top:20.0pt;margin-right:0cm;margin-bottom:
-0cm;margin-left:0cm'><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;force_aac&gt;0
-| 1&lt;/force_aac&gt;</span></b><span lang=EN-GB style='font-size:11.0pt;
-color:black'> <i>default = 1</i></span></p>
+0cm;margin-left:0cm'><a name="_Hlk153726482"><b><span lang=EN-GB
+style='font-size:11.0pt;color:black'>&lt;force_aac&gt;0 | 1&lt;/force_aac&gt;</span></b></a><span
+lang=EN-GB style='font-size:11.0pt;color:black'> <i>default = 1</i></span></p>
 
 <p class=MsoNormal style='margin-top:5.0pt;margin-right:0cm;margin-bottom:0cm;
 margin-left:0cm'><i><span lang=EN-US style='font-size:11.0pt;color:black'>When
@@ -1477,8 +1475,8 @@ style='font-size:11.0pt;color:black'>.</span></i></p>
 <p class=MsoNormal><i><span lang=EN-GB style='font-size:11.0pt;color:black'>0 :
 don’t force unwrapping</span></i></p>
 
-<p class=MsoNormal><i><span lang=EN-GB style='font-size:11.0pt;color:black'>1: force
-unwrappin</span></i></p>
+<p class=MsoNormal><i><span lang=EN-GB style='font-size:11.0pt;color:black'>1:
+force unwrapping</span></i></p>
 
 <p class=MsoNormal><span lang=EN-US style='font-size:11.0pt;color:black'>[Audio
 codec parameters </span><span lang=EN-GB style='font-size:11.0pt;font-family:

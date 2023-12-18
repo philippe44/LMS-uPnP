@@ -492,14 +492,17 @@ static bool handle_http(struct thread_ctx_s *ctx, cache_buffer* cache, bool *use
 
 			// this is not an initial request (there is cache), so if offset is 0, we are all set
 			if (offset) {
-				if (cache->scope(cache, offset) == 0) {
+				if (!lingering && cache->total == offset) {
+					// special case where we just continue so we'll do a 200 with no cache
+					*use_cache = false;
+				} else if (cache->scope(cache, offset) == 0) {
 					// resend range with proper range header except for Sonos...
 					head = ctx->output.chunked ? "HTTP/1.1 206 Partial Content" : "HTTP/1.0 206 Partial Content";
 					if (type != SONOS) kd_vadd(resp, "Content-Range", "bytes %zu-%zu/*", offset, cache->total - 1);
 					cache->set_offset(cache, offset);
-					length = 0;
 					LOG_INFO("[%p]: serving partial content %zu->%zu", ctx, offset, cache->total - 1);
-				} else if (lingering &&  offset >= cache->total) {
+					length = 0;
+				} else if (lingering && offset >= cache->total) {
 					// there is an offset out of scope and we are drained, we are tapping in estimated length
 					send_body = false;
 					head = "HTTP/1.0 416 Range Not Satisfiable";

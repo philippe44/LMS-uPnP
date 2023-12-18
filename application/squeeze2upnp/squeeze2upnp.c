@@ -213,7 +213,7 @@ static char usage[] =
 		   "                        level: error|warn|info|debug|sdebug\n"
 		   "  -f <logfile>          write debug to logfile\n"
 		   "  -p <pid file>         write PID in file\n"
-		   "  -C [-]<codec>,<codec> list of authorized codecs (aac,ogg,ops,ogf,flc,alc,wav,aif,pcm,mp3). '-' removes codecs from default\n"
+		   "  -C [-]<codec>,<codec> list of potential codecs (aac,ogg,ops,ogf,flc,alc,wav,aif,pcm,mp3). '-' removes codecs from default\n"
 		   "  -4                    keep aac/adts frames in a mp4 container (unwrap otherwise)\n"
 		   "  -c (or -o) auto|thru|[pcm|flc[:<q>]|mp3[:<r>]|aac[:<r>][,r:[-]<rate>][,s:<8:16:24>][,flow]] transcode mode (auto)\n"
 		   

@@ -1,3 +1,6 @@
+3.0.0.7
+ - handle special HTTP case when range's offset is total cache
+ 
 3.0.0.6
  - send accept-range header in HEAD and 416 cases
  - fix range in 216 when not enougn data in cache
