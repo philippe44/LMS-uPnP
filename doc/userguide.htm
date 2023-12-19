@@ -325,9 +325,10 @@ be used to wrap vorbis, opus or flac (ogg, ops and ogf in LMS’ codec
 terminology). Like for mp4, most players won’t indicate what they actually
 support, beyond audio/ogg (the proper syntax for such mimetypes is
 audio/ogg;codecs=vorbis, audio/ogg;codecs=opus and audio/ogg;codecs=flac). The
-bridge is non-strict and will allow ogg, ops and ogf if audio/ogg is found, but
-it will send the full mimetype details to the player. If this fails, simply
-manually remove ogg/ops/of from the codecs list.</span></p>
+bridge is non-strict and will allow ogg, ops and ogf if “audio/ogg” is found in
+capabilities, but it will send the full mimetype details to the player. If this
+fails, simply manually remove the unsupported codecs amongst ogg/ops and ogf
+from the list.</span></p>
 
 <p class=MsoNormal style='background:white'><u><span lang=EN-GB
 style='color:black'>2.1.2 Full processing mode</span></u></p>
@@ -431,19 +432,20 @@ calculated value.</span></p>
 </span></b><span lang=EN-US>Last resort is to always force a “content-length”
 through an educated guess, based on bitrate and duration (with comfortable
 margin). When no data is available, the maximum 32 bits-integer (2^32-1) will
-be used. Note that in flow mode or when streaming live content, it fallbacks to
-no-length</span></p>
+be used. Note that in flow mode or when streaming live content, this mode
+fallbacks to “no-length”.</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm'><span lang=EN-US>&nbsp;</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm'><b><span lang=EN-US>Forced
 (&lt;value&gt;):</span></b><span lang=EN-US> As above, but with a user-defined
-value that can be as large as 2^63-1. It will always be sent, even in flow or
-when streaming live content, so it will limit the duration of these session.</span></p>
+but *fixed* value (duration and bitrate have no influence) that can be as large
+as 2^64-1. It will always be sent, even in flow or when streaming live content,
+so it will limit the duration of these session.</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm'><span lang=EN-US>&nbsp;</span></p>
 
-<p class=MsoNormal style='margin-bottom:0cm'><span lang=EN-US>The last two
+<p class=MsoNormal style='margin-bottom:0cm'><span lang=EN-US>These last two
 options create a different type of issues where some players will insist to
 receive their promised amount of bytes and will re-open the connection again
 and again, even when they are told their request cannot be satisfied (we gave
@@ -469,21 +471,21 @@ received audio. The &lt;cache&gt; option lets you tweak that behavior. It’s an
 require the same resource from the beginning after a long while. Still, if it
 happens, the cache can be on the disk in which case the past audio will be
 fully accessible. Note than when playing a webradio or in flow mode, disk cache
-falls back to memory cache for obvious reasons. The file is in you system’s
-temp folder.</span></p>
+falls back to memory cache for obvious reasons. The file is in your system’s
+temp folder. See command line &lt;A&gt; as well.</span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm'><span lang=EN-US>&nbsp;</span></p>
 
-<p class=MsoNormal style='margin-bottom:0cm'><span lang=EN-US>The UPnP standard
-tries to handle this problem by letting servers indicate if they can serve the
-whole file or, if not, which sub-parts they can offer. It includes information
-like does the head or the tail of the audio progresses. The vast majority of UPnP
-players ignore these indications but when one does not, it can be a problem to
-tell the truth. For example, if the bridge reports it only has a portion of the
-file in cache, some players will refuse to pause any track because they
-estimate it’s a live stream. The solution is to either use a disk cache or
-claim that our cache is complete although just a part is in memory (a reward
-for lying…). </span></p>
+<p class=MsoNormal style='margin-bottom:0cm'><span lang=EN-US>The UPnP/DLNA
+(mainly DLNA)  standard tries to handle this problem by letting servers
+indicate if they can serve the whole file or, if not, which sub-parts they can
+offer. It includes information like does the head or the tail of the audio
+progresses. The vast majority of UPnP players ignore these indications but when
+one does not, it can be a problem to tell the truth. For example, if the bridge
+reports it only has a portion of the file in cache, some players will refuse to
+pause any track because they estimate it’s a live stream. The solution is to
+either use a disk cache (A2) or claim that our cache is complete (A1) although
+just a part is in memory (a reward for lying…). </span></p>
 
 <h2 style='margin-top:12.0pt;margin-right:0cm;margin-bottom:6.0pt;margin-left:
 0cm;page-break-after:avoid;background:white'><span lang=EN-GB style='font-size:
@@ -582,10 +584,9 @@ commands (remote/buttons)</span></h2>
 
 <p class=MsoNormal><span lang=EN-GB style='color:black'>LMS takes full control
 of players and t</span><span lang=EN-GB>o use a registered one independently,
-best is to switch it off in LMS. Then whatever happens to the player is not
-forwarded to LMS and no LMS command will be sent that would interfere with it.
-Only when you switch the player back on from LMS will it be under the control
-of LMS.</span></p>
+best is to switch it off in LMS. Then whatever happens to the player is not forwarded
+to LMS and no LMS command will be sent that would interfere with it. Only when
+you switch the player back on from LMS will it be under the control of LMS.</span></p>
 
 <p class=MsoNormal><span lang=EN-GB>Having to switch an UPnP player off every
 time you want to use it independently from LMS might be inconvenient.
@@ -817,10 +818,10 @@ lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-C
 (aac,ogg,ops,ogf,flc,alc,wav,aif,pcm,mp3). '-' removes codecs from default
 &lt;codecs&gt;</span></p>
 
-<p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><a
-name="_Hlk153726613"><span lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";
-color:#A31515'>-4                    keep aac/adts frames in a mp4 container
-(unwrap otherwise)                                        &lt;force_aac&gt; </span></a></p>
+<p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
+lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-4                   
+keep aac/adts frames in a mp4 container (unwrap otherwise)                                       
+&lt;force_aac&gt; </span></p>
 
 <p class=MsoNormal style='margin-bottom:0cm;text-autospace:none'><span
 lang=EN-US style='font-size:9.5pt;font-family:"Cascadia Mono";color:#A31515'>-c
@@ -1200,9 +1201,9 @@ color:black'> Maximum volume]</span></p>
 style='font-size:11.0pt;color:black'>Gapless play is by setting a “current
 track/URI” and a “next track/URI” in UPnP players. When they reach the end of
 “current track/URI”, players move to the next one automatically. Some players
-do not support this feature and will stop when the “current track/URI” ends.
-This options forces the next track to be played on faulty players, but there
-will be a gap.&nbsp; Some players buffer the “next track/URI” while playing the
+do not support this feature and will stop when the “current track/URI” ends. This
+options forces the next track to be played on faulty players, but there will be
+a gap.&nbsp; Some players buffer the “next track/URI” while playing the
 “currentURI” to do real gapless. Other players, although they support “next
 track/URI”, wait for the end of the current track before buffering the next
 one, and that will create a gap.</span></i></p>
@@ -1224,10 +1225,10 @@ lang=EN-US style='font-size:11.0pt;color:black'> Gapless]</span></p>
 <p class=MsoNormal style='margin-top:5.0pt;margin-right:0cm;margin-bottom:0cm;
 margin-left:0cm'><i><span lang=EN-GB style='font-size:11.0pt;color:black'>When
 a next track is requested too early before the end of the current one, some
-service may consider that the connection is stalled and will close it.. This
-happens for players with very large buffers. Set here the number of seconds,
-before the end of the current track, when the next one is requested (0 allows
-request immediately)</span></i></p>
+service may consider that the connection is stalled and will close it.. This happens
+for players with very large buffers. Set here the number of seconds, before the
+end of the current track, when the next one is requested (0 allows request
+immediately)</span></i></p>
 
 <p class=MsoNormal><span lang=EN-US style='font-size:11.0pt;color:black'>[Streaming
 options </span><span style='font-size:11.0pt;font-family:Wingdings;color:black'>è</span><span
@@ -1456,9 +1457,9 @@ color:black'> </span><span lang=EN-US style='font-size:11.0pt;color:black'>FLAC
 header]</span></p>
 
 <p class=MsoNormal style='margin-top:20.0pt;margin-right:0cm;margin-bottom:
-0cm;margin-left:0cm'><a name="_Hlk153726482"><b><span lang=EN-GB
-style='font-size:11.0pt;color:black'>&lt;force_aac&gt;0 | 1&lt;/force_aac&gt;</span></b></a><span
-lang=EN-GB style='font-size:11.0pt;color:black'> <i>default = 1</i></span></p>
+0cm;margin-left:0cm'><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;force_aac&gt;0
+| 1&lt;/force_aac&gt;</span></b><span lang=EN-GB style='font-size:11.0pt;
+color:black'> <i>default = 1</i></span></p>
 
 <p class=MsoNormal style='margin-top:5.0pt;margin-right:0cm;margin-bottom:0cm;
 margin-left:0cm'><i><span lang=EN-US style='font-size:11.0pt;color:black'>When
@@ -1476,7 +1477,7 @@ style='font-size:11.0pt;color:black'>.</span></i></p>
 don’t force unwrapping</span></i></p>
 
 <p class=MsoNormal><i><span lang=EN-GB style='font-size:11.0pt;color:black'>1:
-force unwrapping</span></i></p>
+force unwrappin</span></i></p>
 
 <p class=MsoNormal><span lang=EN-US style='font-size:11.0pt;color:black'>[Audio
 codec parameters </span><span lang=EN-GB style='font-size:11.0pt;font-family:
