@@ -496,7 +496,7 @@ void 		_checkfade(bool, struct thread_ctx_s *ctx);
 void 		_checkduration(u32_t frames, struct thread_ctx_s *ctx);
 
 // output_http.c
-void 		output_flush(struct thread_ctx_s *ctx);
+bool 		output_flush(struct thread_ctx_s *ctx, bool full);
 bool		output_start(struct thread_ctx_s *ctx);
 bool 		output_abort(struct thread_ctx_s *ctx, int index);
 void 		wake_output(struct thread_ctx_s *ctx);

@@ -66,7 +66,7 @@ void sq_wipe_device(struct thread_ctx_s *ctx) {
 	mutex_unlock(ctx->cli_mutex);
 
 	slimproto_close(ctx);
-	output_flush(ctx);
+	output_flush(ctx, true);
 	output_close(ctx);
 #if RESAMPLE
 	process_end(ctx);

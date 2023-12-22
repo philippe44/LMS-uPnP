@@ -1,3 +1,7 @@
+3.0.2
+ - 'q' and 'f' in slimproto have always been inverted
+ - try to handle 'f' as LMS expects, i.e. just cancel the streaming track
+ 
 3.0.1
  - handle special HTTP case when range's offset is total cache
  - send accept-range header in HEAD and 416 cases

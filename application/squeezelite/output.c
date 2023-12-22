@@ -684,37 +684,47 @@ void _output_end_stream(struct buffer *buf, struct thread_ctx_s *ctx) {
 }
 
 /*---------------------------------------------------------------------------*/
-void output_flush(struct thread_ctx_s *ctx) {
+bool output_flush(struct thread_ctx_s *ctx, bool full) {
 	LOCK_O;
 
-	ctx->render.ms_played = 0;
 	/*
 	Don't know actually if it's stopped or not but it will be and that stop event
 	does not matter as we are flushing the whole thing. But if we want the next
 	playback to work, better force that status to RD_STOPPED
 	*/
-	if (ctx->output.state != OUTPUT_OFF) ctx->output.state = OUTPUT_STOPPED;
+	if (ctx->output.state != OUTPUT_OFF && full) ctx->output.state = OUTPUT_STOPPED;
 
 	for (int i = 0; i < ARRAY_COUNT(ctx->output_thread); i++) {
-		if (!ctx->output_thread[i].running) continue;
+		if (!ctx->output_thread[i].running || (ctx->output_thread[i].lingering && !full)) continue;
 		ctx->output_thread[i].running = false;
 		UNLOCK_O;
 		pthread_join(ctx->output_thread[i].thread, NULL);
 		LOCK_O;
 	}
 
-	ctx->output.track_started = false;
+	// this should only be done upon full flush, not just streaming
+	if (full) {
+		ctx->render.ms_played = 0;
+		ctx->render.index = -1;
+		ctx->output.track_started = false;
+	} else {
+		ctx->output.completed = true;
+	}
+
+	// should always be done because we stop the streaming process
+	bool flushed = ctx->output.track_start != NULL;
 	ctx->output.track_start = NULL;
 	ctx->output.encode.flow = false;
+
 	NFREE(ctx->output.header.buffer);
 	output_free_icy(ctx);
 	_output_end_stream(NULL, ctx);
-	ctx->render.index = -1;
 	_buf_resize(ctx->outputbuf, OUTPUTBUF_IDLE_SIZE);
 
 	UNLOCK_O;
 
 	LOG_DEBUG("[%p]: flush output buffer", ctx);
+	return flushed;
 }
 
 /*---------------------------------------------------------------------------*/

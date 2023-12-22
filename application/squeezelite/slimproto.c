@@ -233,23 +233,26 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 	case 't':
 		sendSTAT("STMt", strm->replay_gain, ctx); // STMt replay_gain is no longer used to track latency, but support it
 		break;
-	case 'f':
-		decode_flush(ctx);
-		output_flush(ctx);
-		stream_disconnect(ctx);
-		ctx->status.ms_played = 0;
-		sendSTAT("STMf", 0, ctx);
-		buf_flush(ctx->streambuf);
-		break;
 	case 'q':
 		decode_flush(ctx);
-		output_flush(ctx);
+		output_flush(ctx, true);
 		ctx->status.ms_played = 0;
-		if (stream_disconnect(ctx))
-			sendSTAT("STMf", 0, ctx);
+		stream_disconnect(ctx);
+		// this is noop for LMS up to 8.4 at least
+		sendSTAT("STMf", 0, ctx);
 		buf_flush(ctx->streambuf);
 		if (ctx->last_command != 'q') ctx->callback(ctx->MR, SQ_STOP);
 		break;
+	case 'f': {
+		decode_flush(ctx);
+		bool flushed = output_flush(ctx, false);
+		// this is noop for LMS up to 8.4 at least
+		if (flushed || stream_disconnect(ctx))	sendSTAT("STMf", 0, ctx);
+		buf_flush(ctx->streambuf);
+		ctx->canSTMdu = true;
+		ctx->callback(ctx->MR, SQ_FLUSH);
+		break;
+	}
 	case 'p':
 		{
 			unsigned interval = unpackN(&strm->replay_gain);
