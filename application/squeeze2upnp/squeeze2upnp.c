@@ -1100,9 +1100,9 @@ static void *UpdateThread(void *args)
 
 				for (int i = 0; i < MAX_RENDERERS; i++) {
 					Device = glMRDevices + i;
-					if (Device->Running && (((Device->sqState != SQ_PLAY || Device->State != PLAYING) &&
-						((Device->Config.RemoveTimeout != -1 && now - Device->LastSeen > Device->Config.RemoveTimeout) || 
-						 Device->ErrorCount > MAX_ACTION_ERRORS)) || Device->ErrorCount < 0)) {
+					if (Device->Running && (Device->ErrorCount < 0 || Device->ErrorCount > MAX_ACTION_ERRORS ||
+						(Device->sqState == SQ_STOP && Device->State == STOPPED &&
+						 Device->Config.RemoveTimeout != -1 && now - Device->LastSeen > Device->Config.RemoveTimeout))) {
 						pthread_mutex_lock(&Device->Mutex);
 						LOG_INFO("[%p]: removing unresponsive player (%s)", Device, Device->friendlyName);
 						sq_delete_device(Device->SqueezeHandle);
