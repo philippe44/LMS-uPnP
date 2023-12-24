@@ -1149,7 +1149,6 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 			 * disable it (means that ALAC should be disabled in codecs) */
 
 			mimetype = mimetype_from_codec(out->codec, ctx->mimetypes, out->sample_size);
-			out->icy.allowed &= format == 'm' || format == 'a' || format == 'A' || (format == 'f' && out->sample_size == 'o');
 			out->codec = '*';
 
 			if (format == 'a' && mimetype) {
@@ -1161,6 +1160,11 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 					LOG_INFO("[%p]: forcing mp4 => adts locally", ctx);
 				}
 			} else if (format == 'f' && out->sample_size != 'o') out->codec = 'F';
+
+			// decide if we can allow ICY metadata (u,v,m,f+o,a+2,a+5=>A)	
+			out->icy.allowed &= format == 'm' || format == 'u' || format == 'v' ||
+								(format == 'f' && out->sample_size == 'o') ||
+								(format == 'a' &&  (out->codec == 'A' || out->sample_size == '2'));
 		}
 
 	} else if (out->encode.mode == ENCODE_PCM) {
