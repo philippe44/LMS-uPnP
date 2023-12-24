@@ -452,7 +452,7 @@ bool sq_callback(void *caller, sq_action_t action, ...)
 			Device->sqState = action;
 			Device->ShortTrack = false;
 			Device->ShortTrackWait = 0;
-			Device->LastSeen = gettime_ms();
+			Device->LastSeen = gettime_ms() / 1000;
 			break;
 		case SQ_PAUSE:
 			if (Device->Config.LivePause || Device->Duration) AVTBasic(Device, "Pause");

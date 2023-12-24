@@ -1,3 +1,7 @@
+3.0.4
+ - LastSeen is in seconds not millisec so when stoping to play, player would get removed
+ - allow ogg as part of ICY-enabled codecs
+ 
 3.0.3
  - change device removal logic: remove it
 	 * in any state if there is socket fatal error (or)

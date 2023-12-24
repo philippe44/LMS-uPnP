@@ -1139,6 +1139,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 										 out->encode.sample_rate, out->channels,
 										 ctx->mimetypes, ctx->config.raw_audio_format);
 			out->encode.mode = ENCODE_PCM;
+			out->icy.allowed = false;
 		} else {
 			/* when having codec 'a', it can be mp4/aac (5) or 2 (adts/aac). In case of mp4, if the
 			 * mimetype of the player only has aac, we'll use out mp4-to-adts unwrapper codec. In
@@ -1148,6 +1149,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 			 * disable it (means that ALAC should be disabled in codecs) */
 
 			mimetype = mimetype_from_codec(out->codec, ctx->mimetypes, out->sample_size);
+			out->icy.allowed &= format == 'm' || format == 'a' || format == 'A' || (format == 'f' && out->sample_size == 'o');
 			out->codec = '*';
 
 			if (format == 'a' && mimetype) {
@@ -1162,6 +1164,8 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 		}
 
 	} else if (out->encode.mode == ENCODE_PCM) {
+
+		out->icy.allowed = false;
 
 		if (out->encode.sample_rate && out->encode.sample_size) {
 			// everything is fixed
@@ -1197,6 +1201,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 
 		mimetype = mimetype_from_codec('f', ctx->mimetypes, '\0');
 		if (out->encode.sample_size > 24) out->encode.sample_size = 24;
+		out->icy.allowed = false;
 
 	} else if (out->encode.mode == ENCODE_MP3) {
 
@@ -1234,7 +1239,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 
 		info.format = out->format = mimetype_to_format(out->mimetype);
 		out->out_endian = (out->format == 'w');
-		out->length = ctx->config.stream_length;
+		out->length = ctx->config.stream_length;						
 
 		if (codec_open(out->codec, out->sample_size, out->sample_rate, out->channels,
 			out->in_endian, ctx) &&	output_start(ctx)) {

@@ -445,8 +445,7 @@ static bool handle_http(struct thread_ctx_s *ctx, cache_buffer* cache, bool *use
 	ctx->output.chunked = strstr(request, "HTTP/1.1") != NULL && ctx->output.length == HTTP_LENGTH_CHUNKED;
 
 	// check if add ICY metadata is needed (only on live stream)
-	if (ctx->output.icy.allowed && ((p = kd_lookup(headers, "Icy-MetaData")) != NULL) && atol(p) &&
-		(ctx->output.format == 'm' || ctx->output.format == 'a' || ctx->output.format == 'A')) {    
+	if (ctx->output.icy.allowed && ((p = kd_lookup(headers, "Icy-MetaData")) != NULL) && atol(p)) {
 		kd_vadd(resp, "icy-metaint", "%u", ICY_INTERVAL);
 		LOCK_O;
 		ctx->output.icy.interval = ctx->output.icy.remain = ICY_INTERVAL;
