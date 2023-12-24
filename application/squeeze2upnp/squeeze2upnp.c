@@ -452,7 +452,6 @@ bool sq_callback(void *caller, sq_action_t action, ...)
 			Device->sqState = action;
 			Device->ShortTrack = false;
 			Device->ShortTrackWait = 0;
-			Device->LastSeen = gettime_ms() / 1000;
 			break;
 		case SQ_PAUSE:
 			if (Device->Config.LivePause || Device->Duration) AVTBasic(Device, "Pause");
@@ -667,6 +666,8 @@ static void _SyncNotifState(char *State, struct sMR* Device)
 			NextTrack(Device);
 		}
 
+		// reset presence timeout to avoid immediate disconnect
+		Device->LastSeen = gettime_ms() / 1000;
 		Device->State = STOPPED;
 	}
 	if (!strcmp(State, "PLAYING") && (Device->State != PLAYING)) {
@@ -1102,8 +1103,8 @@ static void *UpdateThread(void *args)
 				for (int i = 0; i < MAX_RENDERERS; i++) {
 					Device = glMRDevices + i;
 					if (Device->Running && (Device->ErrorCount < 0 || Device->ErrorCount > MAX_ACTION_ERRORS ||
-						(Device->sqState == SQ_STOP && Device->State == STOPPED &&
-						 Device->Config.RemoveTimeout != -1 && now - Device->LastSeen > Device->Config.RemoveTimeout))) {
+						(Device->State == STOPPED && Device->Config.RemoveTimeout != -1 && 
+						 now - Device->LastSeen > Device->Config.RemoveTimeout))) {
 						pthread_mutex_lock(&Device->Mutex);
 						LOG_INFO("[%p]: removing unresponsive player (%s)", Device, Device->friendlyName);
 						sq_delete_device(Device->SqueezeHandle);
