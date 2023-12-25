@@ -354,6 +354,8 @@ uint32_t sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, int offse
 		return hash32(metadata->artist) ^ hash32(metadata->title) ^ hash32(metadata->artwork);
 	}
 
+	metadata->valid = true;
+
 	// the tag means the it's a repeating stream whose length might be known
 	if ((p = cli_find_tag(rsp, "repeating_stream")) != NULL) {
 		offset = 0;

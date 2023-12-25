@@ -30,6 +30,7 @@ typedef struct metadata_s {
 	uint32_t bitrate;
 	bool remote;
 	int repeating;
+	bool valid;
 } metadata_t;
 
 struct metadata_s* metadata_init(struct metadata_s* self);
