@@ -1083,7 +1083,8 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 	else if (strcasestr(mode, "null")) out->encode.mode = ENCODE_NULL;
 	else if (!out->duration && ctx->config.send_icy != ICY_NONE &&
 			 ((format == 'm' && mimetype_match_codec(ctx->mimetypes, 2, "mp3", "mpeg")) ||
-		      (format == 'a' && mimetype_match_codec(ctx->mimetypes, 3, "aac", "mp4", "m4a") && out->sample_size == '2')))
+		      (format == 'a' && out->sample_size == '2' && mimetype_match_codec(ctx->mimetypes, 3, "aac", "mp4", "m4a")) ||
+			  ((format == 'o' || format == 'u' || (format == 'f' && out->sample_size == 'o')) && mimetype_match_codec(ctx->mimetypes, 1, "ogg")))) 
 		out->encode.mode = ENCODE_THRU;
 	else out->encode.mode = ENCODE_FLAC;
 
@@ -1162,7 +1163,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 			} else if (format == 'f' && out->sample_size != 'o') out->codec = 'F';
 
 			// decide if we can allow ICY metadata (u,v,m,f+o,a+2,a+5=>A)	
-			out->icy.allowed &= format == 'm' || format == 'u' || format == 'v' ||
+			out->icy.allowed &= format == 'm' || format == 'u' || format == 'o' ||
 								(format == 'f' && out->sample_size == 'o') ||
 								(format == 'a' &&  (out->codec == 'A' || out->sample_size == '2'));
 		}

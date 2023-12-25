@@ -1,3 +1,7 @@
+3.0.7
+ - add all ogg containers (vorbis, opus and flac) to thru in auto mode with live streams
+ - for icy, vorbis is 'o' not 'v'
+ 
 3.0.6
  - only use device's STOPPED state for timeout but reset it at every STOP
  
