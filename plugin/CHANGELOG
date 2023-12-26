@@ -1,3 +1,9 @@
+3.0.10
+ - DescDoc memory leak
+ 
+3.0.9
+ - when player don't respond to UPnP discovery, keep them as long as their DescDoc can be downloaded
+ 
 3.0.8 
  - auto mode ICY only used if metadata is valid
  

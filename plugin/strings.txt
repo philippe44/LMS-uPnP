@@ -169,7 +169,7 @@ PLUGIN_UPNPBRIDGE_STREAMOPTIONS
 PLUGIN_UPNPBRIDGE_STREAMOPTIONS_DESC
 	EN	Options for streaming to UPnP player (see user guide)
 	EN	<br>- LMS does not provide the file size to be sent. The best HTTP mode is to use 'chunked' but some UPnP players require
-	EN	'no-length' to be used. Use 'if known' to send size only when using pcm audio and duration is known. If needed, "automatic"
+	EN	'no-length' to be used. Use 'if known' to send size only when using pcm audio and duration is known. If needed, "estimate"
 	EN	let the bridge estimate a length (except for live stream where no-length is used) and "fixed" uses 2^32-1 always.
 	EN	<br>- To satisfy player's request for HTTP seek, a cache is used. It can be in memory, reported limited or infinite or on
 	EN	disk (fallback in memory when live streaming or using flow)
@@ -195,7 +195,7 @@ PLUGIN_UPNPBRIDGE_HTTPMODENOLENGTH
 	EN	no length
 	
 PLUGIN_UPNPBRIDGE_HTTPMODEAUTO
-	EN	automatic
+	EN	estimate
 	
 PLUGIN_UPNPBRIDGE_HTTPMODEFIXED
 	EN	fixed

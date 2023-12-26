@@ -1105,11 +1105,20 @@ static void *UpdateThread(void *args)
 					if (Device->Running && (Device->ErrorCount < 0 || Device->ErrorCount > MAX_ACTION_ERRORS ||
 						(Device->State == STOPPED && Device->Config.RemoveTimeout != -1 && 
 						 now - Device->LastSeen > Device->Config.RemoveTimeout))) {
-						pthread_mutex_lock(&Device->Mutex);
-						LOG_INFO("[%p]: removing unresponsive player (%s)", Device, Device->friendlyName);
-						sq_delete_device(Device->SqueezeHandle);
-						// device's mutex returns unlocked
-						DelMRDevice(Device);
+						// if device does not answer, try to download its DescDoc
+						IXML_Document* DescDoc = NULL;
+						if (UpnpDownloadXmlDoc(Update->Data, &DescDoc) != UPNP_E_SUCCESS) {
+							pthread_mutex_lock(&Device->Mutex);
+							LOG_INFO("[%p]: removing unresponsive player (%s)", Device, Device->friendlyName);
+							sq_delete_device(Device->SqueezeHandle);
+							// device's mutex returns unlocked
+							DelMRDevice(Device);
+						} else {
+							// device is in trouble, but let's renew grace period
+							Device->LastSeen = now;
+							LOG_INFO("[%p]: %s mute to discovery, but answers UPnP, so keep it", Device, Device->friendlyName);
+						}
+						if (DescDoc) ixmlDocument_free(DescDoc);
 					}
 				}
 
@@ -1388,12 +1397,12 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	strcpy(Device->friendlyName, friendlyName);
 	NFREE(friendlyName);
 
-	char ip[32];
-	sscanf(location, "http://%[^:]", ip);
-		
+	char addr[32];
+	sscanf(location, "http://%[^:]", addr);
+
 	if (!memcmp(Device->sq_config.mac, "\0\0\0\0\0\0", 6)) {
 		uint32_t mac_size = 6;
-		if (SendARP(inet_addr(ip), INADDR_ANY, Device->sq_config.mac, &mac_size)) {
+		if (SendARP(inet_addr(addr), INADDR_ANY, Device->sq_config.mac, &mac_size)) {
 			*(uint32_t*)(Device->sq_config.mac + 2) = hash32(Device->UDN);
 			LOG_INFO("[%p]: creating MAC", Device);
 		}
@@ -1412,7 +1421,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	if (Device->Master) {
 		LOG_INFO("[%p] skipping Sonos slave %s", Device, Device->friendlyName);
 	} else {
-		LOG_INFO("[%p]: adding renderer (%s) %s with mac %hX-%X", Device, Device->friendlyName, ip,
+		LOG_INFO("[%p]: adding renderer (%s) %s with mac %hX-%X", Device, Device->friendlyName, addr,
 				 *(uint16_t*)Device->sq_config.mac, *(uint32_t*)(Device->sq_config.mac + 2));
 	}
 
