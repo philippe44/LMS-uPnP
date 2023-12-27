@@ -1108,7 +1108,7 @@ static void *UpdateThread(void *args)
 						 now - Device->LastSeen > Device->Config.RemoveTimeout))) {
 						// if device does not answer, try to download its DescDoc
 						IXML_Document* DescDoc = NULL;
-						if (UpnpDownloadXmlDoc(Update->Data, &DescDoc) != UPNP_E_SUCCESS) {
+						if (UpnpDownloadXmlDoc(Device->DescDocURL, &DescDoc) != UPNP_E_SUCCESS) {
 							pthread_mutex_lock(&Device->Mutex);
 							LOG_INFO("[%p]: removing unresponsive player (%s)", Device, Device->friendlyName);
 							sq_delete_device(Device->SqueezeHandle);
@@ -1437,6 +1437,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 
 	if (Sink) {
 		Device->MimeTypes = ParseProtocolInfo(Sink, Device->Config.ForcedMimeTypes);
+		free(Sink);
 	} else {
 		LOG_WARN("[%p] unable to get protocol info, set <forced_mimetypes>", Device);
 	} 

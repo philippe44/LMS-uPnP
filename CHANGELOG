@@ -1,3 +1,7 @@
+3.0.12 (NR)
+ - memory leak in Sink (ahah) parsing
+ - when player timeout's, use its DescDocURL, not the UpdateData which is NULL...
+ 
 3.0.11
  - refactor ProtocolInfo parsing and improve + cleanup old code
  - add mimetype application/ogg as authorized option for ogg
