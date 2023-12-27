@@ -28,12 +28,12 @@ int 				_voidHandler(Upnp_EventType EventType, const void *_Event, void *Cookie)
 
 /*----------------------------------------------------------------------------*/
 int CalcGroupVolume(struct sMR *Device) {
-	int i, n = 0;
+	int n = 0;
 	double GroupVolume = 0;
 
 	if (!*Device->Service[GRP_REND_SRV_IDX].ControlURL) return -1;
 
-	for (i = 0; i < MAX_RENDERERS; i++) {
+	for (int i = 0; i < MAX_RENDERERS; i++) {
 		struct sMR *p = glMRDevices + i;
 		if (p->Running && (p == Device || p->Master == Device)) {
 			if (p->Volume == -1) p->Volume = CtrlGetVolume(p);
@@ -46,25 +46,22 @@ int CalcGroupVolume(struct sMR *Device) {
 }
 
 /*----------------------------------------------------------------------------*/
-struct sMR *GetMaster(struct sMR *Device, char **Name)
-{
-	IXML_Document *ActionNode = NULL, *Response;
-	char *Body;
+struct sMR *GetMaster(struct sMR *Device, char **Name) {
+	IXML_Document *Response;
 	struct sMR *Master = NULL;
 	struct sService *Service = &Device->Service[TOPOLOGY_IDX];
 	bool done = false;
 
 	if (!*Service->ControlURL) return NULL;
 
-
-	ActionNode = UpnpMakeAction("GetZoneGroupState", Service->Type, 0, NULL);
+	IXML_Document* ActionNode = UpnpMakeAction("GetZoneGroupState", Service->Type, 0, NULL);
 
 	UpnpSendAction(glControlPointHandle, Service->ControlURL, Service->Type,
 								 NULL, ActionNode, &Response);
 
 	if (ActionNode) ixmlDocument_free(ActionNode);
 
-	Body = XMLGetFirstDocumentItem(Response, "ZoneGroupState", true);
+	char *Body = XMLGetFirstDocumentItem(Response, "ZoneGroupState", true);
 	if (Response) ixmlDocument_free(Response);
 
 	Response = ixmlParseBuffer(Body);
@@ -124,11 +121,8 @@ struct sMR *GetMaster(struct sMR *Device, char **Name)
 }
 
 /*----------------------------------------------------------------------------*/
-void FlushMRDevices(void)
-{
-	int i;
-
-	for (i = 0; i < MAX_RENDERERS; i++) {
+void FlushMRDevices(void) {
+	for (int i = 0; i < MAX_RENDERERS; i++) {
 		struct sMR *p = &glMRDevices[i];
 		pthread_mutex_lock(&p->Mutex);
 		if (p->Running) {
@@ -141,8 +135,7 @@ void FlushMRDevices(void)
 }
 
 /*----------------------------------------------------------------------------*/
-void DelMRDevice(struct sMR *p)
-{
+void DelMRDevice(struct sMR *p) {
 	// already locked expect for failed creation which means a trylock is fine
 	pthread_mutex_trylock(&p->Mutex);
 
@@ -164,8 +157,7 @@ void DelMRDevice(struct sMR *p)
 }
 
 /*----------------------------------------------------------------------------*/
-struct sMR* CURL2Device(const UpnpString *CtrlURL)
-{
+struct sMR* CURL2Device(const UpnpString *CtrlURL) {
 	for (int i = 0; i < MAX_RENDERERS; i++) {
 		if (!glMRDevices[i].Running) continue;
 		for (int j = 0; j < NB_SRV; j++) {
@@ -179,8 +171,7 @@ struct sMR* CURL2Device(const UpnpString *CtrlURL)
 }
 
 /*----------------------------------------------------------------------------*/
-struct sMR* SID2Device(const UpnpString *SID)
-{
+struct sMR* SID2Device(const UpnpString *SID) {
 	for (int i = 0; i < MAX_RENDERERS; i++) {
 		if (!glMRDevices[i].Running) continue;
 		for (int j = 0; j < NB_SRV; j++) {
@@ -194,8 +185,7 @@ struct sMR* SID2Device(const UpnpString *SID)
 }
 
 /*----------------------------------------------------------------------------*/
-struct sService *EventURL2Service(const UpnpString *URL, struct sService *s)
-{
+struct sService *EventURL2Service(const UpnpString *URL, struct sService *s) {
 	for (int i = 0; i < NB_SRV; s++, i++) {
 		if (strcmp(s->EventURL, UpnpString_get_String(URL))) continue;
 		return s;
@@ -205,8 +195,7 @@ struct sService *EventURL2Service(const UpnpString *URL, struct sService *s)
 }
 
 /*----------------------------------------------------------------------------*/
-struct sMR* UDN2Device(const char *UDN)
-{
+struct sMR* UDN2Device(const char *UDN) {
 	for (int i = 0; i < MAX_RENDERERS; i++) {
 		if (!glMRDevices[i].Running) continue;
 		if (!strcmp(glMRDevices[i].UDN, UDN)) {
@@ -218,8 +207,7 @@ struct sMR* UDN2Device(const char *UDN)
 }
 
 /*----------------------------------------------------------------------------*/
-bool CheckAndLock(struct sMR *Device)
-{
+bool CheckAndLock(struct sMR *Device) {
 	if (!Device) {
 		LOG_INFO("device is NULL");
 		return false;
@@ -243,8 +231,7 @@ bool CheckAndLock(struct sMR *Device)
 /*----------------------------------------------------------------------------*/
 
 /*----------------------------------------------------------------------------*/
-static IXML_NodeList *XMLGetNthServiceList(IXML_Document *doc, unsigned int n, bool *contd)
-{
+static IXML_NodeList *XMLGetNthServiceList(IXML_Document *doc, unsigned int n, bool *contd) {
 	IXML_NodeList *ServiceList = NULL;
 	IXML_NodeList *servlistnodelist = NULL;
 	IXML_Node *servlistnode = NULL;
@@ -396,34 +383,28 @@ bool XMLFindAction(const char* base, char* service, char* action) {
 }
 
 /*----------------------------------------------------------------------------*/
-char *XMLGetChangeItem(IXML_Document *doc, char *Tag, char *SearchAttr, char *SearchVal, char *RetAttr)
-{
-	IXML_Node *node;
-	IXML_Document *ItemDoc;
-	IXML_Element *LastChange;
-	IXML_NodeList *List;
-	char *buf, *ret = NULL;
-	uint32_t i;
+char *XMLGetChangeItem(IXML_Document *doc, char *Tag, char *SearchAttr, char *SearchVal, char *RetAttr) {
+	char *ret = NULL;
 
-	LastChange = ixmlDocument_getElementById(doc, "LastChange");
+	IXML_Element* LastChange = ixmlDocument_getElementById(doc, "LastChange");
 	if (!LastChange) return NULL;
 
-	node = ixmlNode_getFirstChild((IXML_Node*) LastChange);
+	IXML_Node* node = ixmlNode_getFirstChild((IXML_Node*) LastChange);
 	if (!node) return NULL;
 
-	buf = (char*) ixmlNode_getNodeValue(node);
+	char *buf = (char*) ixmlNode_getNodeValue(node);
 	if (!buf) return NULL;
 
-	ItemDoc = ixmlParseBuffer(buf);
+	IXML_Document* ItemDoc = ixmlParseBuffer(buf);
 	if (!ItemDoc) return NULL;
 
-	List = ixmlDocument_getElementsByTagName(ItemDoc, Tag);
+	IXML_NodeList* List = ixmlDocument_getElementsByTagName(ItemDoc, Tag);
 	if (!List) {
 		ixmlDocument_free(ItemDoc);
 		return NULL;
 	}
 
-	for (i = 0; i < ixmlNodeList_length(List); i++) {
+	for (uint32_t i = 0; i < ixmlNodeList_length(List); i++) {
 		IXML_Node *node = ixmlNodeList_item(List, i);
 		IXML_Node *attr = _getAttributeNode(node, SearchAttr);
 
@@ -446,18 +427,16 @@ char *XMLGetChangeItem(IXML_Document *doc, char *Tag, char *SearchAttr, char *Se
 }
 
 /*----------------------------------------------------------------------------*/
-static IXML_Node *_getAttributeNode(IXML_Node *node, char *SearchAttr)
-{
+static IXML_Node *_getAttributeNode(IXML_Node *node, char *SearchAttr) {
 	IXML_Node *ret = NULL;
 	IXML_NamedNodeMap *map = ixmlNode_getAttributes(node);
-	int i;
 
 	/*
 	supposed to act like but case insensitive
 	ixmlElement_getAttributeNode((IXML_Element*) node, SearchAttr);
 	*/
 
-	for (i = 0; i < ixmlNamedNodeMap_getLength(map); i++) {
+	for (int i = 0; i < ixmlNamedNodeMap_getLength(map); i++) {
 		ret = ixmlNamedNodeMap_item(map, i);
 		if (strcasecmp(ixmlNode_getNodeName(ret), SearchAttr)) ret = NULL;
 		else break;
@@ -510,66 +489,55 @@ char *uPNPEvent2String(Upnp_EventType S)
 }
 
 /*----------------------------------------------------------------------------*/
-char** ParseProtocolInfo(char *Info, char *Forced) {
-	char *p = Info, **MimeTypes = calloc(MAX_MIMETYPES + 1, sizeof(char*));
-	int n = 0, i = 0;
-	int size = strlen(Info);
-	char MimeType[STR_LEN];
-	bool MatchAll = strcasestr(Info, "http-get:*:*:") || strcasestr(Info, "http-get:::");
+char** ParseProtocolInfo(char* Info, char* Forced) {
+	size_t count = 0;
+	char **MimeTypes = calloc(MAX_MIMETYPES + 1, sizeof(char*));
 
-	// strtok is not re-entrant
-	do {
-		p = strtok(p, ",");
-		// in case Info finishes by a serie of ','
-		if (!p) break;
-		n += strlen(p) + 1;
-		while (*p == ' ') p++;		
-		if (sscanf(p, "http-get:*:%[^:]", MimeType) && strstr(MimeType, "audio")) {
-			MimeTypes[i] = strdup(MimeType);
-			i++;
+	for (char* p = Info; count < MAX_MIMETYPES - 1 && p && *p;) {
+		char item[256] = "", MimeType[256];
+		(void)!sscanf(p, "%255[^,]", item);
+
+		// make sure we go to the end of the data, even if malformed
+		if ((p = strchr(p, ',')) != NULL) while (*p == ',' || *p == ' ') p++;
+		if (!*item) continue;
+
+		if (sscanf(item, "http-get:*:%255[^:]", MimeType) && (strstr(MimeType, "audio") || strstr(MimeType, "application"))) {
+			MimeTypes[count++] = strdup(MimeType);
 		}
-		p += strlen(p) + 1;
-	} while (i < MAX_MIMETYPES && n < size);
-
-	p = Forced;
-	size = p ? strlen(p) : 0;
-	while (size > 0 && i < MAX_MIMETYPES) {
-		strtok(p, ",");
-		MimeTypes[i] = strdup(p);
-		size -= strlen(p) + 1;
-		p += strlen(p) + 1;
-		i++;
 	}
 
-	if (i < MAX_MIMETYPES && MatchAll) MimeTypes[i] = strdup("*");
+	for (char* p = Forced; count < MAX_MIMETYPES - 1 && p && *p;) {
+		char item[256] = "";
+		(void)!sscanf(p, "%255[^,]", item);
+
+		// make sure we go to the end of the data, even if malformed
+		if ((p = strchr(p, ',')) != NULL) while (*p == ',' || *p == ' ') p++;
+		if (!*item) continue;
+
+		MimeTypes[count++] = strdup(item);
+	}
+
+	// in case there is "catch-all", put it at the end
+	if (strcasestr(Info, "http-get:*:*:") || strcasestr(Info, "http-get:::")) MimeTypes[count] = strdup("*");
 
 	return MimeTypes;
 }
 
 /*----------------------------------------------------------------------------*/
-static void _CheckCodecs(char *Codecs, char *Sink, char *Forced, char *Details, char *Codec, int n, ...) {
-	int i;
+static void _CheckCodecs(char* Codecs, char** MimeTypes, char* Details, char* Codec, int n, ...) {
 	va_list args;
-	bool MatchAll = strcasestr(Sink, "http-get:*:*:") || strcasestr(Sink, "http-get:::");
-
 	va_start(args, n);
+	bool found = false;
 
-	for (i = 0; i < n; i++) {
-		char *arg = va_arg(args, char*);
-		char lookup[32], lookup_x[32];
+	for (int i = 0; MimeTypes && !found && i < n; i++) {
+		char* arg = va_arg(args, char*);
 
-		sprintf(lookup, "audio/%s", arg);
-		sprintf(lookup_x, "audio/x-%s", arg);
-
-		if ( MatchAll ||
-			(strstr(Sink, lookup) && (!Details || strstr(Sink, Details))) ||
-			(strstr(Sink, lookup_x) && (!Details || strstr(Sink, Details))) ||
-			(strstr(Forced, lookup) && (!Details || strstr(Forced, Details)))) {
-			if (strlen(Codecs)) {
-				strcat(Codecs, ",");
+		for (char** mimetype = MimeTypes; !found && *mimetype; mimetype++) {
+			if (!strcasecmp(*mimetype, "*") || (strcasestr(*mimetype, arg) && (!Details || strcasestr(*mimetype, Details)))) {
+				if (*Codecs) strcat(Codecs, ",");
 				strcat(Codecs, Codec);
-			} else strcpy(Codecs, Codec);
-			return;
+				found = true;
+			}
 		}
 	}
 
@@ -577,38 +545,43 @@ static void _CheckCodecs(char *Codecs, char *Sink, char *Forced, char *Details, 
 }
 
 /*----------------------------------------------------------------------------*/
-void CheckCodecs(char *Codecs, char *Sink, char *Forced) {
-	char *p, *buf;
-
-	p = buf = strdup(Codecs);
+void CheckCodecs(char* Codecs, char** MimeTypes) {
+	char *buf = strdup(Codecs);
 	*Codecs = '\0';
 
-	while (p && *p) {
-		char *q = strchr(p, ',');
-		if (q) *q = '\0';
+	for (char *p = buf; p && *p;) {
+		char codec[16] = "";
+		(void)!sscanf(p, "%15[^,]", codec);
 
-		if (strstr(p,"mp3")) _CheckCodecs(Codecs, Sink, Forced, NULL, "mp3", 2, "mp3", "mpeg");
-		if (strstr(p,"flc")) _CheckCodecs(Codecs, Sink, Forced, NULL, "flc", 1, "flac");
-		if (strstr(p,"wma")) _CheckCodecs(Codecs, Sink, Forced, NULL, "wma", 1, "wma");
-		if (strstr(p,"ogg")) _CheckCodecs(Codecs, Sink, Forced, NULL, "ogg", 1, "ogg");
-		if (strstr(p,"aac")) _CheckCodecs(Codecs, Sink, Forced, NULL, "aac", 3, "aac", "m4a", "mp4");
-		if (strstr(p,"alc")) _CheckCodecs(Codecs, Sink, Forced, NULL, "alc", 2, "m4a", "mp4");
-		if (strstr(p,"pcm")) _CheckCodecs(Codecs, Sink, Forced, NULL, "pcm", 2, "wav", "audio/L");
-		if (strstr(p,"wav")) _CheckCodecs(Codecs, Sink, Forced, NULL, "wav", 2, "wav", "audio/L");
-		if (strstr(p,"aif")) _CheckCodecs(Codecs, Sink, Forced, NULL, "aif", 3, "aif", "wav", "audio/L");
-		if (strstr(p,"dsf")) _CheckCodecs(Codecs, Sink, Forced, NULL, "dsf", 2, "dsf", "dsd");
-		if (strstr(p,"dff")) _CheckCodecs(Codecs, Sink, Forced, NULL, "dff", 2, "dff", "dsd");
+		if ((p = strchr(p, ',')) != NULL) p++;
+		if (!*codec) continue;
+
+		if (strstr(codec, "mp3")) _CheckCodecs(Codecs, MimeTypes, NULL, "mp3", 2, "mp3", "mpeg");
+		if (strstr(codec, "flc")) _CheckCodecs(Codecs, MimeTypes, NULL, "flc", 1, "flac");
+		if (strstr(codec, "wma")) _CheckCodecs(Codecs, MimeTypes, NULL, "wma", 1, "wma");
+		if (strstr(codec, "ogg")) _CheckCodecs(Codecs, MimeTypes, NULL, "ogg", 1, "ogg");
+		if (strstr(codec, "aac")) _CheckCodecs(Codecs, MimeTypes, NULL, "aac", 3, "aac", "m4a", "mp4");
+		if (strstr(codec, "alc")) _CheckCodecs(Codecs, MimeTypes, NULL, "alc", 2, "m4a", "mp4");
+		if (strstr(codec, "pcm")) _CheckCodecs(Codecs, MimeTypes, NULL, "pcm", 2, "wav", "audio/L");
+		if (strstr(codec, "wav")) _CheckCodecs(Codecs, MimeTypes, NULL, "wav", 2, "wav", "audio/L");
+		if (strstr(codec, "aif")) _CheckCodecs(Codecs, MimeTypes, NULL, "aif", 3, "aif", "wav", "audio/L");
+		if (strstr(codec, "dsf")) _CheckCodecs(Codecs, MimeTypes, NULL, "dsf", 2, "dsf", "dsd");
+		if (strstr(codec, "dff")) _CheckCodecs(Codecs, MimeTypes, NULL, "dff", 2, "dff", "dsd");
 		// ProtocolInfo never contains such details, so be flexible (can always remove codec)
 #ifdef CODECS_STRICT
-		if (strstr(p,"ops")) _CheckCodecs(Codecs, Sink, Forced, "codecs=opus", "ops", 1, "ogg");
-		if (strstr(p,"ogf")) _CheckCodecs(Codecs, Sink, Forced, "codecs=flac", "ogf", 1, "ogg");
+		if (strstr(codec, "ops")) _CheckCodecs(Codecs, MimeTypes, "codecs=opus", "ops", 1, "ogg");
+		if (strstr(codec, "ogf")) _CheckCodecs(Codecs, MimeTypes, "codecs=flac", "ogf", 1, "ogg");
 #else
-		if (strstr(p, "ops")) _CheckCodecs(Codecs, Sink, Forced, NULL, "ops", 1, "ogg");
-		if (strstr(p, "ogf")) _CheckCodecs(Codecs, Sink, Forced, NULL, "ogf", 1, "ogg");
+		if (strstr(codec, "ops")) _CheckCodecs(Codecs, MimeTypes, NULL, "ops", 1, "ogg");
+		if (strstr(codec, "ogf")) _CheckCodecs(Codecs, MimeTypes, NULL, "ogf", 1, "ogg");
 #endif
-
-		p = (q) ? q + 1 : NULL;
 	}
 
-	NFREE(buf);
+	free(buf);
+}
+
+/*----------------------------------------------------------------------------*/
+bool IsCodec(char* Codec, char** MimeTypes) {
+	while(MimeTypes && *MimeTypes && !strcasestr(*MimeTypes, Codec)) MimeTypes++;
+	return MimeTypes && *MimeTypes != NULL;
 }

@@ -619,7 +619,8 @@ sleep:
 	NFREE(p->NextProtoInfo);
 	NFREE(p->NextURI);
 	NFREE(p->ExpectedURI);
-	NFREE(p->Sink);
+	for (int i = 0; p->MimeTypes && p->MimeTypes[i]; i++) free(p->MimeTypes[i]);
+	NFREE(p->MimeTypes);
 	return NULL;
 }
 
@@ -1176,16 +1177,12 @@ static void *UpdateThread(void *args)
 						// we are a master (or not a Sonos)
 						if (!Master && Device->Master) {
 							// leaving a group
-							char **MimeTypes = ParseProtocolInfo(Device->Sink, Device->Config.ForcedMimeTypes);
 							LOG_INFO("[%p]: Sonos %s is now master", Device, Device->friendlyName);
 							pthread_mutex_lock(&Device->Mutex);
 							Device->Master = NULL;
-							Device->SqueezeHandle = sq_reserve_device(Device, Device->on, MimeTypes, &sq_callback);
+							Device->SqueezeHandle = sq_reserve_device(Device, Device->on, Device->MimeTypes, &sq_callback);
 							if (!*(Device->sq_config.name)) strcpy(Device->sq_config.name, Device->friendlyName);
 							sq_run_device(Device->SqueezeHandle, &Device->sq_config);
-
-							for (i = 0; MimeTypes[i]; i++) free(MimeTypes[i]);
-							free(MimeTypes);
 							pthread_mutex_unlock(&Device->Mutex);
 						} else if (Master && (!Device->Master || Device->Master == Device)) {
 							// joining a group as slave
@@ -1234,9 +1231,8 @@ static void *UpdateThread(void *args)
 				updated = true;
 
 				if (AddMRDevice(Device, UDN, DescDoc, Update->Data) && !glDiscovery) {
-					char **MimeTypes = ParseProtocolInfo(Device->Sink, Device->Config.ForcedMimeTypes);
 					// create a new slimdevice
-					Device->SqueezeHandle = sq_reserve_device(Device, Device->on, MimeTypes, &sq_callback);
+					Device->SqueezeHandle = sq_reserve_device(Device, Device->on, Device->MimeTypes, &sq_callback);
 					if (!*(Device->sq_config.name)) strcpy(Device->sq_config.name, Device->friendlyName);
 					if (!Device->SqueezeHandle || !sq_run_device(Device->SqueezeHandle, &Device->sq_config)) {
 						sq_release_device(Device->SqueezeHandle);
@@ -1244,8 +1240,6 @@ static void *UpdateThread(void *args)
 						LOG_ERROR("[%p]: cannot create squeezelite instance (%s)", Device, Device->friendlyName);
 						DelMRDevice(Device);
 					}
-					for (int i = 0; MimeTypes[i]; i++) free(MimeTypes[i]);
-					free(MimeTypes);
 				}
 
 cleanup:
@@ -1300,6 +1294,19 @@ static void *MainThread(void *args) {
 }
 
 /*----------------------------------------------------------------------------*/
+#if 0
+static void Replace(char** str, const char* what, const char* with) {
+	char* right = strcasestr(*str, what);
+	if (!right) return;
+
+	if (strlen(with) > strlen(what)) *str = realloc(*str, strlen(*str) + strlen(with) - strlen(what) + 1);
+	right = strcasestr(*str, what);
+	memmove(right + strlen(with), right + strlen(what), strlen(right + strlen(what)) + 1);
+	memcpy(right, with, strlen(with));
+}
+#endif
+
+/*----------------------------------------------------------------------------*/
 static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, const char *location) {
 	char *friendlyName = NULL;
 	
@@ -1342,7 +1349,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	Device->Actions 		= NULL;
 	Device->NextURI 		= Device->NextProtoInfo = NULL;
 	Device->Master			= NULL;
-	Device->Sink 			= NULL;
+	Device->MimeTypes		= NULL;
 	if (Device->sq_config.roon_mode) {
 		Device->on = true;
 		Device->sq_config.use_cli = false;
@@ -1426,20 +1433,22 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	}
 
 	// get the protocol info
-	if ((Device->Sink = GetProtocolInfo(Device)) == NULL) {
+	char* Sink = GetProtocolInfo(Device);
+
+	if (Sink) {
+		Device->MimeTypes = ParseProtocolInfo(Sink, Device->Config.ForcedMimeTypes);
+	} else {
 		LOG_WARN("[%p] unable to get protocol info, set <forced_mimetypes>", Device);
-		Device->Sink = strdup("");
-	}
+	} 
 
 	// crude check that "auto" mode can work 
-	if (strcasestr(Device->sq_config.mode, "auto") && !strcasestr(Device->Sink, "flac")) {
+	if (strcasestr(Device->sq_config.mode, "auto") && !IsCodec("flac", Device->MimeTypes)) {
 		strcpy(Device->sq_config.mode, "thru");
-		LOG_WARN("[%p]: WARNING: can't use \"auto\" mode as your player does not support flac", Device);
+		LOG_WARN("[%p]: WARNING: %s can't use \"auto\" mode as it does not support flac", Device, Device->friendlyName);
 	}
 
 	// only check codecs in thru mode
-	if (strcasestr(Device->sq_config.mode, "thru"))
-		CheckCodecs(Device->sq_config.codecs, Device->Sink, Device->Config.ForcedMimeTypes);
+	if (strcasestr(Device->sq_config.mode, "thru")) CheckCodecs(Device->sq_config.codecs, Device->MimeTypes);
 
 	pthread_create(&Device->Thread, NULL, &MRThread, Device);
 

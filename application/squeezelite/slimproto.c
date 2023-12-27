@@ -1244,7 +1244,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 
 		info.format = out->format = mimetype_to_format(out->mimetype);
 		out->out_endian = (out->format == 'w');
-		out->length = ctx->config.stream_length;						
+		out->length = ctx->config.stream_length;				
 
 		if (codec_open(out->codec, out->sample_size, out->sample_rate, out->channels,
 			out->in_endian, ctx) &&	output_start(ctx)) {

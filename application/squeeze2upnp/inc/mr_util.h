@@ -32,10 +32,7 @@ char* XMLGetChangeItem(IXML_Document *doc, char *Tag, char *SearchAttr, char *Se
 
 char* uPNPEvent2String(Upnp_EventType S);
 
-char** 			ParseProtocolInfo(char *Info, char* Forced);
-void 			CheckCodecs(char *Codecs, char *Sink, char *Forced);
-
-void 			BusyRaise(struct sMR* Device);
-void 			BusyDrop(struct sMR* Device);
-
+char**	ParseProtocolInfo(char *Info, char* Forced);
+void 	CheckCodecs(char *Codecs, char **MimeTypes);
+bool    IsCodec(char* Codec, char** MimeTypes);
 

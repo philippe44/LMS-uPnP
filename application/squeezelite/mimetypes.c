@@ -120,8 +120,8 @@ char* mimetype_from_codec(char codec, char* mimetypes[], ...) {
 	switch (codec) {
 	case 'm': return _lookup(mimetypes, NULL, 3, "audio/mp3", "audio/mpeg", "audio/mpeg3");
 	case 'w': return _lookup(mimetypes, NULL, 2, "audio/wma", "audio/x-wma");
-	case 'o': return _lookup(mimetypes, "codecs=vorbis", 2, "audio/ogg", "audio/x-ogg");
-	case 'u': return _lookup(mimetypes, "codecs=opus", 2, "audio/ogg", "audio/x-ogg");
+	case 'o': return _lookup(mimetypes, "codecs=vorbis", 3, "audio/ogg", "audio/x-ogg", "application/ogg");
+	case 'u': return _lookup(mimetypes, "codecs=opus", 3, "audio/ogg", "audio/x-ogg", "application/ogg");
 	case 'l': return _lookup(mimetypes, NULL, 2, "audio/mp4", "audio/m4a");
 	case 'a': {
 		va_start(args, mimetypes);
@@ -137,7 +137,7 @@ char* mimetype_from_codec(char codec, char* mimetypes[], ...) {
 		bool ogg = (va_arg(args, int) == 'o');
 		va_end(args);
 
-		if (ogg) return _lookup(mimetypes, "codecs=flac", 2, "audio/ogg", "audio/x-ogg");
+		if (ogg) return _lookup(mimetypes, "codecs=flac", 3, "audio/ogg", "audio/x-ogg", "application/ogg");
 		else return _lookup(mimetypes, NULL, 2, "audio/flac", "audio/x-flac");
 	}
 	case 'd': {
@@ -221,6 +221,7 @@ char mimetype_to_format(char *mimetype) {
 
 	if ((p = strstr(mimetype, "audio/x-")) != NULL) p += strlen("audio/x-");
 	else if ((p = strstr(mimetype, "audio/")) != NULL) p += strlen("audio/");
+	else if ((p = strstr(mimetype, "application/")) != NULL) p += strlen("application/");
 
 	if (strstr(p, "wav")) return 'w';
 	if (strstr(p, "aif")) return 'i';
@@ -287,6 +288,7 @@ char* mimetype_to_ext(char* mimetype) {
 	if (!mimetype) return "";
 	if ((p = strstr(mimetype, "audio/x-")) != NULL) p += strlen("audio/x-");
 	else if ((p = strstr(mimetype, "audio/")) != NULL) p += strlen("audio/");
+	else if ((p = strstr(mimetype, "application/")) != NULL) p += strlen("application/");
 	else return "";
 
 	if (strstr(mimetype, "wav") == p) return "wav";

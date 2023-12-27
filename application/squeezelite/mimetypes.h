@@ -8,7 +8,7 @@
 
 #include <stdint.h>
 
-#define MAX_MIMETYPES	128
+#define MAX_MIMETYPES	256
  
 bool  mimetype_match_codec(char* mimetypes[], int n, ...);
 char* mimetype_from_codec(char codec, char* mimetypes[], ...);

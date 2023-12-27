@@ -522,7 +522,6 @@ typedef enum {TRACK_STOPPED = 0, TRACK_STARTED, TRACK_PAUSED} track_status_t;
 #define PLAYER_NAME_LEN 64
 #define SERVER_VERSION_LEN	32
 #define MAX_PLAYER		32
-#define MAX_MIMETYPES	128
 
 struct thread_ctx_s {
 	int 		self;
