@@ -1,4 +1,7 @@
-3.0.12 (NR)
+3.0.13
+ - When sink is empty, don't search for catch-all options
+ 
+3.0.12
  - memory leak in Sink (ahah) parsing
  - when player timeout's, use its DescDocURL, not the UpdateData which is NULL...
  

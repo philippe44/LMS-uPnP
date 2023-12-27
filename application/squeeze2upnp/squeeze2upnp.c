@@ -1434,13 +1434,13 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 
 	// get the protocol info
 	char* Sink = GetProtocolInfo(Device);
+	Device->MimeTypes = ParseProtocolInfo(Sink, Device->Config.ForcedMimeTypes);
 
-	if (Sink) {
-		Device->MimeTypes = ParseProtocolInfo(Sink, Device->Config.ForcedMimeTypes);
-		free(Sink);
+	if (!Sink) {
+		LOG_WARN("[%p] unable to get protocol info, use <forced_mimetypes>", Device);
 	} else {
-		LOG_WARN("[%p] unable to get protocol info, set <forced_mimetypes>", Device);
-	} 
+		free(Sink);
+	}
 
 	// crude check that "auto" mode can work 
 	if (strcasestr(Device->sq_config.mode, "auto") && !IsCodec("flac", Device->MimeTypes)) {

@@ -518,7 +518,7 @@ char** ParseProtocolInfo(char* Info, char* Forced) {
 	}
 
 	// in case there is "catch-all", put it at the end
-	if (strcasestr(Info, "http-get:*:*:") || strcasestr(Info, "http-get:::")) MimeTypes[count] = strdup("*");
+	if (Info && (strcasestr(Info, "http-get:*:*:") || strcasestr(Info, "http-get:::"))) MimeTypes[count] = strdup("*");
 
 	return MimeTypes;
 }
