@@ -97,14 +97,13 @@ static char* _lookup(char* mimetypes[], char* details, int n, ...) {
 		for (char** p = mimetypes; *p && !mimetype; p++) {
 #ifdef CODECS_STRICT
 			if (**p == '*' || (strstr(*p, needle) && (!details || strstr(*p, details)))) {
-				mimetype = strdup(*p);
-			}
 #else
-			if (**p == '*' || strstr(*p, needle)) {
-				if (!details) mimetype = strdup(needle);
-				else asprintf(&mimetype, "%s;%s", *p, details);
-			}
+			if (**p == '*' || strcasestr(*p, needle)) {
 #endif
+				if (!details) mimetype = strdup(needle);
+				else asprintf(&mimetype, "%s;%s", needle, details);
+			}
+
 		}
 	}
 

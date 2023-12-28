@@ -97,7 +97,7 @@ div.WordSection1
 <div class=WordSection1>
 
 <p class=MsoNormal align=center style='text-align:center'><b><span lang=EN-GB
-style='font-size:15.0pt;color:black'>Squeeze2upnp - UPnP/DLNA bridge - User
+style='font-size:15.0pt;color:black'>edSqueeze2upnp - UPnP/DLNA bridge - User
 Guide</span></b></p>
 
 <h1 style='margin-top:12.0pt;margin-right:0cm;margin-bottom:6.0pt;margin-left:
@@ -1486,15 +1486,19 @@ color:black'> Force AAC</span><span lang=EN-US style='font-size:11.0pt;
 color:black'>]</span></p>
 
 <p class=MsoNormal style='margin-top:20.0pt;margin-right:0cm;margin-bottom:
-0cm;margin-left:0cm'><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;forced_mimetypes&gt;type1,
-type2, …&lt;/forced_mimetypes&gt;</span></b><span lang=EN-GB style='font-size:
-11.0pt;color:black'> <i>default =””</i></span></p>
+0cm;margin-left:0cm'><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;forced_mimetypes&gt;*
+| type1, type2, …&lt;/forced_mimetypes&gt;</span></b><span lang=EN-GB
+style='font-size:11.0pt;color:black'> <i>default =””</i></span></p>
 
 <p class=MsoNormal style='margin-top:5.0pt;margin-right:0cm;margin-bottom:0cm;
 margin-left:0cm'><i><span lang=EN-GB style='font-size:11.0pt;color:black'>Some
 players do not report their full capabilities in their ProtocolInfo parameter.
 This will force a list of types to be accepted. Each type is of a form
 audio/xxx, for example audio/flac to force flac or audio/aac to force aac</span></i></p>
+
+<p class=MsoNormal style='margin-top:5.0pt;margin-right:0cm;margin-bottom:0cm;
+margin-left:0cm'><i><span lang=EN-GB style='font-size:11.0pt;color:black'>Use
+wildcard ‘*’ will authorize all codecs set in &lt;codecs&gt;</span></i></p>
 
 <p class=MsoNormal style='margin-top:20.0pt;margin-right:0cm;margin-bottom:
 0cm;margin-left:0cm'><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;send_metadata&gt;0

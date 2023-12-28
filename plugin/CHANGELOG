@@ -1,3 +1,6 @@
+3.0.14
+ - copy needle on mimetype check, to make sure it works when using mimetype wildcard
+ 
 3.0.13
  - When sink is empty, don't search for catch-all options
  
