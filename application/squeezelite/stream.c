@@ -144,6 +144,8 @@ bool stream_disconnect(struct thread_ctx_s *ctx) {
 static void _disconnect(stream_state state, disconnect_code disconnect, struct thread_ctx_s *ctx) {
 	ctx->stream.state = state;
 	ctx->stream.disconnect = disconnect;
+	if (ctx->stream.ogg.state == STREAM_OGG_HEADER && ctx->stream.ogg.data) free(ctx->stream.ogg.data);
+	ctx->stream.ogg.data = NULL;
 #if USE_SSL
 	if (ctx->ssl) {
 		SSL_shutdown(ctx->ssl);
@@ -154,6 +156,8 @@ static void _disconnect(stream_state state, disconnect_code disconnect, struct t
 	closesocket(ctx->fd);
 	ctx->fd = -1;
 	if (ctx->stream.store) fclose(ctx->stream.store);
+	if (ctx->stream.ogg.state == STREAM_OGG_HEADER && ctx->stream.ogg.data) free(ctx->stream.ogg.data);
+	ctx->stream.ogg.data = NULL;
 	wake_controller(ctx);
 }
 
@@ -222,6 +226,131 @@ static int connect_socket(bool use_ssl, struct thread_ctx_s *ctx) {
 #endif
 
 	return sock;
+}
+
+static u32_t inline itohl(u32_t littlelong) {
+#if SL_LITTLE_ENDIAN
+	return littlelong;
+#else
+	return __builtin_bswap32(littlelong);
+#endif
+}
+
+static u32_t memfind(const u8_t* haystack, u32_t n, const char* needle, u32_t len, u32_t* offset) {
+	int i;
+	for (i = 0; i < n && *offset != len; i++) *offset = (haystack[i] == needle[*offset]) ? *offset + 1 : 0;
+	return i;
+}
+
+static void stream_ogg(struct thread_ctx_s* ctx, size_t n) {
+	if (ctx->stream.ogg.state == STREAM_OGG_OFF) return;
+	u8_t* p = ctx->streambuf->writep;
+
+	while (n) {
+		size_t consumed = min(ctx->stream.ogg.miss, n);
+
+		// copy as many bytes as possible and come back later if we do'nt have enough
+		if (ctx->stream.ogg.data) {
+			memcpy(ctx->stream.ogg.data + ctx->stream.ogg.want - ctx->stream.ogg.miss, p, consumed);
+			ctx->stream.ogg.miss -= consumed;
+			if (ctx->stream.ogg.miss) return;
+		}
+
+		// we have what we want, let's parse
+		switch (ctx->stream.ogg.state) {
+		case STREAM_OGG_SYNC: {
+			ctx->stream.ogg.miss -= consumed;
+			if (consumed) break;
+
+			// we have to memorize position in case any of last 3 bytes match...
+			int pos = memfind(p, n, "OggS", 4, &ctx->stream.ogg.match);
+			if (ctx->stream.ogg.match == 4) {
+				consumed = pos - ctx->stream.ogg.match;
+				ctx->stream.ogg.state = STREAM_OGG_HEADER;
+				ctx->stream.ogg.miss = ctx->stream.ogg.want = sizeof(ctx->stream.ogg.header);
+				ctx->stream.ogg.data = (u8_t*)&ctx->stream.ogg.header;
+				ctx->stream.ogg.match = 0;
+			}
+			else {
+				LOG_INFO("[%p]: OggS not at expected position", ctx);
+				return;
+			}
+			break;
+		}
+		case STREAM_OGG_HEADER:
+			if (!memcmp(ctx->stream.ogg.header.pattern, "OggS", 4)) {
+				ctx->stream.ogg.miss = ctx->stream.ogg.want = ctx->stream.ogg.header.count;
+				ctx->stream.ogg.data = malloc(ctx->stream.ogg.miss);
+				ctx->stream.ogg.state = STREAM_OGG_SEGMENTS;
+			} else {
+				ctx->stream.ogg.state = STREAM_OGG_SYNC;
+				ctx->stream.ogg.data = NULL;
+			}
+			break;
+		case STREAM_OGG_SEGMENTS:
+			// calculate size of page using lacing values
+			for (int i = 0; i < ctx->stream.ogg.want; i++) ctx->stream.ogg.miss += ctx->stream.ogg.data[i];
+			ctx->stream.ogg.want = ctx->stream.ogg.miss;
+			//LOG_INFO("granule %d", ctx->stream.ogg.header.granule);
+			if (ctx->stream.ogg.header.granule == 0) {
+				// granule 0 means a new stream, so let's look into it
+				ctx->stream.ogg.state = STREAM_OGG_PAGE;
+				ctx->stream.ogg.data = realloc(ctx->stream.ogg.data, ctx->stream.ogg.want);
+			} else {
+				// otherwise, jump over data
+				ctx->stream.ogg.state = STREAM_OGG_SYNC;
+				free(ctx->stream.ogg.data);
+				ctx->stream.ogg.data = NULL;
+			}
+			break;
+		case STREAM_OGG_PAGE: {
+			u32_t offset = 0;
+
+			// try to find one of valid Ogg pattern (vorbis, opus)
+			for (char** tag = (char* []){ "\x3vorbis", "OpusTags", NULL }; *tag; tag++, offset = 0) {
+				u32_t pos = memfind(ctx->stream.ogg.data, ctx->stream.ogg.want, *tag, strlen(*tag), &offset);
+				if (offset != strlen(*tag)) continue;
+
+				// u32:len,char[]:vendorId, u32:N, N x (u32:len,char[]:comment)
+				char* p = (char*)ctx->stream.ogg.data + pos;
+				p += itohl(*p) + 4;
+				u32_t count = itohl(*p);
+				p += 4;
+
+				// LMS metadata format for Ogg is "Ogg", N x (u16:len,char[]:comment)
+				memcpy(ctx->stream.header, "Ogg", 3);
+				ctx->stream.header_len = 3;
+
+				for (u32_t len; count--; p += len) {
+					len = itohl(*p);
+					p += 4;
+
+					// only report what we use and don't overflow (network byte order)
+					if (!strncasecmp(p, "TITLE=", 6) || !strncasecmp(p, "ARTIST=", 7) || !strncasecmp(p, "ALBUM=", 6)) {
+						if (ctx->stream.header_len + len > MAX_HEADER) break;
+						ctx->stream.header[ctx->stream.header_len++] = len >> 8;
+						ctx->stream.header[ctx->stream.header_len++] = len;
+						memcpy(ctx->stream.header + ctx->stream.header_len, p, len);
+						ctx->stream.header_len += len;
+					}
+				}
+
+				ctx->stream.meta_send = true;
+				wake_controller(ctx);
+				LOG_INFO("[%p]: Ogg metadata length: %u", ctx, ctx->stream.header_len);
+				break;
+			}
+			free(ctx->stream.ogg.data);
+			ctx->stream.ogg.state = STREAM_OGG_SYNC;
+			break;
+		}
+		default:
+			break;
+		}
+
+		p += consumed;
+		n -= consumed;
+	}
 }
 
 static void *stream_thread(struct thread_ctx_s *ctx) {
@@ -433,6 +562,7 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 
 					if (n > 0) {
 						if (ctx->stream.store) fwrite(ctx->streambuf->writep, 1, n, ctx->stream.store);
+						stream_ogg(ctx, n);
 						_buf_inc_writep(ctx->streambuf, n);
 						ctx->stream.bytes += n;
 						if (ctx->stream.meta_interval) {
@@ -557,7 +687,7 @@ void stream_file(const char *header, size_t header_len, unsigned threshold, stru
 	UNLOCK_S;
 }
 
-void stream_sock(u32_t ip, u16_t port, bool use_ssl, const char *header, size_t header_len, unsigned threshold, bool cont_wait, struct thread_ctx_s *ctx) {
+void stream_sock(u32_t ip, u16_t port, bool use_ssl, char codec, const char *header, size_t header_len, unsigned threshold, bool cont_wait, struct thread_ctx_s *ctx) {
 	int sock;
 	char *p;
 
@@ -607,6 +737,9 @@ void stream_sock(u32_t ip, u16_t port, bool use_ssl, const char *header, size_t 
 	ctx->stream.bytes = 0;
 	ctx->stream.threshold = threshold;
 
+	ctx->stream.ogg.miss = ctx->stream.ogg.match = 0;
+	ctx->stream.ogg.state = (codec == 'o' || codec == 'u') ? STREAM_OGG_SYNC : STREAM_OGG_OFF;
+	
 	if (*ctx->config.store_prefix) {
 		char name[STR_LEN];
 		snprintf(name, sizeof(name), "%s/" BRIDGE_URL "%u-in#%u#.%s", ctx->config.store_prefix, ctx->output.index, sock, ctx->codec->types);

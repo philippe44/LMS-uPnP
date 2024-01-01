@@ -76,7 +76,7 @@ struct opus {
 #ifndef OGG_ONLY
 	struct OggOpusFile *of;
 #else
-	enum {OGG_SYNC, OGG_ID_HEADER, OGG_COMMENT_HEADER} status;
+	enum { OGG_ID_HEADER, OGG_COMMENT_HEADER } status;
 	ogg_stream_state state;
 	ogg_packet packet;
 	ogg_sync_state sync;
@@ -159,7 +159,7 @@ static u32_t parse_uint32(const unsigned char* _data) {
 		(u32_t)_data[2] << 16 | (u32_t)_data[3] << 24;
 }
 
-static int get_ogg_packet(struct thread_ctx_s* ctx) {
+static int get_audio_packet(struct thread_ctx_s* ctx) {
 	int status, packet = -1;
 	struct opus* u = ctx->decode.handle;
 
@@ -179,12 +179,16 @@ static int get_ogg_packet(struct thread_ctx_s* ctx) {
 			bytes -= consumed;
 		}
 
-		// if we have a new page, put it in
-		if (status)	OG(&go, stream_pagein, &u->state, &u->page);
+		// if we have a new page, put it in and reset serialno at BoS
+		if (status) {
+			OG(&go, stream_pagein, &u->state, &u->page);
+			if (OG(&go, page_bos, &u->page)) OG(&go, stream_reset_serialno, &u->state, OG(&go, page_serialno, &u->page));
+		}
 	}
 
-	// we only return a negative value when there is nothing more to proceed
-	if (status > 0) packet = status;
+	/* discard header packets. With no packet, we return a negative value 
+	 * when there is really nothing more to proceed */
+	if (status > 0 && memcmp(u->packet.packet, "OpusHead", 8) && memcmp(u->packet.packet, "OpusTags", 8)) packet = status;
 	else if (ctx->stream.state > DISCONNECT || _buf_used(ctx->streambuf)) packet = 0;
 
 	UNLOCK_S;
@@ -193,17 +197,19 @@ static int get_ogg_packet(struct thread_ctx_s* ctx) {
 
 static int read_opus_header(struct thread_ctx_s* ctx) {
 	struct opus* u = ctx->decode.handle;
-	int status = 0;
+	int done = 0;
 	bool fetch = true;
 
 	LOCK_S;
-
 	size_t bytes = min(_buf_used(ctx->streambuf), _buf_cont_read(ctx->streambuf));
 
-	while (bytes && !status) {
-		// first fetch a page if we need one
-		if (fetch) {
+	while (bytes && !done) {
+		int status;
+
+		// get aligned to a page and ready to bring it in
+		do {
 			size_t consumed = min(bytes, 4096);
+
 			char* buffer = OG(&go, sync_buffer, &u->sync, consumed);
 			memcpy(buffer, ctx->streambuf->readp, consumed);
 			OG(&go, sync_wrote, &u->sync, consumed);
@@ -211,46 +217,52 @@ static int read_opus_header(struct thread_ctx_s* ctx) {
 			_buf_inc_readp(ctx->streambuf, consumed);
 			bytes -= consumed;
 
-			if (!OG(&go, sync_pageseek, &u->sync, &u->page)) continue;
-		}
+			status = fetch ? OG(&go, sync_pageout, &u->sync, &u->page) :
+							 OG(&go, sync_pageseek, &u->sync, &u->page);
+		} while (bytes && status <= 0);
 
-		switch (u->status) {
-		case OGG_SYNC:
-			u->status = OGG_ID_HEADER;
-			OG(&go, stream_reset_serial_no, &u->state, OG(&go, page_serialno, &u->page));
-			fetch = false;
-			break;
-		case OGG_ID_HEADER:
-			status = OG(&go, stream_pagein, &u->state, &u->page);
-			if (OG(&go, stream_packetout, &u->state, &u->packet)) {
-				if (u->packet.bytes < 19 || memcmp(u->packet.packet, "OpusHead", 8)) {
-					LOG_ERROR("[%p]: wrong opus header packet (size:%u)", ctx, u->packet.bytes);
-					status = -100;
-					break;
-				}
+		// nothing has been found and we have no more bytes, come back later
+		if (status <= 0) break;
+
+		// always set stream serialno if we have a new one
+		if (OG(&go, page_bos, &u->page)) OG(&go, stream_reset_serialno, &u->state, OG(&go, page_serialno, &u->page));
+
+		// bring new page in if we want it (otherwise we're just skipping)
+		if (fetch) OG(&go, stream_pagein, &u->state, &u->page);
+
+		// no need for a switch...case
+		if (u->status == OGG_ID_HEADER) {
+			// we need the id packet, get more pages if we don't
+			if (OG(&go, stream_packetout, &u->state, &u->packet) <= 0) continue;
+			
+			// make sure this is a valid packet
+			if (u->packet.bytes < 19 || memcmp(u->packet.packet, "OpusHead", 8)) {
+				LOG_ERROR("[%p]: wrong opus header packet (size:%u)", ctx, u->packet.bytes);
+				done = -100;
+			} else {
 				u->status = OGG_COMMENT_HEADER;
 				u->channels = u->packet.packet[9];
 				u->pre_skip = parse_uint16(u->packet.packet + 10);
 				u->rate = parse_uint32(u->packet.packet + 12);
 				u->gain = parse_int16(u->packet.packet + 16);
 				u->decoder = OP(&gu, decoder_create, 48000, u->channels, &status);
+				fetch = false;
 				if (!u->decoder || status != OPUS_OK) {
-					LOG_ERROR("[%p]: can't create decoder %d (channels:%u)", ctx, status, u->channels);
+					LOG_ERROR("[%p]: can't create opus decoder %d (channels:%u)", ctx, status, u->channels);
+				}
+				else {
+					LOG_INFO("[%p]: opus codec up and running", ctx);
 				}
 			}
-			fetch = true;
-			break;
-		case OGG_COMMENT_HEADER:
-			// skip packets to consume VorbisComment. Headers are mandatory and align on pages
-			status = OG(&go, page_packets, &u->page);
-			break;
-		default:
-			break;
+		} else if (u->status == OGG_COMMENT_HEADER) {
+			// don't consume VorbisComment which could be a huge packet, just skip it
+			if (!OG(&go, page_packets, &u->page)) continue;
+			done = 1;
 		}
 	}
 
 	UNLOCK_S;
-	return status;
+	return done;
 }
 #endif
 
@@ -325,7 +337,7 @@ static decode_state opus_decompress(struct thread_ctx_s *ctx) {
 		memcpy(write_buf, u->overbuf, u->overframes * BYTES_PER_FRAME);
 		n = u->overframes;
 		u->overframes = 0;
-	} else if ((packet = get_ogg_packet(ctx)) > 0) {
+	} else if ((packet = get_audio_packet(ctx)) > 0) {
 		if (frames < MAX_OPUS_FRAMES) {
 			// don't have enough contiguous space, use the overflow buffer (still works if n < 0)
 			n = OP(&gu, decode, u->decoder, u->packet.packet, u->packet.bytes, (opus_int16*) u->overbuf, MAX_OPUS_FRAMES, 0);
@@ -340,7 +352,7 @@ static decode_state opus_decompress(struct thread_ctx_s *ctx) {
 			 * outputbuf and streambuf for maybe a long time while we process it all, so don't do that */
 			n = OP(&gu, decode, u->decoder, u->packet.packet, u->packet.bytes, (opus_int16*) write_buf, frames, 0);
 		}
-	} else if (!packet && !OG(&go, page_eos, &u->page)) {
+	} else if (!packet) {
 		UNLOCK_O_direct;
 		return DECODE_RUNNING;
 	};
@@ -424,14 +436,14 @@ static void opus_open(u8_t size, u32_t rate, u8_t chan, u8_t endianness, struct 
 		u = ctx->decode.handle = calloc(1, sizeof(struct opus));
 		u->overbuf = malloc(MAX_OPUS_FRAMES * BYTES_PER_FRAME);
 		OG(&go, sync_init, &u->sync);
-		OG(&go, stream_init, &u->state, -1);
 	} else {
 		if (u->decoder) OP(&gu, decoder_destroy, u->decoder);
 		u->decoder = NULL;
 		OG(&go, stream_clear, &u->state);
 		OG(&go, sync_clear, &u->sync);
 	}
-	u->status = OGG_SYNC;
+	OG(&go, stream_init, &u->state, -1);
+	u->status = OGG_ID_HEADER;
 	u->overframes = 0;
 #endif
 }

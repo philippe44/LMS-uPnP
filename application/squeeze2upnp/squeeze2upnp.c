@@ -1606,6 +1606,7 @@ static void sighandler(int signum) {
 		exit(EXIT_SUCCESS);
 	}
 	Stop();
+	LOG_INFO("all done - exit through signal");
 	exit(EXIT_SUCCESS);
 }
 

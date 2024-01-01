@@ -299,12 +299,26 @@ struct streamstate {
 		u16_t port;
 		unsigned flags;
 	} strm;
+	struct {
+		enum { STREAM_OGG_OFF, STREAM_OGG_SYNC, STREAM_OGG_HEADER, STREAM_OGG_SEGMENTS, STREAM_OGG_PAGE } state;
+		u32_t want, miss, match;
+		u8_t* data;
+#pragma pack(push, 1)
+		struct {
+			char pattern[4];
+			u8_t version, type;
+			u64_t granule;
+			u32_t serial, page, checksum;
+			u8_t count;
+		} header;
+#pragma pack(pop)
+	} ogg;
 };
 
 bool 		stream_thread_init(unsigned streambuf_size, struct thread_ctx_s *ctx);
 void 		stream_close(struct thread_ctx_s *ctx);
 void 		stream_file(const char *header, size_t header_len, unsigned threshold, struct thread_ctx_s *ctx);
-void 		stream_sock(u32_t ip, u16_t port, bool use_ssl, const char *header, size_t header_len, unsigned threshold, 
+void 		stream_sock(u32_t ip, u16_t port, bool use_ssl, char codec, const char *header, size_t header_len, unsigned threshold, 
 						bool cont_wait, struct thread_ctx_s *ctx);
 bool 		stream_disconnect(struct thread_ctx_s *ctx);
 

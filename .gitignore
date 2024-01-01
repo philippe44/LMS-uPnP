@@ -103,4 +103,5 @@ _backup/
 *.pdb
 *.odt
 application/bin/
+application/enc_temp_folder/
 

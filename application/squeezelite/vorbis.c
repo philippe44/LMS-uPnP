@@ -103,12 +103,12 @@ static struct {
 #endif
 
 struct vorbis {
-	bool opened, eos;
+	bool opened;
 	int channels;
 #ifndef OGG_ONLY
 	OggVorbis_File* vf;
 #else
-	enum { OGG_SYNC, OGG_ID_HEADER, OGG_COMMENT_HEADER, OGG_SETUP_HEADER } status;
+	enum { OGG_ID_HEADER, OGG_COMMENT_HEADER, OGG_SETUP_HEADER } status;
 	struct {
 		ogg_stream_state state;
 		ogg_packet packet;
@@ -206,7 +206,7 @@ int _ov_read(OggVorbis_File* vf, char* pcm, size_t bytes, int *out) {
 #endif
 }
 #else 
-static int get_ogg_packet(struct thread_ctx_s* ctx) {
+static int get_audio_packet(struct thread_ctx_s* ctx) {
 	int status, packet = -1;
 	struct vorbis* v = ctx->decode.handle;
 
@@ -226,12 +226,16 @@ static int get_ogg_packet(struct thread_ctx_s* ctx) {
 			bytes -= consumed;
 		}
 
-		// if we have a new page, put it in
-		if (status)	OG(&go, stream_pagein, &v->state, &v->page);
+		// if we have a new page, put it in and reset serialno at BoS
+		if (status) {
+			OG(&go, stream_pagein, &v->state, &v->page);
+			if (OG(&go, page_bos, &v->page)) OG(&go, stream_reset_serialno, &v->state, OG(&go, page_serialno, &v->page));	
+		}
 	}
 
-	// we only return a negative value when there is nothing more to proceed
-	if (status > 0) packet = status;
+	/* odd packets are not audio and should be discarded. With no packet, we
+	 * return a negative value when there is really nothing more to proceed */
+	if (status > 0 && (v->packet.packet[0] & 0x01) == 0) packet = status;
 	else if (ctx->stream.state > DISCONNECT || _buf_used(ctx->streambuf)) packet = 0;
 
 	UNLOCK_S;
@@ -240,17 +244,19 @@ static int get_ogg_packet(struct thread_ctx_s* ctx) {
 
 static int read_vorbis_header(struct thread_ctx_s* ctx) {
 	struct vorbis* v = ctx->decode.handle;
-	int status = 0;
+	int done = 0;
 	bool fetch = true;
 
 	LOCK_S;
-
 	size_t bytes = min(_buf_used(ctx->streambuf), _buf_cont_read(ctx->streambuf));
 
-	while (bytes && !status) {
-		// first fetch a page if we need one
-		if (fetch) {
+	while (bytes && !done) {
+		int status;
+
+		// get aligned to a page and ready to bring it in
+		do {
 			size_t consumed = min(bytes, 4096);
+
 			char* buffer = OG(&go, sync_buffer, &v->sync, consumed);
 			memcpy(buffer, ctx->streambuf->readp, consumed);
 			OG(&go, sync_wrote, &v->sync, consumed);
@@ -258,80 +264,83 @@ static int read_vorbis_header(struct thread_ctx_s* ctx) {
 			_buf_inc_readp(ctx->streambuf, consumed);
 			bytes -= consumed;
 
-			if (!OG(&go, sync_pageseek, &v->sync, &v->page)) continue;
-		}
+			status = fetch ? OG(&go, sync_pageout, &v->sync, &v->page) :
+		 					 OG(&go, sync_pageseek, &v->sync, &v->page);
+		} while (bytes && status <= 0);
 
-		switch (v->status) {
-		case OGG_SYNC:
-			v->status = OGG_ID_HEADER;
-			OG(&go, stream_reset_serialno, &v->state, OG(&go, page_serialno, &v->page));
-			fetch = false;
-			break;
-		case OGG_ID_HEADER:
-			status = OG(&go, stream_pagein, &v->state, &v->page);
-			if (!OG(&go, stream_packetout, &v->state, &v->packet)) break;
-		
+		// nothing has been found and we have no more bytes, come back later
+		if (status <= 0) break;
+
+		// always set stream serialno if we have a new one
+		if (OG(&go, page_bos, &v->page)) OG(&go, stream_reset_serialno, &v->state, OG(&go, page_serialno, &v->page));
+
+		// bring new page in if we want it (otherwise we're just skipping)
+		if (fetch) OG(&go, stream_pagein, &v->state, &v->page);
+
+		// not a switch...case b/c we might have multiple packets in a page in vorbis
+		if (v->status == OGG_ID_HEADER) {
+			// we need the id packet, get more pages if we don't
+			if (!OG(&go, stream_packetout, &v->state, &v->packet)) continue;
+
 			OV(&gv, info_init, &v->info);
 			status = OV(&gv, synthesis_headerin, &v->info, &v->comment, &v->packet);
 
 			if (status) {
 				LOG_ERROR("[%p]: vorbis id header packet error %d", ctx, status);
-				status = -1;
+				done = -1;
 			} else {
 				v->channels = v->info.channels;
 				v->rate = v->info.rate;
 				v->status = OGG_COMMENT_HEADER;
-
-				// only fetch if no other packet already in (they should not)
-				fetch = OG(&go, page_packets, &v->page) <= 1;
-				if (!fetch) LOG_INFO("[%p]: id packet should terminate page", ctx);
-				LOG_INFO("[%p]: id acquired", ctx);
+				fetch = false;
+				LOG_INFO("[%p]: vorbis id acquired", ctx);
+				// we should only have one packet, so get next pages
+				if (OG(&go, page_packets, &v->page) == 1) continue;
 			}
-			break;
-		case OGG_SETUP_HEADER:
-			// header packets don't align with pages on Vorbis (contrary to Opus)
-			if (fetch) OG(&go, stream_pagein, &v->state, &v->page);
+		} 
+		
+		if (v->status == OGG_COMMENT_HEADER) {
+			// don't consume VorbisComment which could be a huge packet, just skip it
+			int packets = OG(&go, page_packets, &v->page);
+			if (!packets) continue;
+
+			// we have a "fake" comment packet that is just has the last page...
+			v->status = OGG_SETUP_HEADER;
+			OG(&go, stream_pagein, &v->state, &v->page);
+			OG(&go, stream_packetout, &v->state, &v->packet);
+
+			OV(&gv, comment_init, &v->comment);
+			v->comment.vendor = "N/A";
+			fetch = true;
+			LOG_INFO("[%p]: vorbis comment skipped succesfully", ctx);
+
+			// because of lack of page alignment, we might have the setup page already fully in
+			if (packets == 1) continue;
+		}
+
+		if (v->status == OGG_SETUP_HEADER) {
+			// we need the setup packet, get more pages if we don't
+			if (OG(&go, stream_packetout, &v->state, &v->packet) <= 0) continue;
 
 			// finally build a codec if we have the packet
-			status = OG(&go, stream_packetout, &v->state, &v->packet);
-			if (status && ((status = OV(&gv, synthesis_headerin, &v->info, &v->comment, &v->packet)) ||
-				(status = OV(&gv, synthesis_init, &v->decoder, &v->info)))) {
+			if (OV(&gv, synthesis_headerin, &v->info, &v->comment, &v->packet) ||
+				OV(&gv, synthesis_init, &v->decoder, &v->info)) {
 				LOG_ERROR("[%p]: vorbis setup header packet error %d", ctx, status);
 				// no need to free comment, it's fake
 				OV(&gv, info_clear, &v->info);
-				status = -1;
+				done = -1;
 			} else {
 				OV(&gv, block_init, &v->decoder, &v->block);
 				v->opened = true;
-				LOG_INFO("[%p]: codec up and running", ctx);
-				status = 1;
+				LOG_INFO("[%p]: vorbis codec up and running", ctx);
+				done = 1;
 			}
-			//@FIXME: can we have audio on that page as well?
-			break;
-		case OGG_COMMENT_HEADER: {
-			// don't consume VorbisComment, just skip it
-			int packets = OG(&go, page_packets, &v->page);
-			if (packets) {
-				v->status = OGG_SETUP_HEADER;
-				OG(&go, stream_pagein, &v->state, &v->page);
-				OG(&go, stream_packetout, &v->state, &v->packet);
-
-				OV(&gv, comment_init, &v->comment);
-				v->comment.vendor = "N/A";
-
-				// because of lack of page alignment, we might have the setup page already fully in
-				if (packets > 1) fetch = false;
-				LOG_INFO("[%p]: comment skipped succesfully", ctx);
-			}
-			break;
-		}
-		default:
 			break;
 		}
 	}
 
 	UNLOCK_S;
-	return status;
+	return done;
 }
 
 static inline int pcm_out(vorbis_dsp_state* decoder, void*** pcm) {
@@ -404,8 +413,7 @@ static decode_state vorbis_decode( struct thread_ctx_s *ctx) {
 
 		if (status == 0) {
 			return DECODE_RUNNING;
-		}
-		else if (status < 0) {
+		} else if (status < 0) {
 			LOG_WARN("[%p]: can't create codec", ctx);
 			return DECODE_ERROR;
 		}
@@ -450,12 +458,12 @@ static decode_state vorbis_decode( struct thread_ctx_s *ctx) {
 	if (v->overflow) {
 		n = pcm_out(&v->decoder, &pcm);
 		v->overflow = n - min(n, frames);
-	} else if ((packet = get_ogg_packet(ctx)) > 0) {
+	} else if ((packet = get_audio_packet(ctx)) > 0) {
 		n = OV(&gv, synthesis, &v->block, &v->packet);
 		if (n == 0) n = OV(&gv, synthesis_blockin, &v->decoder, &v->block);
 		if (n == 0) n = pcm_out(&v->decoder, &pcm);
 		v->overflow = n - min(n, frames);
-	} else if (!packet && !OG(&go, page_eos, &v->page)) {
+	} else if (!packet) {
 		UNLOCK_O_direct;
 		return DECODE_RUNNING;
 	};
@@ -590,7 +598,6 @@ static void vorbis_open(u8_t size, u32_t rate, u8_t chan, u8_t endianness, struc
 		OV(&gv, clear, v->vf);
 		v->opened = false;
 	}
-	v->eos = true;
 #else
 	if (!v) {
 		v = ctx->decode.handle = calloc(1, sizeof(struct vorbis));
@@ -605,10 +612,9 @@ static void vorbis_open(u8_t size, u32_t rate, u8_t chan, u8_t endianness, struc
 		OG(&go, sync_clear, &v->sync);
 	}
 	OG(&go, stream_init, &v->state, -1);
-	v->eos = false;
 	v->opened = false;
 	v->overflow = 0;
-	v->status = OGG_SYNC;
+	v->status = OGG_ID_HEADER;
 #endif
 }
 

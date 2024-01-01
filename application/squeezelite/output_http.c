@@ -51,13 +51,17 @@ bool output_start(struct thread_ctx_s *ctx) {
 	struct thread_param_s *param = calloc(sizeof(struct thread_param_s), 1);
 
 	// start the http server thread (get an available one first)
+	LOCK_O;
 	for (param->thread = ctx->output_thread; 
 		 param->thread->running && !param->thread->lingering && param->thread < ctx->output_thread + ARRAY_COUNT(ctx->output_thread);
 		 param->thread++);
 
 	if (param->thread->lingering) {
 		param->thread->running = false;
+		UNLOCK_O;
 		pthread_join(param->thread->thread, NULL);
+	} else {
+		UNLOCK_O;
 	}
 
 	// it's calloc
@@ -129,6 +133,8 @@ static void output_http_thread(struct thread_param_s *param) {
 			thread->http, mimetype_to_ext(ctx->output.mimetype));
 		store = fopen(name, "wb");
 	}
+
+	LOG_INFO("[%p]: thread %d started, listening socket %u (cache:%d)", ctx, thread->index, thread->http, cache_type);
 
 	while (thread->running) {
 		if (sock == -1) {
