@@ -315,6 +315,8 @@ static void output_http_thread(struct thread_param_s *param) {
 	LOCK_O;
 
 	thread->http = -1;
+	thread->lingering = false;
+
 	if (thread->running) {
 		// if we self-terminate, nobody will join us so free resources now
 		pthread_detach(thread->thread);

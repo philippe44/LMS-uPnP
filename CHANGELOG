@@ -1,6 +1,10 @@
-3.0.14-1 (to be 3.1.0)
+(3.0.14.x swill be released as 3.1.0)
+3.0.14.1 
+ - lingering status must be reset upon exit otherwise output_start might still try to join
+ 
+3.0.14.1 
  - add ogg (vorbis/opus) metadata forwarding
- - protect output_start wiht mutex as a process can exit lingering right after we have selected it and try to join...
+ - protect output_start with mutex as a process can exit lingering right after we have selected it and try to join...
  
 3.0.14
  - copy needle on mimetype check, to make sure it works when using mimetype wildcard

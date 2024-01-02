@@ -21,7 +21,7 @@
  */
 
 // by default on decent OS, we don't need to raw Ogg depacketizer
-//#define OGG_ONLY
+#define OGG_ONLY
 
 #include "squeezelite.h"
 #ifndef OGG_ONLY
@@ -237,7 +237,7 @@ static int read_opus_header(struct thread_ctx_s* ctx) {
 			
 			// make sure this is a valid packet
 			if (u->packet.bytes < 19 || memcmp(u->packet.packet, "OpusHead", 8)) {
-				LOG_ERROR("[%p]: wrong opus header packet (size:%u)", ctx, u->packet.bytes);
+				LOG_ERROR("[%p]: wrong header packet (size:%u)", ctx, u->packet.bytes);
 				done = -100;
 			} else {
 				u->status = OGG_COMMENT_HEADER;
@@ -248,10 +248,10 @@ static int read_opus_header(struct thread_ctx_s* ctx) {
 				u->decoder = OP(&gu, decoder_create, 48000, u->channels, &status);
 				fetch = false;
 				if (!u->decoder || status != OPUS_OK) {
-					LOG_ERROR("[%p]: can't create opus decoder %d (channels:%u)", ctx, status, u->channels);
+					LOG_ERROR("[%p]: can't create decoder %d (channels:%u)", ctx, status, u->channels);
 				}
 				else {
-					LOG_INFO("[%p]: opus codec up and running", ctx);
+					LOG_INFO("[%p]: codec up and running", ctx);
 				}
 			}
 		} else if (u->status == OGG_COMMENT_HEADER) {

@@ -286,14 +286,14 @@ static int read_vorbis_header(struct thread_ctx_s* ctx) {
 			status = OV(&gv, synthesis_headerin, &v->info, &v->comment, &v->packet);
 
 			if (status) {
-				LOG_ERROR("[%p]: vorbis id header packet error %d", ctx, status);
+				LOG_ERROR("[%p]: id header packet error %d", ctx, status);
 				done = -1;
 			} else {
 				v->channels = v->info.channels;
 				v->rate = v->info.rate;
 				v->status = OGG_COMMENT_HEADER;
 				fetch = false;
-				LOG_INFO("[%p]: vorbis id acquired", ctx);
+				LOG_INFO("[%p]: id acquired", ctx);
 				// we should only have one packet, so get next pages
 				if (OG(&go, page_packets, &v->page) == 1) continue;
 			}
@@ -312,7 +312,7 @@ static int read_vorbis_header(struct thread_ctx_s* ctx) {
 			OV(&gv, comment_init, &v->comment);
 			v->comment.vendor = "N/A";
 			fetch = true;
-			LOG_INFO("[%p]: vorbis comment skipped succesfully", ctx);
+			LOG_INFO("[%p]: comment skipped succesfully", ctx);
 
 			// because of lack of page alignment, we might have the setup page already fully in
 			if (packets == 1) continue;
@@ -325,14 +325,14 @@ static int read_vorbis_header(struct thread_ctx_s* ctx) {
 			// finally build a codec if we have the packet
 			if (OV(&gv, synthesis_headerin, &v->info, &v->comment, &v->packet) ||
 				OV(&gv, synthesis_init, &v->decoder, &v->info)) {
-				LOG_ERROR("[%p]: vorbis setup header packet error %d", ctx, status);
+				LOG_ERROR("[%p]: setup header packet error %d", ctx, status);
 				// no need to free comment, it's fake
 				OV(&gv, info_clear, &v->info);
 				done = -1;
 			} else {
 				OV(&gv, block_init, &v->decoder, &v->block);
 				v->opened = true;
-				LOG_INFO("[%p]: vorbis codec up and running", ctx);
+				LOG_INFO("[%p]: codec up and running", ctx);
 				done = 1;
 			}
 			break;
