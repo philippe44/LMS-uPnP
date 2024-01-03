@@ -302,7 +302,7 @@ struct streamstate {
 	struct {
 		enum { STREAM_OGG_OFF, STREAM_OGG_SYNC, STREAM_OGG_HEADER, STREAM_OGG_SEGMENTS, STREAM_OGG_PAGE } state;
 		u32_t want, miss, match;
-		u8_t* data;
+		u8_t* data, segments[255];
 #pragma pack(push, 1)
 		struct {
 			char pattern[4];
@@ -419,6 +419,7 @@ struct output_thread_s {
 		thread_type 	thread;
 		int				http;			// listening socket of http server
 		int 			index;
+		int				number;
 };
 
 // info for the track being sent to the http renderer (not played)

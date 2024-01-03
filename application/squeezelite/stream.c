@@ -136,6 +136,8 @@ bool stream_disconnect(struct thread_ctx_s *ctx) {
 		disc = true;
 	}
 	ctx->stream.state = STOPPED;
+	if (ctx->stream.ogg.state == STREAM_OGG_PAGE && ctx->stream.ogg.data) free(ctx->stream.ogg.data);
+	ctx->stream.ogg.data = NULL;
 	if (ctx->stream.store) fclose(ctx->stream.store);
 	UNLOCK_S;
 	return disc;
@@ -144,8 +146,6 @@ bool stream_disconnect(struct thread_ctx_s *ctx) {
 static void _disconnect(stream_state state, disconnect_code disconnect, struct thread_ctx_s *ctx) {
 	ctx->stream.state = state;
 	ctx->stream.disconnect = disconnect;
-	if (ctx->stream.ogg.state == STREAM_OGG_HEADER && ctx->stream.ogg.data) free(ctx->stream.ogg.data);
-	ctx->stream.ogg.data = NULL;
 #if USE_SSL
 	if (ctx->ssl) {
 		SSL_shutdown(ctx->ssl);
@@ -155,9 +155,9 @@ static void _disconnect(stream_state state, disconnect_code disconnect, struct t
 #endif
 	closesocket(ctx->fd);
 	ctx->fd = -1;
-	if (ctx->stream.store) fclose(ctx->stream.store);
-	if (ctx->stream.ogg.state == STREAM_OGG_HEADER && ctx->stream.ogg.data) free(ctx->stream.ogg.data);
+	if (ctx->stream.ogg.state == STREAM_OGG_PAGE && ctx->stream.ogg.data) free(ctx->stream.ogg.data);
 	ctx->stream.ogg.data = NULL;
+	if (ctx->stream.store) fclose(ctx->stream.store);
 	wake_controller(ctx);
 }
 
@@ -280,7 +280,7 @@ static void stream_ogg(struct thread_ctx_s* ctx, size_t n) {
 		case STREAM_OGG_HEADER:
 			if (!memcmp(ctx->stream.ogg.header.pattern, "OggS", 4)) {
 				ctx->stream.ogg.miss = ctx->stream.ogg.want = ctx->stream.ogg.header.count;
-				ctx->stream.ogg.data = malloc(ctx->stream.ogg.miss);
+				ctx->stream.ogg.data = ctx->stream.ogg.segments;
 				ctx->stream.ogg.state = STREAM_OGG_SEGMENTS;
 			} else {
 				ctx->stream.ogg.state = STREAM_OGG_SYNC;
@@ -291,15 +291,14 @@ static void stream_ogg(struct thread_ctx_s* ctx, size_t n) {
 			// calculate size of page using lacing values
 			for (int i = 0; i < ctx->stream.ogg.want; i++) ctx->stream.ogg.miss += ctx->stream.ogg.data[i];
 			ctx->stream.ogg.want = ctx->stream.ogg.miss;
-			//LOG_INFO("granule %d", ctx->stream.ogg.header.granule);
+
 			if (ctx->stream.ogg.header.granule == 0) {
 				// granule 0 means a new stream, so let's look into it
 				ctx->stream.ogg.state = STREAM_OGG_PAGE;
-				ctx->stream.ogg.data = realloc(ctx->stream.ogg.data, ctx->stream.ogg.want);
+				ctx->stream.ogg.data = malloc(ctx->stream.ogg.want);
 			} else {
 				// otherwise, jump over data
 				ctx->stream.ogg.state = STREAM_OGG_SYNC;
-				free(ctx->stream.ogg.data);
 				ctx->stream.ogg.data = NULL;
 			}
 			break;

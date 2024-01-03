@@ -21,7 +21,7 @@
  */
 
 // by default on decent OS, we don't need to raw Ogg depacketizer
-#define OGG_ONLY
+//#define OGG_ONLY
 
 #include "squeezelite.h"
 #ifndef OGG_ONLY
@@ -257,6 +257,7 @@ static int read_opus_header(struct thread_ctx_s* ctx) {
 		} else if (u->status == OGG_COMMENT_HEADER) {
 			// don't consume VorbisComment which could be a huge packet, just skip it
 			if (!OG(&go, page_packets, &u->page)) continue;
+			LOG_INFO("[%p]: comment skipped successfully", ctx);
 			done = 1;
 		}
 	}

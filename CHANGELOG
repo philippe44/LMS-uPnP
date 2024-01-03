@@ -1,5 +1,10 @@
 (3.0.14.x swill be released as 3.1.0)
-3.0.14.1 
+
+3.0.14.3
+ - make sure linering is unset on output thread closing
+ - more detailed output thread logs
+
+3.0.14.2
  - lingering status must be reset upon exit otherwise output_start might still try to join
  
 3.0.14.1 

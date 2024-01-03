@@ -56,9 +56,15 @@ bool output_start(struct thread_ctx_s *ctx) {
 		 param->thread->running && !param->thread->lingering && param->thread < ctx->output_thread + ARRAY_COUNT(ctx->output_thread);
 		 param->thread++);
 
+	if (param->thread == ctx->output_thread + ARRAY_COUNT(ctx->output_thread)) {
+		LOG_ERROR("[%p]: can't find a free thread, we should not be there!!!", ctx);
+		return false;
+	}
+
 	if (param->thread->lingering) {
 		param->thread->running = false;
 		UNLOCK_O;
+		LOG_INFO("[%p]: joining thread index:%d (num:%d)", ctx, param->thread->index, param->thread->number);
 		pthread_join(param->thread->thread, NULL);
 	} else {
 		UNLOCK_O;
@@ -87,7 +93,7 @@ bool output_start(struct thread_ctx_s *ctx) {
 		return false;
 	}
 
-	LOG_INFO("[%p]: start thread %d", ctx, (param->thread - ctx->output_thread) / sizeof(ctx->output_thread[0]));
+	LOG_INFO("[%p]: start thread index:%d (num:%d)", ctx, param->thread->index, param->thread->number);
 	pthread_create(&param->thread->thread, NULL, (void *(*)(void*)) &output_http_thread, param);
 
 	return true;
@@ -95,11 +101,12 @@ bool output_start(struct thread_ctx_s *ctx) {
 
 /*---------------------------------------------------------------------------*/
 bool output_abort(struct thread_ctx_s *ctx, int index) {
-	for (int i = 0; i < 2; i++) if (ctx->output_thread[i].index == index) {
+	for (int i = 0; i < ARRAY_COUNT(ctx->output_thread); i++) if (ctx->output_thread[i].index == index) {
 		LOCK_O;
-		ctx->output_thread[i].running = false;
+		ctx->output_thread[i].running = ctx->output_thread[i].lingering = false;
 		UNLOCK_O;
 		pthread_join(ctx->output_thread[i].thread, NULL);
+
 		return true;
 	}
 	return false;
@@ -134,7 +141,7 @@ static void output_http_thread(struct thread_param_s *param) {
 		store = fopen(name, "wb");
 	}
 
-	LOG_INFO("[%p]: thread %d started, listening socket %u (cache:%d)", ctx, thread->index, thread->http, cache_type);
+	LOG_INFO("[%p]: thread index:%d (num:%d) started, listening socket %u (cache:%d)", ctx, thread->index, thread->number, thread->http, cache_type);
 
 	while (thread->running) {
 		if (sock == -1) {
@@ -301,7 +308,7 @@ static void output_http_thread(struct thread_param_s *param) {
 		UNLOCK_O;
 	}
 
-	LOG_INFO("[%p]: exiting, sent %zu bytes", ctx, cache->total);
+	LOG_INFO("[%p]: finishing thread index:%d (num:%d) - sent %zu bytes", ctx, thread->index, thread->number, cache->total);
 
 	buf_destroy(&backlog);
 	buf_destroy(obuf);
@@ -330,7 +337,7 @@ static void output_http_thread(struct thread_param_s *param) {
 	}
 
 	UNLOCK_O;
-	LOG_INFO("[%p]: exited thread %d", ctx, (thread - ctx->output_thread) / sizeof(*thread));
+	LOG_INFO("[%p]: exited thread index:%d (num:%d)", ctx, thread->index, thread->number);
 }
 
 /*----------------------------------------------------------------------------*/
