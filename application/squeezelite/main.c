@@ -702,6 +702,7 @@ void sq_init(struct in_addr host, u16_t port, char *model_name) {
 
 	output_init();
 	decode_init();
+	stream_init();
 }
 
 /*---------------------------------------------------------------------------*/
@@ -714,6 +715,7 @@ void sq_stop() {
 		}
 	}
 
+	stream_end();
 	decode_end();
 	output_end();
 }

@@ -718,20 +718,8 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 	return 0;
 }
 
-
 /*---------------------------------------------------------------------------*/
-bool stream_thread_init(unsigned streambuf_size, struct thread_ctx_s *ctx) {
-	pthread_attr_t attr;
-
-	LOG_DEBUG("[%p] streambuf size: %u", ctx, streambuf_size);
-	ctx->streambuf = &ctx->__s_buf;
-
-	buf_init(ctx->streambuf, ((streambuf_size / (BYTES_PER_FRAME * 3)) * BYTES_PER_FRAME * 3));
-	if (ctx->streambuf->buf == NULL) {
-		LOG_ERROR("[%p] unable to malloc buffer", ctx);
-		return false;
-	}
-
+void stream_init(void) {
 #if USE_LIBOGG && !LINKALL
 	go.handle = dlopen(LIBOGG, RTLD_NOW);
 	if (!go.handle) {
@@ -750,6 +738,27 @@ bool stream_thread_init(unsigned streambuf_size, struct thread_ctx_s *ctx) {
 	go.ogg_page_serialno = dlsym(go.handle, "ogg_page_serialno");
 	go.ogg_page_granulepos = dlsym(go.handle, "ogg_page_granulepos");
 #endif
+}
+
+/*---------------------------------------------------------------------------*/
+void stream_end(void) {
+#if USE_LIBOGG && !LINKALL
+	if (go.handle) dl_close(go.Handle);
+#endif
+}
+
+/*---------------------------------------------------------------------------*/
+bool stream_thread_init(unsigned streambuf_size, struct thread_ctx_s *ctx) {
+	pthread_attr_t attr;
+
+	LOG_DEBUG("[%p] streambuf size: %u", ctx, streambuf_size);
+	ctx->streambuf = &ctx->__s_buf;
+
+	buf_init(ctx->streambuf, ((streambuf_size / (BYTES_PER_FRAME * 3)) * BYTES_PER_FRAME * 3));
+	if (ctx->streambuf->buf == NULL) {
+		LOG_ERROR("[%p] unable to malloc buffer", ctx);
+		return false;
+	}
 
 #if USE_SSL
 	if (!SSLctx) {

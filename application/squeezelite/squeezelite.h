@@ -330,6 +330,8 @@ struct streamstate {
 	} ogg;
 };
 
+void		stream_init(void);
+void		stream_end(void);
 bool 		stream_thread_init(unsigned streambuf_size, struct thread_ctx_s *ctx);
 void 		stream_close(struct thread_ctx_s *ctx);
 void 		stream_file(const char *header, size_t header_len, unsigned threshold, struct thread_ctx_s *ctx);
