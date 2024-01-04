@@ -10,7 +10,7 @@
 
 #pragma once
 
-#define VERSION "v3.0.14.3"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v3.1.0"" ("__DATE__" @ "__TIME__")"
 
 // hopefully we'll get rid of this one at some point
 #define STR_LEN 256
@@ -54,6 +54,13 @@
 #if defined(LOOPBACK)
 #undef LOOPBACK
 #define LOOPBACK 1
+#endif
+
+#if defined(USE_LIBOGG)
+#undef USE_LIBOGG
+#define USE_LIBOGG 1
+#else
+#define USE_LIBOGG 0
 #endif
 
 #if defined(LINKALL)

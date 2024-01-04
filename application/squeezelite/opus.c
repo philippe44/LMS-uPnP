@@ -540,7 +540,9 @@ struct codec *register_opus(void) {
 
 void deregister_opus(void) {
 #if !LINKALL
+#ifdef OGG_ONLY
 	if (go.handle) dlclose(go.handle);
+#endif
 	if (gu.handle) dlclose(gu.handle);
 #endif
 }

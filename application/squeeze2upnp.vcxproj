@@ -91,7 +91,7 @@
       <WarningLevel>Level3</WarningLevel>
       <DisableSpecificWarnings>4129;4018;4244;4101;4267;4102;4068;4142</DisableSpecificWarnings>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>RESAMPLE;CODECS;USE_SSL;FLAC__NO_DLL;LINKALL;UPNP_STATIC_LIB;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;_WINSOCK_DEPRECATED_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>RESAMPLE;CODECS;USE_SSL;FLAC__NO_DLL;UPNP_STATIC_LIB;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;_WINSOCK_DEPRECATED_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;LINKALL;USE_LIBOGG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>squeezelite;squeeze2upnp\inc;crosstools\src;libopenssl\targets\win32\$(PlatformTarget)\include;libpupnp\targets\win32\$(PlatformTarget)\include\addons;libpupnp\targets\win32\$(PlatformTarget)\include\upnp;libpupnp\targets\win32\$(PlatformTarget)\include\ixml;libpthreads4w\targets\win32\$(PlatformTarget)\include;libcodecs\targets\include\flac;libcodecs\targets\include\mad;libcodecs\targets\include\ogg;libcodecs\targets\include\opus;libcodecs\targets\include\opusfile;libcodecs\targets\include\vorbis;libcodecs\targets\include\faac;libcodecs\targets\include\faad2;libcodecs\targets\include\soxr;libcodecs\targets\include\shine;libcodecs\targets\include\addons;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>

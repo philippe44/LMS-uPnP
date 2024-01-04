@@ -49,22 +49,34 @@ static ssize_t  send_backlog(struct buffer* backlog, int sock, const void* data,
 /*---------------------------------------------------------------------------*/
 bool output_start(struct thread_ctx_s *ctx) {
 	struct thread_param_s *param = calloc(sizeof(struct thread_param_s), 1);
+	size_t slot;
 
-	// start the http server thread (get an available one first)
 	LOCK_O;
-	for (param->thread = ctx->output_thread; 
-		 param->thread->running && !param->thread->lingering && param->thread < ctx->output_thread + ARRAY_COUNT(ctx->output_thread);
-		 param->thread++);
 
-	if (param->thread == ctx->output_thread + ARRAY_COUNT(ctx->output_thread)) {
+	// first try to find a non-running thread
+	for (slot = 0; slot < ARRAY_COUNT(ctx->output_thread) && ctx->output_thread[slot].running; slot++);
+
+	// none found, then use the lowest index lingering one
+	if (slot == ARRAY_COUNT(ctx->output_thread)) for (size_t i = 0; i < ARRAY_COUNT(ctx->output_thread); i++) {
+		if (ctx->output_thread[i].lingering &&
+			(slot == ARRAY_COUNT(ctx->output_thread) || ctx->output_thread[i].index <= ctx->output_thread[slot].index)) {
+			slot = i;
+		}
+	}
+
+	// this should never happen as all threads can't be running and none is lingering
+	if (slot == ARRAY_COUNT(ctx->output_thread)) {
 		LOG_ERROR("[%p]: can't find a free thread, we should not be there!!!", ctx);
 		return false;
 	}
 
+	// found something, now need to terminate it if it lingers
+	param->thread = ctx->output_thread + slot;
+
 	if (param->thread->lingering) {
 		param->thread->running = false;
 		UNLOCK_O;
-		LOG_INFO("[%p]: joining thread index:%d (num:%d)", ctx, param->thread->index, param->thread->number);
+		LOG_INFO("[%p]: joining thread index:%d (slot:%d)", ctx, param->thread->index, param->thread->slot);
 		pthread_join(param->thread->thread, NULL);
 	} else {
 		UNLOCK_O;
@@ -73,7 +85,6 @@ bool output_start(struct thread_ctx_s *ctx) {
 	// it's calloc
 	param->thread->index = ctx->output.index;
 	param->thread->running = true;
-	param->thread->lingering = false;
 	param->ctx = ctx;
 
 	// find a free port
@@ -93,7 +104,7 @@ bool output_start(struct thread_ctx_s *ctx) {
 		return false;
 	}
 
-	LOG_INFO("[%p]: start thread index:%d (num:%d)", ctx, param->thread->index, param->thread->number);
+	LOG_INFO("[%p]: start thread index:%d (slot:%d)", ctx, param->thread->index, param->thread->slot);
 	pthread_create(&param->thread->thread, NULL, (void *(*)(void*)) &output_http_thread, param);
 
 	return true;
@@ -103,7 +114,7 @@ bool output_start(struct thread_ctx_s *ctx) {
 bool output_abort(struct thread_ctx_s *ctx, int index) {
 	for (int i = 0; i < ARRAY_COUNT(ctx->output_thread); i++) if (ctx->output_thread[i].index == index) {
 		LOCK_O;
-		ctx->output_thread[i].running = ctx->output_thread[i].lingering = false;
+		ctx->output_thread[i].running = false;
 		UNLOCK_O;
 		pthread_join(ctx->output_thread[i].thread, NULL);
 
@@ -141,11 +152,11 @@ static void output_http_thread(struct thread_param_s *param) {
 		store = fopen(name, "wb");
 	}
 
-	LOG_INFO("[%p]: thread index:%d (num:%d) started, listening socket %u (cache:%d)", ctx, thread->index, thread->number, thread->http, cache_type);
+	LOG_INFO("[%p]: thread index:%d (slot:%d) started, listening socket %u (cache:%d)", ctx, thread->index, thread->slot, thread->http, cache_type);
 
 	while (thread->running) {
 		if (sock == -1) {
-			struct timeval timeout = { 0, 100 * 1000 };
+			struct timeval timeout = { 0, 50 * 1000 };
 
 			FD_ZERO(&rfds);
 			FD_SET(thread->http, &rfds);
@@ -175,7 +186,7 @@ static void output_http_thread(struct thread_param_s *param) {
 			// don't bother locking decoder, there is no race condition
 			if (ctx->decode.new_stream) {
 				// and yes, Windows is so bad that we can't use select() as a timer...
-				usleep(TIMEOUT * 1000);
+				usleep(25 * 1000);
 				continue;
 			}
 			acquired = true;
@@ -292,10 +303,10 @@ static void output_http_thread(struct thread_param_s *param) {
 	
 			LOG_SDEBUG("[%p] sent %u bytes (total: %u)", ctx, bytes, cache->total);
 		} else if (finished) {
+			LOG_INFO("[%p]: socket %d closed, now lingering", ctx, sock);
 			thread->lingering = true;
 			shutdown_socket(sock);
 			sock = -1;
-			LOG_INFO("[%p]: socket closed, now lingering", ctx);
 		} else if (!drain_count) {
 			if (ctx->output.chunked) send_backlog(&backlog, sock, "0\r\n\r\n", 5, 0);
 			finished = true;
@@ -308,7 +319,7 @@ static void output_http_thread(struct thread_param_s *param) {
 		UNLOCK_O;
 	}
 
-	LOG_INFO("[%p]: finishing thread index:%d (num:%d) - sent %zu bytes", ctx, thread->index, thread->number, cache->total);
+	LOG_INFO("[%p]: finishing thread index:%d (slot:%d) - sent %zu bytes", ctx, thread->index, thread->slot, cache->total);
 
 	buf_destroy(&backlog);
 	buf_destroy(obuf);
@@ -337,7 +348,7 @@ static void output_http_thread(struct thread_param_s *param) {
 	}
 
 	UNLOCK_O;
-	LOG_INFO("[%p]: exited thread index:%d (num:%d)", ctx, thread->index, thread->number);
+	LOG_INFO("[%p]: exited thread index:%d (slot:%d)", ctx, thread->index, thread->slot);
 }
 
 /*----------------------------------------------------------------------------*/

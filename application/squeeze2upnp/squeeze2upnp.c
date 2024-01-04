@@ -249,6 +249,9 @@ static char usage[] =
 #if LOOPBACK
 		   " LOOPBACK"
 #endif
+#if USE_LIBOGG
+           " LIBOGG"
+#endif
 #if WINEVENT
 		   " WINEVENT"
 #endif

@@ -24,6 +24,9 @@
 // build detection
 #include "platform.h"
 #include "squeezedefs.h"
+#if USE_LIBOGG
+#include <ogg/ogg.h>
+#endif
 
 #if !defined(LOOPBACK)
 #if LINUX && !defined(SELFPIPE)
@@ -56,6 +59,7 @@
 #define LIBFLAC "libFLAC.so.8"
 #define LIBMAD  "libmad.so.0"
 #define LIBMPG "libmpg123.so.0"
+#define LIBOGG "libogg.so.0"
 #define LIBVORBIS "libvorbisfile.so.3"
 #define LIBTREMOR "libvorbisidec.so.1"
 #define LIBOPUS "libopusfile.so.0"
@@ -70,6 +74,7 @@
 #define LIBFLAC "libFLAC.8.dylib"
 #define LIBMAD  "libmad.0.dylib"
 #define LIBMPG "libmpg123.0.dylib"
+#define LIBOGG "libogg.0.dylib"
 #define LIBVORBIS "libvorbisfile.3.dylib"
 #define LIBTREMOR "libvorbisidec.1.dylib"
 #define LIBOPUS "libopusfile.0.dylib"
@@ -84,6 +89,7 @@
 #define LIBFLAC "libFLAC.dll"
 #define LIBMAD  "libmad-0.dll"
 #define LIBMPG "libmpg123-0.dll"
+#define LIBOGG "libogg.dll"
 #define LIBVORBIS "libvorbisfile.dll"
 #define LIBTREMOR "libvorbisidec.dll"
 #define LIBOPUS "libopusfile-0.dll"
@@ -98,6 +104,7 @@
 #define LIBFLAC "libFLAC.so.11"
 #define LIBMAD  "libmad.so.2"
 #define LIBMPG "libmpg123.so.0"
+#define LIBOGG "libogg.so.0"
 #define LIBVORBIS "libvorbisfile.so.6"
 #define LIBTREMOR "libvorbisidec.so.1"
 #define LIBOPUS "libopusfile.so.1"
@@ -300,8 +307,15 @@ struct streamstate {
 		unsigned flags;
 	} strm;
 	struct {
+#if USE_LIBOGG
+		ogg_stream_state state;
+		ogg_packet packet;
+		ogg_sync_state sync;
+		ogg_page page;
+#else
 		enum { STREAM_OGG_OFF, STREAM_OGG_SYNC, STREAM_OGG_HEADER, STREAM_OGG_SEGMENTS, STREAM_OGG_PAGE } state;
-		u32_t want, miss, match;
+		size_t want, miss, match;
+		u64_t granule;
 		u8_t* data, segments[255];
 #pragma pack(push, 1)
 		struct {
@@ -312,6 +326,7 @@ struct streamstate {
 			u8_t count;
 		} header;
 #pragma pack(pop)
+#endif
 	} ogg;
 };
 
@@ -419,7 +434,7 @@ struct output_thread_s {
 		thread_type 	thread;
 		int				http;			// listening socket of http server
 		int 			index;
-		int				number;
+		int				slot;
 };
 
 // info for the track being sent to the http renderer (not played)
