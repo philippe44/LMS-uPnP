@@ -1,3 +1,6 @@
+3.1.1 
+ - don't block in ov_read callbacks unless it's for headers
+ 
 3.1.0
  - reduce some output_thread timers to speed-up joining when lingering
  - try to find a stopped output thread and if none, stop the oldest lingering one
