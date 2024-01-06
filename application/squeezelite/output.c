@@ -748,7 +748,7 @@ bool output_thread_init(struct thread_ctx_s *ctx) {
 	ctx->output.icy.artist = ctx->output.icy.title = ctx->output.icy.artwork = NULL;
 
 	for (int i = 0; i < ARRAY_COUNT(ctx->output_thread); i++) {
-		ctx->output_thread[i].running = false;
+		ctx->output_thread[i].running = ctx->output_thread[i].terminate = false;
 		ctx->output_thread[i].slot = i;
 		ctx->output_thread[i].http = -1;
 	}
@@ -850,7 +850,7 @@ static FLAC__StreamEncoderWriteStatus flac_write_callback(const FLAC__StreamEnco
 
 	/*
 	Seems that this callback can be called multiple time after a call to the flac
-	encoder ... so it's difficult to assess the mimum size required
+	encoder ... so it's difficult to assess the minimum size required
 	*/
 	if (out < bytes) {
 		LOG_ERROR("[%p]: not enough space for FLAC buffer %u %u", obuf, out, bytes);

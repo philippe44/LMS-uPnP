@@ -749,7 +749,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			if (ctx->decode.state == DECODE_ERROR || 
 			    (ctx->decode.state == DECODE_COMPLETE && ctx->canSTMdu && output_ready && 
 				(ctx->output.encode.flow || _sendSTMu || !ctx->config.next_delay || !ctx->status.duration || 
-				 ctx->status.duration - ctx->status.ms_played < ctx->config.next_delay * 1000))) {	
+				 (s32_t) (ctx->status.duration - ctx->status.ms_played) < ctx->config.next_delay * 1000))) {	
 				if (ctx->decode.state == DECODE_COMPLETE) _sendSTMd = true;
 				if (ctx->decode.state == DECODE_ERROR)    _sendSTMn = true;
 				ctx->decode.state = DECODE_STOPPED;
@@ -1272,7 +1272,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 	// need to stop thread if something went wrong
 	if (!ret) {
 		LOG_INFO("[%p]: something went wrong starting process %d", ctx, out->index);
-		output_abort(ctx, out->index);
+		output_stop(ctx, out->index, false);
 	}
 
 	return ret;

@@ -47,6 +47,14 @@ static ssize_t  send_chunked(bool chunked, struct buffer* backlog, int sock, con
 static ssize_t  send_backlog(struct buffer* backlog, int sock, const void* data, size_t bytes, int flags);
 
 /*---------------------------------------------------------------------------*/
+void output_stop(struct thread_ctx_s* ctx, int index, bool less) {
+	for (int i = 0; i < ARRAY_COUNT(ctx->output_thread); i++) {
+		if (less ? ctx->output_thread[i].index < index : ctx->output_thread[i].index == index)
+			ctx->output_thread[i].terminate = true;
+	}
+}
+
+/*---------------------------------------------------------------------------*/
 bool output_start(struct thread_ctx_s *ctx) {
 	struct thread_param_s *param = calloc(sizeof(struct thread_param_s), 1);
 	size_t slot;
@@ -64,9 +72,9 @@ bool output_start(struct thread_ctx_s *ctx) {
 		}
 	}
 
-	// this should never happen as all threads can't be running and none is lingering
+	// this should never happen as all threads can't be running with none lingering
 	if (slot == ARRAY_COUNT(ctx->output_thread)) {
-		LOG_ERROR("[%p]: can't find a free thread, we should not be there!!!", ctx);
+		LOG_ERROR("[%p]: can't find a free thread, we should not be here!!!", ctx);
 		return false;
 	}
 
@@ -85,6 +93,7 @@ bool output_start(struct thread_ctx_s *ctx) {
 	// it's calloc
 	param->thread->index = ctx->output.index;
 	param->thread->running = true;
+	param->thread->terminate = false;
 	param->ctx = ctx;
 
 	// find a free port
@@ -108,19 +117,6 @@ bool output_start(struct thread_ctx_s *ctx) {
 	pthread_create(&param->thread->thread, NULL, (void *(*)(void*)) &output_http_thread, param);
 
 	return true;
-}
-
-/*---------------------------------------------------------------------------*/
-bool output_abort(struct thread_ctx_s *ctx, int index) {
-	for (int i = 0; i < ARRAY_COUNT(ctx->output_thread); i++) if (ctx->output_thread[i].index == index) {
-		LOCK_O;
-		ctx->output_thread[i].running = false;
-		UNLOCK_O;
-		pthread_join(ctx->output_thread[i].thread, NULL);
-
-		return true;
-	}
-	return false;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -154,7 +150,7 @@ static void output_http_thread(struct thread_param_s *param) {
 
 	LOG_INFO("[%p]: thread index:%d (slot:%d) started, listening socket %u (cache:%d)", ctx, thread->index, thread->slot, thread->http, cache_type);
 
-	while (thread->running) {
+	while (thread->running && !thread->terminate) {
 		if (sock == -1) {
 			struct timeval timeout = { 0, 50 * 1000 };
 
@@ -170,7 +166,7 @@ static void output_http_thread(struct thread_param_s *param) {
 				FD_ZERO(&rfds);
 			}
 
-			if (sock != -1 && ctx->running) {
+			if (sock != -1 && thread->running) {
 				LOG_INFO("[%p]: got HTTP connection %u", ctx, sock);
 			} else continue;
 		}
@@ -205,9 +201,16 @@ static void output_http_thread(struct thread_param_s *param) {
 	
 		// something wrong happened or master connection closed
 		if (n < 0 || !res) {
+			// don't forget to linger if device disconnects us before we can sent last chunk
+			if (finished) {
+				LOG_WARN("[%p]: remote closed socket before lingering (%d)", ctx, sock);
+				thread->lingering = true;
+			} 
+
 			LOG_INFO("[%p]: HTTP close %d (bytes %zd) (n:%d res:%d)", ctx, sock, cache->total, n, res);
 			closesocket(sock);
 			sock = -1;
+
 			/* when streaming fails, decode will be completed but new_stream never happened, 
 			 * so output thread is blocked until the player closes the connection at which 
 			 * point we must exit and release slimproto (case where bytes == 0)	*/
@@ -335,16 +338,16 @@ static void output_http_thread(struct thread_param_s *param) {
 	thread->http = -1;
 	thread->lingering = false;
 
-	if (thread->running) {
-		// if we self-terminate, nobody will join us so free resources now
-		pthread_detach(thread->thread);
-		thread->running = false;
-	}
-
 	if (ctx->output.encode.flow) {
 		_output_end_stream(NULL, ctx);
 		// need to have slimproto move on in case of stream failure
 		ctx->output.completed = true;
+	}
+
+	if (thread->running) {
+		// if we self-terminate, nobody will join us so free resources now
+		pthread_detach(thread->thread);
+		thread->running = false;
 	}
 
 	UNLOCK_O;

@@ -432,11 +432,12 @@ typedef enum { ENCODE_THRU, ENCODE_NULL, ENCODE_PCM, ENCODE_FLAC, ENCODE_AAC, EN
 
 // parameters for the output management thread
 struct output_thread_s {
-		bool			running, lingering;
-		thread_type 	thread;
-		int				http;			// listening socket of http server
-		int 			index;
-		int				slot;
+	bool			running, lingering;
+	bool			terminate;
+	thread_type 	thread;
+	int				http;			// listening socket of http server
+	int 			index;
+	int				slot;
 };
 
 // info for the track being sent to the http renderer (not played)
@@ -453,7 +454,7 @@ struct outputstate {
 	u32_t	offset;			// offset of track in ms (for flow mode)
 	u32_t	bitrate;	  	// as per name
 	int64_t length;			// HTTP content-length (-1:no chunked, -3 chunked if possible, >=0 fake length)
-	u16_t  	index;			// 16 bits track counter(see output_thread)
+	int 	index;			// track counter (see output_thread)
 	u16_t	port;			// port of latest thread (mainy used for codc)
 	bool 	chunked;		// chunked mode
 	char 	mimetype[STR_LEN];	// content-type to send to player
@@ -530,8 +531,7 @@ void 		_checkduration(u32_t frames, struct thread_ctx_s *ctx);
 // output_http.c
 bool 		output_flush(struct thread_ctx_s *ctx, bool full);
 bool		output_start(struct thread_ctx_s *ctx);
-bool 		output_abort(struct thread_ctx_s *ctx, int index);
-void 		wake_output(struct thread_ctx_s *ctx);
+void 		output_stop(struct thread_ctx_s* ctx, int index, bool below);
 
 /***************** main thread context**************/
 typedef struct {
@@ -597,7 +597,7 @@ struct thread_ctx_s {
 	char		cli_id[18];		// (6*2)+(5*':')+NULL
 	mutex_type	cli_mutex;
 	u32_t		cli_timeout;
-	struct output_thread_s output_thread[2];
+	struct output_thread_s output_thread[5];
 	bool 		decode_running, stream_running;
 	thread_type	decode_thread, stream_thread;
 	struct sockaddr_in serv_addr;

@@ -1,3 +1,11 @@
+3.1.2
+ - playtime might be over what LMS claimed in metadata, so make a signed comparison to send STMd
+ - if remote closes socket before output_thread lingers, it was blocked in running state
+ - when new track started, forced lower index output_thread to exit anyway (don't linger when not needed)
+ - add "cancelled" flag to output_thread so that it an be set w/o joining
+ - index are always integer
+ - increase usable output threads to 5
+ 
 3.1.1 
  - don't block in ov_read callbacks unless it's for headers
  
