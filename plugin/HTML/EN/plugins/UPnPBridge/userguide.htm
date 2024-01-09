@@ -135,7 +135,8 @@ be used.</span></p>
 configured and ran from LMS, but it can also run on another machine on the same
 network. In the latter case, configuration must be done semi-manually. You can
 use systemd ro run it on an independent compute and use the guide of one on my
-other apps, AirConnect https://github.com/philippe44/AirConnect#start-automatically-in-linux</span></p>
+other apps, AirConnect
+https://github.com/philippe44/AirConnect#start-automatically-in-linux</span></p>
 
 <h2 style='margin-top:12.0pt;margin-right:0cm;margin-bottom:6.0pt;margin-left:
 28.8pt;text-indent:-28.8pt;page-break-after:avoid;background:white'><span
@@ -295,7 +296,9 @@ pcm/wav/aif audio tracks. </span></p>
 style='color:black'>FLAC</span></b><span lang=EN-GB style='color:black'>: When
 seeking in a track, LMS does not send a flac header which can cause playback
 failure. The parameter &lt;flac_header&gt; let the bridge insert a pseudo flac
-header on the fly when it’s missing.<b> </b></span></p>
+header on the fly when it’s missing. When that re-insertion is made, the bridge
+also adjust the frame counters so that they always start from 0 (otherwise
+players might display an incorrect timestamp)</span></p>
 
 <p class=MsoNormal style='background:white'><b><span lang=EN-GB
 style='color:black'>PCM/WAV/AIF: </span></b><span lang=EN-GB style='color:black'>As
@@ -324,8 +327,8 @@ useless formats, so it’s not where I spend most attention and time..</span></p
 <p class=MsoNormal style='background:white'><b><span lang=EN-CA>OGG</span></b><span
 lang=EN-CA>: It is a container not a codec (often confused with vorbis) and can
 be used to wrap vorbis, opus or flac (ogg, ops and ogf in LMS’ codec
-terminology). Like for mp4, most players won’t indicate what they actually
-support, beyond audio/ogg (the proper syntax for such mimetypes is
+terminology). Like for mp4, most players won’t indicate what they actually support,
+beyond audio/ogg (the proper syntax for such mimetypes is
 audio/ogg;codecs=vorbis, audio/ogg;codecs=opus and audio/ogg;codecs=flac). The
 bridge is non-strict and will allow ogg, ops and ogf if “audio/ogg” is found in
 capabilities, but it will send the full mimetype details to the player. If this
@@ -586,9 +589,10 @@ commands (remote/buttons)</span></h2>
 
 <p class=MsoNormal><span lang=EN-GB style='color:black'>LMS takes full control
 of players and t</span><span lang=EN-GB>o use a registered one independently,
-best is to switch it off in LMS. Then whatever happens to the player is not forwarded
-to LMS and no LMS command will be sent that would interfere with it. Only when
-you switch the player back on from LMS will it be under the control of LMS.</span></p>
+best is to switch it off in LMS. Then whatever happens to the player is not
+forwarded to LMS and no LMS command will be sent that would interfere with it.
+Only when you switch the player back on from LMS will it be under the control
+of LMS.</span></p>
 
 <p class=MsoNormal><span lang=EN-GB>Having to switch an UPnP player off every
 time you want to use it independently from LMS might be inconvenient.
@@ -1203,9 +1207,9 @@ color:black'> Maximum volume]</span></p>
 style='font-size:11.0pt;color:black'>Gapless play is by setting a “current
 track/URI” and a “next track/URI” in UPnP players. When they reach the end of
 “current track/URI”, players move to the next one automatically. Some players
-do not support this feature and will stop when the “current track/URI” ends. This
-options forces the next track to be played on faulty players, but there will be
-a gap.&nbsp; Some players buffer the “next track/URI” while playing the
+do not support this feature and will stop when the “current track/URI” ends.
+This options forces the next track to be played on faulty players, but there
+will be a gap.&nbsp; Some players buffer the “next track/URI” while playing the
 “currentURI” to do real gapless. Other players, although they support “next
 track/URI”, wait for the end of the current track before buffering the next
 one, and that will create a gap.</span></i></p>
@@ -1227,10 +1231,10 @@ lang=EN-US style='font-size:11.0pt;color:black'> Gapless]</span></p>
 <p class=MsoNormal style='margin-top:5.0pt;margin-right:0cm;margin-bottom:0cm;
 margin-left:0cm'><i><span lang=EN-GB style='font-size:11.0pt;color:black'>When
 a next track is requested too early before the end of the current one, some
-service may consider that the connection is stalled and will close it.. This happens
-for players with very large buffers. Set here the number of seconds, before the
-end of the current track, when the next one is requested (0 allows request
-immediately)</span></i></p>
+service may consider that the connection is stalled and will close it.. This
+happens for players with very large buffers. Set here the number of seconds,
+before the end of the current track, when the next one is requested (0 allows
+request immediately)</span></i></p>
 
 <p class=MsoNormal><span lang=EN-US style='font-size:11.0pt;color:black'>[Streaming
 options </span><span style='font-size:11.0pt;font-family:Wingdings;color:black'>è</span><span
@@ -1434,7 +1438,8 @@ to start from 0. Such header is required by some players and it contains
 information like total number of samples in the file. The bridge cannot know
 these values and the flac standard specifies that they should be set to 0 when
 unknown. Still, some players do not comply and expect a non-zero total number
-of frames and at least counted from the value of the first frame, not from 0.</span></i></p>
+of frames. The bridge always recalculate frame number to start from when
+seeking.</span></i></p>
 
 <p class=MsoNormal><i><u><span lang=EN-GB style='font-size:11.0pt;color:black'>This
 only applies to passthrough mode.</span></u></i></p>
@@ -1449,8 +1454,7 @@ header re-inserted with 0 for total number of sample and checksum</span></i></p>
 header re-inserted with 2^36-1 for total number of samples</span></i></p>
 
 <p class=MsoNormal><i><span lang=EN-GB style='font-size:11.0pt;color:black'>3:
-header re-inserted with number of samples calculated from remaining duration +
-first frame index</span></i></p>
+header re-inserted with number of samples calculated from remaining duration</span></i></p>
 
 <p class=MsoNormal><span lang=EN-US style='font-size:11.0pt;color:black'>[Audio
 codec parameters </span><span lang=EN-GB style='font-size:11.0pt;font-family:
@@ -1605,8 +1609,8 @@ player.</span></i></p>
 - Sonos PLAY:3&lt;<b>friendly_name&gt;</b></span></p>
 
 <p class=MsoNormal><i><span lang=EN-GB style='font-size:11.0pt;color:black'>!!!
-DO NOT EDIT THIS !!!&nbsp; It is the UPnP device name set by player – this is discovered
-automatically. The example is is for a Sonos player.</span></i></p>
+DO NOT EDIT THIS !!!&nbsp; It is the UPnP device name set by player – this is
+discovered automatically. The example is is for a Sonos player.</span></i></p>
 
 <p class=MsoNormal><b><span lang=EN-GB style='font-size:11.0pt;color:black'>&lt;name&gt;string&lt;/name&gt;</span></b></p>
 
