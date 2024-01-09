@@ -327,8 +327,8 @@ useless formats, so it’s not where I spend most attention and time..</span></p
 <p class=MsoNormal style='background:white'><b><span lang=EN-CA>OGG</span></b><span
 lang=EN-CA>: It is a container not a codec (often confused with vorbis) and can
 be used to wrap vorbis, opus or flac (ogg, ops and ogf in LMS’ codec
-terminology). Like for mp4, most players won’t indicate what they actually support,
-beyond audio/ogg (the proper syntax for such mimetypes is
+terminology). Like for mp4, most players won’t indicate what they actually
+support, beyond audio/ogg (the proper syntax for such mimetypes is
 audio/ogg;codecs=vorbis, audio/ogg;codecs=opus and audio/ogg;codecs=flac). The
 bridge is non-strict and will allow ogg, ops and ogf if “audio/ogg” is found in
 capabilities, but it will send the full mimetype details to the player. If this
@@ -1438,7 +1438,7 @@ to start from 0. Such header is required by some players and it contains
 information like total number of samples in the file. The bridge cannot know
 these values and the flac standard specifies that they should be set to 0 when
 unknown. Still, some players do not comply and expect a non-zero total number
-of frames. The bridge always recalculate frame number to start from when
+of frames. The bridge always recalculates frame number to start from 0 when
 seeking.</span></i></p>
 
 <p class=MsoNormal><i><u><span lang=EN-GB style='font-size:11.0pt;color:black'>This
