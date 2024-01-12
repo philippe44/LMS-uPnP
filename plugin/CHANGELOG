@@ -1,3 +1,7 @@
+3.3.0 (pre)
+ - only re-acquire state on play action completion. This is not needed on stop/pause and will create issues like fake stops
+ - on renderer stop, only terminate output_http_thread if it's lingering
+
 3.2.0
  - playtime might be over what LMS claimed in metadata, so make a signed comparison to send STMd
  - if remote closes socket before output_thread lingers, it was blocked in running state
