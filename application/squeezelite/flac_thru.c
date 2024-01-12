@@ -35,6 +35,8 @@ static log_level *loglevel = &decode_loglevel;
 #define lzcnt(x) __builtin_clz(x)
 #endif
 
+// see https://xiph.org/flac/format.html
+
 static const u32_t	FLAC_RATES[] = { 0, 88200, 176400, 192000, 8000, 16000, 22050,
 							   24000, 32000, 44100, 48000, 96000, 0x0c, 0xd, 0x0e, 0x0f };
 static const u8_t	FLAC_CHANNELS[] = { 1, 2, 3, 4, 5, 6, 7, 8, 2, 2, 2, 0, 0, 0, 0, 0 };

@@ -40,8 +40,8 @@
 #define MAGIC			0xAABBCCDD
 #define RESOURCE_LENGTH	250
 
-enum 	eMRstate { UNKNOWN, STOPPED, PLAYING, PAUSED, TRANSITIONING };
-enum 	{ AVT_SRV_IDX = 0, REND_SRV_IDX, CNX_MGR_IDX, TOPOLOGY_IDX, GRP_REND_SRV_IDX, NB_SRV };
+enum eMRstate { UNKNOWN, STOPPED, PLAYING, PAUSED, TRANSITIONING };
+enum { AVT_SRV_IDX = 0, REND_SRV_IDX, CNX_MGR_IDX, TOPOLOGY_IDX, GRP_REND_SRV_IDX, NB_SRV };
 
 struct sService {
 	char Id			[RESOURCE_LENGTH];
@@ -53,9 +53,7 @@ struct sService {
 	uint32_t		Failed;
 };
 
-
-typedef struct sMRConfig
-{
+typedef struct sMRConfig {
 	bool		SeekAfterPause;
 	bool		LivePause;
 	bool		ByteSeek;

@@ -304,10 +304,8 @@ static bool 	_ProcessQueue(struct sMR *Device);
 static void 	_SyncNotifState(char *State, struct sMR* Device);
 static void 	_ProcessVolume(char *Volume, struct sMR* Device);
 
-
 /*----------------------------------------------------------------------------*/
-bool sq_callback(void *caller, sq_action_t action, ...)
-{
+bool sq_callback(void *caller, sq_action_t action, ...) {
 	struct sMR *Device = caller;
 	bool rc = true;
 
@@ -539,15 +537,11 @@ bool sq_callback(void *caller, sq_action_t action, ...)
 	return rc;
 }
 
-
 /*----------------------------------------------------------------------------*/
-static void *MRThread(void *args)
-{
+static void *MRThread(void *args) {
 	int elapsed, wakeTimer = MIN_POLL;
-	unsigned last;
 	struct sMR *p = (struct sMR*) args;
-
-	last = gettime_ms();
+	unsigned last = gettime_ms();
 
 	for (; p->Running; crossthreads_sleep(wakeTimer)) {
 		elapsed = gettime_ms() - last;
@@ -627,10 +621,8 @@ sleep:
 	return NULL;
 }
 
-
 /*----------------------------------------------------------------------------*/
-static void _SyncNotifState(char *State, struct sMR* Device)
-{
+static void _SyncNotifState(char *State, struct sMR* Device) {
 	sq_event_t Event = SQ_NONE;
 	bool Param = false;
 
@@ -708,11 +700,9 @@ static void _SyncNotifState(char *State, struct sMR* Device)
 }
 
 /*----------------------------------------------------------------------------*/
-static bool _ProcessQueue(struct sMR *Device)
-{
+static bool _ProcessQueue(struct sMR *Device) {
 	struct sService *Service = &Device->Service[AVT_SRV_IDX];
 	tAction *Action;
-	int rc = 0;
 
 	/*
 	ASSUMING DEVICE'S MUTEX LOCKED
@@ -722,7 +712,7 @@ static bool _ProcessQueue(struct sMR *Device)
 	if ((Action = queue_extract(&Device->ActionQueue)) == NULL) return false;
 
 	Device->WaitCookie = Device->seqN++;
-	rc = UpnpSendActionAsync(glControlPointHandle, Service->ControlURL, Service->Type,
+	int rc = UpnpSendActionAsync(glControlPointHandle, Service->ControlURL, Service->Type,
 							 NULL, Action->ActionNode, ActionHandler, Device->WaitCookie);
 
 	if (rc != UPNP_E_SUCCESS) {
@@ -732,12 +722,11 @@ static bool _ProcessQueue(struct sMR *Device)
 	ixmlDocument_free(Action->ActionNode);
 	free(Action);
 
-	return (rc == 0);
+	return (rc == UPNP_E_SUCCESS);
 }
 
 /*----------------------------------------------------------------------------*/
-static void _ProcessVolume(char *Volume, struct sMR* Device)
-{
+static void _ProcessVolume(char *Volume, struct sMR* Device) {
 	int UPnPVolume = atoi(Volume), GroupVolume;
 	uint32_t now = gettime_ms();
 	struct sMR *Master = Device->Master ? Device->Master : Device;
@@ -851,17 +840,12 @@ int ActionHandler(Upnp_EventType EventType, const void* Event, void* Cookie) {
 				p->StartCookie = p->WaitCookie;
 				_ProcessQueue(p);
 
-				/*
-				when certain waited action has been completed, the state need
-				to be re-acquired because a 'stop' state might be missed when
-				(eg) repositionning where two consecutive status update will
-				give 'playing', the 'stop' in the middle being unseen
-				*/
-				if (Resp && ((!strcasecmp(Resp, "StopResponse") && p->State == STOPPED) ||
-					(!strcasecmp(Resp, "PlayResponse") && p->State == PLAYING) ||
-					(!strcasecmp(Resp, "PauseResponse") && p->State == PAUSED))) {
-					p->State = UNKNOWN;
-				}
+				/* when play action has been completed, the state need to be re-acquired because we
+				 * might have missed a state in-between. For example, while seeking there is a very 
+				 * stop/play so the STOPPED state will be missed and the PLAYING event will be as 
+				 * well. This should not be done for stop/pause actions otherwise we might create a fake STOPPED event state and think
+				 * we stopped when in fact it's just the re-acquisition of current state */
+				if (Resp && !strcasecmp(Resp, "PlayResponse") && p->State == PLAYING) p->State = UNKNOWN;
 
 				break;
 			}
@@ -966,8 +950,7 @@ int ActionHandler(Upnp_EventType EventType, const void* Event, void* Cookie) {
 }
 
 /*----------------------------------------------------------------------------*/
-int MasterHandler(Upnp_EventType EventType, const void *_Event, void *Cookie)
-{
+int MasterHandler(Upnp_EventType EventType, const void *_Event, void *Cookie) {
 	// this variable is not thread_safe and not supposed to be
 	static int recurse = 0;
 	// libupnp makes this highly re-entrant so callees must protect themselves
@@ -1081,16 +1064,14 @@ int MasterHandler(Upnp_EventType EventType, const void *_Event, void *Cookie)
 }
 
 /*----------------------------------------------------------------------------*/
-static void FreeUpdate(void *_Item)
-{
+static void FreeUpdate(void *_Item) {
 	tUpdate *Item = (tUpdate*) _Item;
 	NFREE(Item->Data);
 	free(Item);
 }
 
 /*----------------------------------------------------------------------------*/
-static void *UpdateThread(void *args)
-{
+static void *UpdateThread(void *args) {
 	while (glMainRunning) {
 		tUpdate *Update;
 		bool updated = false;
@@ -1467,8 +1448,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 }
 
 /*----------------------------------------------------------------------------*/
-static bool isExcluded(char *Model)
-{
+static bool isExcluded(char *Model) {
 	char item[STR_LEN];
 	char *p = glExcluded;
 	if (!glExcluded) return false;
@@ -1590,6 +1570,7 @@ static bool Stop(void) {
 
 	return true;
 }
+
 /*---------------------------------------------------------------------------*/
 static void sighandler(int signum) {
 	int i;

@@ -1,5 +1,5 @@
 /*
- *  Squeeze2upnp - LMS to uPNP bridge
+ *  UPnP renderer utils
  *
  *	(c) Philippe, philippe_44@outlook.com
  *

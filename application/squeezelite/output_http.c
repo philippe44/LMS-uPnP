@@ -47,10 +47,16 @@ static ssize_t  send_chunked(bool chunked, struct buffer* backlog, int sock, con
 static ssize_t  send_backlog(struct buffer* backlog, int sock, const void* data, size_t bytes, int flags);
 
 /*---------------------------------------------------------------------------*/
-void output_stop(struct thread_ctx_s* ctx, int index, bool less) {
+void output_terminate(struct thread_ctx_s* ctx, int index, bool lingers) {
 	for (int i = 0; i < ARRAY_COUNT(ctx->output_thread); i++) {
-		if (less ? ctx->output_thread[i].index < index : ctx->output_thread[i].index == index)
-			ctx->output_thread[i].terminate = true;
+		if (ctx->output_thread[i].index == index && (!lingers || ctx->output_thread[i].lingering)) ctx->output_thread[i].terminate = true;
+	}
+}
+
+/*---------------------------------------------------------------------------*/
+void output_terminate_below(struct thread_ctx_s* ctx, int index) {
+	for (int i = 0; i < ARRAY_COUNT(ctx->output_thread); i++) {
+		if (ctx->output_thread[i].index < index) ctx->output_thread[i].terminate = true;
 	}
 }
 

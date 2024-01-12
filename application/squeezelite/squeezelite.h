@@ -307,7 +307,9 @@ struct streamstate {
 		unsigned flags;
 	} strm;
 	struct {
+		bool flac;
 #if USE_LIBOGG
+		bool active;
 		ogg_stream_state state;
 		ogg_packet packet;
 		ogg_sync_state sync;
@@ -335,7 +337,7 @@ void		stream_end(void);
 bool 		stream_thread_init(unsigned streambuf_size, struct thread_ctx_s *ctx);
 void 		stream_close(struct thread_ctx_s *ctx);
 void 		stream_file(const char *header, size_t header_len, unsigned threshold, struct thread_ctx_s *ctx);
-void 		stream_sock(u32_t ip, u16_t port, bool use_ssl, char codec, const char *header, size_t header_len, unsigned threshold, 
+void 		stream_sock(u32_t ip, u16_t port, bool use_ssl, bool use_ogg, const char *header, size_t header_len, unsigned threshold, 
 						bool cont_wait, struct thread_ctx_s *ctx);
 bool 		stream_disconnect(struct thread_ctx_s *ctx);
 
@@ -531,7 +533,8 @@ void 		_checkduration(u32_t frames, struct thread_ctx_s *ctx);
 // output_http.c
 bool 		output_flush(struct thread_ctx_s *ctx, bool full);
 bool		output_start(struct thread_ctx_s *ctx);
-void 		output_stop(struct thread_ctx_s* ctx, int index, bool below);
+void 		output_terminate(struct thread_ctx_s* ctx, int index, bool lingers);
+void 		output_terminate_below(struct thread_ctx_s* ctx, int index);
 
 /***************** main thread context**************/
 typedef struct {

@@ -107,6 +107,8 @@ static FLAC__StreamDecoderReadStatus read_cb(const FLAC__StreamDecoder *decoder,
 	_buf_inc_readp(ctx->streambuf, bytes);
 	UNLOCK_S;
 
+	if (!end && !bytes) usleep(100 * 1000);
+
 	*want = bytes;
 
 	return end ? FLAC__STREAM_DECODER_READ_STATUS_END_OF_STREAM : FLAC__STREAM_DECODER_READ_STATUS_CONTINUE;
@@ -310,7 +312,7 @@ struct codec *register_flac(void) {
 		return NULL;
 	}
 
-	LOG_INFO("using flac to decode flc", NULL);
+	LOG_INFO("using flac to decode ogf,flc", NULL);
 	return &ret;
 }
 
