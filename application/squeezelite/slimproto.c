@@ -1274,7 +1274,8 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 	// need to stop thread if something went wrong
 	if (!ret) {
 		LOG_INFO("[%p]: something went wrong starting process %d", ctx, out->index);
-		output_terminate(ctx, out->index, false);
+		// as an exception, we can call this w/o LOCK_O
+		_output_terminate(ctx, out->index);
 	}
 
 	return ret;

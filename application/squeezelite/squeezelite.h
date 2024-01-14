@@ -524,6 +524,10 @@ void		output_end(void);
 void		output_set_icy(struct metadata_s* metadata, struct thread_ctx_s* ctx);
 void 		output_free_icy(struct thread_ctx_s *ctx);
 
+bool		_output_lingers(struct thread_ctx_s* ctx, int index);
+void 		_output_terminate(struct thread_ctx_s* ctx, int index);
+void 		_output_terminate_below(struct thread_ctx_s* ctx, int index);
+
 bool		_output_fill(struct buffer *buf, FILE *store, struct thread_ctx_s *ctx);
 void 		_output_new_stream(struct buffer *buf, FILE *store, struct thread_ctx_s *ctx);
 void 		_output_end_stream(struct buffer *buf, struct thread_ctx_s *ctx);
@@ -533,8 +537,6 @@ void 		_checkduration(u32_t frames, struct thread_ctx_s *ctx);
 // output_http.c
 bool 		output_flush(struct thread_ctx_s *ctx, bool full);
 bool		output_start(struct thread_ctx_s *ctx);
-void 		output_terminate(struct thread_ctx_s* ctx, int index, bool lingers);
-void 		output_terminate_below(struct thread_ctx_s* ctx, int index);
 
 /***************** main thread context**************/
 typedef struct {

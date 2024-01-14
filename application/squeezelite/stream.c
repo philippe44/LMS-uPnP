@@ -128,21 +128,21 @@ static bool send_header(struct thread_ctx_s *ctx) {
 		n = _send(ctx, ptr, len, MSG_NOSIGNAL);
 		if (n <= 0) {
 			if (n < 0 && _last_error(ctx) == ERROR_WOULDBLOCK && try < 10) {
-				LOG_SDEBUG("[%p] retrying (%d) writing to socket", ctx, ++try);
+				LOG_SDEBUG("[%p]: retrying (%d) writing to socket", ctx, ++try);
 				usleep(1000);
 				continue;
 			}
-			LOG_WARN("[%p] failed writing to socket: %s", ctx, strerror(_last_error(ctx)));
+			LOG_WARN("[%p]: failed writing to socket: %s", ctx, strerror(_last_error(ctx)));
 			ctx->stream.disconnect = LOCAL_DISCONNECT;
 			ctx->stream.state = DISCONNECT;
 			wake_controller(ctx);
 			return false;
 		}
-		LOG_SDEBUG("[%p] wrote %d bytes to socket", ctx, n);
+		LOG_SDEBUG("[%p]: wrote %d bytes to socket", ctx, n);
 		ptr += n;
 		len -= n;
 	}
-	LOG_SDEBUG("[%p] wrote header", ctx);
+	LOG_SDEBUG("[%p]: wrote header", ctx);
 	return true;
 }
 
@@ -174,10 +174,10 @@ static void _disconnect(stream_state state, disconnect_code disconnect, struct t
 static int connect_socket(bool use_ssl, struct thread_ctx_s *ctx) {
 	int sock = socket(AF_INET, SOCK_STREAM, 0);
 
-	LOG_INFO("[%p] connecting to %s:%d", ctx, inet_ntoa(ctx->stream.addr.sin_addr), ntohs(ctx->stream.addr.sin_port));
+	LOG_INFO("[%p]: connecting to %s:%d", ctx, inet_ntoa(ctx->stream.addr.sin_addr), ntohs(ctx->stream.addr.sin_port));
 
 	if (sock < 0) {
-		LOG_ERROR("[%p] failed to create socket", ctx);
+		LOG_ERROR("[%p]: failed to create socket", ctx);
 		return sock;
 	}
 
@@ -188,13 +188,13 @@ static int connect_socket(bool use_ssl, struct thread_ctx_s *ctx) {
 	unsigned int opt, len = sizeof(opt);
 	getsockopt(sock, SOL_SOCKET, SO_RCVBUF, (void*)&opt, &len);
 	setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (void*) &opt, sizeof(opt));
-	LOG_INFO("[%p] set SO_RCVBUF at %d bytes", ctx, opt);
+	LOG_INFO("[%p]: set SO_RCVBUF at %d bytes", ctx, opt);
 
 	set_nonblock(sock);
 	set_nosigpipe(sock);
 
 	if (tcp_connect_timeout(sock, ctx->stream.addr, 10*1000) < 0) {
-		LOG_WARN("[%p] unable to connect to server", ctx);
+		LOG_WARN("[%p]: unable to connect to server", ctx);
 		closesocket(sock);
 		return -1;
 	}
@@ -560,7 +560,7 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 					ctx->stream.header_len++;
 
 					if (ctx->stream.header_len > MAX_HEADER - 1) {
-						LOG_ERROR("[%p] received headers too long: %u", ctx, ctx->stream.header_len);
+						LOG_ERROR("[%p]: received headers too long: %u", ctx, ctx->stream.header_len);
 						_disconnect(DISCONNECT, LOCAL_DISCONNECT, ctx);
 					}
 
@@ -568,7 +568,7 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 						ctx->stream.endtok++;
 						if (ctx->stream.endtok == 4) {
 							*(ctx->stream.header + ctx->stream.header_len) = '\0';
-							LOG_INFO("[%p] headers: len: %d\n%s", ctx, ctx->stream.header_len, ctx->stream.header);
+							LOG_INFO("[%p]: headers: len: %d\n%s", ctx, ctx->stream.header_len, ctx->stream.header);
 							ctx->stream.state = ctx->stream.cont_wait ? STREAMING_WAIT : STREAMING_BUFFERING;
 							wake_controller(ctx);
 						}
@@ -592,7 +592,7 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 								UNLOCK_S;
 								continue;
 							}
-							LOG_WARN("[%p] error reading icy meta: %s", ctx, n ? strerror(_last_error(ctx)) : "closed");
+							LOG_WARN("[%p]: error reading icy meta: %s", ctx, n ? strerror(_last_error(ctx)) : "closed");
 							_disconnect(STOPPED, LOCAL_DISCONNECT, ctx);
 							UNLOCK_S;
 							continue;
@@ -609,7 +609,7 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 								UNLOCK_S;
 								continue;
 							}
-							LOG_WARN("[%p] error reading icy meta: %s", ctx, n ? strerror(_last_error(ctx)) : "closed");
+							LOG_WARN("[%p]: error reading icy meta: %s", ctx, n ? strerror(_last_error(ctx)) : "closed");
 							_disconnect(STOPPED, LOCAL_DISCONNECT, ctx);
 							UNLOCK_S;
 							continue;
@@ -621,7 +621,7 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 					if (ctx->stream.meta_left == 0) {
 						if (ctx->stream.header_len) {
 							*(ctx->stream.header + ctx->stream.header_len) = '\0';
-							LOG_INFO("[%p] icy meta: len: %u\n%s", ctx, ctx->stream.header_len, ctx->stream.header);
+							LOG_INFO("[%p]: icy meta: len: %u\n%s", ctx, ctx->stream.header_len, ctx->stream.header);
 							ctx->stream.meta_send = true;
 							wake_controller(ctx);
 						}
@@ -640,11 +640,11 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 
 					int n = _recv(ctx, ctx->streambuf->writep, space, 0);
 					if (n == 0) {
-						LOG_INFO("[%p] end of stream (t:%lld)", ctx, ctx->stream.bytes);
+						LOG_INFO("[%p]: end of stream (t:%" PRId64 ")", ctx, ctx->stream.bytes);
 						_disconnect(DISCONNECT, DISCONNECT_OK, ctx);
 					}
 					if (n < 0 && _last_error(ctx) != ERROR_WOULDBLOCK) {
-						LOG_WARN("[%p] error reading: %s (%d)", ctx, strerror(_last_error(ctx)), _last_error(ctx));
+						LOG_WARN("[%p]: error reading: %s (%d)", ctx, strerror(_last_error(ctx)), _last_error(ctx));
 						_disconnect(DISCONNECT, REMOTE_DISCONNECT, ctx);
 					}
 
@@ -666,7 +666,7 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 						wake_controller(ctx);
 					}
 
-					LOG_DEBUG("[%p] streambuf read %d bytes", ctx, n);
+					LOG_DEBUG("[%p]: streambuf read %d bytes", ctx, n);
 				}
 			}
 
@@ -674,7 +674,7 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 
 		}
 		else {
-			LOG_SDEBUG("[%p] poll timeout", ctx);
+			LOG_SDEBUG("[%p]: poll timeout", ctx);
 		}
 	}
 
@@ -721,12 +721,12 @@ void stream_end(void) {
 bool stream_thread_init(unsigned streambuf_size, struct thread_ctx_s *ctx) {
 	pthread_attr_t attr;
 
-	LOG_DEBUG("[%p] streambuf size: %u", ctx, streambuf_size);
+	LOG_DEBUG("[%p]: streambuf size: %u", ctx, streambuf_size);
 	ctx->streambuf = &ctx->__s_buf;
 
 	buf_init(ctx->streambuf, ((streambuf_size / (BYTES_PER_FRAME * 3)) * BYTES_PER_FRAME * 3));
 	if (ctx->streambuf->buf == NULL) {
-		LOG_ERROR("[%p] unable to malloc buffer", ctx);
+		LOG_ERROR("[%p]: unable to malloc buffer", ctx);
 		return false;
 	}
 
@@ -756,7 +756,7 @@ bool stream_thread_init(unsigned streambuf_size, struct thread_ctx_s *ctx) {
 }
 
 void stream_close(struct thread_ctx_s *ctx) {
-	LOG_INFO("[%p] close stream", ctx);
+	LOG_INFO("[%p]: close stream", ctx);
 	LOCK_S;
 	ctx->stream_running = false;
 	UNLOCK_S;
@@ -774,7 +774,7 @@ void stream_file(const char *header, size_t header_len, unsigned threshold, stru
 	memcpy(ctx->stream.header, header, header_len);
 	*(ctx->stream.header+header_len) = '\0';
 
-	LOG_INFO("[%p] opening local file: %s", ctx, ctx->stream.header);
+	LOG_INFO("[%p]: opening local file: %s", ctx, ctx->stream.header);
 
 #if WIN
 	ctx->fd = open(ctx->stream.header, O_RDONLY | O_BINARY);
@@ -784,7 +784,7 @@ void stream_file(const char *header, size_t header_len, unsigned threshold, stru
 
 	ctx->stream.state = STREAMING_FILE;
 	if (ctx->fd < 0) {
-		LOG_WARN("[%p] can't open file: %s", ctx, ctx->stream.header);
+		LOG_WARN("[%p]: can't open file: %s", ctx, ctx->stream.header);
 		ctx->stream.state = DISCONNECT;
 	}
 	wake_controller(ctx);
@@ -845,7 +845,7 @@ void stream_sock(u32_t ip, u16_t port, bool use_ssl, bool use_ogg, const char *h
 	memcpy(ctx->stream.header, header, header_len);
 	*(ctx->stream.header+header_len) = '\0';
 
-	LOG_INFO("[%p] header: %s", ctx, ctx->stream.header);
+	LOG_INFO("[%p]: header: %s", ctx, ctx->stream.header);
 
 	ctx->stream.sent_headers = false;
 	ctx->stream.bytes = 0;

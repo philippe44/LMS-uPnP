@@ -68,7 +68,7 @@ static void *decode_thread(struct thread_ctx_s *ctx) {
 
 		if (ctx->decode.state == DECODE_RUNNING && ctx->codec) {
 
-			LOG_SDEBUG("streambuf bytes: %u outputbuf space: %u", bytes, space);
+			LOG_SDEBUG("[%p]: streambuf bytes: %u outputbuf space: %u", ctx, bytes, space);
 
 			IF_DIRECT(
 				min_space = ctx->codec->min_space;
@@ -93,7 +93,7 @@ static void *decode_thread(struct thread_ctx_s *ctx) {
 
 				if (ctx->decode.state != DECODE_RUNNING) {
 
-					LOG_INFO("decode %s", ctx->decode.state == DECODE_COMPLETE ? "complete" : "error");
+					LOG_INFO("[%p]: decode % s", ctx, ctx->decode.state == DECODE_COMPLETE ? "complete" : "error");
 
 					LOCK_O;
 					if (ctx->output.fade_mode) _checkfade(false, ctx);
@@ -190,7 +190,7 @@ void decode_thread_init(struct thread_ctx_s *ctx) {
 /*---------------------------------------------------------------------------*/
 void decode_close(struct thread_ctx_s *ctx) {
 
-	LOG_DEBUG("close decode", NULL);
+	LOG_DEBUG("[%p]: close decode", ctx);
 	LOCK_D;
 	if (ctx->codec) {
 		ctx->codec->close(ctx);
@@ -234,7 +234,7 @@ unsigned decode_newstream(unsigned sample_rate, int supported_rates[], struct th
 bool codec_open(u8_t codec, u8_t sample_size, u32_t sample_rate, u8_t channels, u8_t endianness, struct thread_ctx_s *ctx) {
 	int i;
 
-	LOG_DEBUG("codec open: '%c'", codec);
+	LOG_DEBUG("[%p]: codec open: '%c'", ctx, codec);
 
 	LOCK_D;
 
@@ -252,7 +252,7 @@ bool codec_open(u8_t codec, u8_t sample_size, u32_t sample_rate, u8_t channels, 
 		if (codecs[i] && codecs[i]->id == codec) {
 
 			if (ctx->codec && ctx->codec != codecs[i]) {
-				LOG_DEBUG("closing codec: '%c'", ctx->codec->id);
+				LOG_DEBUG("[%p]: closing codec: '%c'", ctx, ctx->codec->id);
 				ctx->codec->close(ctx);
 			}
 
@@ -267,7 +267,7 @@ bool codec_open(u8_t codec, u8_t sample_size, u32_t sample_rate, u8_t channels, 
 
 	UNLOCK_D;
 
-	LOG_ERROR("codec not found", NULL);
+	LOG_ERROR("[%p]: codec not found", ctx);
 
 	return false;
 }

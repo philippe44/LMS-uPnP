@@ -1,6 +1,11 @@
 3.3.0 (pre)
- - only re-acquire state on play action completion. This is not needed on stop/pause and will create issues like fake stops
- - on renderer stop, only terminate output_http_thread if it's lingering
+ - only re-acquire state on "play" action completion (not stop/pause). Fake stop will be created otherwise
+ - on renderer reported stop, only terminate output_http_thread if it's lingering
+ - elapsed accrued time should not be reset upon SET_TRACK but when expected track is detected
+ - send_backlog always send the requested bytes, not just what has been actually sent!!!
+ - fix some logs syntax
+ - force gapped transition when duration is 0 b/c some players (Sonos) won't use nextURI when a webradio-like one ends by lack of HTTP data
+ - output_thread won't restart from 0 when fully served (see above, when closing a webradio-like stream) 
 
 3.2.0
  - playtime might be over what LMS claimed in metadata, so make a signed comparison to send STMd

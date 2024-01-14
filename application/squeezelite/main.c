@@ -177,7 +177,7 @@ bool cli_open_socket(struct thread_ctx_s *ctx) {
 	addr.sin_port = htons(ctx->cli_port);
 
 	if (tcp_connect_timeout(ctx->cli_sock, addr, 250))  {
-		LOG_ERROR("[%p] unable to connect to server with cli", ctx);
+		LOG_ERROR("[%p]: unable to connect to server with cli", ctx);
 		closesocket(ctx->cli_sock);
 		ctx->cli_sock = -1;
 		return false;
@@ -291,7 +291,7 @@ u32_t sq_get_time(sq_dev_handle_t handle) {
 		time = (u32_t) (atof(rsp) * 1000);
 	}
 	else {
-		LOG_ERROR("[%p] cannot gettime", ctx);
+		LOG_ERROR("[%p]: cannot gettime", ctx);
 	}
 
 	NFREE(rsp);
@@ -313,11 +313,11 @@ bool sq_set_time(sq_dev_handle_t handle, char *pos) {
 	}
 
 	sprintf(cmd, "%s time %s", ctx->cli_id, pos);
-	LOG_INFO("[%p] time cmd %s", ctx, cmd);
+	LOG_INFO("[%p]: time cmd %s", ctx, cmd);
 
 	rsp = cli_send_cmd(cmd, false, true, ctx);
 	if (!rsp) {
-		LOG_ERROR("[%p] cannot settime %d", ctx, time);
+		LOG_ERROR("[%p]: cannot settime %d", ctx, time);
 		return false;
 	}
 
@@ -505,7 +505,7 @@ void sq_notify(sq_dev_handle_t handle, sq_event_t event, ...) {
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
 	char cmd[128], *rsp;
 
-	LOG_SDEBUG("[%p] notif %d", ctx, event);
+	LOG_SDEBUG("[%p]: notif %d", ctx, event);
 
 	// squeezelite device has not started yet or is off ...
 	if (!ctx->running || !ctx->on || !handle || !ctx->in_use) return;
@@ -531,7 +531,7 @@ void sq_notify(sq_dev_handle_t handle, sq_event_t event, ...) {
 				ctx->render.ms_paused += gettime_ms() - ctx->render.track_pause_time;
 				ctx->render.state = RD_PLAYING;
 				UNLOCK_O;
-				LOG_INFO("[%p] resume notification (paused time %u)", ctx, ctx->render.ms_paused);
+				LOG_INFO("[%p]: resume notification (paused time %u)", ctx, ctx->render.ms_paused);
 			} else if (ctx->render.state != RD_PLAYING) {
 				LOCK_O;
 				ctx->render.state = RD_PLAYING;
@@ -540,19 +540,19 @@ void sq_notify(sq_dev_handle_t handle, sq_event_t event, ...) {
 					ctx->output.track_started = true;
 					ctx->render.track_start_time = gettime_ms();
 					LOG_INFO("[%p] track %u started by play at %u", ctx, ctx->render.index, ctx->render.track_start_time);
-					output_terminate_below(ctx, ctx->render.index);
+					_output_terminate_below(ctx, ctx->render.index);
             	} else {
-					LOG_INFO("[%p] play notification", ctx );
+					LOG_INFO("[%p]: play notification", ctx );
 				}
 				UNLOCK_O;
 				wake_controller(ctx);
 			} else {
-				LOG_INFO("[%p] play ignored", ctx );
+				LOG_INFO("[%p]: play ignored", ctx );
 			}
 
 			if (va_arg(args, int)) {
 				// unsollicited PLAY done on the player direclty
-				LOG_WARN("[%p] unsollicited play", ctx);
+				LOG_WARN("[%p]: unsollicited play", ctx);
 				sprintf(cmd, "%s play", ctx->cli_id);
 				rsp = cli_send_cmd(cmd, false, true, ctx);
 				NFREE(rsp);
@@ -564,11 +564,11 @@ void sq_notify(sq_dev_handle_t handle, sq_event_t event, ...) {
 			LOCK_O;
 			ctx->render.state = RD_PAUSED;
 			ctx->render.track_pause_time = gettime_ms();
-			LOG_INFO("[%p] track paused at %u", ctx, ctx->render.track_pause_time);
+			LOG_INFO("[%p]: track paused at %u", ctx, ctx->render.track_pause_time);
 			UNLOCK_O;
 
 			if (va_arg(args, int)) {
-				LOG_WARN("[%p] unsollicited pause", ctx);
+				LOG_WARN("[%p]: unsollicited pause", ctx);
 				sprintf(cmd, "%s pause", ctx->cli_id);
 				rsp = cli_send_cmd(cmd, false, true, ctx);
 				NFREE(rsp);
@@ -578,7 +578,7 @@ void sq_notify(sq_dev_handle_t handle, sq_event_t event, ...) {
 		case SQ_STOP:
 			if (va_arg(args, int)) {
 				// stop if the renderer side is sure or if we had 2 stops in a row
-				LOG_INFO("[%p] forced STOP", ctx);
+				LOG_INFO("[%p]: forced STOP", ctx);
 				sprintf(cmd, "%s stop", ctx->cli_id);
 				rsp = cli_send_cmd(cmd, false, true, ctx);
 				NFREE(rsp);
@@ -594,9 +594,9 @@ void sq_notify(sq_dev_handle_t handle, sq_event_t event, ...) {
 				// might be a STMu or a STMo, let slimproto decide
 				LOCK_O;
 				ctx->render.state = RD_STOPPED;
+				if (ctx->render.index >= 0 && _output_lingers(ctx, ctx->render.index)) _output_terminate(ctx, ctx->render.index);
 				UNLOCK_O;
-				LOG_INFO("[%p] notify STOP", ctx);
-				if (ctx->render.index >= 0) output_terminate(ctx, ctx->render.index, true);
+				LOG_INFO("[%p]: notify STOP", ctx);
 				wake_controller(ctx);
 			}
 			break;
@@ -633,13 +633,12 @@ void sq_notify(sq_dev_handle_t handle, sq_event_t event, ...) {
 					ctx->output.track_started = true;
 					ctx->render.track_start_time = now;
 					ctx->render.ms_paused = ctx->render.track_pause_time = 0;
-					LOG_INFO("[%p] flow track started at %u for %u", ctx,
-							   ctx->render.track_start_time, ctx->render.duration);
+					LOG_INFO("[%p]: flow track started at %u for %u", ctx, ctx->render.track_start_time, ctx->render.duration);
 					wake_controller(ctx);
-				}
+				} 
 			} else ctx->render.ms_played = 0;
 			UNLOCK_O;
-			LOG_DEBUG("[%p] time %d %d", ctx, ctx->render.ms_played, time);
+			LOG_DEBUG("[%p]: time %d %d", ctx, ctx->render.ms_played, time);
 			break;
 		}
 		case SQ_TRACK_INFO: {
@@ -660,8 +659,8 @@ void sq_notify(sq_dev_handle_t handle, sq_event_t event, ...) {
 				if (ctx->render.state == RD_PLAYING) {
 					ctx->output.track_started = true;
 					ctx->render.track_start_time = gettime_ms();
-					LOG_INFO("[%p] track %u started by info at %u", ctx, index, ctx->render.track_start_time);
-					output_terminate_below(ctx, index);
+					LOG_INFO("[%p]: track %u started by info at %u", ctx, index, ctx->render.track_start_time);
+					_output_terminate_below(ctx, index);
 					wake_controller(ctx);
 				}
 			}

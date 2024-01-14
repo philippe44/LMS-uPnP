@@ -344,16 +344,14 @@ bool sq_callback(void *caller, sq_action_t action, ...) {
 			NFREE(Device->NextURI);
 			NFREE(Device->ExpectedURI);
 			NFREE(Device->NextProtoInfo);
-			Device->ElapsedLast = Device->ElapsedOffset = 0;
 			metadata_free(&Device->NextMetaData);
 			// carefull that we modify the caller's metadata
 			if (!Device->Config.SendCoverArt) NFREE(p->metadata.artwork);
 
-			LOG_INFO("[%p]:\n\tartist:%s\n\talbum:%s\n\ttitle:%s\n\tgenre:%s\n\t"
-					 "duration:%d.%03d\n\tsize:%d\n\tcover:%s\n\toffset:%u", Device,
+			LOG_INFO("[%p]:\n\tartist:%s\n\talbum:%s\n\ttitle:%s\n"
+					 "\tduration:%d\n\trepeating:%d\n\tcover:%s\n\toffset:%u", Device,
 					p->metadata.artist, p->metadata.album, p->metadata.title,
-					p->metadata.genre, div(p->metadata.duration, 1000).quot,
-					div(p->metadata.duration,1000).rem, p->metadata.size,
+					p->metadata.duration, p->metadata.repeating,
 					p->metadata.artwork ? p->metadata.artwork : "", p->offset);
 
 			char *DLNAfeatures = format_to_dlna(p->format, Device->sq_config.cache != HTTP_CACHE_MEMORY, !p->metadata.duration && !p->flow);
@@ -376,6 +374,7 @@ bool sq_callback(void *caller, sq_action_t action, ...) {
 					LOG_WARN("[%p]: set current URI (*) (s:%u) %s", Device, Device->ShortTrack, uri);
 					Device->ShortTrackWait = 0;
 					Device->Duration = p->metadata.duration;
+					Device->Elapsed = Device->ElapsedAccrued = 0;
 					if (p->metadata.duration && p->metadata.duration < SHORT_TRACK) Device->ShortTrack = true;
 					AVTSetURI(Device, uri, &p->metadata, ProtoInfo);
 					AVTPlay(Device);
@@ -393,6 +392,7 @@ bool sq_callback(void *caller, sq_action_t action, ...) {
 			} else {
 				if (p->metadata.duration && p->metadata.duration < SHORT_TRACK) Device->ShortTrack = true;
 				Device->Duration = p->metadata.duration;
+				Device->Elapsed = Device->ElapsedAccrued = 0;
 				LOG_INFO("[%p]: set current URI (s:%u) %s", Device, Device->ShortTrack, uri);
 				AVTSetURI(Device, uri, &p->metadata, ProtoInfo);
 			}
@@ -753,6 +753,7 @@ static void NextTrack(struct sMR *Device) {
 	else Device->ShortTrack = false;
 
 	Device->Duration = Device->NextMetaData.duration;
+	Device->Elapsed = Device->ElapsedAccrued = 0;
 	AVTSetURI(Device, Device->NextURI, &Device->NextMetaData, Device->NextProtoInfo);
 	LOG_INFO("[%p]: set URI %s", Device, Device->NextURI);
 
@@ -883,21 +884,6 @@ int ActionHandler(Upnp_EventType EventType, const void* Event, void* Cookie) {
 			NFREE(r);
 
 			if (p->State == PLAYING) {
-				// When not playing, position is not reliable
-				r = XMLGetFirstDocumentItem(Result, "RelTime", true);
-				if (r) {
-					uint32_t Elapsed = ConvertTime(r) * 1000;
-					if (p->Config.AcceptNextURI == NEXT_FORCE && p->Duration > 0 && p->Duration - Elapsed <= 2000) p->Duration = Elapsed - p->Duration;
-					if (!p->Duration) {
-						if (p->ElapsedLast > Elapsed) p->ElapsedOffset += p->ElapsedLast;
-						p->ElapsedLast = Elapsed;
-						Elapsed += p->ElapsedOffset;
-					}
-					sq_notify(p->SqueezeHandle, SQ_TIME, Elapsed);
-					LOG_DEBUG("[%p]: position %d (cookie %p)", p, Elapsed, Cookie);
-				}
-
-				NFREE(r);
 
 				// URI detection response
 				r = XMLGetFirstDocumentItem(Result, "TrackURI", true);
@@ -916,11 +902,34 @@ int ActionHandler(Upnp_EventType EventType, const void* Event, void* Cookie) {
 						if (doc) ixmlDocument_free(doc);
 					}
 
-					if (p->ExpectedURI && !strcasecmp(r, p->ExpectedURI)) NFREE(p->ExpectedURI);
+					if (p->ExpectedURI && !strcasecmp(r, p->ExpectedURI)) {
+						LOG_INFO("{%p]: expected URI detected %s", p, p->ExpectedURI);
+						p->Elapsed = p->ElapsedAccrued = 0;
+						NFREE(p->ExpectedURI);
+					}
 					if (r) sq_notify(p->SqueezeHandle, SQ_TRACK_INFO, r);
 				}
 
 				NFREE(r);
+
+				// When not playing, position is not reliable
+				r = XMLGetFirstDocumentItem(Result, "RelTime", true);
+				if (r) {
+					uint32_t Elapsed = ConvertTime(r) * 1000;
+					if (p->Config.AcceptNextURI == NEXT_FORCE && p->Duration > 0 && p->Duration - Elapsed <= 2000) p->Duration = Elapsed - p->Duration;
+					// some players reset their position counter on icy metadata change
+					if (Elapsed < p->Elapsed) {
+						p->ElapsedAccrued += p->Elapsed;
+						LOG_INFO("[%p]: elapse roll-back detected %d/%d (new base:%d)", p, Elapsed, p->Elapsed, p->ElapsedAccrued);
+					}
+					p->Elapsed = Elapsed;
+					Elapsed += p->ElapsedAccrued;
+					sq_notify(p->SqueezeHandle, SQ_TIME, Elapsed);
+					LOG_DEBUG("[%p]: position %d (cookie %p)", p, Elapsed, Cookie);
+				}
+
+				NFREE(r);
+
 			}
 
 			LOG_SDEBUG("Action complete : %i (cookie %p)", EventType, Cookie);
@@ -1853,13 +1862,16 @@ int main(int argc, char *argv[])
 		SET_LOGLEVEL(util);
 		SET_LOGLEVEL(upnp);
 
-		if (!strcmp(resp, "save"))	{
+		if (!strcasecmp(resp, "save"))	{
 			char name[128];
 			i = scanf("%s", name);
 			SaveConfig(name, glConfigID, true);
-		}
-
-		if (!strcmp(resp, "dump") || !strcmp(resp, "dumpall"))	{
+		} else if (!strcasecmp(resp, "scan")) {
+			for (size_t i = 0; glDiscoveryPatterns[i]; i++) {
+				LOG_INFO("UPnP search for %s", glDiscoveryPatterns[i]);
+				UpnpSearchAsync(glControlPointHandle, DISCOVERY_TIME, glDiscoveryPatterns[i], NULL);
+			}
+		} else if (!strcasecmp(resp, "dump") || !strcasecmp(resp, "dumpall"))	{
 			uint32_t now = gettime_ms() / 1000;
 			bool all = !strcmp(resp, "dumpall");
 
