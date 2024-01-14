@@ -204,6 +204,10 @@ lang=EN-US style='font-size:11.0pt'>&gt;</span><span lang=EN-US>. Still, many
 players either don’t report the support of that feature or fail on track’s
 transition.</span></p>
 
+<p class=MsoNormal><span lang=EN-US>Note that transition will <b>always</b> be
+gapped when the duration of a track is unknown (0). This also applies when a
+password has been set on LMS, as no metadata can be gathered then.</span></p>
+
 <h2 style='margin-top:12.0pt;margin-right:0cm;margin-bottom:6.0pt;margin-left:
 28.8pt;text-indent:-28.8pt;page-break-after:avoid;background:white'><span
 lang=EN-GB style='font-size:14.0pt;font-family:"Liberation Sans"'>1.3</span><span
@@ -678,6 +682,13 @@ lang=EN-GB style='color:black'>Player does not resume: </span></b><span
 lang=EN-GB style='color:black'>see above but if nothing works, try setting
 &lt;seek_on_resume&gt; to 1 which forces LMS to do a time seek where it paused
 (brute force solution, last resort).</span></h2>
+
+<h2 style='margin-top:12.0pt;margin-right:0cm;margin-bottom:10.0pt;margin-left:
+28.8pt;text-indent:-28.8pt;page-break-after:avoid;background:white'><b><span
+lang=EN-GB style='color:black'>There is always a gap: </span></b><span
+lang=EN-GB style='color:black'>make sure your player supports gapless. Tracks with
+unknown (0) duration will be gapped and this is the case if you have set a
+password on LMS.</span></h2>
 
 <p class=MsoNormal><b><span lang=EN-GB style='color:black'>I don’t understand
 “full processing”: </span></b><span lang=EN-GB style='color:black'>in that

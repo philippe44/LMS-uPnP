@@ -358,9 +358,12 @@ bool sq_callback(void *caller, sq_action_t action, ...) {
 			(void)!asprintf(&ProtoInfo, "http-get:*:%s:%s", p->mimetype, DLNAfeatures);
 			free(DLNAfeatures);
 
+			bool GapTrack = !p->metadata.duration || (p->metadata.duration && p->metadata.duration < SHORT_TRACK);
+
 			// Sonos requires special prefix for ICY but it can't be a repeating stream (must have no duration)
 			if ((!p->metadata.duration || p->metadata.repeating != -1) && (*Device->Service[TOPOLOGY_IDX].ControlURL) &&
 				(p->format == 'm' || p->format == 'a') && Device->sq_config.send_icy) {
+				GapTrack = true;
 				(void) !asprintf(&uri, "x-rincon-mp3radio://%s", p->uri);
 				if (p->format == 'a') (void)! asprintf(&Device->ExpectedURI, "aac://%s", p->uri);
 				LOG_INFO("[%p]: Sonos live stream", Device);
@@ -371,29 +374,30 @@ bool sq_callback(void *caller, sq_action_t action, ...) {
 			 if (p->offset) {
 				if (Device->State == STOPPED) {
 					// could not get next URI before track stopped, restart
-					LOG_WARN("[%p]: set current URI (*) (s:%u) %s", Device, Device->ShortTrack, uri);
-					Device->ShortTrackWait = 0;
+					LOG_WARN("[%p]: set current URI on stopped (g:%u) %s", Device, Device->GapTrack, uri);
+					Device->TrackWait = 0;
+					Device->GapTrack = GapTrack;
 					Device->Duration = p->metadata.duration;
 					Device->Elapsed = Device->ElapsedAccrued = 0;
-					if (p->metadata.duration && p->metadata.duration < SHORT_TRACK) Device->ShortTrack = true;
 					AVTSetURI(Device, uri, &p->metadata, ProtoInfo);
 					AVTPlay(Device);
-				} else if (Device->Config.AcceptNextURI != NEXT_GAPLESS || Device->ShortTrack || (p->metadata.duration && p->metadata.duration < SHORT_TRACK)) {
+				} else if (Device->Config.AcceptNextURI != NEXT_GAPLESS || Device->GapTrack || GapTrack) {
 					// can't use UPnP NextURI capability
-					LOG_INFO("[%p]: next URI gapped (s:%u) %s", Device, Device->ShortTrack, uri);
+					LOG_INFO("[%p]: next URI gapped (g:%u) %s", Device, Device->GapTrack, uri);
 					Device->NextURI = uri;
 					Device->NextProtoInfo = ProtoInfo;
 					metadata_clone(&p->metadata, &Device->NextMetaData);
 				} else {
 					// nominal case, use UPnP NextURI feature
+					Device->GapTrack = GapTrack;
 					LOG_INFO("[%p]: next URI gapless %s", Device, uri);
 					AVTSetNextURI(Device, uri, &p->metadata, ProtoInfo);
 				}
 			} else {
-				if (p->metadata.duration && p->metadata.duration < SHORT_TRACK) Device->ShortTrack = true;
+				Device->GapTrack = GapTrack;
 				Device->Duration = p->metadata.duration;
 				Device->Elapsed = Device->ElapsedAccrued = 0;
-				LOG_INFO("[%p]: set current URI (s:%u) %s", Device, Device->ShortTrack, uri);
+				LOG_INFO("[%p]: set current URI (g:%u) %s", Device, Device->GapTrack, uri);
 				AVTSetURI(Device, uri, &p->metadata, ProtoInfo);
 			}
 
@@ -451,8 +455,8 @@ bool sq_callback(void *caller, sq_action_t action, ...) {
 			NFREE(Device->ExpectedURI);
 			metadata_free(&Device->NextMetaData);
 			Device->sqState = action;
-			Device->ShortTrack = false;
-			Device->ShortTrackWait = 0;
+			Device->GapTrack = false;
+			Device->TrackWait = 0;
 			break;
 		case SQ_PAUSE:
 			if (Device->Config.LivePause || Device->Duration) AVTBasic(Device, "Pause");
@@ -547,7 +551,7 @@ static void *MRThread(void *args) {
 		elapsed = gettime_ms() - last;
 		pthread_mutex_lock(&p->Mutex);
 
-		if (p->ShortTrack) wakeTimer = MIN_POLL / 2;
+		if (p->Duration < SHORT_TRACK) wakeTimer = MIN_POLL / 2;
 		else wakeTimer = (p->sqState != SQ_STOP && p->on) ? MIN_POLL : MIN_POLL * 10;
 
 		LOG_SDEBUG("[%p]: UPnP thread timer %d %d", p, elapsed, wakeTimer);
@@ -561,10 +565,10 @@ static void *MRThread(void *args) {
 		if (p->Master) goto sleep;
 
 		// was just waiting for a short track to end
-		if (p->ShortTrackWait > 0 && ((p->ShortTrackWait -= elapsed) < 0)) {
-			LOG_WARN("[%p]: stopping on short track timeout", p);
-			p->ShortTrack = false;
-			sq_notify(p->SqueezeHandle, SQ_STOP, p->ShortTrack);
+		if (p->TrackWait > 0 && ((p->TrackWait -= elapsed) < 0)) {
+			LOG_WARN("[%p]: stopping on track wait timeout", p);
+			p->GapTrack = false;
+			sq_notify(p->SqueezeHandle, SQ_STOP, false);
 		}
 
 		// hack to deal with players that do not report end of track
@@ -643,10 +647,10 @@ static void _SyncNotifState(char *State, struct sMR* Device) {
 			Param = true;
 			Event = SQ_STOP;
 		} else if (!Device->NextURI) {
-			if (Device->ShortTrack) {
+			if (Device->GapTrack) {
 				// might not even have received next LMS's request, wait a bit
-				Device->ShortTrackWait = 5000;
-				LOG_WARN("[%p]: stop on short track (wait %hd ms for next URI)", Device, Device->ShortTrackWait);
+				Device->TrackWait = 5000;
+				LOG_WARN("[%p]: stop on short track (wait %hd ms for next URI)", Device, Device->TrackWait);
 			} else if (Device->sqState == SQ_PLAY && Device->ExpectedURI && Device->Config.AcceptNextURI == NEXT_GAPLESS) {
 				// gapless player but something went wrong, requesting LMS to got to next track
 				Event = SQ_NEXT_FAILED;
@@ -749,9 +753,7 @@ static void _ProcessVolume(char *Volume, struct sMR* Device) {
 
 /*----------------------------------------------------------------------------*/
 static void NextTrack(struct sMR *Device) {
-	if (Device->NextMetaData.duration && Device->NextMetaData.duration < SHORT_TRACK) Device->ShortTrack = true;
-	else Device->ShortTrack = false;
-
+	Device->GapTrack = !Device->NextMetaData.duration || (Device->NextMetaData.duration && Device->NextMetaData.duration < SHORT_TRACK);
 	Device->Duration = Device->NextMetaData.duration;
 	Device->Elapsed = Device->ElapsedAccrued = 0;
 	AVTSetURI(Device, Device->NextURI, &Device->NextMetaData, Device->NextProtoInfo);

@@ -88,8 +88,8 @@ struct sMR {
 	char			*ExpectedURI;					// to detect track change
 	int32_t			Duration;       			 	// for players that don't report end of track (Bose)
 	uint32_t 		Elapsed, ElapsedAccrued;        // for players that reset counter on icy changes
-	bool			ShortTrack;    					// current or next track is short
-	int16_t			ShortTrackWait;					// stop timeout when short track is last track
+	bool			GapTrack;    					// current or next track is short
+	int				TrackWait;						// stop timeout when short track is last track
 	sq_action_t		sqState;
 	uint8_t			*seqN;
 	void			*WaitCookie, *StartCookie;
