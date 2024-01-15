@@ -39,6 +39,34 @@
 #include "cross_ssl.h"
 #include "cross_thread.h"
 
+/*----------------------------------------------------------------------------*/
+/* KeyNotes																	  */
+/*----------------------------------------------------------------------------*/
+
+/* Handling of end of UPnP next URI and end of track is difficult because there 
+ * is a lot of diversity between players. When the webserver has sent everything
+ * it should normally continues to linger and when LMS sends a new track we should
+ * use nextURI so that the player moves automatically to the next track when it has
+ * exhausted data with the current one. Sounds logical, but that's not how some do
+ * and they will NOT request nextURI but instead try to re-open the current one,
+ * especially if they receive a track with no duration and icy metadata. Although 
+ * it possible to rely on workarounds like refusing to reopen a fully served resource
+ * when requested again from the begining, some players will still fail and cause a
+ * weird sequence that lead to false LMS "next" request and all sort of uncontrolled
+ * things. I've decided to never use the nextURI option, so no gapless when playing 
+ * a track with no duration. This way, we'll always expect a stop so the transition
+ * will be under control. Still, we need to refuse reopening fully served resourced 
+ * when requested again from the begining, which also is a way for the stop to happen, 
+ * but without the uncertainty of what might be a stop in some cases or a real next 
+ * in some others.
+ * Short tracks are also a problem and are gapped-in and gapped-out for safety. There
+ * is a need to delay the decision that the player has really stopped in case LMS has
+ * not yet sent the new track, so a grace of 5s will be added afterwhat, it's a real
+ * full stop. More notes should be added to that in slimproto.c about how stopping of
+ * tracks are detected, also when expected duration is not met.
+ * See also notes in ouput_http.c
+ */
+
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
 #define	CONNECTION_MGR 			"urn:schemas-upnp-org:service:ConnectionManager"
@@ -61,7 +89,7 @@
 enum { NEXT_FORCE = -1, NEXT_GAPPED = 0, NEXT_GAPLESS = 1 };
 
 /*----------------------------------------------------------------------------*/
-/* globals initialized */
+/* globals initialized														  */
 /*----------------------------------------------------------------------------*/
 int32_t				glLogLimit = -1;
 char				glBinding[128] = "?";
@@ -152,7 +180,7 @@ typedef struct sUpdate {
 } tUpdate;
 
 /*----------------------------------------------------------------------------*/
-/* consts or pseudo-const*/
+/* consts or pseudo-const													  */
 /*----------------------------------------------------------------------------*/
 static char* glDiscoveryPatterns[8] = { "urn:schemas-upnp-org:device:MediaRenderer:1",
 										"urn:schemas-upnp-org:device:MediaRenderer:2" };
@@ -170,7 +198,7 @@ static const struct cSearchedSRV_s
 				   };
 
 /*----------------------------------------------------------------------------*/
-/* locals */
+/* locals																	  */
 /*----------------------------------------------------------------------------*/
 static log_level 	  	*loglevel = &main_loglevel;
 #if LINUX || FREEBSD || SUNOS
@@ -349,16 +377,16 @@ bool sq_callback(void *caller, sq_action_t action, ...) {
 			if (!Device->Config.SendCoverArt) NFREE(p->metadata.artwork);
 
 			LOG_INFO("[%p]:\n\tartist:%s\n\talbum:%s\n\ttitle:%s\n"
-					 "\tduration:%d\n\trepeating:%d\n\tcover:%s\n\toffset:%u", Device,
+					 "\tduration:%d\n\trepeating:%d\n\tcover:%s\n\tindex:%u", Device,
 					p->metadata.artist, p->metadata.album, p->metadata.title,
 					p->metadata.duration, p->metadata.repeating,
-					p->metadata.artwork ? p->metadata.artwork : "", p->offset);
+					p->metadata.artwork ? p->metadata.artwork : "", p->index);
 
 			char *DLNAfeatures = format_to_dlna(p->format, Device->sq_config.cache != HTTP_CACHE_MEMORY, !p->metadata.duration && !p->flow);
 			(void)!asprintf(&ProtoInfo, "http-get:*:%s:%s", p->mimetype, DLNAfeatures);
 			free(DLNAfeatures);
 
-			bool GapTrack = !p->metadata.duration || (p->metadata.duration && p->metadata.duration < SHORT_TRACK);
+			bool GapTrack = p->metadata.duration < SHORT_TRACK;
 
 			// Sonos requires special prefix for ICY but it can't be a repeating stream (must have no duration)
 			if ((!p->metadata.duration || p->metadata.repeating != -1) && (*Device->Service[TOPOLOGY_IDX].ControlURL) &&
@@ -371,7 +399,7 @@ bool sq_callback(void *caller, sq_action_t action, ...) {
 
 			if (!Device->ExpectedURI) Device->ExpectedURI = strdup(uri);
 
-			 if (p->offset) {
+			 if (p->index) {
 				if (Device->State == STOPPED) {
 					// could not get next URI before track stopped, restart
 					LOG_WARN("[%p]: set current URI on stopped (g:%u) %s", Device, Device->GapTrack, uri);
@@ -551,8 +579,11 @@ static void *MRThread(void *args) {
 		elapsed = gettime_ms() - last;
 		pthread_mutex_lock(&p->Mutex);
 
+		/*
 		if (p->Duration < SHORT_TRACK) wakeTimer = MIN_POLL / 2;
 		else wakeTimer = (p->sqState != SQ_STOP && p->on) ? MIN_POLL : MIN_POLL * 10;
+		*/
+		wakeTimer = (p->sqState != SQ_STOP && p->on) ? MIN_POLL / 2 : MIN_POLL * 10;
 
 		LOG_SDEBUG("[%p]: UPnP thread timer %d %d", p, elapsed, wakeTimer);
 
@@ -583,11 +614,9 @@ static void *MRThread(void *args) {
 			}
 		}
 
-		/*
-		should not request any status update if we are stopped, off or waiting
-		for an action to be performed
-		*/
-		// exception is to poll extended informations if any for battery
+		/* should not request any status update if we are stopped, off or waiting for an action
+		 * to be performed with an exception to poll extended informations if any for battery */
+
 		if (p->on && !p->WaitCookie && p->InfoExPoll >= INFOEX_POLL) {
 			p->InfoExPoll = 0;
 			AVTCallAction(p, "GetInfoEx", p->seqN++);
@@ -596,19 +625,17 @@ static void *MRThread(void *args) {
 		if (!p->on || (p->sqState == SQ_STOP && p->State == STOPPED) ||
 			 p->ErrorCount < 0 || p->ErrorCount > MAX_ACTION_ERRORS || p->WaitCookie) goto sleep;
 
-		// get track position & CurrentURI
-		if (p->TrackPoll >= TRACK_POLL) {
-			p->TrackPoll = 0;
-			if (p->sqState != SQ_STOP && p->sqState != SQ_PAUSE) {
-				AVTCallAction(p, "GetPositionInfo", p->seqN++);
-			}
-		}
-
-		// do polling as event is broken in many uPNP devices
+		// do polling as event is broken in many uPNP devices, but not synchronously
 		if (p->StatePoll >= STATE_POLL) {
+			// state polling (PLAY, STOP...)
 			p->StatePoll = 0;
 			AVTCallAction(p, "GetTransportInfo", p->seqN++);
+		} else if (p->TrackPoll >= TRACK_POLL) {
+			// get track position & CurrentURI
+			p->TrackPoll = 0;
+			if (p->sqState != SQ_STOP && p->sqState != SQ_PAUSE) AVTCallAction(p, "GetPositionInfo", p->seqN++);
 		}
+
 sleep:
 		pthread_mutex_unlock(&p->Mutex);
 		last = gettime_ms();
@@ -650,7 +677,7 @@ static void _SyncNotifState(char *State, struct sMR* Device) {
 			if (Device->GapTrack) {
 				// might not even have received next LMS's request, wait a bit
 				Device->TrackWait = 5000;
-				LOG_WARN("[%p]: stop on short track (wait %hd ms for next URI)", Device, Device->TrackWait);
+				LOG_WARN("[%p]: stop on short track (wait %d ms for next URI)", Device, Device->TrackWait);
 			} else if (Device->sqState == SQ_PLAY && Device->ExpectedURI && Device->Config.AcceptNextURI == NEXT_GAPLESS) {
 				// gapless player but something went wrong, requesting LMS to got to next track
 				Event = SQ_NEXT_FAILED;
@@ -753,7 +780,7 @@ static void _ProcessVolume(char *Volume, struct sMR* Device) {
 
 /*----------------------------------------------------------------------------*/
 static void NextTrack(struct sMR *Device) {
-	Device->GapTrack = !Device->NextMetaData.duration || (Device->NextMetaData.duration && Device->NextMetaData.duration < SHORT_TRACK);
+	Device->GapTrack = Device->NextMetaData.duration < SHORT_TRACK;
 	Device->Duration = Device->NextMetaData.duration;
 	Device->Elapsed = Device->ElapsedAccrued = 0;
 	AVTSetURI(Device, Device->NextURI, &Device->NextMetaData, Device->NextProtoInfo);
@@ -909,6 +936,7 @@ int ActionHandler(Upnp_EventType EventType, const void* Event, void* Cookie) {
 						p->Elapsed = p->ElapsedAccrued = 0;
 						NFREE(p->ExpectedURI);
 					}
+
 					if (r) sq_notify(p->SqueezeHandle, SQ_TRACK_INFO, r);
 				}
 
@@ -920,7 +948,7 @@ int ActionHandler(Upnp_EventType EventType, const void* Event, void* Cookie) {
 					uint32_t Elapsed = ConvertTime(r) * 1000;
 					if (p->Config.AcceptNextURI == NEXT_FORCE && p->Duration > 0 && p->Duration - Elapsed <= 2000) p->Duration = Elapsed - p->Duration;
 					// some players reset their position counter on icy metadata change
-					if (Elapsed < p->Elapsed) {
+					if (Elapsed < p->Elapsed && sq_icy_active(p->SqueezeHandle)) {
 						p->ElapsedAccrued += p->Elapsed;
 						LOG_INFO("[%p]: elapse roll-back detected %d/%d (new base:%d)", p, Elapsed, p->Elapsed, p->ElapsedAccrued);
 					}

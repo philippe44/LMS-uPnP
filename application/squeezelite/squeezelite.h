@@ -438,8 +438,7 @@ struct output_thread_s {
 	bool			terminate;
 	thread_type 	thread;
 	int				http;			// listening socket of http server
-	int 			index;
-	int				slot;
+	int 			index, slot;
 };
 
 // info for the track being sent to the http renderer (not played)
@@ -471,7 +470,7 @@ struct outputstate {
 	} live_metadata;
 	// for icy data
 	struct {
-		bool allowed;
+		bool allowed, active;
 		size_t interval, remain;
 		char *artist, *title, *artwork;
 		bool  updated;
@@ -514,6 +513,7 @@ struct renderstate {
 	u32_t 	track_pause_time; // timestamp when the track was paused
 	u32_t	track_start_time; // timestamp when the track started
 	int     index;    		// current track index in player (-1 = unknown)
+	bool	icy;
 };
 
 // function starting with _ must be called with mutex locked

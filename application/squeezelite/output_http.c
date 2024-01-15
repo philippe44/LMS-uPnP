@@ -22,6 +22,21 @@
 #include "squeezelite.h"
 #include "cache.h"
 
+/*----------------------------------------------------------------------------*/
+/* KeyNotes																	  */
+/*----------------------------------------------------------------------------*/
+
+/* The webserver thread will linger as long as not terminated once it has sent 
+ * all the available data. Now, when a track start is detected, all servers with 
+ * indexes below the new one are terminated (not joined). The current server is 
+ * also terminated when the player self-stops but only if it was lingering as a
+ * stop might be follow by a LMS "next" and if the served track was the next one,
+ * it would lead to a failure (webserver mute).
+ * When LMS starts a new track, the logic is to find a free webserver and if none
+ * can be found, then use a lingering one with the lowest index. There is no reason
+ * why we should be in that situation as webservers are freed as soon as a new 
+ * track start is detected, but... */
+
 extern log_level	output_loglevel;
 static log_level 	*loglevel = &output_loglevel;
 
@@ -31,7 +46,6 @@ static log_level 	*loglevel = &output_loglevel;
 #define UNLOCK_D mutex_unlock(ctx->decode.mutex)
 
 #define MAX_BLOCK		(32*1024)
-#define ICY_INTERVAL	16384
 #define TIMEOUT			50
 #define DRAIN_MAX		(5000 / TIMEOUT)
 
@@ -297,7 +311,7 @@ static void output_http_thread(struct thread_param_s *param) {
 			send_backlog(&backlog, sock, NULL, 0, 0);
 		} else if (use_cache || _buf_used(obuf)) {
 			// only get what we can process (ignore result because all is always sent/backlog'd)
-			size_t chunk = ctx->output.icy.interval ? ctx->output.icy.remain : MAX_BLOCK, bytes = chunk;
+			size_t chunk = ctx->output.icy.active ? ctx->output.icy.remain : MAX_BLOCK, bytes = chunk;
 			uint8_t* readp = NULL;
 
 			// try to source from cache first if we have to
@@ -415,7 +429,7 @@ static ssize_t send_with_icy(struct outputstate* out, struct buffer *backlog, in
 	bytes = send_chunked(out->chunked, backlog, sock, data, bytes, flags);
 
 	// ICY not active, just send
-	if (!out->icy.interval) return bytes;
+	if (!out->icy.active) return bytes;
 
 	out->icy.remain -= bytes;
 	LOG_DEBUG("[%p]: ICY remains %zu", out, out->icy.remain);
@@ -487,12 +501,13 @@ static bool handle_http(struct thread_ctx_s *ctx, cache_buffer* cache, bool *use
 
 	// check if add ICY metadata is needed (only on live stream)
 	if (ctx->output.icy.allowed && ((p = kd_lookup(headers, "Icy-MetaData")) != NULL) && atol(p)) {
-		kd_vadd(resp, "icy-metaint", "%u", ICY_INTERVAL);
+		kd_vadd(resp, "icy-metaint", "%u", ctx->output.icy.interval);
 		LOCK_O;
-		ctx->output.icy.interval = ctx->output.icy.remain = ICY_INTERVAL;
+		ctx->output.icy.remain = ctx->output.icy.interval;
 		ctx->output.icy.updated = true;
+		ctx->output.icy.active = true;
 		UNLOCK_O;
-	} else ctx->output.icy.interval = 0;
+	} else ctx->output.icy.active = false;
 
 	// handle various DLNA headers
 	if ((p = kd_lookup(headers, "transferMode.dlna.org")) != NULL) kd_add(resp, "transferMode.dlna.org", p);
@@ -575,7 +590,7 @@ static bool handle_http(struct thread_ctx_s *ctx, cache_buffer* cache, bool *use
 			LOG_INFO("[%p]: won't resend from start when fully served", ctx);
 		} else if (cache->total) {
 			// see Sonos above but also Sonos re-opens stream when icy to add it (not a resume!)
-			if (type == SONOS && !ctx->output.icy.interval) length = UINT32_MAX;
+			if (type == SONOS && !ctx->output.icy.active) length = UINT32_MAX;
 			LOG_INFO("[%p]: serving with cache from %zu (cached:%zu)", ctx, cache->total - cache->level(cache), cache->total);
 		} else {
 			// normal request, don't use cache

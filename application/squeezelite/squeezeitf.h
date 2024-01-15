@@ -67,7 +67,7 @@ typedef	struct sq_dev_param_s {
 
 struct track_param
 {
-	unsigned	offset;
+	unsigned	index;
 	metadata_t	metadata;
 	char		uri[STR_LEN];
 	char		mimetype[STR_LEN];
@@ -96,3 +96,4 @@ bool 				sq_set_time(sq_dev_handle_t handle, char *pos);
 bool				sq_close(void *desc);
 bool 				sq_is_remote(const char *urn);
 void*				sq_get_ptr(sq_dev_handle_t handle);
+bool				sq_icy_active(sq_dev_handle_t handle);

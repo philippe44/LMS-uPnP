@@ -671,7 +671,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			ctx->status.voltage = ctx->voltage;
 			bool output_ready = ctx->output.completed || ctx->output.encode.flow;
 
-			// streaming properly started
+			// streaming properly started, make sure STMs is sent before STMd
 			if (ctx->output.track_started) {
 				_sendSTMs = true;
 				ctx->canSTMdu = true;
@@ -734,36 +734,30 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 				// autostart 2 and 3 require cont to be received first
 			}
 
-			/*
-			 Unless flow mode is used, wait for all output to be sent to the
-			 player before asking for next track. The outputbuf must be empty
-			 and STMs sent, because for short tracks the output thread might
-			 exit before playback has started and we don't want to send STMd
-			 before STMs.
-			 Streaming services like Deezer or RP plugin close connection if
-			 stalled for too long (30s), so if STMd is sent too early, once the-
-			 outputbuf is filled, connection will be idle for a while, so need
-			 to wait a bit toward the end of the track before sending STMd.
-			 But when flow mode is used, the stream is regulated by the player
-			 and thus should be continuous, so there is no need to wait toward
-			 the end of the track
-			*/
+			/* unless flow mode is used, wait for all output to be sent to the player before 
+			 * asking for next track and we don't want to send STMd before STMs. In addition
+			 * streaming services like Deezer, Qobuz or RP plugin close connection if stalled 
+			 * for too long (30s), so if STMd is sent too early, once the outputbuf is filled,
+			 * connection will be idle for a while, so we need to wait a bit toward the end of 
+			 * the track before sending STMd. This is not great when duration is incorrect and
+			 * we might fail with an unexpected stop, but then we'll do a quick STMD +STMu and 
+			 * LMS will continue. It duration is 0 because it's unknown, there is no good option
+			 * when disconnected, we'll just have to request next track. When flow mode is used, 
+			 * the stream is regulated by the player and thus should be continuous, so there is 
+			 * no need to wait toward the end of the track */
 			if (ctx->decode.state == DECODE_ERROR || 
 			    (ctx->decode.state == DECODE_COMPLETE && ctx->canSTMdu && output_ready && 
-				(ctx->output.encode.flow || _sendSTMu || !ctx->config.next_delay || !ctx->status.duration || 
-				 (s32_t) (ctx->status.duration - ctx->status.ms_played) < ctx->config.next_delay * 1000))) {	
-				if (ctx->decode.state == DECODE_COMPLETE) _sendSTMd = true;
-				if (ctx->decode.state == DECODE_ERROR)    _sendSTMn = true;
-				ctx->decode.state = DECODE_STOPPED;
-				if (ctx->status.stream_state == STREAMING_HTTP ||
-					ctx->status.stream_state == STREAMING_FILE) {
-					_stream_disconnect = true;
-				}
+				 (ctx->output.encode.flow || _sendSTMu || !ctx->config.next_delay || !ctx->status.duration || 
+				  (s32_t) (ctx->status.duration - ctx->status.ms_played) < ctx->config.next_delay * 1000))) {
 
-				// remote party closed the connection while still streaming
-				if (_sendSTMu) {
-					LOG_WARN("[%p]: Track shorter than expected (%d/%d)", ctx, ctx->status.ms_played, ctx->status.duration);
-				}
+				if (ctx->decode.state == DECODE_COMPLETE) _sendSTMd = true;
+				if (ctx->decode.state == DECODE_ERROR) _sendSTMn = true;
+				ctx->decode.state = DECODE_STOPPED;
+
+				if (ctx->status.stream_state == STREAMING_HTTP || ctx->status.stream_state == STREAMING_FILE) _stream_disconnect = true;
+
+				// remote party closed the connection while still streaming or duration was wrong
+				if (_sendSTMu) LOG_WARN("[%p]: Track shorter than expected (%d/%d)", ctx, ctx->status.ms_played, ctx->status.duration);
 			}
 
 			UNLOCK_D;
@@ -1018,7 +1012,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 	LOCK_O;
 	out->index++;
 	// try to handle next track failed stream where we jump over N tracks
-	info.offset = ctx->render.index != -1 ? out->index - ctx->render.index : 0;
+	info.index = ctx->render.index != -1 ? out->index - ctx->render.index : 0;
 	info.flow = out->encode.flow;
 	_buf_resize(ctx->outputbuf, ctx->config.outputbuf_size);
 	UNLOCK_O;
@@ -1030,10 +1024,10 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 	*/
 
 	// get metadata - they must be freed by callee whenever he wants
-	uint32_t hash = sq_get_metadata(ctx->self, &info.metadata, info.offset);
+	uint32_t hash = sq_get_metadata(ctx->self, &info.metadata, info.index);
 
 	// skip tracks that are too short
-	if (info.offset && info.metadata.duration && info.metadata.duration < SHORT_TRACK) {
+	if (info.index && info.metadata.duration && info.metadata.duration < SHORT_TRACK) {
 		LOG_WARN("[%p]: track too short (%d)", ctx, info.metadata.duration);
 		metadata_free(&info.metadata);
 		return false;
@@ -1083,6 +1077,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 	else if (strcasestr(mode, "aac")) out->encode.mode = ENCODE_AAC;
 	else if (strcasestr(mode, "mp3")) out->encode.mode = ENCODE_MP3;
 	else if (strcasestr(mode, "null")) out->encode.mode = ENCODE_NULL;
+	// auto mode will use thru only if we have a real chance for icy (arbitrary limitation of codecs here)
 	else if (info.metadata.valid && !out->duration && ctx->config.send_icy != ICY_NONE &&
 			 ((format == 'm' && mimetype_match_codec(ctx->mimetypes, 2, "mp3", "mpeg")) ||
 		      (format == 'a' && out->sample_size == '2' && mimetype_match_codec(ctx->mimetypes, 3, "aac", "mp4", "m4a")) ||
@@ -1100,6 +1095,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 	out->encode.channels = 0;
 	// reset time offset for new tracks
 	out->offset = 0;
+	out->icy.interval = 16 * 1024;
 
 	// in case of flow, all parameters shall be set
 	if (strcasestr(mode, "flow") && out->encode.mode != ENCODE_THRU) {
@@ -1142,7 +1138,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 										 out->encode.sample_rate, out->channels,
 										 ctx->mimetypes, ctx->config.raw_audio_format);
 			out->encode.mode = ENCODE_PCM;
-			out->icy.allowed = false;
+			out->icy.interval = 128 * 1024;
 		} else {
 			/* when having codec 'a', it can be mp4/aac (5) or 2 (adts/aac). In case of mp4, if the
 			 * mimetype of the player only has aac, we'll use out mp4-to-adts unwrapper codec. In
@@ -1164,15 +1160,12 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 				}
 			} else if (format == 'f' && out->sample_size != 'o') out->codec = 'F';
 
-			// decide if we can allow ICY metadata (u,v,m,f+o,a+2,a+5=>A)	
-			out->icy.allowed &= format == 'm' || format == 'u' || format == 'o' ||
-								(format == 'f' && out->sample_size == 'o') ||
-								(format == 'a' &&  (out->codec == 'A' || out->sample_size == '2'));
+			if (format == 'f' || format == 'l' || format == 'd') out->icy.interval = 128 * 1024;
 		}
 
 	} else if (out->encode.mode == ENCODE_PCM) {
 
-		out->icy.allowed = false;
+		out->icy.interval = 128 * 1024;
 
 		if (out->encode.sample_rate && out->encode.sample_size) {
 			// everything is fixed
@@ -1208,7 +1201,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 
 		mimetype = mimetype_from_codec('f', ctx->mimetypes, '\0');
 		if (out->encode.sample_size > 24) out->encode.sample_size = 24;
-		out->icy.allowed = false;
+		out->icy.interval = 128 * 1024;
 
 	} else if (out->encode.mode == ENCODE_MP3) {
 

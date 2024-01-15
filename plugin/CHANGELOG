@@ -5,7 +5,9 @@
  - send_backlog always send the requested bytes, not just what has been actually sent!!!
  - fix some logs syntax
  - force gapped transition when duration is 0 b/c some players (Sonos) won't use nextURI when a webradio-like one ends by lack of HTTP data
- - output_thread won't restart from 0 when fully served (see above, when closing a webradio-like stream) 
+ - don't accept full (Range 0- or nothing) GET request in output_thread when lingering (see above, when closing a webradio-like stream) 
+ - allow icy on every codec, just provide interval, let user config and requesting player decide
+ - alternate getting of TransportInfo and PositionInfo (increase polling speed)
 
 3.2.0
  - playtime might be over what LMS claimed in metadata, so make a signed comparison to send STMd

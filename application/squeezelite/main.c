@@ -138,7 +138,6 @@ static char *cli_decode(char *str) {
   return buf;
 }
 
-
 /*---------------------------------------------------------------------------*/
 /* IMPORTANT: be sure to free() the returned string after use */
 static char *cli_find_tag(char *str, char *tag) {
@@ -186,7 +185,6 @@ bool cli_open_socket(struct thread_ctx_s *ctx) {
 	LOG_INFO("[%p]: opened CLI socket %d", ctx, ctx->cli_sock);
 	return true;
 }
-
 
 /*---------------------------------------------------------------------------*/
 #define CLI_SEND_SLEEP (10000)
@@ -297,7 +295,6 @@ u32_t sq_get_time(sq_dev_handle_t handle) {
 	NFREE(rsp);
 	return time;
 }
-
 
 /*---------------------------------------------------------------------------*/
 bool sq_set_time(sq_dev_handle_t handle, char *pos) {
@@ -538,6 +535,7 @@ void sq_notify(sq_dev_handle_t handle, sq_event_t event, ...) {
 				// PLAY event can happen before render index has been captured
 				if (ctx->render.index == ctx->output.index) {
 					ctx->output.track_started = true;
+					ctx->render.icy = ctx->output.icy.active;
 					ctx->render.track_start_time = gettime_ms();
 					LOG_INFO("[%p] track %u started by play at %u", ctx, ctx->render.index, ctx->render.track_start_time);
 					_output_terminate_below(ctx, ctx->render.index);
@@ -658,6 +656,7 @@ void sq_notify(sq_dev_handle_t handle, sq_event_t event, ...) {
 				ctx->render.duration = ctx->output.duration;
 				if (ctx->render.state == RD_PLAYING) {
 					ctx->output.track_started = true;
+					ctx->render.icy = ctx->output.icy.active;
 					ctx->render.track_start_time = gettime_ms();
 					LOG_INFO("[%p]: track %u started by info at %u", ctx, index, ctx->render.track_start_time);
 					_output_terminate_below(ctx, index);
@@ -790,4 +789,9 @@ bool sq_run_device(sq_dev_handle_t handle, sq_dev_param_t *param) {
 /*--------------------------------------------------------------------------*/
 void *sq_get_ptr(sq_dev_handle_t handle) {
 	return handle ? thread_ctx + handle - 1 : NULL;
+}
+
+/*--------------------------------------------------------------------------*/
+bool sq_icy_active(sq_dev_handle_t handle) {
+	return handle ? thread_ctx[handle - 1].render.index != -1 && thread_ctx[handle - 1].render.icy : false;
 }

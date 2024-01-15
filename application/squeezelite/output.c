@@ -707,6 +707,7 @@ bool output_flush(struct thread_ctx_s *ctx, bool full) {
 	if (full) {
 		ctx->render.ms_played = 0;
 		ctx->render.index = -1;
+		ctx->render.icy = false;
 		ctx->output.track_started = false;
 	} else {
 		ctx->output.completed = true;
