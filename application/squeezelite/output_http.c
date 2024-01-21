@@ -100,10 +100,24 @@ bool output_start(struct thread_ctx_s *ctx) {
 		}
 	}
 
-	// this should never happen as all threads can't be running with none lingering
+	/* something weird happened like LMS did not flush us but keep sending strms. I've 
+	 * seen that with a live radio statio, that suddenly responded by 404. Si is is 
+	 * fine for stream and decoder, but output threads are stuck waiting */
 	if (slot == ARRAY_COUNT(ctx->output_thread)) {
-		LOG_ERROR("[%p]: can't find a free thread, we should not be here!!!", ctx);
-		return false;
+		LOG_ERROR("[%p]: can't find a free thread, we should not be here!!! (s:%d)", ctx, ctx->output.state);
+		if (ctx->output.state < OUTPUT_RUNNING) {
+			LOG_ERROR("[%p]: terminating all threads immediately", ctx);
+			for (slot = 0; slot < ARRAY_COUNT(ctx->output_thread); slot++) {
+				ctx->output_thread[slot].running = false;
+				UNLOCK_O;
+				pthread_join(ctx->output_thread[slot].thread, NULL);
+				LOCK_O;
+			}
+			// restarting from slot 0
+			slot = 0;
+		} else {
+			return false;
+		}
 	}
 
 	// found something, now need to terminate it if it lingers

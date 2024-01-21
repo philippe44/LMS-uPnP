@@ -1,3 +1,9 @@
+3.3.1
+ - UpnpResolveURL needs one extra byte if RelURL parameters does not start with a '/'
+ - when slimproto has a 404 on a webradio, LMS keeps sending strms again and again without flush or quit. That's fine for streamer
+ and decoder who just restart but the output threads where accumulating. So release them all if we have no space left. If this 
+ happens a few times before we have exhausted output_threads, next successful track transition or a flush will terminate others.
+ 
 3.3.0
  - only re-acquire state on "play" action completion (not stop/pause). Fake stop will be created otherwise
  - on renderer reported stop, only terminate output_http_thread if it's lingering
