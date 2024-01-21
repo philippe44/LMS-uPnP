@@ -386,7 +386,7 @@ bool sq_callback(void *caller, sq_action_t action, ...) {
 			(void)!asprintf(&ProtoInfo, "http-get:*:%s:%s", p->mimetype, DLNAfeatures);
 			free(DLNAfeatures);
 
-			bool GapTrack = p->metadata.duration < SHORT_TRACK;
+			bool GapTrack = !Device->sq_config.roon_mode && p->metadata.duration < SHORT_TRACK;
 
 			// Sonos requires special prefix for ICY but it can't be a repeating stream (must have no duration)
 			if ((!p->metadata.duration || p->metadata.repeating != -1) && (*Device->Service[TOPOLOGY_IDX].ControlURL) &&
@@ -579,18 +579,12 @@ static void *MRThread(void *args) {
 		elapsed = gettime_ms() - last;
 		pthread_mutex_lock(&p->Mutex);
 
-		/*
-		if (p->Duration < SHORT_TRACK) wakeTimer = MIN_POLL / 2;
-		else wakeTimer = (p->sqState != SQ_STOP && p->on) ? MIN_POLL : MIN_POLL * 10;
-		*/
+		p->StatePoll += elapsed;
+		p->TrackPoll += elapsed;
+		if (p->InfoExPoll != -1) p->InfoExPoll += elapsed;
 		wakeTimer = (p->sqState != SQ_STOP && p->on) ? MIN_POLL / 2 : MIN_POLL * 10;
 
 		LOG_SDEBUG("[%p]: UPnP thread timer %d %d", p, elapsed, wakeTimer);
-
-		p->StatePoll += elapsed;
-		p->TrackPoll += elapsed;
-
-		if (p->InfoExPoll != -1) p->InfoExPoll += elapsed;
 
 		// do nothing if we are a slave
 		if (p->Master) goto sleep;
@@ -604,7 +598,7 @@ static void *MRThread(void *args) {
 
 		// hack to deal with players that do not report end of track
 		if (p->Duration < 0 && ((p->Duration += elapsed) >= 0)) {
-			if (p->NextProtoInfo) {
+			if (p->NextURI) {
 				LOG_INFO("[%p] overtime next track", p);
 				NextTrack(p);
 			} else {
@@ -687,7 +681,7 @@ static void _SyncNotifState(char *State, struct sMR* Device) {
 				Event = SQ_STOP;
 				LOG_INFO("[%p]: uPNP stop", Device);
 			}
-		} else if (Device->NextProtoInfo) {
+		} else {
 			// non-gapless player or gapped track, manually set next track
 			LOG_INFO("[%p]: gapped transition", Device);
 			NextTrack(Device);
