@@ -1,3 +1,7 @@
+3.3.2
+ - fix ogg streaming metadata parsing for USE_LIBOGG and not (protect against multiplexed streams and avoid build-up)
+ - use setlocale() so that atof does not fail on '.'
+ 
 3.3.1
  - UpnpResolveURL needs one extra byte if RelURL parameters does not start with a '/'
  - when slimproto has a 404 on a webradio, LMS keeps sending strms again and again without flush or quit. That's fine for streamer

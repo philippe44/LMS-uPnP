@@ -246,6 +246,10 @@ static u32_t inline itohl(u32_t littlelong) {
 #endif
 }
 
+/* https://xiph.org/ogg/doc/framing.html
+ * https://xiph.org/flac/ogg_mapping.html
+ * https://xiph.org/vorbis/doc/Vorbis_I_spec.html#x1-610004.2 */
+
 #if !USE_LIBOGG
 static size_t memfind(const u8_t* haystack, size_t n, const char* needle, size_t len, size_t* offset) {
 	size_t i;
@@ -253,10 +257,10 @@ static size_t memfind(const u8_t* haystack, size_t n, const char* needle, size_t
 	return i;
 }
 
-/* https://xiph.org/ogg/doc/framing.html
- * https://xiph.org/flac/ogg_mapping.html
- * https://xiph.org/vorbis/doc/Vorbis_I_spec.html#x1-610004.2 */
-
+ /* this mode is made to save memory and CPU by not calling ogg decoding function and never having
+  * full packets (as a vorbis_comment can have a very large artwork. It works only at the page
+  * level, which means there is a risk of missing the searched comment if they are not on the
+  * first page of the vorbis_comment packet... nothing is perfect */
 static void stream_ogg(struct thread_ctx_s* ctx, size_t n) {
 	if (ctx->stream.ogg.state == STREAM_OGG_OFF) return;
 	u8_t* p = ctx->streambuf->writep;
@@ -296,6 +300,8 @@ static void stream_ogg(struct thread_ctx_s* ctx, size_t n) {
 				ctx->stream.ogg.miss = ctx->stream.ogg.want = ctx->stream.ogg.header.count;
 				ctx->stream.ogg.data = ctx->stream.ogg.segments;
 				ctx->stream.ogg.state = STREAM_OGG_SEGMENTS;
+				// granule and page are also in little endian but that does not matter
+				ctx->stream.ogg.header.serial = itohl(ctx->stream.ogg.header.serial);
 			} else {
 				ctx->stream.ogg.state = STREAM_OGG_SYNC;
 				ctx->stream.ogg.data = NULL;
@@ -306,19 +312,21 @@ static void stream_ogg(struct thread_ctx_s* ctx, size_t n) {
 			for (size_t i = 0; i < ctx->stream.ogg.want; i++) ctx->stream.ogg.miss += ctx->stream.ogg.data[i];
 			ctx->stream.ogg.want = ctx->stream.ogg.miss;
 
-			if (ctx->stream.ogg.header.granule == 0 || 
-				(ctx->stream.ogg.header.granule == - 1 && ctx->stream.ogg.granule == 0)) {
-				// granule 0 means a new stream, so let's look into it
-				ctx->stream.ogg.state = STREAM_OGG_PAGE;
-				ctx->stream.ogg.data = malloc(ctx->stream.ogg.want);
-			} else {
+			// acquire serial number when we are looking for headers and hit a bos
+			if (ctx->stream.ogg.serial == ULLONG_MAX && (ctx->stream.ogg.header.type & 0x02)) ctx->stream.ogg.serial = ctx->stream.ogg.header.serial;
+
+			// we have overshot and missed header, reset serial number to restart search (O and -1 are le/be)
+			if (ctx->stream.ogg.header.serial == ctx->stream.ogg.serial && ctx->stream.ogg.header.granule && ctx->stream.ogg.header.granule != -1) ctx->stream.ogg.serial = ULLONG_MAX;
+
+			// not our serial (the above protected us from granule > 0)
+			if (ctx->stream.ogg.header.serial != ctx->stream.ogg.serial) {
 				// otherwise, jump over data
 				ctx->stream.ogg.state = STREAM_OGG_SYNC;
 				ctx->stream.ogg.data = NULL;
+			} else {
+				ctx->stream.ogg.state = STREAM_OGG_PAGE;
+				ctx->stream.ogg.data = malloc(ctx->stream.ogg.want);
 			}
-
-			// memorize granule for next page
-			if (ctx->stream.ogg.header.granule != -1) ctx->stream.ogg.granule = ctx->stream.ogg.header.granule;
 			break;
 		case STREAM_OGG_PAGE: {
 			char** tag = (char* []){ "\x3vorbis", "OpusTags", NULL };
@@ -359,8 +367,9 @@ static void stream_ogg(struct thread_ctx_s* ctx, size_t n) {
 
 				ctx->stream.ogg.flac = false;
 				ctx->stream.meta_send = true;
+				ctx->stream.ogg.serial = ULLONG_MAX;
 				wake_controller(ctx);
-				LOG_INFO("[%p]: Ogg metadata length: %u", ctx, ctx->stream.header_len);
+				LOG_INFO("[%p]: metadata length: %u", ctx, ctx->stream.header_len);
 			}
 			free(ctx->stream.ogg.data);
 			ctx->stream.ogg.data = NULL;
@@ -386,11 +395,23 @@ static void stream_ogg(struct thread_ctx_s* ctx, size_t n) {
 
 	// extract a page from sync buffer
 	while (OG(&go, sync_pageout, &ctx->stream.ogg.sync, &ctx->stream.ogg.page) > 0) {
-		// always set stream serialno if we have a new one
-		if (OG(&go, page_bos, &ctx->stream.ogg.page)) OG(&go, stream_reset_serialno, &ctx->stream.ogg.state, OG(&go, page_serialno, &ctx->stream.ogg.page));
+		uint32_t serial = OG(&go, page_serialno, &ctx->stream.ogg.page);
 
-		// bring new page in (there should be one) but we only care about granule 0 (not audio)
-		if (OG(&go, stream_pagein, &ctx->stream.ogg.state, &ctx->stream.ogg.page) || OG(&go, page_granulepos, &ctx->stream.ogg.page)) continue;
+		// set stream serialno if we wait for a new one (no multiplexed streams)
+		if (ctx->stream.ogg.serial == ULLONG_MAX && OG(&go, page_bos, &ctx->stream.ogg.page)) {
+			ctx->stream.ogg.serial = serial;
+			OG(&go, stream_reset_serialno, &ctx->stream.ogg.state, serial);
+		}
+
+		// if we overshot, restart searching for headers
+		int64_t granule = OG(&go.dl, page_granulepos, &ctx->stream.ogg.page);
+		if (ctx->stream.ogg.serial == serial && granule && granule != -1) ctx->stream.ogg.serial = ULLONG_MAX;
+
+		// if we don't have a serial number or it's not us, don't bring page in to avoid build-up
+		if (ctx->stream.ogg.serial != serial) continue;
+
+		// bring new page in (there should be one but multiplexed streams are not supported)
+		if (OG(&go, stream_pagein, &ctx->stream.ogg.state, &ctx->stream.ogg.page)) continue;
 
 		// get a packet (there might be more than one in a page)
 		while (OG(&go, stream_packetout, &ctx->stream.ogg.state, &ctx->stream.ogg.packet) > 0) {
@@ -430,9 +451,10 @@ static void stream_ogg(struct thread_ctx_s* ctx, size_t n) {
 
 			// ogg_packet_clear does not need to be called
 			ctx->stream.ogg.flac = false;
+			ctx->stream.ogg.serial = ULLONG_MAX;
 			ctx->stream.meta_send = true;
 			wake_controller(ctx);
-			LOG_INFO("[%p]: Ogg metadata length: %u", ctx, ctx->stream.header_len - 3);
+			LOG_INFO("[%p]: metadata length: %u", ctx, ctx->stream.header_len - 3);
 
 			// return as we might have more than one metadata set but we want the first one
 			return;
@@ -867,6 +889,7 @@ void stream_sock(u32_t ip, u16_t port, bool use_ssl, bool use_ogg, const char *h
 	ctx->stream.ogg.state = use_ogg ? STREAM_OGG_SYNC : STREAM_OGG_OFF;
 #endif
 	ctx->stream.ogg.flac = false;
+	ctx->stream.ogg.serial = ULLONG_MAX;
 
 	if (*ctx->config.store_prefix) {
 		char name[STR_LEN];

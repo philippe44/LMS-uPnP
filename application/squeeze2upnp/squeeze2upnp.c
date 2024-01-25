@@ -11,6 +11,7 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <locale.h>
 
 #include "platform.h"
 
@@ -1785,6 +1786,9 @@ int main(int argc, char *argv[])
 	signal(SIGHUP, sighandler);
 #endif
 
+	// otherwise some atof/strtod fail with '.'
+	setlocale(LC_NUMERIC, "C");
+
 	// first try to find a config file on the command line
 	for (i = 1; i < argc; i++) {
 		if (!strcmp(argv[i], "-x")) {
@@ -1820,10 +1824,6 @@ int main(int argc, char *argv[])
 	}
 
 	LOG_WARN("Starting squeeze2upnp version: %s", VERSION);
-
-	if (strtod("0.30", NULL) != 0.30) {
-		LOG_WARN("weird GLIBC, try -static build in case of failure");
-	}
 
 	if (!glConfigID) {
 		LOG_ERROR("\n\n!!!!!!!!!!!!!!!!!! ERROR LOADING CONFIG FILE !!!!!!!!!!!!!!!!!!!!!\n", NULL);

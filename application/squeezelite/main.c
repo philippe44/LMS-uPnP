@@ -468,10 +468,9 @@ uint32_t sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, int offse
 
 	metadata_defaults(metadata);
 
-	LOG_DEBUG("[%p]: idx %d\n\tartist:%s\n\talbum:%s\n\ttitle:%s\n\tgenre:%s\n\tduration:%d.%03d\n\tsize:%d\n\tcover:%s", ctx, metadata->index,
+	LOG_DEBUG("[%p]: idx %d\n\tartist:%s\n\talbum:%s\n\ttitle:%s\n\tduration:%d\n\trepeating:%d\n\tsize:%d\n\tcover:%s", ctx, metadata->index,
 				metadata->artist, metadata->album, metadata->title,
-				metadata->genre, div(metadata->duration, 1000).quot,
-				div(metadata->duration,1000).rem, metadata->size,
+				metadata->duration, metadata->repeating, metadata->size,
 				metadata->artwork ? metadata->artwork : "");
 
 	return hash32(metadata->artist) ^ hash32(metadata->title) ^ hash32(metadata->artwork);

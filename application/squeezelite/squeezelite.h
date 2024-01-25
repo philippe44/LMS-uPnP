@@ -308,6 +308,7 @@ struct streamstate {
 	} strm;
 	struct {
 		bool flac;
+		u64_t serial;
 #if USE_LIBOGG
 		bool active;
 		ogg_stream_state state;
@@ -317,7 +318,6 @@ struct streamstate {
 #else
 		enum { STREAM_OGG_OFF, STREAM_OGG_SYNC, STREAM_OGG_HEADER, STREAM_OGG_SEGMENTS, STREAM_OGG_PAGE } state;
 		size_t want, miss, match;
-		u64_t granule;
 		u8_t* data, segments[255];
 #pragma pack(push, 1)
 		struct {

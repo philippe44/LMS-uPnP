@@ -606,7 +606,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			}
 
 			// handle icy locally or inform player manager
-			if (ctx->output.icy.interval) {
+			if (ctx->output.icy.active) {
 				// icy is activated, handle things locally
 				if (updated) output_set_icy(metadata, ctx);
 			} else if ((ctx->output.encode.flow && ctx->output.track_started) || updated) {
@@ -1064,7 +1064,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 
 	// in flow mode we now have eveything, just initialize codec
 	if (out->encode.flow) {
-		if (out->icy.interval) output_set_icy(&info.metadata, ctx);
+		if (out->icy.active) output_set_icy(&info.metadata, ctx);
 		metadata_free(&info.metadata);
 		return codec_open(out->codec, out->sample_size, out->sample_rate,
 			out->channels, out->in_endian, ctx);

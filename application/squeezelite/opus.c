@@ -224,7 +224,7 @@ static int read_opus_header(struct thread_ctx_s* ctx) {
 		// nothing has been found and we have no more bytes, come back later
 		if (status <= 0) break;
 
-		// always set stream serialno if we have a new one
+		// always set stream serialno if we have a new one (no multiplexed streams)
 		if (OG(&go, page_bos, &u->page)) OG(&go, stream_reset_serialno, &u->state, OG(&go, page_serialno, &u->page));
 
 		// bring new page in if we want it (otherwise we're just skipping)
