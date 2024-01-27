@@ -22,14 +22,14 @@ typedef struct metadata_s {
 	char *genre;
 	// TODO: shall this two be merged?
 	uint32_t track, index, disc;
-	uint32_t duration, live_duration;
+	uint32_t duration, position;
+	int32_t live_duration;
 	uint32_t size;
 	uint32_t sample_rate;
 	uint8_t  sample_size;
 	uint8_t  channels;
 	uint32_t bitrate;
 	bool remote;
-	int repeating;
 	bool valid;
 } metadata_t;
 

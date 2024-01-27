@@ -19,6 +19,10 @@
  *
  */
 
+ /*----------------------------------------------------------------------------*/
+ /* KeyNotes																	  */
+ /*----------------------------------------------------------------------------*/
+
 /* This works almost like squeezelite, but with a big difference: the STMd which
  * tells LMS to send the next track is only sent once the full current track has
  * been accepted by the player (long buffer). This makes a whole difference in term
@@ -28,7 +32,11 @@
  * does not cause any real time issue as http players have large buffers but it
  * simplifies extremely buffer management. To some extend, the output buffer
  * pointers could be reset at the begining every time an output exit because no
- * decoder is running at that time */
+ * decoder is running at that time.
+ * The time duration used everywhere must always reflect the true nature of what 
+ * being streamed. It's it used to calculate content-length and check when track 
+ * ends so it is necessary to correct it for webradio (must be 0) and for any 
+ * content that might have a "fake" duration like repeating streams */
 
 /* TODO
 - move from CLI to COMET
@@ -1043,8 +1051,8 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 	out->bitrate = info.metadata.bitrate;
 	out->icy.allowed = false;
 
-	// get live metadata when track repeats or have no duration (livestream)
-	out->live_metadata.enabled = !out->duration || info.metadata.repeating != -1;
+	// get live metadata when track has a live_duration (it updates) or no duration at all (webradio)
+	out->live_metadata.enabled = !out->duration || info.metadata.live_duration != -1;
 	out->live_metadata.last = now;
 	out->live_metadata.hash = out->live_metadata.enabled ? 0 : hash;
 	UNLOCK_O;

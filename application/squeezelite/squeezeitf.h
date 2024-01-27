@@ -89,7 +89,7 @@ void				sq_release_device(sq_dev_handle_t);
 void				sq_notify(sq_dev_handle_t handle, sq_event_t event, ...);
 uint32_t			sq_get_time(sq_dev_handle_t handle);
 uint32_t			sq_self_time(sq_dev_handle_t handle);
-uint32_t			sq_get_metadata(sq_dev_handle_t handle, struct metadata_s *metadata, int offset);
+uint32_t			sq_get_metadata(sq_dev_handle_t handle, struct metadata_s *metadata, int token);
 void				sq_default_metadata(struct metadata_s *metadata, bool init);
 void 				sq_free_metadata(struct metadata_s *metadata);
 bool 				sq_set_time(sq_dev_handle_t handle, char *pos);

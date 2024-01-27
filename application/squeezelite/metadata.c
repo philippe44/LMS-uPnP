@@ -58,6 +58,6 @@ void metadata_defaults(struct metadata_s* const self) {
 struct metadata_s* metadata_init(struct metadata_s* self) {
 	if (!self) self = malloc(sizeof(*self));
 	memset(self, 0, sizeof(*self));
-	self->repeating = -1;
+	self->live_duration = -1;
 	return self;
 }

@@ -378,9 +378,9 @@ bool sq_callback(void *caller, sq_action_t action, ...) {
 			if (!Device->Config.SendCoverArt) NFREE(p->metadata.artwork);
 
 			LOG_INFO("[%p]:\n\tartist:%s\n\talbum:%s\n\ttitle:%s\n"
-					 "\tduration:%d\n\trepeating:%d\n\tcover:%s\n\tindex:%u", Device,
+					 "\tduration:%d\n\tlive_duration:%d\n\tposition:%d\n\tcover:%s\n\tindex:%u", Device,
 					p->metadata.artist, p->metadata.album, p->metadata.title,
-					p->metadata.duration, p->metadata.repeating,
+					p->metadata.duration, p->metadata.live_duration, p->metadata.position,
 					p->metadata.artwork ? p->metadata.artwork : "", p->index);
 
 			char *DLNAfeatures = format_to_dlna(p->format, Device->sq_config.cache != HTTP_CACHE_MEMORY, !p->metadata.duration && !p->flow);
@@ -390,7 +390,7 @@ bool sq_callback(void *caller, sq_action_t action, ...) {
 			bool GapTrack = !Device->sq_config.roon_mode && p->metadata.duration < SHORT_TRACK;
 
 			// Sonos requires special prefix for ICY but it can't be a repeating stream (must have no duration)
-			if ((!p->metadata.duration || p->metadata.repeating != -1) && (*Device->Service[TOPOLOGY_IDX].ControlURL) &&
+			if ((!p->metadata.duration || p->metadata.live_duration != -1) && (*Device->Service[TOPOLOGY_IDX].ControlURL) &&
 				(p->format == 'm' || p->format == 'a') && Device->sq_config.send_icy) {
 				GapTrack = true;
 				(void) !asprintf(&uri, "x-rincon-mp3radio://%s", p->uri);

@@ -398,18 +398,16 @@ static void output_http_thread(struct thread_param_s *param) {
 
 /*----------------------------------------------------------------------------*/
 ssize_t send_backlog(struct buffer* backlog, int sock, const void* data, size_t bytes, int flags) {
-	ssize_t sent = 0;
-
 	// if there is no backlog buffer, it should be a blocking socket so just send
 	if (!backlog) return send(sock, data, bytes, flags);
 
 	// try to flush backlog if any
-	while (_buf_used(backlog) && sent >= 0) {
+	for (ssize_t sent = 0; _buf_used(backlog) && sent >= 0;) {
 		sent = send(sock, backlog->readp, _buf_cont_read(backlog), flags);
 		if (sent > 0) _buf_inc_readp(backlog, sent);
 	}
 
-	sent = 0;
+	ssize_t sent = 0;
 
 	// try to send data if backlog is flushed
 	if (!_buf_used(backlog)) {
@@ -419,7 +417,9 @@ ssize_t send_backlog(struct buffer* backlog, int sock, const void* data, size_t 
 
 	// store what we have not sent
 	_buf_write(backlog, (u8_t*) data + sent, bytes - sent);
-	return sent < 0 ? sent : bytes;
+
+	// we always accept the whole block
+	return bytes;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -446,7 +446,7 @@ static ssize_t send_with_icy(struct outputstate* out, struct buffer *backlog, in
 	if (!out->icy.active) return bytes;
 
 	out->icy.remain -= bytes;
-	LOG_DEBUG("[%p]: ICY remains %zu", out, out->icy.remain);
+	LOG_DEBUG("[%p]: ICY remains %zu (sending %zu)", out, out->icy.remain, bytes);
 
 	// ICY is active
 	if (!out->icy.remain) {
@@ -461,11 +461,12 @@ static ssize_t send_with_icy(struct outputstate* out, struct buffer *backlog, in
 			int len = snprintf(buffer, ICY_LEN_MAX, format,
 							 out->icy.artist, *out->icy.artist ? " - " : "",
 							 out->icy.title, out->icy.artwork) - 1;
-			LOG_INFO("[%p]: ICY update\n\t%s\n\t%s\n\t%s", out, out->icy.artist, out->icy.title, out->icy.artwork);
 
 			len_16 = (len + 15) / 16;
 			memset(buffer + len + 1, 0, len_16 * 16 - len);
 			buffer[0] = len_16;
+
+			LOG_INFO("[%p]: ICY update of %d bytes (%d blocks)\n\t%s\n\t%s\n\t%s", out, len, len_16, out->icy.artist, out->icy.title, out->icy.artwork);
 		}
 
 		send_chunked(out->chunked, backlog, sock, buffer, len_16 * 16 + 1, flags);
