@@ -1,3 +1,6 @@
+3.3.5
+ - use updated libflac with chaining enabled
+ 
 3.3.4
  - clarify use of index in sq_get_metadata
  - add <time> in metadata recurring queries (not uses for now)
