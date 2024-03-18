@@ -79,7 +79,7 @@ bool mimetype_match_codec(char* mimetypes[], int n, ...) {
 
 	while (!match && n--) {
 		char* needle = va_arg(args, char*);
-		for (char** p = mimetypes; *p && !match; p++) if (strstr(*p, needle)) return match = true;
+		for (char** p = mimetypes; *p && !match; p++) if (strstr(*p, needle)) match = true;
 	}
 
 	va_end(args);
