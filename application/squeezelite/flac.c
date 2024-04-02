@@ -23,10 +23,6 @@
 
 #include <FLAC/stream_decoder.h>
 
-#if !WIN && LINKALL
-FLAC_API FLAC__bool __attribute__((weak)) FLAC__stream_decoder_set_ogg_chaining(FLAC__StreamDecoder* decoder, FLAC__bool value) { return true; };
-#endif
-
 #if !LINKALL
 static struct {
 	void *handle;
@@ -257,10 +253,16 @@ static void flac_open(u8_t sample_size, u32_t sample_rate, u8_t channels, u8_t e
 
 	if ( f->container == 'o' ) {
 		FLAC(&gf, stream_decoder_set_metadata_respond, f->decoder, FLAC__METADATA_TYPE_VORBIS_COMMENT);
-#if !LINKALL
-		if (gf.FLAC__stream_decoder_set_ogg_chaining) f->FLAC__stream_decoder_set_ogg_chaining(f->decoder, true);
-#else
+#if LINKALL
+#ifdef FLAC__OGG_CHAINING
 		FLAC__stream_decoder_set_ogg_chaining(f->decoder, true);
+#else 
+#pragma message ("OggFlac library does not support chaining") 
+#endif
+#else
+		if (gf.FLAC__stream_decoder_set_ogg_chaining) {
+			gf.FLAC__stream_decoder_set_ogg_chaining(f->decoder, true);
+		}
 #endif
 		FLAC(&gf, stream_decoder_init_ogg_stream, f->decoder, &read_cb, NULL, NULL, NULL, NULL, &write_cb, &metadata_cb, &error_cb, ctx);
 	} else {
@@ -323,8 +325,13 @@ static bool load_flac(void) {
 
 	// ignore error on that method, it's not available on all versions
 	gf.FLAC__stream_decoder_set_ogg_chaining = dlsym(gf.handle, "FLAC__stream_decoder_set_ogg_chaining");
+	if (!gf.FLAC__stream_decoder_set_ogg_chaining) {
+		LOG_INFO("OggFlac chaining disabled");
+	}
 
 	LOG_INFO("loaded "LIBFLAC, NULL);
+#elif !defined(FLAC__OGG_CHAINING)
+	LOG_INFO("OggFlac chaining disabled");
 #endif
 
 	return true;
