@@ -1203,7 +1203,7 @@ static void *UpdateThread(void *args) {
 							if (!*(Device->sq_config.name)) strcpy(Device->sq_config.name, Device->friendlyName);
 							sq_run_device(Device->SqueezeHandle, &Device->sq_config);
 							pthread_mutex_unlock(&Device->Mutex);
-						} else if (Master && (!Device->Master || Device->Master == Device)) {
+						} else if (Master && (!Device->Master || Device->Master != Master)) {
 							// joining a group as slave
 							LOG_INFO("[%p]: Sonos %s is now slave", Device, Device->friendlyName);
 							pthread_mutex_lock(&Device->Mutex);
@@ -1416,6 +1416,8 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 
 		NFREE(ServiceURL);
 	}
+
+	// we are a slave (our master might not yet be discovered)
 	Device->Master = GetMaster(Device, &friendlyName);
 
 	// set remaining items now that we are sure
@@ -1446,6 +1448,9 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 
 	if (Device->Master) {
 		LOG_INFO("[%p] skipping Sonos slave %s", Device, Device->friendlyName);
+		if (Device->Master == Device) {
+			LOG_INFO("[%p] but master not yet discovered, assigning to self", Device);
+		}
 	} else {
 		LOG_INFO("[%p]: adding renderer (%s) %s with mac %hX-%X", Device, Device->friendlyName, addr,
 				 *(uint16_t*)Device->sq_config.mac, *(uint32_t*)(Device->sq_config.mac + 2));
