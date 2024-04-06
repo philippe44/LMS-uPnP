@@ -1,3 +1,6 @@
+3.3.9
+ - better fix for sonos master detection
+ 
 3.3.8
  - Some Sonos might really assign self-master which was making them move to slave at 2nd discovery turn
 

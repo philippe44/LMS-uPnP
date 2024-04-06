@@ -70,37 +70,35 @@ struct sMR *GetMaster(struct sMR *Device, char **Name) {
 	if (Response) {
 		char myUUID[RESOURCE_LENGTH] = "";
 		IXML_NodeList *GroupList = ixmlDocument_getElementsByTagName(Response, "ZoneGroup");
-		int i;
 
 		sscanf(Device->UDN, "uuid:%s", myUUID);
 
 		// list all ZoneGroups
-		for (i = 0; !done && GroupList && i < (int) ixmlNodeList_length(GroupList); i++) {
+		for (int i = 0; !done && GroupList && i < (int) ixmlNodeList_length(GroupList); i++) {
 			IXML_Node *Group = ixmlNodeList_item(GroupList, i);
 			const char *Coordinator = ixmlElement_getAttribute((IXML_Element*) Group, "Coordinator");
 			IXML_NodeList *MemberList = ixmlDocument_getElementsByTagName((IXML_Document*) Group, "ZoneGroupMember");
-			int j;
 
 			// list all ZoneMembers
-			for (j = 0; !done && j < (int) ixmlNodeList_length(MemberList); j++) {
+			for (int j = 0; !done && j < (int) ixmlNodeList_length(MemberList); j++) {
 				IXML_Node *Member = ixmlNodeList_item(MemberList, j);
 				const char *UUID = ixmlElement_getAttribute((IXML_Element*) Member, "UUID");
-				int k;
+				if (strcasecmp(myUUID, UUID)) continue;
 
 				// get ZoneName
-				if (!strcasecmp(myUUID, UUID)) {
-					NFREE(*Name);
-					*Name = strdup(ixmlElement_getAttribute((IXML_Element*) Member, "ZoneName"));
-					if (!strcasecmp(myUUID, Coordinator)) done = true;
-				}
+				NFREE(*Name);
+				*Name = strdup(ixmlElement_getAttribute((IXML_Element*) Member, "ZoneName"));
 
-				// look for our master (if we are not)
-				for (k = 0; !done && k < MAX_RENDERERS; k++) {
-					if (glMRDevices[k].Running && strcasestr(glMRDevices[k].UDN, (char*) Coordinator)) {
-						Master = glMRDevices + k;
-						LOG_DEBUG("Found Master %s %s", myUUID, Master->UDN);
-						done = true;
-					}
+				// if we are the coordinator it's all we need to do
+				done = !strcasecmp(myUUID, Coordinator);
+
+				// otherwise, look for our master (the coordinator) in existing devices
+				for (int k = 0; !done && k < MAX_RENDERERS; k++) {
+					if (!glMRDevices[k].Running || strcasestr(glMRDevices[k].UDN, (char*)Coordinator)) continue;
+
+					Master = glMRDevices + k;
+					LOG_DEBUG("Found Master %s %s", myUUID, Master->UDN);
+					done = true;
 				}
 			}
 
