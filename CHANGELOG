@@ -1,3 +1,6 @@
+3.4.0
+ - OpenSSL 3.x
+ 
 3.3.9
  - better fix for sonos master detection
  

@@ -121,7 +121,7 @@
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>libopenssl\targets\win32\$(PlatformTarget);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>libopenssl_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libopenssl_static.lib;Crypt32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Manifest>
       <AdditionalManifestFiles>manifest.xml</AdditionalManifestFiles>
