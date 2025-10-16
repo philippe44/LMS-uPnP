@@ -37,7 +37,6 @@
 #include "cross_util.h"
 #include "cross_log.h"
 #include "cross_net.h"
-#include "cross_ssl.h"
 #include "cross_thread.h"
 
 /*----------------------------------------------------------------------------*/

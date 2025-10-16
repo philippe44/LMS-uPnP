@@ -1,3 +1,6 @@
+3.4.1
+ - remove libatomic dependency
+ 
 3.4.0
  - OpenSSL 3.x
  
