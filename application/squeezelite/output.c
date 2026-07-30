@@ -500,7 +500,7 @@ void _output_new_stream(struct buffer *obuf, FILE *store, struct thread_ctx_s *c
 			break;
 		}
 
-		// set length if required (all the time or only wehn known) but use 32 bits value with wav and aif
+		// set length if required (all the time or only when known) but use 32 bits value with wav and aif
 		if (out->length == 0 || out->length == HTTP_LENGTH_IFKNOWN) out->length = out->format == 'p' ? length : len32;
 
 		LOG_INFO("[%p]: PCM encoding r:%u s:%u f:%c", ctx, out->encode.sample_rate,	out->encode.sample_size, out->format);
@@ -510,7 +510,7 @@ void _output_new_stream(struct buffer *obuf, FILE *store, struct thread_ctx_s *c
 		int level = 5;
 		if (sscanf(ctx->config.mode, "%*[^:]:%d", &level) && level > 9) level = 9;
 
-		// level are estimates absed on various tests
+		// level are estimates based on various tests
 		double ratio[] = { 0.8, 0.79, 0.78, 0.75, 0.72, 0.71, 0.70, 0.68, 0.65 };
 		bitrate = (out->encode.channels * out->encode.sample_size * out->encode.sample_rate * ratio[level]) / 1000;
 

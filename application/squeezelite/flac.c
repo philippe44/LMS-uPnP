@@ -59,7 +59,8 @@ static struct {
 	FLAC__bool (* FLAC__stream_decoder_process_single)(FLAC__StreamDecoder *decoder);
 	FLAC__StreamDecoderState (* FLAC__stream_decoder_get_state)(const FLAC__StreamDecoder *decoder);
 	void (*FLAC__stream_decoder_set_metadata_respond)(FLAC__StreamDecoder* decoder, FLAC__MetadataType type);
-	FLAC__bool(*FLAC__stream_decoder_set_ogg_chaining)(FLAC__StreamDecoder* decoder, FLAC__bool allow);
+	FLAC__bool(*FLAC__stream_decoder_set_decode_chained_stream)(FLAC__StreamDecoder* decoder, FLAC__bool allow);
+	FLAC__bool(*FLAC__stream_decoder_finish_link)(FLAC__StreamDecoder* decoder);
 } gf;
 #endif
 
@@ -254,14 +255,10 @@ static void flac_open(u8_t sample_size, u32_t sample_rate, u8_t channels, u8_t e
 	if ( f->container == 'o' ) {
 		FLAC(&gf, stream_decoder_set_metadata_respond, f->decoder, FLAC__METADATA_TYPE_VORBIS_COMMENT);
 #if LINKALL
-#ifdef FLAC__OGG_CHAINING
-		FLAC__stream_decoder_set_ogg_chaining(f->decoder, true);
-#else 
-#pragma message ("OggFlac library does not support chaining") 
-#endif
+		FLAC__stream_decoder_set_decode_chained_stream(f->decoder, true);
 #else
-		if (gf.FLAC__stream_decoder_set_ogg_chaining) {
-			gf.FLAC__stream_decoder_set_ogg_chaining(f->decoder, true);
+		if (gf.FLAC__stream_decoder_set_decode_chained_stream) {
+			gf.FLAC__stream_decoder_set_decode_chained_stream(f->decoder, true);
 		}
 #endif
 		FLAC(&gf, stream_decoder_init_ogg_stream, f->decoder, &read_cb, NULL, NULL, NULL, NULL, &write_cb, &metadata_cb, &error_cb, ctx);
@@ -285,7 +282,15 @@ static decode_state flac_decode(struct thread_ctx_s *ctx) {
 
 	if (!ok && state != FLAC__STREAM_DECODER_END_OF_STREAM) {
 		LOG_INFO("flac error: %s", FLAC_A(&gf, StreamDecoderStateString)[state]);
-	};
+	}
+
+	if (state == FLAC__STREAM_DECODER_END_OF_LINK) {
+		if (!FLAC(&gf, stream_decoder_finish_link, f->decoder)) {
+			LOG_INFO("flac error: could not finish chained link");
+			return DECODE_ERROR;
+		}
+		return DECODE_RUNNING;
+	}
 
 	if (state == FLAC__STREAM_DECODER_END_OF_STREAM) {
 		return DECODE_COMPLETE;
@@ -323,15 +328,14 @@ static bool load_flac(void) {
 		return false;
 	}
 
-	// ignore error on that method, it's not available on all versions
-	gf.FLAC__stream_decoder_set_ogg_chaining = dlsym(gf.handle, "FLAC__stream_decoder_set_ogg_chaining");
-	if (!gf.FLAC__stream_decoder_set_ogg_chaining) {
+	// ignore error on that method, it's not available on all versions (but they are together)
+	gf.FLAC__stream_decoder_set_decode_chained_stream = dlsym(gf.handle, "FLAC__stream_decoder_set_decode_chained_stream");
+	gf.FLAC__stream_decoder_finish_link = dlsym(handle, "FLAC__stream_decoder_finish_link");
+	if (!gf.FLAC__stream_decoder_set_decode_chained_stream) {
 		LOG_INFO("OggFlac chaining disabled");
 	}
 
 	LOG_INFO("loaded "LIBFLAC, NULL);
-#elif !defined(FLAC__OGG_CHAINING)
-	LOG_INFO("OggFlac chaining disabled");
 #endif
 
 	return true;
