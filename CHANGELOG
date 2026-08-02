@@ -1,3 +1,6 @@
+3.4.3
+ - add sample rates 705600 and 768000
+ 
 3.4.2
  - update flac to stock version
  - fix an oggflac chaining issue
