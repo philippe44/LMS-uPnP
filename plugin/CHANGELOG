@@ -1,3 +1,7 @@
+3.4.4
+ - fix Sonos master selection (credit @iFlip721)
+ - fix some memory leak
+
 3.4.3
  - add sample rates 705600 and 768000
  
