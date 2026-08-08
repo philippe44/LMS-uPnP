@@ -107,6 +107,7 @@ struct sMR {
 	uint32_t		VolumeStampRx, VolumeStampTx;	// timestamps to filter volume loopbacks
 	int				ErrorCount;                     // UPnP protocol error count, negative means fatal error
 	uint32_t		LastSeen;						// presence timeout for player which went dark
+    bool            Leaving;
 	char			**MimeTypes;
 };
 

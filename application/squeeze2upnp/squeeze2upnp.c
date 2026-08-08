@@ -75,6 +75,7 @@
 
 #define DISCOVERY_TIME 		30
 #define PRESENCE_TIMEOUT	(DISCOVERY_TIME * 6)
+#define BYE_TIMEOUT			5
 
 #define TRACK_POLL  	(1000)
 #define STATE_POLL  	(500)
@@ -535,7 +536,7 @@ bool sq_callback(void *caller, sq_action_t action, ...) {
 				// for standalone master, GroupVolume equals Device->Volume
 				for (int i = 0; i < MAX_RENDERERS; i++) {
 					struct sMR *p = glMRDevices + i;
-					if (!p->Running || (p != Device && p->Master != Device)) continue;
+					if (!p->Running || (p != Device && p->Master != Device) || p->Volume < 0) continue;
 
 					// must set a volume for slave if we have not acquired it already
 					if (p->Volume && p->Volume != -1 && GroupVolume) p->Volume = min(p->Volume * Ratio, p->Config.MaxVolume);
@@ -1125,7 +1126,7 @@ static void *UpdateThread(void *args) {
 						 now - Device->LastSeen > Device->Config.RemoveTimeout))) {
 						// if device does not answer, try to download its DescDoc
 						IXML_Document* DescDoc = NULL;
-						if (UpnpDownloadXmlDoc(Device->DescDocURL, &DescDoc) != UPNP_E_SUCCESS) {
+						if (Device->Leaving || UpnpDownloadXmlDoc(Device->DescDocURL, &DescDoc) != UPNP_E_SUCCESS) {
 							pthread_mutex_lock(&Device->Mutex);
 							LOG_INFO("[%p]: removing unresponsive player (%s)", Device, Device->friendlyName);
 							sq_delete_device(Device->SqueezeHandle);
@@ -1134,6 +1135,7 @@ static void *UpdateThread(void *args) {
 						} else {
 							// device is in trouble, but let's renew grace period
 							Device->LastSeen = now;
+							Device->Leaving = false;
 							Device->ErrorCount = 0;
 							LOG_INFO("[%p]: %s mute to discovery, but answers UPnP, so keep it", Device, Device->friendlyName);
 						}
@@ -1144,14 +1146,18 @@ static void *UpdateThread(void *args) {
 			// device removal request
 			} else if (Update->Type == BYE_BYE) {
 				Device = UDN2Device(Update->Data);
-
-				// Multiple bye-bye might be sent
 				if (!CheckAndLock(Device)) continue;
 
-				LOG_INFO("[%p]: renderer bye-bye: %s", Device, Device->friendlyName);
-				sq_delete_device(Device->SqueezeHandle);
-				// device's mutex returns unlocked
-				DelMRDevice(Device);
+				// some stack sends (many) bye-bye when their SSDP stack restarts, try to search again 
+				if (!Device->Leaving) {
+					LOG_INFO("[%p]: renderer <%s> bye-bye, doing a targeted search", Device, Device->friendlyName);
+					Device->LastSeen = now - PRESENCE_TIMEOUT + BYE_TIMEOUT - 1;
+					Device->Leaving = true;
+					UpnpSearchAsync(glControlPointHandle, BYE_TIMEOUT, Device->UDN, Device);
+				}
+
+				pthread_mutex_unlock(&Device->Mutex);
+
 			// device keepalive or search response
 			} else if (Update->Type == DISCOVERY) {
 				IXML_Document *DescDoc = NULL;
@@ -1174,6 +1180,7 @@ static void *UpdateThread(void *args) {
 						char *friendlyName = NULL;
 						struct sMR *Master = GetMaster(Device, &friendlyName);
 						Device->LastSeen = now;
+						Device->Leaving = false;
 						LOG_DEBUG("[%p] UPnP keep alive: %s", Device, Device->friendlyName);
 						// check for name change
 						UpnpDownloadXmlDoc(Update->Data, &DescDoc);
@@ -1358,6 +1365,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	Device->Volume 			= -1;
 	Device->VolumeStampRx 	= Device->VolumeStampTx = gettime_ms() - 2000;
 	Device->LastSeen		= gettime_ms() / 1000;
+	Device->LastSeen		= false;
 	// all this is set to 0 by memset ...
 	Device->SqueezeHandle 	= 0;
 	Device->ErrorCount 		= 0;

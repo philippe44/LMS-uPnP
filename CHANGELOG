@@ -1,3 +1,7 @@
+3.4.5
+ - be less aggrseive on bye-bye and do a targeted search before removing player
+ - fix some group volume calculation
+ 
 3.4.4
  - fix Sonos master selection (credit @iFlip721)
  - fix some memory leak
