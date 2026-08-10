@@ -111,6 +111,7 @@ static unsigned check_header(struct thread_ctx_s *ctx) {
 		LOG_WARN("[%p]: unknown format - can't parse header", ctx);
 	}
 
+	/* All LMS versions at least up to 9.1.x have a limitation for rate above
 	 * 384k and send a wrong rate (see Player::SqueezePlay.pm) so we need to
 	 * add support for whatever is in the header. If this is the same, no harm */
 	if (strcasestr(ctx->config.mode, "thru") && ctx->output.supported_rates[0] != ctx->output.sample_rate) {
