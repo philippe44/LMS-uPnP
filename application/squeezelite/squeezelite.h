@@ -461,7 +461,7 @@ struct outputstate {
 	char 	mimetype[STR_LEN];	// content-type to send to player
 	bool  	track_started;	// track has started to be streamed (trigger, not state)
 	u8_t  	*track_start;   // pointer where track starts in buffer, just for legacy compatibility
-	int		supported_rates[2];	// for resampling (0 = use raw)
+	int		supported_rates[3];	// for resampling (0 = use raw)
 	// for regular metadata update
 	struct metadata_s metadata;
 	struct {

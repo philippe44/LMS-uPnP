@@ -73,7 +73,7 @@ static log_level *loglevel = &slimproto_loglevel;
 static u8_t 	pcm_sample_size[] = { 8, 16, 24, 32 };
 static u32_t 	pcm_sample_rate[] = { 11025, 22050, 32000, 44100, 48000,
 									  8000, 12000, 16000, 24000, 96000, 88200,
-									  176400, 192000, 352800, 384000, 705600, 768000 };
+									  176400, 192000, 352800, 384000, 0, 705600, 768000 };
 static u8_t		pcm_channels[] = { 1, 2 };
 
 static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels,
@@ -1123,6 +1123,7 @@ static bool process_start(u8_t format, u32_t rate, u8_t size, u8_t channels, u8_
 	}
 
 	// set sample rate for re-encoding
+	memset(out->supported_rates, 0, sizeof(out->supported_rates));
 	if (sample_rate > 0) out->supported_rates[0] = sample_rate;
 	else if (sample_rate < 0) out->supported_rates[0] = out->sample_rate ? min(out->sample_rate, abs(sample_rate)) : sample_rate;
 	else out->supported_rates[0] = out->sample_rate;

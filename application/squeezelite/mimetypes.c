@@ -198,7 +198,7 @@ char* mimetype_from_pcm(uint8_t* sample_size, bool truncable, uint32_t sample_ra
 				}
 			}
 
-			// if we have no found anything with 24 bist, try 16 bits if authorized
+			// if we have no found anything with 24 bits, try 16 bits if authorized
 			if (*sample_size == 24 && truncable) {
 				*sample_size = 16;
 			} else {

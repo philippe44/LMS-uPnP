@@ -111,6 +111,14 @@ static unsigned check_header(struct thread_ctx_s *ctx) {
 		LOG_WARN("[%p]: unknown format - can't parse header", ctx);
 	}
 
+	 * 384k and send a wrong rate (see Player::SqueezePlay.pm) so we need to
+	 * add support for whatever is in the header. If this is the same, no harm */
+	if (strcasestr(ctx->config.mode, "thru") && ctx->output.supported_rates[0] != ctx->output.sample_rate) {
+		LOG_WARN("[%p]: header sample rate (%d) different of LMS (%d), look for LMS update", ctx, 
+				 ctx->output.sample_rate, ctx->output.supported_rates[0]);
+		ctx->output.supported_rates[1] = ctx->output.sample_rate;
+	}
+
 	return bytes;
 }
 
@@ -147,6 +155,10 @@ static decode_state pcm_decode(struct thread_ctx_s *ctx) {
 
 		ctx->output.direct_sample_rate = ctx->output.sample_rate;
 		ctx->output.sample_rate = decode_newstream(ctx->output.sample_rate, ctx->output.supported_rates, ctx);
+
+		// if we have selected 2nd rate, this is a difference between header and LMS' so update encode rate
+		if (ctx->output.sample_rate == ctx->output.supported_rates[1]) ctx->output.encode.sample_rate = ctx->output.sample_rate;
+
 		ctx->output.track_start = ctx->outputbuf->writep;
 		if (ctx->output.fade_mode) _checkfade(true, ctx);
 		ctx->decode.new_stream = false;

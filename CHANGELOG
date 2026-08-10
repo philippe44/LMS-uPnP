@@ -1,3 +1,6 @@
+3.4.6
+ - allow rates 705k and 768k with (ugly) workaround for LMS that does not send correct rate
+ 
 3.4.5
  - be less aggrseive on bye-bye and do a targeted search before removing player
  - fix some group volume calculation
