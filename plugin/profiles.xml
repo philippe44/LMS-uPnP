@@ -106,5 +106,15 @@
 		<stream_length>-2</stream_length>
 		<sample_rate>192000</sample_rate>
 		<L24_format>0</L24_format>
-	</profile>				
+	</profile>
+	<profile name='Naim NDX'>
+		<!-- NDX display is text only -->
+		<send_metadata>1</send_metadata>
+		<send_coverart>0</send_coverart>
+		<send_icy>2</send_icy>
+		<!-- Pause of live streams doesn't work -->
+		<live_pause>0</live_pause>
+		<sample_rate>192000</sample_rate>
+		<codecs>aac,ogg,mp3,flc,alc,wav,pcm,aif</codecs>
+	</profile>			
 </squeeze2upnp>
