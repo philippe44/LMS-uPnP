@@ -1,49 +1,65 @@
 PLUGIN_UPNPBRIDGE
+	DA	UPnP/DLNA bro
 	EN	UPnP/DLNA bridge
 
 PLUGIN_UPNPBRIDGE_DESC
+	DA	Benyt UPnP/DLNA afspillere i LMS
 	EN	Use UPnP/DLNA players in LMS 
 	
 PLUGIN_UPNPBRIDGE_YES
+	DA	Ja
 	EN	Yes
 		
 PLUGIN_UPNPBRIDGE_NO
+	DA	Nej
 	EN	No
 	
 PLUGIN_UPNPBRIDGE_AUTORUN
+	DA	Start UPnP/DLNA broen
 	EN	Start the Bridge
 
 PLUGIN_UPNPBRIDGE_AUTORUN_DESC
+	DA	Automatisk start UPnP/DLNA broen når serveren starter.
 	EN	Automatically start the UPnP/DLNA bridge instance when the server starts.
 
 PLUGIN_UPNPBRIDGE_RUNNING_0
+	DA	Kører ikke
 	EN	Not Running
 
 PLUGIN_UPNPBRIDGE_RUNNING_1
+	DA	Kører
 	EN	Running
 	
 PLUGIN_UPNPBRIDGE_USERGUIDELINK
+	DA	Vis brugervejledningen
 	EN	View User Guide
 	
 PLUGIN_UPNPBRIDGE_BINARIES
+	DA	Vælg binær
 	EN	Select Binary
 
 PLUGIN_UPNPBRIDGE_RESTART
+	DA	Genstart
 	EN	Restart
 
 PLUGIN_UPNPBRIDGE_BINARIES_DESC
+	DA	Vælg den Squeeze2upnp binære fil, som bedst matcher din maskines arkitektur.
 	EN	Select the Squeeze2upnp binary which best matches your machine's architecture.
 	
 PLUGIN_UPNPBRIDGE_WARNING
+	DA	Det anbefales STÆRKT at stoppe din bro før du ændrer parametre
 	EN	It is HIGHLY recommended to stop the bridge before changing parameters
     
 PLUGIN_UPNPBRIDGE_VCREDIST
+	DA	Windows brugere, venligst installér dette
 	EN	Windows users, please install this
 	
 PLUGIN_UPNPBRIDGE_PARAMINFO
+	DA	En TOM parameterværdi betyder, at [common parameters] benyttes
 	EN	An EMPTY parameter value means that [common parameters] is used
 	
 PLUGIN_UPNPBRIDGE_COMMONPARAMINFO
+	DA	Disse parametre sætter standardindstillingerne for alle afspillere (TOM værdi betyder at indbyggede standardindstillinger benyttes)
 	EN	These parameters set the defaults for all players (EMPTY value means use built-in default)
 
 PLUGIN_UPNPBRIDGE_OUTPUT
@@ -53,120 +69,176 @@ PLUGIN_UPNPBRIDGE_OUTPUT_DESC
 	EN	N/A
 
 PLUGIN_UPNPBRIDGE_OPTIONS
+	DA	Ekstra kommandolinjeindstillinger
 	EN	Extra command line options
 
 PLUGIN_UPNPBRIDGE_OPTIONS_DESC
+	DA	Tilføj yderligere kommandolinjeindstillinger for Squeeze2upnp start her. Se
+	DA	brugervejledningen på https://github.com/philippe44/LMS-to-UPnP for detaljer.
 	EN	Add additional Squeeze2upnp startup command line options here.  See the user guide in https://github.com/philippe44/LMS-to-UPnP 
 	EN	for details.
 
 PLUGIN_UPNPBRIDGE_DEBUG
+	DA	Mere fejlfinding
 	EN	Additional debugging
 
 PLUGIN_UPNPBRIDGE_DEBUG_DESC
+	DA	Angiv fejlfindingsniveau for skrivning til logfilen.
 	EN	Specify debugging level for writing to the log file.
 	
 PLUGIN_UPNPBRIDGE_ALL
+	DA	Alt
 	EN	All
 
 PLUGIN_UPNPBRIDGE_
+	DA	Ingen
 	EN	None
 
 PLUGIN_UPNPBRIDGE_OUTPUT
+	DA	Fejlfinding for output enheder
 	EN	Output device debugging
 
 PLUGIN_UPNPBRIDGE_STREAM
+	DA	Stream fejlfinding
 	EN	Stream debugging
 
 PLUGIN_UPNPBRIDGE_SLIMPROTO
+	DA	Styring af protokol for fejlfinding (slimproto)
 	EN	Control protocol debugging (slimproto)
-	
+
 PLUGIN_UPNPBRIDGE_SLIMMAIN
+	DA	Slim Main funktionsfejlfinding
 	EN	Slim Main function debugging
 
 PLUGIN_UPNPBRIDGE_DECODE
+	DA	Decode fejlfinding
 	EN	Decode debugging
 
 PLUGIN_UPNPBRIDGE_UPNP
+	DA	UPnp fejlfinding
 	EN	UPnP debugging
 
 PLUGIN_UPNPBRIDGE_UTIL
+	DA	Hjælpeprogrammer fejlfinding
 	EN	Utilities debugging
 
 PLUGIN_UPNPBRIDGE_MAIN
+	DA	Hovedprogram fejlfinding
 	EN	Main application debugging
 
 PLUGIN_UPNPBRIDGE_LOGGING
+	DA	Muligheder for logning
 	EN	Logging options
 	
 PLUGIN_UPNPBRIDGE_LOGGING_DESC
+	DA	Aktivér logning af fejl- og fejlfindingsmeddelelser.
+	DA	<br>- Sæt en værdi i MB for at begrænse logstørrelsen (-1 for ubegrænset)
 	EN	Enable logging of error and debug messages.
 	EN	<br>- Set a value in MB to limit log size (-1 for unlimited)
 
 PLUGIN_UPNPBRIDGE_LOGENABLE
+	DA	Aktivér
 	EN	Enable
 
 PLUGIN_UPNPBRIDGE_LOGLINK
+	DA	Vis
 	EN	View
 	
 PLUGIN_UPNPBRIDGE_ERASELOG
+	DA	Slet ved opstart
 	EN	Erase at start
 	
 PLUGIN_UPNPBRIDGE_LOGSIZE
+	DA	Maks størrelse (MB)
 	EN	Max size (MB)
 
 PLUGIN_UPNPBRIDGE_CLEANLOG
+	DA	Rens
 	EN	Clean
 	
 PLUGIN_UPNPBRIDGE_PLAYER
+	DA	Vælg UPnP afspiller
 	EN	Select UPnP player
 		
 PLUGIN_UPNPBRIDGE_CONFIG
+	DA	Konfigurationsfil
 	EN	Configuration file
 
 PLUGIN_UPNPBRIDGE_CONFIG_DESC
+	DA	<i>Genererer</i> genscanninger af netværket og bygger en konfigurationsfil inklusive alle opdagede afspillere mens,
+	DA	eksisterende parametre og afspillere bevares (dette stopper din bro i ~30 sekunder)
+	DA	<br>Når autogem er markeret, vil konfigurationsfilen automatisk blive opdateret, hver gang en afspiller bliver opdaget
 	EN	<i>Generate</i> re-scans the network and builds a configuration file including all discovered players while retaining
 	EN	existing parameters and players (this will stop the bridge for ~30s)
 	EN	<br>When autosave is checked, the configuration file will be automatically updated every time a player is discovered
 
 PLUGIN_UPNPBRIDGE_CONFLINK
+	DA	Vis
 	EN	View
 	
 PLUGIN_UPNPBRIDGE_GENCONFIG
+	DA	Generér
 	EN	Generate
 
 PLUGIN_UPNPBRIDGE_AUTOSAVECONFIG
+	DA	Autogem
 	EN	Autosave
 
 PLUGIN_UPNPBRIDGE_DELCONFIG
+	DA	Slet
 	EN	Erase
 	
 PLUGIN_UPNPBRIDGE_CUSTOMDISCOVERY
+	DA	UPnP ekstra søgetokens
 	EN	UPnP extra search tokens
 	
 PLUGIN_UPNPBRIDGE_CUSTOMDISCOVERY_DESC
+	DA	UPnP-søgning bruger standardtokens "urn:schemas-upnp-org:device:MediaRenderer:1" og "urn:schemas-upnp-org:device:MediaRenderer:2". Nogle afspillere er kreative og bruger et andet arrangement, selvom de er UPnP. Tilføj her en komma- eller semikolonsepareret liste over søgetokens
 	EN	UPnP search is using standard tokens "urn:schemas-upnp-org:device:MediaRenderer:1" and "urn:schemas-upnp-org:device:MediaRenderer:2". Some players are creative and use different scheme although they are UPnP. Add here a comma or semi-colon separated list of search tokens
 	
 PLUGIN_UPNPBRIDGE_BINDING
+	DA	Netværksbinding og port
 	EN	Network binding and port
 	
 PLUGIN_UPNPBRIDGE_BASEPORT
+	DA	og start fra port
 	EN	and start from port
 
 PLUGIN_UPNPBRIDGE_USELMSBINDING
+	DA	Benyt LMS grænsefladen
 	EN	Use LMS interface
 
 PLUGIN_UPNPBRIDGE_BINDING_DESC
+	DA	Netværkets ip-grænseflade og basis port, der skal bruges (format [ip|iface][:port]. Dette er nødvendigt, hvis du har en computer med flere netværksgrænseflader. Iface er navnet på grænsefladen fundet ved hjælp af ipconfig/ifconifg
+	DA	Benyt ? for at lade din bro bestemme eller markér "Benyt LMS-grænseflade" for at sikre, at din bro bruger samme netværk som LMS og tilføj en valgfri basis port
+	DA	Din bro vil bruge op til 64 porte fra basis porten (min. 49152). Når den ikke er indstillet, bruges tilfældige værdier.
 	EN	The network ip interface and base port to be used (format [ip|iface][:port]. This is needed if you have a computer with multiple network interfaces. The iface is the name of the interface found using ipconfig/ifconifg
 	EN	Use ? to let the bridge decide or check "use LMS interface" to make sure the Bridge uses the same network as LMS and add an optional baseport
 	EN	The bridge will use up to 64 ports from the base port (min 49152). When not set, random values are used.
 	
 PLUGIN_UPNPBRIDGE_TEXTDEFAULT
+	DA	Følgende parametre gælder for ALLE afspillere - indtast "standard" (uden ") i tekstbokse for at indstille til standardværdier
 	EN	The following parameters apply to ALL players - enter "default" (without ") in text boxes to set to default values
 
 PLUGIN_UPNPBRIDGE_STREAMOPTIONS
+	DA	Streaming muligheder
 	EN	Streaming options
 
 PLUGIN_UPNPBRIDGE_STREAMOPTIONS_DESC
+	DA	Muligheder for streaming til UPnP afspiller (se brugervejledningen)
+	DA	<b>- LMS giver ikke filstørrelsen, der skal sendes. Den bedste HTTP-tilstand er at bruge 'chunked', men nogle UPnP-spillere kræver at
+	DA	man bruger 'no-length'. Benyt 'if known' for kun at sende filstørrelsen, når du bruger pcm-lyd, og varigheden er kendt. Hvis det er
+	DA	nødvendigt, "estimate" lader din bro estimere en længde (bortset fra livestream, hvor der bruges no-length) og "fast" bruger altid 2^32-1.
+	DA	<br>- For at tilfredsstille afspillerens anmodning om HTTP-søgning, bruges et mellemlager (cache). Det kan være i hukommelsen,
+	DA	rapporteret begrænset eller uendeligt, eller på disk (fallback i hukommelsen ved livestreaming eller brug af flow)
+	DA	<br>- Nogle afspillere understøtter afspilning uden pause (gapless) og hopper dermed automatisk til næste nummer i afspilningslisten.
+	DA	Dette registreres automatisk, men du kan gennemtvinge at det er deaktiveret. Andre (f.eks. Bose) er helt itu og sidder fast mod nummerets afslutning.
+	DA	Brug 'force' til at tvinge dem til at flytte til næste nummer.
+	DA	<br>- Med store buffere kan der meget hurtigt anmodes om næste nummer, og nogle streamingtjenester kan muligvis lukke forbindelsen.
+	DA	Anmodning kan forsinkes op til &ltN&gt sekunder før slutningen af ​​det aktuelle nummer. Indstil til 0 for at anmode om det med det samme
+	DA	<br>- Hvis din afspiller ikke genoptager, hvor den blev sat på pause, benyt denne til at tvinge LMS til at genstarte fra den gemte position
+	DA	<br>- Nogle afspillere nægter at sætte livestreams på pause (webradioer). Brug dette til at stoppe, når LMS anmoder om en pause
+	DA	<br>se Brugervejledningen for flere detaljer (virkelig!).
 	EN	Options for streaming to UPnP player (see user guide)
 	EN	<br>- LMS does not provide the file size to be sent. The best HTTP mode is to use 'chunked' but some UPnP players require
 	EN	'no-length' to be used. Use 'if known' to send size only when using pcm audio and duration is known. If needed, "estimate"
@@ -183,30 +255,38 @@ PLUGIN_UPNPBRIDGE_STREAMOPTIONS_DESC
 	EN	<br>see User Guide for more details (really). 
 		
 PLUGIN_UPNPBRIDGE_HTTPMODE
+	DA	HTTP tilstand
 	EN	HTTP mode 
 	
 PLUGIN_UPNPBRIDGE_HTTPMODECHUNKED
 	EN	chunked
 	
 PLUGIN_UPNPBRIDGE_HTTPMODEIFKNOWN
+	DA	hvis kendt
 	EN	if known
 	
 PLUGIN_UPNPBRIDGE_HTTPMODENOLENGTH
+	DA	ingen længde
 	EN	no length
 	
 PLUGIN_UPNPBRIDGE_HTTPMODEAUTO
+	DA	anslå
 	EN	estimate
 	
 PLUGIN_UPNPBRIDGE_HTTPMODEFIXED
+	DA	fastlåst
 	EN	fixed
 	
 PLUGIN_UPNPBRIDGE_CACHE
+	DA	Mellemlager
 	EN	Cache	
 	
 PLUGIN_UPNPBRIDGE_CACHEMEMORY
+	DA	hukommelse
 	EN	memory	
 	
 PLUGIN_UPNPBRIDGE_CACHEINFINITE
+	DA	uendelig
 	EN	infinite		
 	
 PLUGIN_UPNPBRIDGE_CACHEDISK
@@ -216,18 +296,23 @@ PLUGIN_UPNPBRIDGE_ACCEPTNEXTURI
 	EN	Gapless 
 	
 PLUGIN_UPNPBRIDGE_NEXTFORCE
+	DA	Tving
 	EN	Force
 	
 PLUGIN_UPNPBRIDGE_NEXTDELAY
+	DA	Forsinkelse
 	EN	Delay
     
 PLUGIN_UPNPBRIDGE_SEEKAFTERPAUSE
+	DA	Afslut pause
 	EN	Unpause
 	
 PLUGIN_UPNPBRIDGE_UNPAUSESEEK
+	DA	Søg
 	EN	Seek
 	
 PLUGIN_UPNPBRIDGE_UNPAUSERESUME
+	DA	Genoptag
 	EN	Resume
 	
 PLUGIN_UPNPBRIDGE_LIVEPAUSE
@@ -240,9 +325,24 @@ PLUGIN_UPNPBRIDGE_STOP
 	EN	Stop			
 	
 PLUGIN_UPNPBRIDGE_UPNPAUDIOCAPS
+	DA	UPnP afspiller audio egenskaber
 	EN	UPnP player audio capabilities
 
 PLUGIN_UPNPBRIDGE_UPNPAUDIOCAPS_DESC
+	DA	Liste over UPnP/DLNA-afspillerens egenskaber, som de vil blive rapporteret til LMS
+	DA	<br><i>- Codecs:</i> understøttede codecs. Kommasepareret liste over <b>med tab</b>:aac,ogg,ops,mp3 <b>tabsfri</b>:flc,ogf,alc
+	DA	og <b>ukomprimeret</b>:wav,pcm,aif. Når du sætter disse for en bestemt afspiller, skal du tilføje + eller - foran codec-navnet
+	DA	for at tilføje til eller fjerne fra standardlisten. Hvis omkodning er aktiveret, vil lokal afkodning blive udført af din bro
+	DA	(kun mp3,aac,flc,alc,pcm og ogg er understøttet). Hvis omkodning er deaktiveret, og et anført codec IKKE understøttes af
+	DA	UPnP-afspilleren, vil den blive ignoreret. Hvis omkodning er aktiveret, vil lokal afkodning blive udført af din bro
+	DA	(kun mp3,aac,flc,alc,wav,aif,pcm,ogf,ops og ogg er understøttet)
+	DA	<br><i>- Maks sample rate</i> maksimal understøttet samplingsfrekvens. Dette vil lade LMS bestemme,
+	DA	hvornår der skal foretages resampling på serversiden.
+	DA	<br><i>- PCM format:</i> kommasepareret liste (<b>ordnet</b>) over understøttede ukomprimerede lydformater (wav, aiff eller
+	DA	raw). Disse formater bruges, når der sendes pcm-lyd til UPnP-afspilleren. Når du indstiller disse til en bestemt afspiller,
+	DA	skal du tilføje + eller - foran formatnavnet for at tilføje til eller fjerne fra standardlisten.
+	DA	<br><i>- Flere MimeTypes:</i> gennemtving UPnP-afspillerens understøttelse af nogle MIME-typer,
+	DA	hvis de ikke opdages automatisk (se brugervejledningen)
 	EN	List the audio capabilities of the UPnP/DLNA player as they will be reported to LMS
 	EN	<br><i>- Codecs:</i> supported codecs. Comma-separated list of <b>lossy</b>:aac,ogg,ops,mp3 <b>lossless</b>:flc,ogf,alc 
 	EN	and <b>uncompressed</b>:wav,pcm,aif. When setting these for a specific player, add + or - in front of codec name to
@@ -259,36 +359,65 @@ PLUGIN_UPNPBRIDGE_UPNPAUDIOCAPS_DESC
 	EN	user's guide)
 		
 PLUGIN_UPNPBRIDGE_SAMPLERATE
+	DA	Maks samplerate
 	EN	Max sample rate
 
 PLUGIN_UPNPBRIDGE_CODECS
+	DA	Codecs
 	EN	Codecs
 	
 PLUGIN_UPNPBRIDGE_ADVANCED
+	DA	Vis avancerede indstillinger
 	EN	Show advanced options
 	
 PLUGIN_UPNPBRIDGE_RAWAUDIOFORMAT
 	EN	PCM format
 	
 PLUGIN_UPNPBRIDGE_L24PLAIN
+	DA	almindelige 24 bits
 	EN	plain 24 bits
 
 PLUGIN_UPNPBRIDGE_L24PACKED1
+	DA	pakket type 1
 	EN	packed type 1
 	
 PLUGIN_UPNPBRIDGE_L24ALWAYS16
+	DA	16 bits altid
 	EN	16 bits always
 	
 PLUGIN_UPNPBRIDGE_L24RAWONLY16
+	DA	16 bits kun ved raw format
 	EN	16 bits raw only
 	
 PLUGIN_UPNPBRIDGE_FORCEDMIMETYPES
+	DA	Flere MimeTypes
 	EN	Additional MimeTypes
 
 PLUGIN_UPNPBRIDGE_ENCODEPARAMS
+	DA	Audio format til UPnP afspiller
 	EN	Audio format to UPnP player
 	
 PLUGIN_UPNPBRIDGE_ENCODEPARAMS_DESC
+	DA	Din bro kan enten blot sende audio data til afspilleren (med mindre ændringer) eller udføre en fuld omkodning, som
+	DA	forbedrer kompatibiliteten ved at sende et kontrolleret dataformat og tillade replay gain samt fading ind og ud. Det er
+	DA	også muligt at sende lyd i en kontinuerlig strøm af data i stedet for et nummer ad gangen for at muliggøre ægte gapless
+	DA	afspilning og krydsfading. Se brugervejledningen for flere detaljer
+	DA	<br><i>- Transkodning:</i> format sendt til afspilleren. Når tom eller indstillet til 'none', sendes lyden uændret videre til
+	DA	afspilleren. Brug 'silent' for at sende lydløse mp3-rammer og brug kun afspilleren til visning (oprethold ikke synkronisering)
+	DA	<br><i>- Flow:</i> aktivér "flow" tilstand, hvor afspillelister sendes som en kontinuerlig audio stream.
+	DA	<br><i>- 24 bit PCM:</i> 24 bit sample kan sendes i almindeligt format eller pakket ved hjælp af et DVD-format.
+	DA	Hvis UPnP-afspilleren ikke understøtter 24 bits PCM overhovedet, kan samples afkortes til 16 bit. Nogle
+	DA	afspillere accepterer 'wav' i 24 bit, men ikke "raw", i så fald foretages afkortning kun for "raw".
+	DA	<br><i>- FLAC header:</i> når der søges, fjerner LMS flac headeren, men de fleste UPnP afspillere kræver det. Headers indeholder
+	DA	"samlet antal af samples" og forskellige værdier som kan afprøves (FLAC standarden siger, at 0 skal fungere, men det gør det ikke altid)
+	DA	<br><i>- Gennemtving AAC:</i> nogle afspillere rapporterer mp4-understøttelse, men mener AAC/ADTS data-rammer eller kan ikke håndtere
+	DA	mp4-containere uden HTTP-indholdslængde. Dette tvinger ADTS-rammer til at blive pakket ud og sendt i raw format til afspilleren.
+	DA	<br><i>- FLAC-komprimering:</i> Indstil komprimeringsniveauet i FLAC-tilstand. 0 = laveste komprimering og CPU-belastning
+	DA	<br><i>- MP3/AAC bitrate:</i> i mp3/aac-tilstand, indstil bitrate
+	DA	<br><i>- Resample rate:</i> resample rate for omkodning. Når "No higher" er indstillet, vil resampling kun ske, hvis hastigheden er over den
+	DA	indstillede værdi, undtagen i flowtilstand, hvor hastigheden skal være fast (44100 som standard). Når den efterlades tom, udføres ingen resampling.
+	DA	<br><i>- Sample størrelse:</i> sample størrelse til omkodning. Når den efterlades tom, bruges original sample størrelse for nummeret, undtagen i flow
+	DA	hvor sample størrelsen skal fastsættes (16 bit som standard)
 	EN	The bridge can either simply passthrough audio data to the player (with minor alteration) or do a full transcoding which
 	EN	improves compatibility by sending controlled format and allows replay gain as well as fading in and out. It's also 
 	EN	possible to send audio in a continuous flow of data instead of tracks one-by-one to enable true gapless and 
@@ -311,21 +440,25 @@ PLUGIN_UPNPBRIDGE_ENCODEPARAMS_DESC
 	EN	where sample size must be fixed (16 bits by default)
 
 PLUGIN_UPNPBRIDGE_ENCODEMODE
+	DA	Transkodning
 	EN	Transcode
 
 PLUGIN_UPNPBRIDGE_ENCODEFLACLEVEL
+	DA	FLAC kompression
 	EN	Flac compression
 	
 PLUGIN_UPNPBRIDGE_ENCODEBITRATE
 	EN	Bitrate
 	
 PLUGIN_UPNPBRIDGE_ENCODERATEFLAG
+	DA	Ikke højere
 	EN	No higher
 	
 PLUGIN_UPNPBRIDGE_ENCODERATE
 	EN	Resample rate
 
 PLUGIN_UPNPBRIDGE_ENCODESIZE
+	DA	Sample størrelse
 	EN	Sample size
 
 PLUGIN_UPNPBRIDGE_ENCODEFLOW
@@ -335,6 +468,7 @@ PLUGIN_UPNPBRIDGE_FLACHEADER
 	EN	FLAC header
 	
 PLUGIN_UPNPBRIDGE_FORCEAAC
+	DA	Gennemtving AAC
 	EN	Force AAC
 
 PLUGIN_UPNPBRIDGE_L24FORMAT
@@ -344,30 +478,43 @@ PLUGIN_UPNPBRIDGE_SERVER
 	EN	LMS Server
 	
 PLUGIN_UPNPBRIDGE_ENABLED
+	DA	Aktiveret
 	EN	Enabled
 	
 PLUGIN_UPNPBRIDGE_REMOVETIMEOUT
+	DA	Fjern timeout
 	EN	Remove timeout
 	
 PLUGIN_UPNPBRIDGE_PLAYERINFO
+	DA	Afspillerinformation
 	EN	Player information
 	
 PLUGIN_UPNPBRIDGE_PLAYERINFO_DESC
+	DA	Navnet og MAC adressen på afspilleren kan ændres her. <i>Navn</i> overskrives af værdi i LMS-afspillerens konfigurationsside
 	EN	The Name and MAC address of the player can be changed here. The <i>Name</i> is superseded by value in LMS player's configuration page
 		
 PLUGIN_UPNPBRIDGE_PLAYERNAME
+	DA	Navn
 	EN	Name
 	
 PLUGIN_UPNPBRIDGE_PLAYERMAC
+	DA	MAC adresse
 	EN	MAC address
 
 PLUGIN_UPNPBRIDGE_DELETEPLAYER
+	DA	Slet
 	EN	Delete
 
 PLUGIN_UPNPBRIDGE_UPNPMGMT
+	DA	Afspillerens opdagelsesmuligheder
 	EN	Player discovery options
 	
 PLUGIN_UPNPBRIDGE_UPNPMGMT_DESC
+	DA	Diverse indstillinger
+	DA	<br>- For standardlisten kan nyopdagede afspillere automatisk føjes til LMS
+	DA	<br>- For individuelle afspillere kan en afspiller aktiveres eller deaktiveres
+	DA	<br>- Tving LMS-server (? til automatisk opdagelse)
+	DA	<br>- Fjern timeout sætter tid (sek) for at beholde en afspiller i LMS, efter at den har misset en keep-alive (-1 = aldrig)
 	EN	Misc options
 	EN	<br>- For the default list newly discovered players can be automatically added to LMS 
 	EN	<br>– For individual players a player can be enabled or disabled
@@ -375,91 +522,117 @@ PLUGIN_UPNPBRIDGE_UPNPMGMT_DESC
 	EN	<br>- Remove timeout sets the time (s) to keep a player in LMS after is has missed a keep-alive (-1 = never)
 
 PLUGIN_UPNPBRIDGE_ENABLEDEFS
+	DA	Afspiller er aktiveret
 	EN	Player is enabled
 
 PLUGIN_UPNPBRIDGE_SENDMETADATA
+	DA	Send LMS metadata til afspilleren
 	EN	Send LMS metadata to player
 	
 PLUGIN_UPNPBRIDGE_SENDCOVERART
+	DA	Inkludér cover grafik
 	EN	Include cover art
 	
 PLUGIN_UPNPBRIDGE_COVERART
+	DA	ved opløsning
 	EN	at resolution
 
 PLUGIN_UPNPBRIDGE_SENDICY
 	EN	Send ICY metadata
 	
 PLUGIN_UPNPBRIDGE_ICYTEXT
+	DA	Kun tekst
 	EN	Text only
 
 PLUGIN_UPNPBRIDGE_SENDMETADATA_DESC
+	DA	- Når en UPnP afspiller har et display, kan LMS sende metadata (titel, kunstner, album) til den.
+	DA	<br>- Du kan fremtvinge opløsning af grafik ved hjælp af syntaks &ltX&gtx&ltY&gt. Du skal bruge LMS til proxy grafik, ikke
+	DA	mysqueezebox.com, for at det virker (lad det stå tomt som standard)
+	DA	<br>- ICY metadata er en mulighed for at sende live titel, når du spiller webradio. Brug 'kun tekst' med afspillere, der ikke understøtter grafik i ICY.
+	DA	Dette <b>VIRKER IKKE</b>, hvis du har indstillet en adgangskode til LMS-kommandoadgang
 	EN	- When a UPnP player has a display, LMS can send metadata (title, artist, album) to it. 
 	EN	<br>- You can also force resolution of artwork using syntax &ltX&gtx&ltY&gt. You must use LMS to proxy artwork, not 
 	EN	mysqueezebox.com for that to work (leave it empty for default)
 	EN	<br>- ICY metadata is an option to send live title when playing webradio. Use 'Text only' with players that don't support artwork in ICY.
 	EN	This <b>DOES NOT</b> work if you have set a password for LMS command access
-	
+
 PLUGIN_UPNPBRIDGE_VOLUMEMGMT
+	DA	Lydsniveautyring for afspiller
 	EN	Player volume management
 	
 PLUGIN_UPNPBRIDGE_VOLUMEMGMT_DESC
+	DA	Definerer, hvordan LMS lydniveaukommandoer sendes til afspilleren. Normale værdier er 0..100, men nogle afspillere har et lavere maksimum,
+	DA	der kan indstilles her. Dette afsnit styrer også, hvordan LMS lydniveaukommandoer sendes til og feedback fra afspilleren.
 	EN	Defines how LMS volume commands are sent to player. Normal values are 0..100 but some players have a lower maximum that can be set 
 	EN	here. This section also controls how LMS volume commands are sent to and feedback from player. 
 
 PLUGIN_UPNPBRIDGE_VOLUMEONPLAY
+	DA	LMS lydniveauændringer
 	EN	LMS volume changes
 	
 PLUGIN_UPNPBRIDGE_MAXVOLUME
+	DA	Maksimum lydniveau
 	EN	Maximum volume
 	
 PLUGIN_UPNPBRIDGE_VOLUMEFEEDBACK
+	DA	Tilbagemelding til LMS
 	EN	Feedback to LMS
 	
 PLUGIN_UPNPBRIDGE_VOLUMEWHENPLAYING
+	DA	kun når der afspilles
 	EN	only when playing
 	
 PLUGIN_UPNPBRIDGE_VOLUMEIGNORE
+	DA	ignorér alle ændringer
 	EN	ignore all changes
 	
 PLUGIN_UPNPBRIDGE_VOLUMEFORWARD
 	EN	transparent forward	
 
 PLUGIN_UPNPBRIDGE_USEPROFILE
+	DA	Anvend foruddefineret afspillerprofil
 	EN	Apply pre-defined player profile
 	
 PLUGIN_UPNPBRIDGE_USEPROFILE_DESC
+	DA	(</b>valgfrit</b>) Dette er en liste over velkendte afspillere. Anvend modellen med overskrivning af parametre for den valgte model.
+	DA	Opdateringsliste henter en opdateret liste - dette tager nogle få sekunder
 	EN	(</b>optional</b>) This is a list of well-known players. Applying the model with overwrite parameters with the selected model. 
 	EN	Update list fetches an updated list - this takes a few seconds 
 
 PLUGIN_UPNPBRIDGE_APPLYPROFILE
+	DA	Anvend
 	EN	Apply
 	
 PLUGIN_UPNPBRIDGE_UPDATEPROFILES
+	DA	Hent
 	EN	Fetch
 
 PLUGIN_UPNPBRIDGE_UPDATEPROFILESFROM
+	DA	fra
 	EN	from
 
 PLUGIN_UPNPBRIDGE_PLAYERLIST
+	DA	Liste over afspillere i konfigurationsfilen - Bemærk, at flere enheder muligvis er blevet opdaget
 	EN	List of players currently in configuration file - Note that more devices might have been discovered
 		
 PLUGIN_UPNPBRIDGE_NOCONFIG
+	DA	Konfigurationsfil mangler - opret en ved at klikke på "generér" eller, hvis automatisk lagring er aktiveret, opdater denne side
 	EN	Configuration file missing - create one by clicking "generate" or, if autosave is on, refresh this page
 
 PLUGIN_UPNPBRIDGE_INFO_UNIX
+	DA	Din UPnP/DLNA-bro bruger Squeeze2upnp softwareafspilleren, som er installeret som en del af udvidelsesmodulet.
+	DA	Du kan styre den fra serverens webgrænseflade eller enhver anden Squeezebox kontrolapplikation.
 	EN	UPnP/DLNA bridge uses the Squeeze2upnp software player which is installed as part of the plugin.  You can control it from the server
 	EN	web interface or any other Squeezebox control application.
 
 PLUGIN_UPNPBRIDGE_INFO_WIN
+	DA	Din UPnP/DLNA bro bruger Squeeze2upnp softwareafspilleren, som er installeret som en del af udvidelsesmodulet.
+	DA	Du kan styre den fra serverens webgrænseflade eller enhver anden Squeezebox kontrolapplikation.
 	EN	UPnP/DLNA bridge uses the Squeeze2upnp software player which is installed as part of the plugin.  You can control it from the server
 	EN	web interface or any other Squeezebox control application.
 
 PLUGIN_UPNPBRIDGE_INFO_MAC
+	DA	Din UPnP/DLNA bro bruger Squeeze2upnp softwareafspilleren, som er installeret som en del af udvidelsesmodulet.
+	DA	Du kan styre den fra serverens webgrænseflade eller enhver anden Squeezebox kontrolapplikation.
 	EN	UPnP/DLNA bridge uses the Squeeze2upnp software player which is installed as part of the plugin.  You can control it from the server
 	EN	web interface or any other Squeezebox control application.
-	
-	
-	
-
-	
-
