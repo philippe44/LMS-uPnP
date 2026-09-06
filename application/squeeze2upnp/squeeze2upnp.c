@@ -508,7 +508,7 @@ bool sq_callback(void *caller, sq_action_t action, ...) {
 			Volume = LMSVolumeMap[Volume];
 
 			// discard echo commands
-			if (now < Device->VolumeStampRx + 1000) break;
+			if (now - Device->VolumeStampRx < 1000) break;
 
 			// calculate volume and check for change
 			if ((int) Device->Volume == (Volume * Device->Config.MaxVolume) / 100) break;
@@ -761,7 +761,7 @@ static void _ProcessVolume(char *Volume, struct sMR* Device) {
 	ASSUMING DEVICE'S MUTEX LOCKED
 	*/
 
-	if (UPnPVolume != (int) Device->Volume && now > Master->VolumeStampTx + 1000) {
+	if (UPnPVolume != (int) Device->Volume && now - Master->VolumeStampTx > 1000) {
 		Device->Volume = UPnPVolume;
 		Master->VolumeStampRx = now;
 		GroupVolume = CalcGroupVolume(Master);
@@ -1245,7 +1245,7 @@ static void *UpdateThread(void *args) {
 
 				// new device so search a free spot - as this function is not called
 				// recursively, no need to lock the device's mutex
-				for (Device = glMRDevices; Device->Running && Device < glMRDevices + MAX_RENDERERS; Device++);
+				for (Device = glMRDevices; Device < glMRDevices + MAX_RENDERERS && Device->Running; Device++);
 
 				// no more room !
 				if (Device == glMRDevices + MAX_RENDERERS) {
