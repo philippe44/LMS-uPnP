@@ -483,9 +483,10 @@ static ssize_t send_with_icy(struct outputstate* out, struct buffer *backlog, in
 static bool handle_http(struct thread_ctx_s *ctx, cache_buffer* cache, bool *use_cache, bool lingering, int index, int sock) {
 	char* body = NULL, * request = NULL, * p = NULL;
 	key_data_t headers[64], resp[16] = { { NULL, NULL } };
+	key_data_list_t hdr = { 63, headers };
 	int len, id;
 
-	if (!http_parse_simple(sock, &request, headers, &body, &len)) {
+	if (!http_parse_simple(sock, &request, &hdr, &body, &len)) {
 		LOG_WARN("[%p]: http parsing error %s", ctx, request);
 		NFREE(body);
 		NFREE(request);

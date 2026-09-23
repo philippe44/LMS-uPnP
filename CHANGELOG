@@ -1,3 +1,6 @@
+3.4.8 
+ - fix some potential buffer overflow (crosstools)
+ 
 3.4.7
  - fix some volume timestamp rollover
  
