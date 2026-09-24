@@ -177,7 +177,7 @@ void DelMRDevice(struct sMR *p) {
 
 	p->Running = false;
 
-	// kick-up all sleepers
+	// kick-up all sleepers and join player's thread
 	crossthreads_wake();
 
 	pthread_mutex_unlock(&p->Mutex);
@@ -257,8 +257,6 @@ bool CheckAndLock(struct sMR *Device) {
 /*----------------------------------------------------------------------------*/
 static IXML_NodeList *XMLGetNthServiceList(IXML_Document *doc, unsigned int n, bool *contd) {
 	IXML_NodeList *ServiceList = NULL;
-	IXML_NodeList *servlistnodelist = NULL;
-	IXML_Node *servlistnode = NULL;
 	*contd = false;
 
 	/*  ixmlDocument_getElementsByTagName()
@@ -269,7 +267,7 @@ static IXML_NodeList *XMLGetNthServiceList(IXML_Document *doc, unsigned int n, b
 	 *  return (NodeList*) A pointer to a NodeList containing the
 	 *                      matching items or NULL on an error. 	 */
 	LOG_SDEBUG("GetNthServiceList called : n = %d", n);
-	servlistnodelist = ixmlDocument_getElementsByTagName(doc, "serviceList");
+	IXML_NodeList* servlistnodelist = ixmlDocument_getElementsByTagName(doc, "serviceList");
 	if (servlistnodelist &&
 		ixmlNodeList_length(servlistnodelist) &&
 		n < ixmlNodeList_length(servlistnodelist)) {
@@ -278,7 +276,7 @@ static IXML_NodeList *XMLGetNthServiceList(IXML_Document *doc, unsigned int n, b
 		 *
 		 *  return (Node*) A pointer to a Node or NULL if there was an
 		 *                  error. */
-		servlistnode = ixmlNodeList_item(servlistnodelist, n);
+		IXML_Node* servlistnode = ixmlNodeList_item(servlistnodelist, n);
 		if (servlistnode) {
 			/* create as list of DOM nodes */
 			ServiceList = ixmlElement_getElementsByTagName(
@@ -297,33 +295,25 @@ static IXML_NodeList *XMLGetNthServiceList(IXML_Document *doc, unsigned int n, b
 int XMLFindAndParseService(IXML_Document* DescDoc, const char* location,
 	const char* serviceTypeBase, char** serviceType, char** serviceId, 
 	char** eventURL, char** controlURL, char** serviceURL) {
-	unsigned int i;
-	unsigned long length;
 	int found = 0;
 	int ret;
-	unsigned int sindex = 0;
-	char* tempServiceType = NULL;
-	char* baseURL = NULL;
 	const char* base = NULL;
-	char* relcontrolURL = NULL;
-	char* releventURL = NULL;
-	IXML_NodeList* serviceList = NULL;
-	IXML_Element* service = NULL;
 	bool contd = true;
 
-	baseURL = XMLGetFirstDocumentItem(DescDoc, "URLBase", true);
+	char* baseURL = XMLGetFirstDocumentItem(DescDoc, "URLBase", true);
 	if (baseURL) base = baseURL;
 	else base = location;
 
-	for (sindex = 0; contd; sindex++) {
-		tempServiceType = NULL;
-		relcontrolURL = NULL;
-		releventURL = NULL;
-		service = NULL;
+	for (unsigned int sindex = 0; contd; sindex++) {
+		char* tempServiceType = NULL;
+		char* relcontrolURL = NULL;
+		char* releventURL = NULL;
+		IXML_Element* service = NULL;
+		IXML_NodeList* serviceList = NULL;
 
 		if ((serviceList = XMLGetNthServiceList(DescDoc, sindex, &contd)) == NULL) continue;
-		length = ixmlNodeList_length(serviceList);
-		for (i = 0; i < length; i++) {
+		unsigned long length = ixmlNodeList_length(serviceList);
+		for (int i = 0; i < length; i++) {
 			service = (IXML_Element*)ixmlNodeList_item(serviceList, i);
 			tempServiceType = XMLGetFirstElementItem((IXML_Element*)service, "serviceType");
 			LOG_SDEBUG("serviceType %s", tempServiceType);
@@ -354,8 +344,6 @@ int XMLFindAndParseService(IXML_Document* DescDoc, const char* location,
 				}
 				free(relcontrolURL);
 				free(releventURL);
-				relcontrolURL = NULL;
-				releventURL = NULL;
 				found = 1;
 				break;
 			}
@@ -363,13 +351,10 @@ int XMLFindAndParseService(IXML_Document* DescDoc, const char* location,
 			tempServiceType = NULL;
 		}
 		free(tempServiceType);
-		tempServiceType = NULL;
 		if (serviceList) ixmlNodeList_free(serviceList);
-		serviceList = NULL;
 	}
 
 	free(baseURL);
-
 	return found;
 }
 
@@ -386,12 +371,11 @@ bool XMLFindAction(const char* base, char* service, char* action) {
 		IXML_NodeList* actionList = ixmlDocument_getElementsByTagName((IXML_Document*)actions, "action");
 		int i;
 
-		for (i = 0; actionList && i < (int)ixmlNodeList_length(actionList); i++) {
+		for (int i = 0; actionList && i < (int)ixmlNodeList_length(actionList); i++) {
 			IXML_Node* node = ixmlNodeList_item(actionList, i);
-			const char* name;
 			node = (IXML_Node*)ixmlDocument_getElementById((IXML_Document*)node, "name");
 			node = ixmlNode_getFirstChild(node);
-			name = ixmlNode_getNodeValue(node);
+			const char* name = ixmlNode_getNodeValue(node);
 			if (name && !strcasecmp(name, action)) {
 				res = true;
 				break;
@@ -472,8 +456,7 @@ static IXML_Node *_getAttributeNode(IXML_Node *node, char *SearchAttr) {
 }
 
 /*----------------------------------------------------------------------------*/
-char *uPNPEvent2String(Upnp_EventType S)
-{
+char *uPNPEvent2String(Upnp_EventType S) {
 	switch (S) {
 	/* Discovery */
 	case UPNP_DISCOVERY_ADVERTISEMENT_ALIVE:

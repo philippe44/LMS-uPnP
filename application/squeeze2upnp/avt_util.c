@@ -55,7 +55,7 @@ void AVTActionFlush(cross_queue_t *Queue) {
 	tAction *Action;
 
 	while ((Action = queue_extract(Queue)) != NULL) {
-        if (Action->ActionNode) ixmlDocument_free(Action->ActionNode);
+		if (Action->ActionNode) ixmlDocument_free(Action->ActionNode);
 		free(Action);
 	}
 }
