@@ -12,6 +12,7 @@ use Slim::Utils::Log;
 use Slim::Control::Request;
 
 my $prefs = preferences('plugin.upnpbridge');
+my $serverPrefs = preferences('server');
 my $hasOutputChannels;
 my $fade_volume;
 my $statusHandler = Slim::Control::Request::addDispatch(['status', '_index', '_quantity'], [1, 1, 1, \&statusQuery]);
@@ -44,6 +45,12 @@ sub fade_volume {
 	my ($client, $fade, $callback, $callbackargs) = @_;
 	# no fade-in or out, we don't want that flur of commands
 	return $fade_volume->($client, $fade, $callback, $callbackargs) if $client->modelName !~ /UPnPBridge/ || ($fade > 0 && $client->can('setMute'));
+	# LMS sets a temporary volume of 0 before a fade-in (resume) and counts on the fade to restore
+	# it, otherwise that 0 is re-sent at next track start, so restore it in one step like a fade end
+	if ($fade > 0 && defined $client->tempVolume && $client->tempVolume == 0) {
+		my $volume = $serverPrefs->client($client)->get('volume');
+		$client->volume($volume, 1) if $volume > 0 && !$serverPrefs->client($client)->get('mute');
+	}
 	return $callback->(@{$callbackargs}) if $callback;
 }
 
