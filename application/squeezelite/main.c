@@ -576,7 +576,7 @@ void sq_notify(sq_dev_handle_t handle, sq_event_t event, ...) {
 
 			if (va_arg(args, int)) {
 				LOG_WARN("[%p]: unsollicited pause", ctx);
-				sprintf(cmd, "%s pause", ctx->cli_id);
+				sprintf(cmd, "%s pause 1", ctx->cli_id);
 				rsp = cli_send_cmd(cmd, false, true, ctx);
 				NFREE(rsp);
 			}
