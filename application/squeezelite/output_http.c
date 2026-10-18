@@ -558,6 +558,15 @@ static bool handle_http(struct thread_ctx_s *ctx, cache_buffer* cache, bool *use
 		 * proper range request but we need to answer 206 without a content-range (which is not
 		 * compliant) or it fails as well */
 
+		/* Some renderers (GStreamer-based) open the first URI, close it and re-open it to play. A short
+		 * track can be fully served before they come back, so when lingering still accept to restart if
+		 * output is still that track (headers are taken from it), it is not a webradio-like stream,
+		 * renderer has not played that track yet and cache has it all */
+		LOCK_O;
+		bool restart = lingering && ctx->output.index == index && ctx->output.duration &&
+					   (ctx->render.index < index || !ctx->render.ms_played) && cache->scope(cache, 0) == 0;
+		UNLOCK_O;
+
 		if ((p = kd_lookup(headers, "Range")) != NULL && cache->total) {
 			size_t offset = 0;
 			(void)!sscanf(p, "bytes=%zu", &offset);
@@ -591,14 +600,14 @@ static bool handle_http(struct thread_ctx_s *ctx, cache_buffer* cache, bool *use
 						cache->total, length, cache->total - avail);
 					length = 0;
 				}
-			} else if (lingering) {
+			} else if (lingering && !restart) {
 				// don't resend from start when all as already been sent
 				send_body = false;
 				head = "HTTP/1.0 410 Gone";
 				kd_free(resp);
 				LOG_INFO("[%p]: won't resend from start when fully served", ctx);
 			}
-		} else if (lingering) {
+		} else if (lingering && !restart) {
 			// don't resend from start when all as already been sent
 			send_body = false;
 			head = "HTTP/1.0 410 Gone";
